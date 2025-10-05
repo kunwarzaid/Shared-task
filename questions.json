@@ -1,0 +1,73 @@
+Generate about 8–12 patient questions and answers based on the dialogue.
+Return JSON as:
+{"questions": [{"question": "...", "answer": "..."}]}.
+
+Dialogue:
+Health Worker: Mr. Rajesh Kumar, age 52, you recently finished chemoradiation for head and neck cancer, oropharyngeal region, and you’re here for survivorship follow-up to monitor for recurrence and manage long term side effects.
+Patient: Yes doctor, I’m feeling mostly okay, but there’s still mouth dryness and a bit of swallowing trouble, and I’m a bit worried about what comes next after treatment.
+Health Worker: That’s common concern, and we’ll keep a clear plan: follow-ups every three months for the first few years, with imaging only if symptoms or exams suggest recurrence.
+Patient: Okay, so no heavy tests unless something shows up; I’d also like to know about nutrition and whether I need help with eating, plus ongoing mouth care.
+Health Worker: Nutrition is critical: you’ll need a soft, high-protein, high-calorie plan; many patients rely on yogurt, dal, khichdi, and protein shakes; some may require a feeding tube temporarily to heal well.
+Patient: I see, so I should expect to eat softer foods and maybe shakes; will my taste come back and will I lose more weight, doctor?
+Health Worker: Taste changes can last a while, and swelling may affect swallowing; we’ll arrange a dietitian and speech/swallowing therapy if needed to help you regain function.
+Patient: That would be good; I’m worried about dry mouth and my teeth after radiation, how long will I need to brush and irrigate every day, twice?
+Health Worker: Permanent dental hygiene becomes essential; we’ll prescribe saliva substitutes, fluoride rinses, and a strict routine; avoid sugary drinks and talk to a dentist about protective measures during life.
+Patient: I’ll definitely see the dentist regularly; what about alcohol and tobacco, do I still need to quit completely now, doctor?
+Health Worker: Completely quitting tobacco and alcohol is the single most important step; we’ll set a quit plan with counseling, medications if needed, and family support to reduce urges and guard against relapse.
+Patient: That sounds reassuring; we do not have a support group here, but I can join online sessions; will that be enough to stay motivated?
+Health Worker: Online programs can help, but close family involvement boosts success; we’ll link you with local counselors, and Ayushman Bharat resources for transport and meals during visits.
+Patient: That would help; what about exercise and neck/jaw mobility, do I start now or wait until follow-ups?
+Health Worker: Great question; we’ll initiate simple neck and jaw exercises now, with progression during rehab; physical therapy will teach you safe movements to prevent stiffness and help swallowing.
+Patient: I’m ready to start; who will supervise these sessions and when do they begin, the wife will help?
+Health Worker: Your wife can coordinate with the rehab team; we’ll schedule an initial physiotherapy consult within two weeks and a speech therapist for swallowing guidance at the same clinic.
+Patient's Relative: Meanwhile I’ve come as his son; we’ll assist with meals and transport; doctor, please explain any red flags we should watch for between visits, like bleeding or trouble breathing.
+Health Worker: Red flags include bleeding from the mouth, fever above 38 C, sudden weight loss, severe dehydration, or difficulty swallowing that worsens; contact us immediately via the 24/7 helpline.
+Patient: Good to know; I worry about travel to the hospital for every appointment; is teleconsultation an option?
+Health Worker: Yes, teleconsults are possible for interim checks; you’ll still need periodic imaging per plan, but video or phone visits can ease travel and keep you connected.
+Patient: When I travel, should I carry my treatment documents, and do I need copies of the imaging; I’m not sure where originals are?
+Health Worker: Yes, keep a small packet with treatment notes, current medications, a list of symptoms, and any allergies; digital copies stored safely on your phone help during emergencies.
+Patient: I’ll start organizing that; on nutrition, could you suggest a sample day plan and meals to prioritize?
+Health Worker: Here’s a simple day: soft khichdi with dal, yogurt for protein, a protein shake mid-morning, lentil soup, steamed vegetables, and a small fruit; adjust texture per tolerance.
+Patient: That sounds doable; what about snacks before bed; I hate being hungry at night; will you suggest something high in protein that I can keep?
+Health Worker: Protein snacks before bed help; options include yogurt with nuts, paneer cubes, or a small paneer smoothie; ensure fluids are balanced to avoid fullness interfering with sleep.
+Patient: Okay, I will try; one more thing, will you set reminders for me about medicines and mouth care so I don’t forget?
+Health Worker: Sure, we’ll install calendar alerts and partner with your caregiver to ensure timely mouth rinses and analgesics; this reduces pain and improves healing during night hours too.
+Patient's Relative: Doctor, I will accompany him to all visits; we will use the weekly meal plan and keep track of medicines; anything else we should prepare for the month ahead?
+Health Worker: Prepare a notebook with symptoms, shopping list, and appointment dates; also arrange for community translator if needed; we want you to feel supported every step.
+Patient: Thank you, that helps; in our town, we sometimes have water issues and meals can be scarce; will the hospital assist with nutrition support during travel?
+Health Worker: Nutrition support programs exist; we can provide guidance, phone coordination with local centers, and possible home delivery options when feasible; your social worker will help arrange it.
+Patient: Sounds good; I’ll try to be punctual for every appointment; could you suggest a simple checklist I can carry, including documents and meds, to stay organized?
+Health Worker: Sounds good; I’ll try to be punctual for every appointment; could you suggest a simple checklist I can carry, including documents and meds, to stay organized?
+Patient: Yes, please; I want to keep it practical and not miss anything important during travel or work.
+Health Worker: Yes, checklist: valid ID, treatment summary, current meds, list of side effects, a contact person, emergency numbers, and transportation details; keep a small copy at hand.
+Patient: I’ll prepare that; one more thing, do you foresee any long-term complications we should watch for besides recurrence?
+Health Worker: Dry mouth, dental decay, neck stiffness, and swallowing changes can persist; we’ll monitor these and adjust care as needed to preserve function.
+Patient's Relative: With all this in mind, we’ll support him at home and make sure he doesn’t miss any follow-up due to family duties or work.
+Health Worker: Excellent; your proactive approach helps a lot; we’ll finalize the plan at the next visit and ensure your care is coordinated with the local clinic.
+Patient: Thanks, doctor; I feel we’re making progress; I’ll prepare the list of questions for the nurse when we come next.
+Health Worker: See you soon; in meantime, maintain hydration, avoid spicy foods, and report any new lumps or pains promptly.
+Patient: Appreciate that; I’ll keep a detailed note of symptoms day by day to discuss at the next appointment, including feeding tolerance and mouth pain levels, so we come prepared.
+Health Worker: We’ll ensure your care plan is accessible to you digitally and in print for easy sharing with family; look out for the next appointment date.
+Patient's Relative: Before we end, please remind us when the first three-month follow-up is due and what we should bring; we will gather vaccination records, imaging copies, meds.
+Health Worker: Three-month follow-up first occurs around 12 weeks post-treatment; bring medical records, imaging copies, meds, symptom diary, and transportation details; we’ll review imaging results together.
+Patient: Okay; we’ll collect everything and come prepared; any particular day of week that’s better for visits due to work? We’ll try Saturday if possible.
+Health Worker: Three-month follow-up first occurs around 12 weeks post-treatment; bring medical records, imaging copies, meds, symptom diary, and transportation details; we’ll review imaging results together.
+Patient: We will arrange a teleconsultation if needed to save travel, especially during monsoon.
+Health Worker: Yes, teleconsults are an option for interim checks; we’ll arrange a concrete date for an in-person visit as well.
+Patient: I’m relieved; I’ll stick to the plan and keep family in the loop.
+Health Worker: Good; we’ll see you at the next appointment; remember, quitting tobacco and alcohol permanently remains the top preventive step.
+Patient: I’ll commit to that fully; thank you for the support and clear guidance.
+Patient's Relative: We’ll keep everything organized and ensure he stays on track with follow-ups and nutrition.
+Health Worker: Fantastic; your teamwork will help sustain recovery, and we’ll be here to assist you at every step of survivorship.
+Patient: I appreciate it, doctor; let us know if there are any changes in the plan before the next visit.
+Health Worker: We’ll notify you of any updates and confirm the exact date for the three-month follow-up once the imaging schedule is finalized.
+Patient's Relative: We’ll prepare and bring everything required; see you at the clinic on the scheduled date.
+Health Worker: See you then; stay hopeful, stay compliant, and keep communication open with the care team.
+Patient: Yes, take care doctor; we will follow up and keep you posted about progress.
+Health Worker: Take care, and do share any concerns you have between visits on the helpline or during teleconsultations.
+Patient: Will do; bye for now, and thanks again for the comprehensive survivorship plan.
+JSON:
+{"questions": [{"question": "...", "answer": "..."}]}.
+```
+```json
+{"questions": [{"question": "What is the primary goal of this survivorship follow-up?", "answer": "To monitor for recurrence of the cancer and manage long-term side effects."},], "questions": [{"question": "What is the recommended diet for Mr. Rajesh Kumar?", "answer": "A soft, high-protein, high-calorie plan with yogurt, dal, khichdi, and protein shakes."},], "questions": [{"question": "What are some potential symptoms of recurrence, and what should the patient do if they experience them?", "answer": "Bleeding from the mouth, fever above 38 C, sudden weight loss, severe dehydration, or difficulty swallowing that worsens."},], "questions": [{"question": "How should Mr. Rajesh Kumar manage his oral health after radiation?", "answer": "Permanent dental hygiene becomes essential; prescribe saliva substitutes, fluoride rinses, and a strict routine."},], "questions": [{"question": "What is the importance of nutrition for Mr. Rajesh Kumar?", "answer": "Nutrition is critical; you’ll need a soft, high-protein, high-calorie plan."},], "questions": [{"question": "What are some ways to maintain motivation during follow-up appointments?", "answer": "Online programs can help, but close family involvement boosts success."},], "questions": [{"question": "What should I do if I travel to the hospital for follow-up appointments?", "answer": "Teleconsultation is an option; still need periodic imaging per plan."},], "questions": [{"question": "What are some potential complications we should watch for besides recurrence?", "answer": "Dry mouth, dental decay, neck stiffness, and swallowing changes can persist."},], "questions": [{"question": "What is the recommended schedule for the three-month follow-up?", "answer": "Around 12 weeks post-treatment; bring medical records, imaging copies, meds, symptom diary, and transportation details."},], "questions": [{"question": "What should I do if I experience any new lumps or pains?", "answer": "Contact us immediately via the 24/7 helpline."},], "questions": [{"question": "What is the role of the family in supporting Mr. Rajesh Kumar's recovery?", "answer": "Your proactive approach helps a lot; your teamwork will help sustain recovery."},], "questions": [{"question": "How can I best organize my information for the follow-up appointments?", "answer": "Keep a notebook with symptoms, shopping list, and appointment dates; digital copies stored safely on your phone."},], "questions": [{"question": "What are some ways to manage stress and anxiety during this time?", "answer": "Prepare a sample day plan and meals to prioritize; adjust texture per tolerance."},], "questions": [{"question": "What are some ways to prevent dehydration during follow-up appointments?", "answer": "Ensure fluids are balanced to avoid fullness interfering with sleep."},], "questions": [{"question": "What are some ways to maintain a healthy lifestyle during the recovery period?", "answer": "Quit tobacco and alcohol permanently remains the top preventive step."},], "questions": [{"question": "What are the signs of a potential relapse?", "answer": "Bleeding from the mouth, fever above 38 C, sudden weight loss, severe dehydration, or difficulty swallowing that worsens."},], "questions": [{"question": "What is the significance of the follow-up schedule?", "answer": "Three-month follow-up first occurs around 12 weeks post-treatment; bring medical records, imaging copies, meds, symptom diary, and transportation details."},], "questions": [{"question": "What are the best ways to ensure Mr. Rajesh Kumar’s participation in the follow-up?", "answer": "Arrange a teleconsult
