@@ -2,8 +2,8 @@ import os
 import zipfile
 
 # Path to your zip file
-zip_path = "/workspace/SharedTask_NLPAI4Health_Train&dev_set.zip"
-extract_to = "/workspace/SharedTask_NLPAI4Health_Train&dev_set"
+zip_path = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Traindev_s.zip"
+extract_to = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
 
 # ✅ 1. Unzip (only if not already extracted)
 if not os.path.exists(extract_to):
