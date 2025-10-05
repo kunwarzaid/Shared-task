@@ -1,146 +1,21 @@
-/usr/local/lib/python3.10/dist-packages/scipy/__init__.py:132: UserWarning: A NumPy version >=1.21.6 and <1.28.0 is required for this version of SciPy (detected version 2.2.6)
-  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
-
-A module that was compiled using NumPy 1.x cannot be run in
-NumPy 2.2.6 as it may crash. To support both 1.x and 2.x
-versions of NumPy, modules must be compiled with NumPy 2.0.
-Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
-
-If you are a user of the module, the easiest solution will be to
-downgrade to 'numpy<2' or try to upgrade the affected module.
-We expect that some modules will need time to support NumPy 2.
-
-Traceback (most recent call last):  File "/usr/lib/python3.10/runpy.py", line 196, in _run_module_as_main
-    return _run_code(code, main_globals, None,
-  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
-    exec(code, run_globals)
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel_launcher.py", line 17, in <module>
-    app.launch_new_instance()
-  File "/usr/local/lib/python3.10/dist-packages/traitlets/config/application.py", line 1043, in launch_instance
-    app.start()
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel/kernelapp.py", line 736, in start
-    self.io_loop.start()
-  File "/usr/local/lib/python3.10/dist-packages/tornado/platform/asyncio.py", line 195, in start
-    self.asyncio_loop.run_forever()
-  File "/usr/lib/python3.10/asyncio/base_events.py", line 603, in run_forever
-    self._run_once()
-  File "/usr/lib/python3.10/asyncio/base_events.py", line 1909, in _run_once
-    handle._run()
-  File "/usr/lib/python3.10/asyncio/events.py", line 80, in _run
-    self._context.run(self._callback, *self._args)
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel/kernelbase.py", line 516, in dispatch_queue
-    await self.process_one()
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel/kernelbase.py", line 505, in process_one
-    await dispatch(*args)
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel/kernelbase.py", line 412, in dispatch_shell
-    await result
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel/kernelbase.py", line 740, in execute_request
-    reply_content = await reply_content
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel/ipkernel.py", line 422, in do_execute
-    res = shell.run_cell(
-  File "/usr/local/lib/python3.10/dist-packages/ipykernel/zmqshell.py", line 546, in run_cell
-    return super().run_cell(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/IPython/core/interactiveshell.py", line 3009, in run_cell
-    result = self._run_cell(
-  File "/usr/local/lib/python3.10/dist-packages/IPython/core/interactiveshell.py", line 3064, in _run_cell
-    result = runner(coro)
-  File "/usr/local/lib/python3.10/dist-packages/IPython/core/async_helpers.py", line 129, in _pseudo_sync_runner
-    coro.send(None)
-  File "/usr/local/lib/python3.10/dist-packages/IPython/core/interactiveshell.py", line 3269, in run_cell_async
-    has_raised = await self.run_ast_nodes(code_ast.body, cell_name,
-  File "/usr/local/lib/python3.10/dist-packages/IPython/core/interactiveshell.py", line 3448, in run_ast_nodes
-    if await self.run_code(code, result, async_=asy):
-  File "/usr/local/lib/python3.10/dist-packages/IPython/core/interactiveshell.py", line 3508, in run_code
-    exec(code_obj, self.user_global_ns, self.user_ns)
-  File "/tmp/ipykernel_121/454573796.py", line 1, in <module>
-    from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2317, in __getattr__
-    module = self._get_module(self._class_to_module[name])
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2345, in _get_module
-    return importlib.import_module("." + module_name, self.__name__)
-  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/tokenization_auto.py", line 40, in <module>
-    from .auto_factory import _LazyAutoMapping
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/auto_factory.py", line 43, in <module>
-    from ...generation import GenerationMixin
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2317, in __getattr__
-    module = self._get_module(self._class_to_module[name])
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2345, in _get_module
-    return importlib.import_module("." + module_name, self.__name__)
-  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/generation/utils.py", line 55, in <module>
-    from .candidate_generator import (
-  File "/usr/local/lib/python3.10/dist-packages/transformers/generation/candidate_generator.py", line 29, in <module>
-    from sklearn.metrics import roc_curve
-  File "/usr/local/lib/python3.10/dist-packages/sklearn/__init__.py", line 82, in <module>
-    from .base import clone
-  File "/usr/local/lib/python3.10/dist-packages/sklearn/base.py", line 17, in <module>
-    from .utils import _IS_32BIT
-  File "/usr/local/lib/python3.10/dist-packages/sklearn/utils/__init__.py", line 17, in <module>
-    from scipy.sparse import issparse
-  File "/usr/local/lib/python3.10/dist-packages/scipy/sparse/__init__.py", line 274, in <module>
-    from ._csr import *
-  File "/usr/local/lib/python3.10/dist-packages/scipy/sparse/_csr.py", line 11, in <module>
-    from ._sparsetools import (csr_tocsc, csr_tobsr, csr_count_blocks,
+/usr/local/lib/python3.10/dist-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+/usr/local/lib/python3.10/dist-packages/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: '/usr/local/lib/python3.10/dist-packages/torchvision/image.so: undefined symbol: _ZN3c1017RegisterOperatorsD1Ev'If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
+  warn(
+/usr/local/lib/python3.10/dist-packages/torch/cuda/__init__.py:182: UserWarning: CUDA initialization: The NVIDIA driver on your system is too old (found version 11040). Please update your GPU driver by downloading and installing a new version from the URL: http://www.nvidia.com/Download/index.aspx Alternatively, go to: https://pytorch.org to install a PyTorch version that has been compiled with your version of the CUDA driver. (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:109.)
+  return torch._C._cuda_getDeviceCount() > 0
+/usr/local/lib/python3.10/dist-packages/torchvision/datapoints/__init__.py:12: UserWarning: The torchvision.datapoints and torchvision.transforms.v2 namespaces are still Beta. While we do not expect major breaking changes, some APIs may still change according to user feedback. Please submit any feedback you may have in this issue: https://github.com/pytorch/vision/issues/6753, and you can also check out https://github.com/pytorch/vision/issues/7319 to learn more about the APIs that we suspect might involve future changes. You can silence this warning by calling torchvision.disable_beta_transforms_warning().
+  warnings.warn(_BETA_TRANSFORMS_WARNING)
+/usr/local/lib/python3.10/dist-packages/torchvision/transforms/v2/__init__.py:54: UserWarning: The torchvision.datapoints and torchvision.transforms.v2 namespaces are still Beta. While we do not expect major breaking changes, some APIs may still change according to user feedback. Please submit any feedback you may have in this issue: https://github.com/pytorch/vision/issues/6753, and you can also check out https://github.com/pytorch/vision/issues/7319 to learn more about the APIs that we suspect might involve future changes. You can silence this warning by calling torchvision.disable_beta_transforms_warning().
+  warnings.warn(_BETA_TRANSFORMS_WARNING)
 ---------------------------------------------------------------------------
-AttributeError                            Traceback (most recent call last)
-AttributeError: _ARRAY_API not found
----------------------------------------------------------------------------
-ImportError                               Traceback (most recent call last)
+TypeError                                 Traceback (most recent call last)
 Cell In[6], line 1
 ----> 1 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
       2 import os, json
       4 # Paths
 
-File /usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py:2317, in _LazyModule.__getattr__(self, name)
-   2315 elif name in self._class_to_module:
-   2316     try:
--> 2317         module = self._get_module(self._class_to_module[name])
-   2318         value = getattr(module, name)
-   2319     except (ModuleNotFoundError, RuntimeError) as e:
-
-File /usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py:2347, in _LazyModule._get_module(self, module_name)
-   2345     return importlib.import_module("." + module_name, self.__name__)
-   2346 except Exception as e:
--> 2347     raise e
-
-File /usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py:2345, in _LazyModule._get_module(self, module_name)
-   2343 def _get_module(self, module_name: str):
-   2344     try:
--> 2345         return importlib.import_module("." + module_name, self.__name__)
-   2346     except Exception as e:
-   2347         raise e
-
-File /usr/lib/python3.10/importlib/__init__.py:126, in import_module(name, package)
-    124             break
-    125         level += 1
---> 126 return _bootstrap._gcd_import(name[level:], package, level)
-
-File /usr/local/lib/python3.10/dist-packages/transformers/models/auto/tokenization_auto.py:40
-     31 from ...utils import (
-     32     cached_file,
-     33     extract_commit_hash,
-   (...)
-     37     logging,
-     38 )
-     39 from ..encoder_decoder import EncoderDecoderConfig
----> 40 from .auto_factory import _LazyAutoMapping
-     41 from .configuration_auto import (
-     42     CONFIG_MAPPING_NAMES,
-     43     AutoConfig,
-   (...)
-     46     replace_list_option_in_docstrings,
-     47 )
-     50 if is_tokenizers_available():
-
-File /usr/local/lib/python3.10/dist-packages/transformers/models/auto/auto_factory.py:43
-     39 from .configuration_auto import AutoConfig, model_type_to_module_name, replace_list_option_in_docstrings
-     42 if is_torch_available():
----> 43     from ...generation import GenerationMixin
-     46 logger = logging.get_logger(__name__)
-     48 _T = TypeVar("_T")
+File <frozen importlib._bootstrap>:1075, in _handle_fromlist(module, fromlist, import_, recursive)
 
 File /usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py:2317, in _LazyModule.__getattr__(self, name)
    2315 elif name in self._class_to_module:
@@ -166,81 +41,90 @@ File /usr/lib/python3.10/importlib/__init__.py:126, in import_module(name, packa
     125         level += 1
 --> 126 return _bootstrap._gcd_import(name[level:], package, level)
 
-File /usr/local/lib/python3.10/dist-packages/transformers/generation/utils.py:55
-     45 from ..tokenization_utils import ExtensionsTrie
-     46 from ..utils import (
-     47     ModelOutput,
-     48     TransformersKwargs,
+File /usr/local/lib/python3.10/dist-packages/transformers/pipelines/__init__.py:64
+     51 from .base import (
+     52     ArgumentHandler,
+     53     CsvPipelineDataFormat,
    (...)
-     53     logging,
-     54 )
----> 55 from .candidate_generator import (
-     56     AssistantVocabTranslatorCache,
-     57     AssistedCandidateGenerator,
-     58     AssistedCandidateGeneratorDifferentTokenizers,
-     59     CandidateGenerator,
-     60     EarlyExitCandidateGenerator,
-     61     PromptLookupCandidateGenerator,
-     62     UniversalSpeculativeDecodingGenerator,
-     63     _prepare_attention_mask,
-     64     _prepare_token_type_ids,
-     65 )
-     66 from .configuration_utils import (
-     67     ALL_STATIC_CACHE_IMPLEMENTATIONS,
-     68     DEPRECATED_STATIC_CACHE_IMPLEMENTATIONS,
+     61     infer_framework_load_model,
+     62 )
+     63 from .depth_estimation import DepthEstimationPipeline
+---> 64 from .document_question_answering import DocumentQuestionAnsweringPipeline
+     65 from .feature_extraction import FeatureExtractionPipeline
+     66 from .fill_mask import FillMaskPipeline
+
+File /usr/local/lib/python3.10/dist-packages/transformers/pipelines/document_question_answering.py:30
+     21 from ..utils import (
+     22     ExplicitEnum,
+     23     add_end_docstrings,
    (...)
-     71     GenerationMode,
-     72 )
-     73 from .continuous_batching import ContinuousMixin
+     27     logging,
+     28 )
+     29 from .base import ChunkPipeline, build_pipeline_init_args
+---> 30 from .question_answering import select_starts_ends
+     33 if is_vision_available():
+     34     from PIL import Image
 
-File /usr/local/lib/python3.10/dist-packages/transformers/generation/candidate_generator.py:29
-     25 from ..utils import is_sklearn_available
-     28 if is_sklearn_available():
----> 29     from sklearn.metrics import roc_curve
-     31 from ..pytorch_utils import isin_mps_friendly
-     32 from .logits_process import LogitsProcessorList, MinLengthLogitsProcessor, SuppressTokensLogitsProcessor
+File /usr/local/lib/python3.10/dist-packages/transformers/pipelines/question_answering.py:9
+      5 from typing import TYPE_CHECKING, Optional, Union
+      7 import numpy as np
+----> 9 from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
+     10 from ..modelcard import ModelCard
+     11 from ..tokenization_utils import PreTrainedTokenizer
 
-File /usr/local/lib/python3.10/dist-packages/sklearn/__init__.py:82
-     80 from . import _distributor_init  # noqa: F401
-     81 from . import __check_build  # noqa: F401
----> 82 from .base import clone
-     83 from .utils._show_versions import show_versions
-     85 __all__ = [
-     86     "calibration",
-     87     "cluster",
+File /usr/local/lib/python3.10/dist-packages/transformers/data/__init__.py:15
+      1 # Copyright 2020 The HuggingFace Team. All rights reserved.
+      2 #
+      3 # Licensed under the Apache License, Version 2.0 (the "License");
    (...)
-    128     "show_versions",
-    129 ]
+     12 # See the License for the specific language governing permissions and
+     13 # limitations under the License.
+---> 15 from .data_collator import (
+     16     DataCollatorForLanguageModeling,
+     17     DataCollatorForMultipleChoice,
+     18     DataCollatorForPermutationLanguageModeling,
+     19     DataCollatorForSeq2Seq,
+     20     DataCollatorForSOP,
+     21     DataCollatorForTokenClassification,
+     22     DataCollatorForWholeWordMask,
+     23     DataCollatorWithFlattening,
+     24     DataCollatorWithPadding,
+     25     DefaultDataCollator,
+     26     default_data_collator,
+     27 )
+     28 from .metrics import glue_compute_metrics, xnli_compute_metrics
+     29 from .processors import (
+     30     DataProcessor,
+     31     InputExample,
+   (...)
+     45     xnli_tasks_num_labels,
+     46 )
 
-File /usr/local/lib/python3.10/dist-packages/sklearn/base.py:17
-     15 from . import __version__
-     16 from ._config import get_config
----> 17 from .utils import _IS_32BIT
-     18 from .utils._set_output import _SetOutputMixin
-     19 from .utils._tags import (
-     20     _DEFAULT_TAGS,
-     21 )
+File /usr/local/lib/python3.10/dist-packages/transformers/data/data_collator.py:763
+    757             batch["decoder_input_ids"] = decoder_input_ids
+    759         return batch
+    762 @dataclass
+--> 763 class DataCollatorForLanguageModeling(DataCollatorMixin):
+    764     """
+    765     Data collator used for language modeling. Inputs are dynamically padded to the maximum length of a batch if they
+    766     are not all of the same length.
+   (...)
+    823     </Tip>
+    824     """
+    826     tokenizer: PreTrainedTokenizerBase
 
-File /usr/local/lib/python3.10/dist-packages/sklearn/utils/__init__.py:17
-     15 import warnings
-     16 import numpy as np
----> 17 from scipy.sparse import issparse
-     19 from .murmurhash import murmurhash3_32
-     20 from .class_weight import compute_class_weight, compute_sample_weight
+File /usr/local/lib/python3.10/dist-packages/transformers/data/data_collator.py:1233, in DataCollatorForLanguageModeling()
+   1228     # The rest of the time (10% of the time) we keep the masked input tokens unchanged
+   1229     return inputs, labels
+   1231 @staticmethod
+   1232 def _calc_word_ids_and_prob_mask(
+-> 1233     offsets: np.ndarray[np.ndarray[tuple[int, int]]], special_tokens_mask: np.ndarray[np.ndarray[int]]
+   1234 ) -> tuple[np.ndarray[np.ndarray[int]], np.ndarray[np.ndarray[int]]]:
+   1235     """
+   1236     Map tokens to word ids and create mask of tokens to not mask.
+   1237     Tokens that are part of the same word will have the same word id and we will only
+   1238     set a mask probability for the first token of each word.
+   1239     """
+   1241     token_starts = offsets[:, :, 0]
 
-File /usr/local/lib/python3.10/dist-packages/scipy/sparse/__init__.py:274
-    271 import warnings as _warnings
-    273 from ._base import *
---> 274 from ._csr import *
-    275 from ._csc import *
-    276 from ._lil import *
-
-File /usr/local/lib/python3.10/dist-packages/scipy/sparse/_csr.py:11
-      9 from ._matrix import spmatrix, _array_doc_to_matrix
-     10 from ._base import _spbase, sparray
----> 11 from ._sparsetools import (csr_tocsc, csr_tobsr, csr_count_blocks,
-     12                            get_csr_submatrix)
-     13 from ._sputils import upcast
-     15 from ._compressed import _cs_matrix
-
-ImportError: numpy.core.multiarray failed to import
+TypeError: Too few arguments for numpy.ndarray
