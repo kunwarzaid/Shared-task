@@ -84,3 +84,55 @@ for file in tqdm(sorted(os.listdir(input_dir))):
         f.write(json_summary)
 
 print("\n✅ Done! Summaries saved in:", output_dir)
+
+
+
+# -----------------------------
+# 4️⃣ Batch processing all files (safe JSON loading)
+# -----------------------------
+input_dir = "/workspace/SharedTask_NLPAI4Health_Train&dev_set/train/English/Dialogues"
+output_dir = "/workspace/outputs"
+os.makedirs(output_dir, exist_ok=True)
+
+print("Processing English dialogue files...\n")
+
+for file in tqdm(sorted(os.listdir(input_dir))):
+    if not file.endswith(".jsonl"):
+        continue
+
+    file_path = os.path.join(input_dir, file)
+    dialogues = []
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue  # skip blank lines
+            try:
+                obj = json.loads(line)
+                if "dialogue" in obj:
+                    speaker = obj.get("speaker", "")
+                    text = obj["dialogue"].strip()
+                    dialogues.append(f"{speaker}: {text}")
+            except json.JSONDecodeError:
+                # If malformed line, skip it
+                continue
+
+    if not dialogues:
+        print(f"⚠️ Skipped empty or invalid file: {file}")
+        continue
+
+    dialogue = "\n".join(dialogues)
+
+    # Generate summaries
+    text_summary = generate_summary(dialogue, mode="text")
+    json_summary = generate_summary(dialogue, mode="json")
+
+    # Save outputs
+    base = file.replace(".jsonl", "")
+    with open(os.path.join(output_dir, f"{base}_summary.txt"), "w", encoding="utf-8") as f:
+        f.write(text_summary)
+    with open(os.path.join(output_dir, f"{base}_summary.json"), "w", encoding="utf-8") as f:
+        f.write(json_summary)
+
+print("\n✅ Done! Summaries saved in:", output_dir)
+
