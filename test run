@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import os, json
 
 # Paths
-dialogue_path = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train/English/Dialogues/scenario_47_9ddd7f080a4f46a59cd173747b031943_IDX_05_1.jsonl"
+dialogue_path = "/workspace/SharedTask_NLPAI4Health_Train&dev_set//train/English/Dialogues/scenario_47_9ddd7f080a4f46a59cd173747b031943_IDX_05_1.jsonl"
 output_dir = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test_outputs_english"
 os.makedirs(output_dir, exist_ok=True)
 
@@ -43,7 +43,7 @@ Organize into sections like Context, Presentation, Assessment, Plan, and Follow-
 
 Dialogue:
 {dialogue_text}
-English Summary:
+### English Summary:
 """
 
 p_json = f"""Extract structured clinical information from the dialogue.
@@ -53,7 +53,7 @@ management_plan, follow_up_plan, patient_concerns_preferences_consent.
 
 Dialogue:
 {dialogue_text}
-JSON:
+### JSON:
 """
 
 p_qna = f"""Generate about 8–12 patient questions and answers based on the dialogue.
@@ -62,7 +62,7 @@ Return JSON as:
 
 Dialogue:
 {dialogue_text}
-JSON:
+### JSON:
 """
 
 # ---------- Generate ----------
