@@ -1,8 +1,32 @@
+# ====================================================
+# SharedTask_NLPAI4Health — English Summarization
+# ====================================================
 from transformers import pipeline
+import os, json
+from tqdm import tqdm
 
-# Load once
+# -----------------------------
+# 1️⃣ Load lightweight model
+# -----------------------------
+# You can replace 'google/gemma-2b-it' with any <3B model like 'mistralai/Mistral-7B-Instruct-v0.2' (if allowed GPU)
 summarizer = pipeline("text-generation", model="google/gemma-2b-it", device_map="auto")
 
+# -----------------------------
+# 2️⃣ Helper: clean output
+# -----------------------------
+def clean_output(result, mode="text"):
+    if mode == "text":
+        return result.split("### Response:")[-1].strip()
+    elif mode == "json":
+        txt = result.split("### JSON Output:")[-1].strip()
+        # ensure valid JSON-like output
+        start, end = txt.find("{"), txt.rfind("}")
+        return txt[start:end+1] if start != -1 and end != -1 else txt
+    return result.strip()
+
+# -----------------------------
+# 3️⃣ Summarization generator
+# -----------------------------
 def generate_summary(dialogue, mode="text"):
     if mode == "text":
         prompt = f"""
@@ -14,7 +38,7 @@ Dialogue:
 
 ### Response:
 """
-    elif mode == "json":
+    else:  # mode == "json"
         prompt = f"""
 Extract structured clinical information from the following dialogue.
 Return valid JSON with keys:
@@ -27,9 +51,36 @@ Dialogue:
 
 ### JSON Output:
 """
-    else:
-        raise ValueError("mode must be 'text' or 'json'")
+    raw = summarizer(prompt, max_new_tokens=600, do_sample=False)[0]["generated_text"]
+    return clean_output(raw, mode)
 
-    result = summarizer(prompt, max_new_tokens=600, do_sample=False)[0]["generated_text"]
-    # Strip prompt text cleanly
-    return result.split("### Response:")[-1].split("### JSON Output:")[-1].strip()
+# -----------------------------
+# 4️⃣ Batch processing all files
+# -----------------------------
+input_dir = "/workspace/SharedTask_NLPAI4Health_Train&dev_set/train/English/Dialogues"
+output_dir = "/workspace/outputs"
+os.makedirs(output_dir, exist_ok=True)
+
+print("Processing English dialogue files...\n")
+
+for file in tqdm(sorted(os.listdir(input_dir))):
+    if not file.endswith(".jsonl"):
+        continue
+    
+    file_path = os.path.join(input_dir, file)
+    with open(file_path, "r") as f:
+        # combine lines (some files contain multiple dialogue segments)
+        dialogue = "\n".join([json.loads(line)["dialogue"] for line in f])
+    
+    # Generate outputs
+    text_summary = generate_summary(dialogue, mode="text")
+    json_summary = generate_summary(dialogue, mode="json")
+
+    # Save to output folder
+    base = file.replace(".jsonl", "")
+    with open(os.path.join(output_dir, f"{base}_summary.txt"), "w") as f:
+        f.write(text_summary)
+    with open(os.path.join(output_dir, f"{base}_summary.json"), "w") as f:
+        f.write(json_summary)
+
+print("\n✅ Done! Summaries saved in:", output_dir)
