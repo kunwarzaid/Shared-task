@@ -1,0 +1,83 @@
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from tqdm import tqdm
+import torch, json, os
+
+# ✅ Paths
+input_dir = "/workspace/SharedTask_NLPAI4Health_Train&dev_set/train/English/Dialogues"
+output_dir = "/workspace/outputs_text_summaries"
+os.makedirs(output_dir, exist_ok=True)
+
+# ✅ Load model (you can change model_name as needed)
+model_name = "google/gemma-2b-it"  # or try "mistralai/Mistral-7B-Instruct-v0.2"
+print("🔹 Loading multilingual model...")
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    device_map="auto",
+    torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32
+)
+
+summarizer = pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    device=0 if torch.cuda.is_available() else -1
+)
+
+# ✅ Helper: Load dialogues safely
+def load_dialogue(filepath):
+    lines = []
+    with open(filepath, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                obj = json.loads(line.strip())
+                speaker = obj.get("speaker", "")
+                text = obj.get("dialogue", "")
+                lines.append(f"{speaker}: {text}")
+            except json.JSONDecodeError:
+                continue
+    return "\n".join(lines)
+
+# ✅ Helper: Summarize a batch of dialogues
+def summarize_batch(dialogue_batch):
+    prompts = [
+        f"Summarize the following doctor–patient dialogue in English.\n"
+        f"Organize into sections like Context, Presentation, Assessment, Plan, and Follow-up.\n\nDialogue:\n{dialogue}"
+        for dialogue in dialogue_batch
+    ]
+    results = summarizer(
+        prompts,
+        max_new_tokens=400,
+        do_sample=True,
+        temperature=0.7,
+        top_p=0.9
+    )
+    return [r[0]["generated_text"] for r in results]
+
+# ✅ Collect dialogues
+dialogues, file_names = [], []
+for file in sorted(os.listdir(input_dir)):
+    if not file.endswith(".jsonl"):
+        continue
+    path = os.path.join(input_dir, file)
+    text = load_dialogue(path)
+    if text.strip():
+        dialogues.append(text)
+        file_names.append(file)
+
+print(f"📁 Found {len(dialogues)} dialogues to summarize.\n")
+
+# ✅ Process in batches for efficiency
+batch_size = 4
+for i in tqdm(range(0, len(dialogues), batch_size)):
+    batch = dialogues[i:i+batch_size]
+    names = file_names[i:i+batch_size]
+
+    outputs = summarize_batch(batch)
+    for name, summary in zip(names, outputs):
+        output_path = os.path.join(output_dir, name.replace(".jsonl", "_summary.txt"))
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(summary)
+
+print("✅ Summarization complete! Check:", output_dir)
