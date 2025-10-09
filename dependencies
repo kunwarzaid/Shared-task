@@ -1,0 +1,3 @@
+pip install --upgrade torch torchvision torchaudio
+pip install --upgrade transformers peft accelerate bitsandbytes datasets sentencepiece
+pip install evaluate rouge-score sacrebleu
