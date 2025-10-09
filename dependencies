@@ -1,3 +1,6 @@
 pip install --upgrade torch torchvision torchaudio
 pip install --upgrade transformers peft accelerate bitsandbytes datasets sentencepiece
 pip install evaluate rouge-score sacrebleu
+pip install -U "transformers>=4.45.1" accelerate bitsandbytes peft datasets sentencepiece evaluate
+# Optional metric libs
+pip install rouge-score sacrebleu
