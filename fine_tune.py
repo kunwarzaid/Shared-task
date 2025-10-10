@@ -1,5 +1,3 @@
-
-
 import os
 import json
 import zipfile
@@ -7,29 +5,24 @@ from pathlib import Path
 from typing import List, Dict
 
 import torch
-from datasets import Dataset, load_metric
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    Trainer,
-    TrainingArguments,
-    DataCollatorWithPadding
-)
+#import evaluate
+from datasets import Dataset
+from transformers import  AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorWithPadding
 from peft import LoraConfig, get_peft_model
 from transformers import BitsAndBytesConfig
 
 ZIP_PATH = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Traindev_s.zip"
-EXTRACT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Traindev_s"
-TRAIN_ROOT = os.path.join(EXTRACT_DIR, "train")
-DEV_ROOT = os.path.join(EXTRACT_DIR, "dev")
+DATA_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
+#TRAIN_ROOT = os.path.join(EXTRACT_DIR, "train")
+#DEV_ROOT = os.path.join(EXTRACT_DIR, "dev")
 OUTPUT_DIR = "/workspace/data/KZ_2117574/gemma1b_qlora_multilingual_finetune"
 BASE_MODEL =  "/workspace/data/KZ_2117574/gemma_3_1b"
 
 
-if not os.path.exists(DATA_DIR):
-    with zipfile.ZipFile(ZIP_PATH, "r") as zf:
-        zf.extractall("/workspace/data")
-    print("Data unzipped!")
+#if not os.path.exists(DATA_DIR):
+ #   with zipfile.ZipFile(ZIP_PATH, "r") as zf:
+  #      zf.extractall("/workspace/data/KZ_2117574")
+   # print("Data unzipped!")
 
 
 def read_jsonl(path):
@@ -136,5 +129,4 @@ print("Starting fine-tuning...")
 trainer.train()
 trainer.save_model(OUTPUT_DIR)
 tokenizer.save_pretrained(OUTPUT_DIR)
-print("✅ Training complete! Model saved to:", OUTPUT_DIR)
-
+print("Training complete! Model saved to:", OUTPUT_DIR)
