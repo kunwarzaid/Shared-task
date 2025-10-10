@@ -40,7 +40,6 @@ def read_jsonl(path):
     return records
 
 
-# --- FIXED make_examples ---
 def make_examples(root):
     examples = []
 
@@ -62,10 +61,12 @@ def make_examples(root):
                 dlg_path = os.path.join(dlg_dir, fn)
                 records = read_jsonl(dlg_path)
 
-                # Safely join dialogue text
+                # Flatten any list entries and safely convert all to strings
                 dialogue_text = "\n".join([
-                    item["dialogue"] if isinstance(item, dict) and "dialogue" in item else str(item)
-                    for item in records
+                    " ".join(x["dialogue"]) if isinstance(x.get("dialogue"), list)
+                    else str(x.get("dialogue", "")) if isinstance(x, dict)
+                    else str(x)
+                    for x in records
                 ])
 
                 sum_path = os.path.join(sum_dir, fn.replace(".jsonl", "_summary.txt"))
@@ -102,6 +103,7 @@ def make_examples(root):
                     examples.append({"text": prompt, "labels": a})
 
     return examples
+
 
 
 # --- LOAD DATA ---
