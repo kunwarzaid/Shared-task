@@ -1,93 +1,213 @@
-def make_examples(root):
-    examples = []
+ Skipped malformed QnA file scenario_43_bcb6ac84b7f043228d6b5be2372f34b7_IDX_02_3_questions.json: 'utf-8' codec can't decode byte 0xe0 in position 12287: unexpected end of data
+✅ Loaded 223297 examples from /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train
+✅ Loaded 13262 examples from /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/dev
+✅ Loaded 223297 train and 13262 dev examples
+trainable params: 745,472 || all params: 1,000,631,424 || trainable%: 0.07450015881172246
 
-    for lang in os.listdir(root):
-        lang_path = os.path.join(root, lang)
-        if not os.path.isdir(lang_path):
-            continue
+Map:   0%|          | 0/223297 [00:00<?, ? examples/s]
+�/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py:4034: UserWarning: `as_target_tokenizer` is deprecated and will be removed in v5 of Transformers. You can tokenize your labels by using the argument `text_target` of the regular `__call__` method (either in the same call as your input texts if you use the same keyword arguments, or in a separate call.
+  warnings.warn(
 
-        dlg_dir = os.path.join(lang_path, "Dialogues")
-        sum_dir = os.path.join(lang_path, "Summary_Text")
-        qna_dir = os.path.join(lang_path, "QnA")
+Map:   0%|          | 1000/223297 [00:02<08:20, 443.71 examples/s]
+Map:   1%|          | 2000/223297 [00:04<07:54, 466.79 examples/s]
+Map:   1%|▏         | 3000/223297 [00:06<07:45, 473.18 examples/s]
+Map:   2%|▏         | 4000/223297 [00:07<06:39, 549.10 examples/s]
+Map:   2%|▏         | 5000/223297 [00:07<04:25, 822.02 examples/s]
+Map:   3%|▎         | 6000/223297 [00:08<03:04, 1180.08 examples/s]
+Map:   3%|▎         | 7000/223297 [00:08<02:12, 1627.41 examples/s]
+Map:   4%|▎         | 8000/223297 [00:08<01:53, 1891.85 examples/s]
+Map:   4%|▍         | 9000/223297 [00:08<01:26, 2464.41 examples/s]
+Map:   4%|▍         | 10000/223297 [00:08<01:08, 3102.77 examples/s]
+Map:   5%|▍         | 11000/223297 [00:08<00:55, 3806.49 examples/s]
+Map:   5%|▌         | 12000/223297 [00:09<00:46, 4501.72 examples/s]
+Map:   6%|▌         | 13000/223297 [00:09<01:28, 2364.87 examples/s]
+Map:   6%|▋         | 14000/223297 [00:11<02:35, 1342.65 examples/s]
+Map:   7%|▋         | 15000/223297 [00:12<03:23, 1022.46 examples/s]
+Map:   7%|▋         | 16000/223297 [00:14<03:52, 889.83 examples/s] 
+Map:   8%|▊         | 17000/223297 [00:15<03:34, 963.08 examples/s]
+Map:   8%|▊         | 18000/223297 [00:15<02:39, 1289.34 examples/s]
+Map:   9%|▊         | 19000/223297 [00:15<01:59, 1703.14 examples/s]
+Map:   9%|▉         | 20000/223297 [00:15<01:32, 2197.23 examples/s]
+Map:   9%|▉         | 21000/223297 [00:15<01:13, 2738.09 examples/s]
+Map:  10%|▉         | 22000/223297 [00:16<01:01, 3298.45 examples/s]
+Map:  10%|█         | 23000/223297 [00:16<00:59, 3373.74 examples/s]
+Map:  11%|█         | 24000/223297 [00:16<00:50, 3970.90 examples/s]
+Map:  11%|█         | 25000/223297 [00:16<00:44, 4490.23 examples/s]
+Map:  12%|█▏        | 26000/223297 [00:16<00:39, 4948.61 examples/s]
+Map:  12%|█▏        | 27000/223297 [00:16<00:36, 5376.49 examples/s]
+Map:  13%|█▎        | 28000/223297 [00:17<00:36, 5398.95 examples/s]
+Map:  13%|█▎        | 29000/223297 [00:18<01:58, 1634.91 examples/s]
+Map:  13%|█▎        | 30000/223297 [00:20<02:56, 1098.22 examples/s]
+Map:  14%|█▍        | 31000/223297 [00:21<03:36, 886.87 examples/s] 
+Map:  14%|█▍        | 32000/223297 [00:23<04:08, 770.39 examples/s]
+Map:  15%|█▍        | 33000/223297 [00:24<03:53, 815.13 examples/s]
+Map:  15%|█▌        | 34000/223297 [00:24<02:52, 1099.75 examples/s]
+Map:  16%|█▌        | 35000/223297 [00:25<02:08, 1467.90 examples/s]
+Map:  16%|█▌        | 36000/223297 [00:25<01:37, 1918.93 examples/s]
+Map:  17%|█▋        | 37000/223297 [00:25<01:16, 2441.85 examples/s]
+Map:  17%|█▋        | 38000/223297 [00:26<01:49, 1695.37 examples/s]
+Map:  17%|█▋        | 39000/223297 [00:28<03:15, 942.39 examples/s] 
+Map:  18%|█▊        | 40000/223297 [00:30<04:05, 746.11 examples/s]
+Map:  18%|█▊        | 41000/223297 [00:32<04:43, 642.22 examples/s]
+Map:  19%|█▉        | 42000/223297 [00:34<05:03, 597.30 examples/s]
+Map:  19%|█▉        | 43000/223297 [00:36<05:17, 567.14 examples/s]
+Map:  20%|█▉        | 44000/223297 [00:38<05:25, 550.33 examples/s]
+Map:  20%|██        | 45000/223297 [00:40<05:13, 568.11 examples/s]
+Map:  21%|██        | 46000/223297 [00:40<03:44, 789.02 examples/s]
+Map:  21%|██▏       | 48000/223297 [00:40<02:07, 1378.15 examples/s]
+Map:  22%|██▏       | 50000/223297 [00:40<01:22, 2112.83 examples/s]
+Map:  23%|██▎       | 52000/223297 [00:40<00:57, 2983.57 examples/s]
+Map:  24%|██▎       | 53000/223297 [00:40<00:53, 3166.64 examples/s]
+Map:  25%|██▍       | 55000/223297 [00:41<00:39, 4308.89 examples/s]
+Map:  26%|██▌       | 57000/223297 [00:41<00:30, 5473.12 examples/s]
+Map:  26%|██▋       | 59000/223297 [00:41<00:24, 6617.35 examples/s]
+Map:  27%|██▋       | 61000/223297 [00:41<00:21, 7664.02 examples/s]
+Map:  28%|██▊       | 63000/223297 [00:41<00:19, 8409.35 examples/s]
+Map:  29%|██▉       | 65000/223297 [00:42<00:17, 9099.45 examples/s]
+Map:  30%|███       | 67000/223297 [00:42<00:16, 9585.28 examples/s]
+Map:  31%|███       | 69000/223297 [00:42<00:18, 8320.21 examples/s]
+Map:  32%|███▏      | 71000/223297 [00:42<00:17, 8937.00 examples/s]
+Map:  33%|███▎      | 73000/223297 [00:42<00:15, 9508.08 examples/s]
+Map:  34%|███▎      | 75000/223297 [00:43<00:14, 10035.61 examples/s]
+Map:  34%|███▍      | 77000/223297 [00:43<00:14, 10347.31 examples/s]
+Map:  35%|███▌      | 79000/223297 [00:43<00:13, 10460.29 examples/s]
+Map:  36%|███▋      | 81000/223297 [00:43<00:13, 10675.43 examples/s]
+Map:  37%|███▋      | 83000/223297 [00:43<00:16, 8688.43 examples/s] 
+Map:  38%|███▊      | 85000/223297 [00:44<00:14, 9336.37 examples/s]
+Map:  39%|███▉      | 87000/223297 [00:44<00:13, 9838.61 examples/s]
+Map:  40%|███▉      | 89000/223297 [00:44<00:13, 10152.91 examples/s]
+Map:  41%|████      | 91000/223297 [00:44<00:12, 10379.17 examples/s]
+Map:  42%|████▏     | 93000/223297 [00:44<00:12, 10604.80 examples/s]
+Map:  43%|████▎     | 95000/223297 [00:44<00:11, 10726.78 examples/s]
+Map:  43%|████▎     | 97000/223297 [00:45<00:11, 10773.53 examples/s]
+Map:  44%|████▍     | 99000/223297 [00:45<00:14, 8696.40 examples/s] 
+Map:  45%|████▌     | 101000/223297 [00:45<00:13, 9277.54 examples/s]
+Map:  46%|████▌     | 103000/223297 [00:45<00:12, 9704.73 examples/s]
+Map:  47%|████▋     | 105000/223297 [00:46<00:11, 10111.06 examples/s]
+Map:  48%|████▊     | 107000/223297 [00:46<00:11, 10413.22 examples/s]
+Map:  49%|████▉     | 109000/223297 [00:46<00:10, 10581.70 examples/s]
+Map:  50%|████▉     | 111000/223297 [00:46<00:10, 10712.65 examples/s]
+Map:  51%|█████     | 113000/223297 [00:46<00:12, 8490.34 examples/s] 
+Map:  52%|█████▏    | 115000/223297 [00:47<00:11, 9164.76 examples/s]
+Map:  52%|█████▏    | 117000/223297 [00:47<00:10, 9706.48 examples/s]
+Map:  53%|█████▎    | 119000/223297 [00:47<00:10, 10118.93 examples/s]
+Map:  54%|█████▍    | 121000/223297 [00:47<00:09, 10430.50 examples/s]
+Map:  55%|█████▌    | 123000/223297 [00:47<00:09, 10585.07 examples/s]
+Map:  56%|█████▌    | 125000/223297 [00:48<00:09, 10828.90 examples/s]
+Map:  57%|█████▋    | 127000/223297 [00:48<00:08, 10922.16 examples/s]
+Map:  58%|█████▊    | 129000/223297 [00:48<00:10, 8795.21 examples/s] 
+Map:  59%|█████▊    | 131000/223297 [00:48<00:09, 9397.58 examples/s]
+Map:  60%|█████▉    | 133000/223297 [00:48<00:09, 9841.53 examples/s]
+Map:  60%|██████    | 135000/223297 [00:49<00:08, 10231.22 examples/s]
+Map:  61%|██████▏   | 137000/223297 [00:49<00:08, 10504.88 examples/s]
+Map:  62%|██████▏   | 139000/223297 [00:49<00:07, 10809.46 examples/s]
+Map:  63%|██████▎   | 141000/223297 [00:50<00:19, 4166.71 examples/s] 
+Map:  64%|██████▎   | 142000/223297 [00:52<00:38, 2121.04 examples/s]
+Map:  64%|██████▍   | 143000/223297 [00:53<00:58, 1362.16 examples/s]
+Map:  64%|██████▍   | 144000/223297 [00:55<01:13, 1074.67 examples/s]
+Map:  65%|██████▍   | 145000/223297 [00:57<01:25, 912.45 examples/s] 
+Map:  65%|██████▌   | 146000/223297 [00:58<01:35, 807.85 examples/s]
+Map:  66%|██████▌   | 147000/223297 [00:59<01:17, 979.08 examples/s]
+Map:  66%|██████▋   | 148000/223297 [00:59<00:58, 1285.10 examples/s]
+Map:  67%|██████▋   | 149000/223297 [00:59<00:44, 1673.67 examples/s]
+Map:  67%|██████▋   | 150000/223297 [00:59<00:34, 2147.30 examples/s]
+Map:  68%|██████▊   | 151000/223297 [00:59<00:26, 2695.09 examples/s]
+Map:  68%|██████▊   | 152000/223297 [00:59<00:21, 3309.39 examples/s]
+Map:  69%|██████▊   | 153000/223297 [01:00<00:17, 3968.26 examples/s]
+Map:  69%|██████▉   | 154000/223297 [01:00<00:15, 4579.25 examples/s]
+Map:  69%|██████▉   | 155000/223297 [01:00<00:13, 5152.92 examples/s]
+Map:  70%|██████▉   | 156000/223297 [01:00<00:11, 5668.29 examples/s]
+Map:  70%|███████   | 157000/223297 [01:00<00:10, 6093.80 examples/s]
+Map:  71%|███████   | 158000/223297 [01:00<00:12, 5082.19 examples/s]
+Map:  71%|███████   | 159000/223297 [01:01<00:11, 5628.39 examples/s]
+Map:  72%|███████▏  | 160000/223297 [01:01<00:10, 6032.97 examples/s]
+Map:  72%|███████▏  | 161000/223297 [01:01<00:09, 6319.21 examples/s]
+Map:  73%|███████▎  | 162000/223297 [01:01<00:09, 6560.50 examples/s]
+Map:  73%|███████▎  | 163000/223297 [01:01<00:08, 6736.12 examples/s]
+Map:  73%|███████▎  | 164000/223297 [01:01<00:08, 6938.89 examples/s]
+Map:  74%|███████▍  | 165000/223297 [01:01<00:08, 6833.81 examples/s]
+Map:  74%|███████▍  | 166000/223297 [01:01<00:08, 6920.87 examples/s]
+Map:  75%|███████▍  | 167000/223297 [01:02<00:08, 6643.80 examples/s]
+Map:  75%|███████▌  | 168000/223297 [01:02<00:08, 6764.52 examples/s]
+Map:  76%|███████▌  | 169000/223297 [01:02<00:07, 6879.18 examples/s]
+Map:  76%|███████▌  | 170000/223297 [01:02<00:07, 6950.65 examples/s]
+Map:  77%|███████▋  | 171000/223297 [01:02<00:07, 7009.03 examples/s]
+Map:  77%|███████▋  | 172000/223297 [01:02<00:07, 6981.79 examples/s]
+Map:  77%|███████▋  | 173000/223297 [01:03<00:21, 2356.58 examples/s]
+Map:  78%|███████▊  | 174000/223297 [01:06<00:59, 826.70 examples/s] 
+Map:  78%|███████▊  | 175000/223297 [01:08<01:06, 729.30 examples/s]
+Map:  79%|███████▉  | 176000/223297 [01:10<01:09, 681.18 examples/s]
+Map:  79%|███████▉  | 177000/223297 [01:12<01:11, 649.31 examples/s]
+Map:  80%|███████▉  | 178000/223297 [01:12<00:58, 768.02 examples/s]
+Map:  80%|████████  | 179000/223297 [01:13<00:42, 1046.11 examples/s]
+Map:  81%|████████  | 180000/223297 [01:13<00:30, 1408.13 examples/s]
+Map:  81%|████████  | 181000/223297 [01:13<00:22, 1856.79 examples/s]
+Map:  82%|████████▏ | 182000/223297 [01:13<00:17, 2399.07 examples/s]
+Map:  82%|████████▏ | 183000/223297 [01:13<00:13, 3012.46 examples/s]
+Map:  82%|████████▏ | 184000/223297 [01:13<00:10, 3671.25 examples/s]
+Map:  83%|████████▎ | 185000/223297 [01:13<00:08, 4289.14 examples/s]
+Map:  83%|████████▎ | 186000/223297 [01:13<00:07, 4898.34 examples/s]
+Map:  84%|████████▎ | 187000/223297 [01:15<00:18, 2011.99 examples/s]
+Map:  84%|████████▍ | 188000/223297 [01:17<00:35, 982.90 examples/s] 
+Map:  85%|████████▍ | 189000/223297 [01:19<00:45, 752.91 examples/s]
+Map:  85%|████████▌ | 190000/223297 [01:22<00:56, 586.07 examples/s]
+Map:  86%|████████▌ | 191000/223297 [01:24<00:57, 560.32 examples/s]
+Map:  86%|████████▌ | 192000/223297 [01:26<00:57, 539.85 examples/s]
+Map:  86%|████████▋ | 193000/223297 [01:27<00:49, 606.66 examples/s]
+Map:  87%|████████▋ | 194000/223297 [01:27<00:35, 834.91 examples/s]
+Map:  87%|████████▋ | 195000/223297 [01:27<00:24, 1142.00 examples/s]
+Map:  88%|████████▊ | 196000/223297 [01:27<00:17, 1537.84 examples/s]
+Map:  88%|████████▊ | 197000/223297 [01:27<00:12, 2028.66 examples/s]
+Map:  89%|████████▊ | 198000/223297 [01:28<00:15, 1604.04 examples/s]
+Map:  89%|████████▉ | 199000/223297 [01:30<00:27, 873.37 examples/s] 
+Map:  90%|████████▉ | 200000/223297 [01:33<00:34, 668.98 examples/s]
+Map:  90%|█████████ | 201000/223297 [01:35<00:38, 575.25 examples/s]
+Map:  90%|█████████ | 202000/223297 [01:37<00:40, 531.73 examples/s]
+Map:  91%|█████████ | 203000/223297 [01:40<00:41, 492.22 examples/s]
+Map:  91%|█████████▏| 204000/223297 [01:42<00:39, 493.58 examples/s]
+Map:  92%|█████████▏| 205000/223297 [01:42<00:26, 683.17 examples/s]
+Map:  92%|█████████▏| 206000/223297 [01:42<00:18, 939.54 examples/s]
+Map:  93%|█████████▎| 207000/223297 [01:42<00:12, 1276.40 examples/s]
+Map:  93%|█████████▎| 208000/223297 [01:42<00:08, 1700.14 examples/s]
+Map:  94%|█████████▎| 209000/223297 [01:42<00:06, 2221.14 examples/s]
+Map:  94%|█████████▍| 210000/223297 [01:43<00:04, 2829.34 examples/s]
+Map:  94%|█████████▍| 211000/223297 [01:43<00:03, 3483.81 examples/s]
+Map:  95%|█████████▍| 212000/223297 [01:43<00:02, 4189.63 examples/s]
+Map:  95%|█████████▌| 213000/223297 [01:43<00:02, 4863.23 examples/s]
+Map:  96%|█████████▌| 214000/223297 [01:43<00:01, 5472.67 examples/s]
+Map:  96%|█████████▋| 215000/223297 [01:43<00:01, 6033.52 examples/s]
+Map:  97%|█████████▋| 216000/223297 [01:43<00:01, 6588.61 examples/s]
+Map:  97%|█████████▋| 217000/223297 [01:43<00:00, 6941.42 examples/s]
+Map:  98%|█████████▊| 218000/223297 [01:45<00:02, 1817.96 examples/s]
+Map:  98%|█████████▊| 219000/223297 [01:47<00:03, 1108.13 examples/s]
+Map:  99%|█████████▊| 220000/223297 [01:48<00:03, 873.60 examples/s] 
+Map:  99%|█████████▉| 221000/223297 [01:51<00:03, 688.16 examples/s]
+Map:  99%|█████████▉| 222000/223297 [01:52<00:01, 657.69 examples/s]
+Map: 100%|█████████▉| 223000/223297 [01:52<00:00, 894.64 examples/s]
+Map: 100%|██████████| 223297/223297 [01:52<00:00, 1977.27 examples/s]
 
-        # --- Summarization ---
-        if os.path.isdir(dlg_dir) and os.path.isdir(sum_dir):
-            for fn in os.listdir(dlg_dir):
-                if not fn.endswith(".jsonl"):
-                    continue
-                dlg_path = os.path.join(dlg_dir, fn)
+Map:   0%|          | 0/13262 [00:00<?, ? examples/s]
+Map:   8%|▊         | 1000/13262 [00:00<00:04, 2651.69 examples/s]
+Map:  15%|█▌        | 2000/13262 [00:00<00:03, 3418.76 examples/s]
+Map:  23%|██▎       | 3000/13262 [00:00<00:02, 3624.52 examples/s]
+Map:  30%|███       | 4000/13262 [00:01<00:02, 3397.81 examples/s]
+Map:  38%|███▊      | 5000/13262 [00:01<00:01, 4429.43 examples/s]
+Map:  45%|████▌     | 6000/13262 [00:01<00:01, 4031.21 examples/s]
+Map:  53%|█████▎    | 7000/13262 [00:01<00:01, 3932.98 examples/s]
+Map:  60%|██████    | 8000/13262 [00:01<00:01, 4594.16 examples/s]
+Map:  68%|██████▊   | 9000/13262 [00:02<00:01, 3333.48 examples/s]
+Map:  75%|███████▌  | 10000/13262 [00:02<00:01, 3083.93 examples/s]
+Map:  83%|████████▎ | 11000/13262 [00:03<00:00, 3224.05 examples/s]
+Map:  90%|█████████ | 12000/13262 [00:03<00:00, 3799.93 examples/s]
+Map:  98%|█████████▊| 13000/13262 [00:03<00:00, 4372.03 examples/s]
+Map: 100%|██████████| 13262/13262 [00:03<00:00, 3812.74 examples/s]
 
-                dialogues = []
-                for x in read_jsonl(dlg_path):
-                    try:
-                        if isinstance(x, dict):
-                            val = x.get("dialogue", "")
-                        else:
-                            val = str(x)
-                        if isinstance(val, list):
-                            val = " ".join(map(str, val))
-                        dialogues.append(str(val))
-                    except Exception as e:
-                        print(f"⚠️ Skipped malformed dialogue line in {fn}: {e}")
-                        continue
+zTraceback (most recent call last):
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 189, in <module>
 
-                dialogue_text = "\n".join(dialogues).strip()
-                if not dialogue_text:
-                    continue
+    args = TrainingArguments(
+TypeError: TrainingArguments.__init__() got an unexpected keyword argument 'evaluation_strategy'
 
-                sum_path = os.path.join(sum_dir, fn.replace(".jsonl", "_summary.txt"))
-                if os.path.exists(sum_path):
-                    try:
-                        with open(sum_path, "r", encoding="utf-8") as f:
-                            summary = f.read().strip()
-                        if summary:
-                            prompt = (
-                                f"Summarize the following doctor–patient dialogue in English:\n"
-                                f"{dialogue_text}\nSummary:"
-                            )
-                            examples.append({"text": prompt, "labels": summary})
-                    except Exception as e:
-                        print(f"⚠️ Skipped summary {fn}: {e}")
+removing /jobs/275600
 
-        # --- QnA ---
-        if os.path.isdir(qna_dir):
-            for fn in os.listdir(qna_dir):
-                if not fn.endswith(".json"):
-                    continue
-
-                qna_path = os.path.join(qna_dir, fn)
-                try:
-                    with open(qna_path, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                except Exception as e:
-                    print(f"⚠️ Skipped malformed QnA file {fn}: {e}")
-                    continue
-
-                # Handle if data is not a dict
-                if not isinstance(data, dict):
-                    print(f"⚠️ Skipped {fn}: invalid JSON structure (not a dict)")
-                    continue
-
-                qs = data.get("questions", [])
-                if not isinstance(qs, list):
-                    continue
-
-                for qa in qs:
-                    try:
-                        if not isinstance(qa, dict):
-                            continue
-                        q = qa.get("question", "")
-                        a = qa.get("answer", "")
-                        if not q or not a:
-                            continue
-                        prompt = (
-                            "Answer the following question in the same language as the dialogue:\n"
-                            f"Question: {q}\nAnswer:"
-                        )
-                        examples.append({"text": prompt, "labels": a})
-                    except Exception as e:
-                        print(f"⚠️ Skipped malformed QA entry in {fn}: {e}")
-                        continue
-
-    print(f"✅ Loaded {len(examples)} examples from {root}")
-    return examples
+Failed to execute script
