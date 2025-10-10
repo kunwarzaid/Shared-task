@@ -1,3 +1,12 @@
+import os
+import json
+from pathlib import Path
+from typing import List, Dict
+
+import torch
+
+
+
 # ----------------------------- ACCELERATE COMPAT SHIM -----------------------------
 # Put this at the VERY TOP of your file (before importing transformers / Trainer)
 import sys, importlib, inspect, traceback
@@ -67,3 +76,289 @@ def accelerate_compat_shim():
 # Run the shim immediately (so it's active before transformers imports)
 accelerate_compat_shim()
 # -------------------------------------------------------------------------------
+
+
+from datasets import Dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    Trainer,
+    TrainingArguments,
+    DataCollatorForLanguageModeling
+)
+from peft import LoraConfig, get_peft_model
+from transformers import BitsAndBytesConfig
+
+
+# --- PATHS ---
+ZIP_PATH = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Traindev_s.zip"
+DATA_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/fast/gemma1b_qlora_multilingual_finetune"
+BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"
+
+
+# --- SAFE JSONL READER ---
+def read_jsonl(path):
+    """Read JSONL file safely, skip broken lines."""
+    records = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                # skip invalid lines
+                continue
+    return records
+
+
+def make_examples(root):
+    examples = []
+
+    for lang in os.listdir(root):
+        lang_path = os.path.join(root, lang)
+        if not os.path.isdir(lang_path):
+            continue
+
+        dlg_dir = os.path.join(lang_path, "Dialogues")
+        sum_dir = os.path.join(lang_path, "Summary_Text")
+        qna_dir = os.path.join(lang_path, "QnA")
+
+        # --- Summarization ---
+        if os.path.isdir(dlg_dir) and os.path.isdir(sum_dir):
+            for fn in os.listdir(dlg_dir):
+                if not fn.endswith(".jsonl"):
+                    continue
+                dlg_path = os.path.join(dlg_dir, fn)
+
+                dialogues = []
+                for x in read_jsonl(dlg_path):
+                    try:
+                        if isinstance(x, dict):
+                            val = x.get("dialogue", "")
+                        else:
+                            val = str(x)
+                        if isinstance(val, list):
+                            val = " ".join(map(str, val))
+                        dialogues.append(str(val))
+                    except Exception as e:
+                        print(f"⚠️ Skipped malformed dialogue line in {fn}: {e}")
+                        continue
+
+                dialogue_text = "\n".join(dialogues).strip()
+                if not dialogue_text:
+                    continue
+
+                sum_path = os.path.join(sum_dir, fn.replace(".jsonl", "_summary.txt"))
+                if os.path.exists(sum_path):
+                    try:
+                        with open(sum_path, "r", encoding="utf-8") as f:
+                            summary = f.read().strip()
+                        if summary:
+                            prompt = (
+                                f"Summarize the following doctor–patient dialogue in English:\n"
+                                f"{dialogue_text}\nSummary:"
+                            )
+                            examples.append({"text": prompt, "labels": summary})
+                    except Exception as e:
+                        print(f"⚠️ Skipped summary {fn}: {e}")
+
+        # --- QnA ---
+        if os.path.isdir(qna_dir):
+            for fn in os.listdir(qna_dir):
+                if not fn.endswith(".json"):
+                    continue
+
+                qna_path = os.path.join(qna_dir, fn)
+                try:
+                    with open(qna_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception as e:
+                    print(f"⚠️ Skipped malformed QnA file {fn}: {e}")
+                    continue
+
+                # Handle if data is not a dict
+                if not isinstance(data, dict):
+                    print(f"⚠️ Skipped {fn}: invalid JSON structure (not a dict)")
+                    continue
+
+                qs = data.get("questions", [])
+                if not isinstance(qs, list):
+                    continue
+
+                for qa in qs:
+                    try:
+                        if not isinstance(qa, dict):
+                            continue
+                        q = qa.get("question", "")
+                        a = qa.get("answer", "")
+                        if not q or not a:
+                            continue
+                        prompt = (
+                            "Answer the following question in the same language as the dialogue:\n"
+                            f"Question: {q}\nAnswer:"
+                        )
+                        examples.append({"text": prompt, "labels": a})
+                    except Exception as e:
+                        print(f"⚠️ Skipped malformed QA entry in {fn}: {e}")
+                        continue
+
+    print(f" Loaded {len(examples)} examples from {root}")
+    return examples
+
+
+
+# --- LOAD DATA ---
+train_data = make_examples(os.path.join(DATA_DIR, "train"))
+dev_data = make_examples(os.path.join(DATA_DIR, "dev"))
+print(f"Loaded {len(train_data)} train and {len(dev_data)} dev examples")
+
+
+# --- MODEL + QLoRA ---
+bnb_cfg = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL,use_fast=True)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL,
+    device_map="auto",
+    quantization_config=bnb_cfg
+)
+
+# Apply LoRA
+lora_cfg = LoraConfig(
+    r=8,
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj"],
+    lora_dropout=0.05,
+    task_type="CAUSAL_LM"
+)
+model = get_peft_model(model, lora_cfg)
+model.print_trainable_parameters()
+
+
+# --- TOKENIZATION ---
+def tokenize_fn(examples):
+
+    model_inputs = tokenizer(examples["text"], truncation=True, max_length=1024,padding=False)
+    labels = tokenizer(text_target=examples["labels"], truncation=True, max_length=1024,padding=False)
+    model_inputs["labels"] = labels["input_ids"]
+    return model_inputs
+
+
+train_ds = Dataset.from_list(train_data)
+train_ds= train_ds.map(tokenize_fn, batched=True, num_proc=4, remove_columns=["text","labels"])
+dev_ds = Dataset.from_list(dev_data).map(tokenize_fn, batched=True)
+
+from transformers import DataCollatorWithPadding
+data_collator = DataCollatorWithPadding(tokenizer,padding="longest",return_tensors="pt")
+
+# --- TRAINING ---
+args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=8,
+    num_train_epochs=2,
+    learning_rate=2e-4,
+    fp16=True,
+    eval_strategy="epoch",
+    save_strategy="epoch",
+    logging_steps=20,
+    report_to="none"
+)
+
+collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+
+trainer = Trainer(
+    model=model,
+    args=args,
+    train_dataset=train_ds,
+    eval_dataset=dev_ds,
+    data_collator=data_collator
+)
+
+print("Starting fine-tuning...")
+trainer.train()
+trainer.save_model(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
+print("Training complete! Model saved to:", OUTPUT_DIR)
+Error:
+Starting fine-tuning...
+
+  0%|          | 0/55826 [00:00<?, ?it/s]
+�Traceback (most recent call last):
+  File "/workspace/table-to-text-flan-t5/finetune_sharedtask_fast.py", line 290, in <module>
+
+r    trainer.train()
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2325, in train
+
+�    return inner_training_loop(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2674, in _inner_training_loop
+
+�    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 4020, in training_step
+
+�    loss = self.compute_loss(model, inputs, num_items_in_batch=num_items_in_batch)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 4110, in compute_loss
+
+�    outputs = model(**inputs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+
+�    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+
+�    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/accelerate/utils/operations.py", line 820, in forward
+
+�    return model_forward(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/accelerate/utils/operations.py", line 808, in __call__
+
+�    return convert_to_fp32(self.model_forward(*args, **kwargs))
+  File "/usr/local/lib/python3.10/dist-packages/torch/amp/autocast_mode.py", line 16, in decorate_autocast
+
+|    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/peft/peft_model.py", line 1129, in forward
+
+�    return self.base_model(
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+
+�    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+
+�    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/peft/tuners/tuners_utils.py", line 161, in forward
+
+�    return self.model.forward(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/accelerate/hooks.py", line 170, in new_forward
+
+�    output = module._old_forward(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/generic.py", line 918, in wrapper
+
+�    output = func(self, *args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/models/gemma3/modeling_gemma3.py", line 682, in forward
+
+�    loss = self.loss_function(logits, labels, self.vocab_size, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/loss/loss_utils.py", line 67, in ForCausalLMLoss
+    loss = fixed_cross_entropy(logits, shift_labels, num_items_in_batch, ignore_index, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/loss/loss_utils.py", line 36, in fixed_cross_entropy
+
+�    loss = nn.functional.cross_entropy(source, target, ignore_index=ignore_index, reduction=reduction)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/functional.py", line 3059, in cross_entropy
+
+�    return torch._C._nn.cross_entropy_loss(input, target, weight, _Reduction.get_enum(reduction), ignore_index, label_smoothing)
+ValueError: Expected input batch_size (47) to match target batch_size (120).
+
+  0%|          | 0/55826 [00:03<?, ?it/s]
+
+removing /jobs/275659
+
+Failed to execute script
