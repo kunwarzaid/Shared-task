@@ -1,72 +1,16 @@
-�Could not find the bitsandbytes CUDA binary at PosixPath('/usr/local/lib/python3.10/dist-packages/bitsandbytes/libbitsandbytes_cuda128_nocublaslt.so')
 
-�The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers, 8-bit multiplication, and GPU quantization are unavailable.
+�WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
 
-�Traceback (most recent call last):
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2317, in __getattr__
+yTraceback (most recent call last):
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 73, in <module>
 
-�    module = self._get_module(self._class_to_module[name])
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2347, in _get_module
+�    train_data = make_examples(os.path.join(DATA_DIR,"train"))
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 53, in make_examples
 
-{    raise e
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2345, in _get_module
+�    text = "\n".join([x.get("dialogue","") for x in read_jsonl(dlg_path)])
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 53, in <listcomp>
 
-�    return importlib.import_module("." + module_name, self.__name__)
-  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    text = "\n".join([x.get("dialogue","") for x in read_jsonl(dlg_path)])
+AttributeError: 'str' object has no attribute 'get'
 
-�    return _bootstrap._gcd_import(name[level:], package, level)
-  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
-
-E  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
-
-N  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
-
-D  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
-
-J  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
-
-�  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 220, in <module>
-
-w    from peft import PeftModel
-  File "/usr/local/lib/python3.10/dist-packages/peft/__init__.py", line 22, in <module>
-
-l    from .auto import (
-  File "/usr/local/lib/python3.10/dist-packages/peft/auto.py", line 31, in <module>
-
-y    from .config import PeftConfig
-  File "/usr/local/lib/python3.10/dist-packages/peft/config.py", line 23, in <module>
-
-�    from .utils import CONFIG_NAME, PeftType, TaskType
-  File "/usr/local/lib/python3.10/dist-packages/peft/utils/__init__.py", line 21, in <module>
-
-�    from .loftq_utils import replace_lora_weights_loftq
-  File "/usr/local/lib/python3.10/dist-packages/peft/utils/loftq_utils.py", line 35, in <module>
-
-    import bitsandbytes as bnb
-  File "/usr/local/lib/python3.10/dist-packages/bitsandbytes/__init__.py", line 15, in <module>
-
-    from .nn import modules
-  File "/usr/local/lib/python3.10/dist-packages/bitsandbytes/nn/__init__.py", line 17, in <module>
-
-�    from .triton_based_modules import (
-  File "/usr/local/lib/python3.10/dist-packages/bitsandbytes/nn/triton_based_modules.py", line 7, in <module>
-
-�    from bitsandbytes.triton.int8_matmul_mixed_dequantize import (
-  File "/usr/local/lib/python3.10/dist-packages/bitsandbytes/triton/int8_matmul_mixed_dequantize.py", line 12, in <module>
-
-H    from triton.ops.matmul_perf_model import early_config_prune, estimate_matmul_time
-ModuleNotFoundError: No module named 'triton.ops'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 10, in <module>
-
-�    from transformers import  AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorWithPadding
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 2320, in __getattr__
-
-�    raise ModuleNotFoundError(
-ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?
-
-removing /jobs/275575
+removing /jobs/275581
