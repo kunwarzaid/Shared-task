@@ -1,8 +1,16 @@
 zTraceback (most recent call last):
-  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 108, in <module>
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 110, in <module>
 
 �    train_data = make_examples(os.path.join(DATA_DIR, "train"))
-  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 66, in make_examples
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 65, in make_examples
 
-_    dialogue_text = "\n".join([
-TypeError: sequence item 26: expected str instance, list found
+x    dialogue_text = "\n".join([
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 66, in <listcomp>
+
+C    " ".join(x["dialogue"]) if isinstance(x.get("dialogue"), list)
+
+4AttributeError: 'str' object has no attribute 'get'
+
+removing /jobs/275595
+
+Failed to execute script
