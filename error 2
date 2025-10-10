@@ -1,30 +1,20 @@
-�Traceback (most recent call last):
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/configuration_auto.py", line 1155, in from_pretrained
+xTraceback (most recent call last):
+  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 8, in <module>
 
-�⚠️ Skipped malformed QnA file scenario_43_bcb6ac84b7f043228d6b5be2372f34b7_IDX_02_3_questions.json: 'utf-8' codec can't decode byte 0xe0 in position 12287: unexpected end of data
- Loaded 223297 examples from /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train
- Loaded 13262 examples from /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/dev
-Loaded 223297 train and 13262 dev examples
+    from transformers import (
+  File "/usr/local/lib/python3.10/dist-packages/transformers/__init__.py", line 27, in <module>
+    from . import dependency_versions_check
+  File "/usr/local/lib/python3.10/dist-packages/transformers/dependency_versions_check.py", line 16, in <module>
 
-�    config_class = CONFIG_MAPPING[config_dict["model_type"]]
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/configuration_auto.py", line 852, in __getitem__
+�    from .utils.versions import require_version, require_version_core
+  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/__init__.py", line 24, in <module>
 
-�    raise KeyError(key)
-KeyError: 'gemma3_text'
+�    from .auto_docstring import (
+  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/auto_docstring.py", line 30, in <module>
 
-During handling of the above exception, another exception occurred:
+�    from .generic import ModelOutput
+  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/generic.py", line 465, in <module>
 
-Traceback (most recent call last):
-  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 157, in <module>
+(    _torch_pytree.register_pytree_node(
 
-�    model = AutoModelForCausalLM.from_pretrained(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/auto_factory.py", line 523, in from_pretrained
-
-�    config, kwargs = AutoConfig.from_pretrained(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/configuration_auto.py", line 1157, in from_pretrained
-
-
-    raise ValueError(
-ValueError: The checkpoint you are trying to load has model type `gemma3_text` but Transformers does not recognize this architecture. This could be because of an issue with the checkpoint, or because your version of Transformers is out of date.
-
-removing /jobs/275648
+}AttributeError: module 'torch.utils._pytree' has no attribute 'register_pytree_node'. Did you mean: '_register_pytree_node'?
