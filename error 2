@@ -1,19 +1,22 @@
+�⚠️ Skipped malformed QnA file scenario_43_bcb6ac84b7f043228d6b5be2372f34b7_IDX_02_3_questions.json: 'utf-8' codec can't decode byte 0xe0 in position 12287: unexpected end of data
+✅ Loaded 223297 examples from /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train
+✅ Loaded 13262 examples from /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/dev
+✅ Loaded 223297 train and 13262 dev examples
 
-�Detected kernel version 5.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+�    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/tokenization_auto.py", line 862, in from_pretrained
 
-Starting fine-tuning...
+�    return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 2089, in from_pretrained
 
-zTraceback (most recent call last):
-  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 213, in <module>
+�    return cls._from_pretrained(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 2311, in _from_pretrained
 
-r    trainer.train()
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2325, in train
+�    tokenizer = cls(*init_inputs, **init_kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/models/gemma/tokenization_gemma_fast.py", line 103, in __init__
 
-�    return inner_training_loop(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2449, in _inner_training_loop
+�    super().__init__(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_fast.py", line 111, in __init__
 
-�    model = self._wrap_model(self.model_wrapped)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2067, in _wrap_model
-
-�    if self.accelerator.unwrap_model(model, keep_torch_compile=False) is not model:
-TypeError: Accelerator.unwrap_model() got an unexpected keyword argument 'keep_torch_compile'
+�    fast_tokenizer = TokenizerFast.from_file(fast_tokenizer_file)
+Exception: data did not match any variant of untagged enum ModelWrapper at line 2379610 column 3
