@@ -1,20 +1,69 @@
-xTraceback (most recent call last):
-  File "/workspace/table-to-text-flan-t5/fine_tune_gemma_1b.py", line 8, in <module>
+# ----------------------------- ACCELERATE COMPAT SHIM -----------------------------
+# Put this at the VERY TOP of your file (before importing transformers / Trainer)
+import sys, importlib, inspect, traceback
 
-    from transformers import (
-  File "/usr/local/lib/python3.10/dist-packages/transformers/__init__.py", line 27, in <module>
-    from . import dependency_versions_check
-  File "/usr/local/lib/python3.10/dist-packages/transformers/dependency_versions_check.py", line 16, in <module>
+def accelerate_compat_shim():
+    try:
+        # If accelerate is already loaded, inspect it. Otherwise try to import it.
+        if "accelerate" in sys.modules:
+            accelerate = sys.modules["accelerate"]
+        else:
+            import accelerate
 
-�    from .utils.versions import require_version, require_version_core
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/__init__.py", line 24, in <module>
+        # show diagnostics
+        try:
+            ver = getattr(accelerate, "__version__", "unknown")
+        except Exception:
+            ver = "unknown"
+        print(f"[shim] accelerate imported from: {getattr(accelerate, '__file__', 'unknown')}")
+        print(f"[shim] accelerate.__version__ = {ver}")
 
-�    from .auto_docstring import (
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/auto_docstring.py", line 30, in <module>
+        # Inspect unwrap_model signature
+        try:
+            sig = inspect.signature(accelerate.Accelerator.unwrap_model)
+            print(f"[shim] unwrap_model signature: {sig}")
+        except Exception as e:
+            print("[shim] Could not inspect unwrap_model signature:", e)
+            sig = None
 
-�    from .generic import ModelOutput
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/generic.py", line 465, in <module>
+        # If signature lacks keep_torch_compile, apply compatibility wrapper
+        needs_shim = True
+        if sig is not None:
+            params = list(sig.parameters.keys())
+            if "keep_torch_compile" in params:
+                needs_shim = False
 
-(    _torch_pytree.register_pytree_node(
+        if needs_shim:
+            print("[shim] Applying compatibility shim to Accelerator.unwrap_model() ...")
+            _orig_unwrap = accelerate.Accelerator.unwrap_model
 
-}AttributeError: module 'torch.utils._pytree' has no attribute 'register_pytree_node'. Did you mean: '_register_pytree_node'?
+            def _unwrap_compat(self, model, *args, **kwargs):
+                # Try original call first (handles newer accelerate which accepts kw)
+                try:
+                    return _orig_unwrap(self, model, *args, **kwargs)
+                except TypeError as te:
+                    # remove the keep_torch_compile if present and retry
+                    kwargs.pop("keep_torch_compile", None)
+                    # In case 'model' passed as list/tuple or different shape, be permissive
+                    return _orig_unwrap(self, model, *args, **kwargs)
+                except Exception:
+                    # fall back: call original with minimal signature
+                    try:
+                        return _orig_unwrap(self, model)
+                    except Exception as e:
+                        # last resort: raise with context
+                        tb = traceback.format_exc()
+                        raise RuntimeError("[shim] unwrap_model compatibility wrapper failed:\n" + tb) from e
+
+            accelerate.Accelerator.unwrap_model = _unwrap_compat
+            print("[shim] shim applied successfully.")
+        else:
+            print("[shim] No shim needed; accelerate supports keep_torch_compile in signature.")
+        # done
+    except Exception as e:
+        print("[shim] ERROR while applying accelerate shim:", e)
+        print(traceback.format_exc())
+
+# Run the shim immediately (so it's active before transformers imports)
+accelerate_compat_shim()
+# -------------------------------------------------------------------------------
