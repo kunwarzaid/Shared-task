@@ -1,153 +1,156 @@
+# finetune_sharedtask_fast.py
+# Lightweight multilingual QLoRA fine-tuning for the shared task
+# - With Accelerate "unwrap_model" shim
+# - Subset sampling + shorter max length for speed
+# - Safe tokenization pipeline for causal LM (no label length mismatches)
+
 import os
 import json
-import torch
-import sys, importlib, inspect, traceback
+import random
+from typing import List, Dict
 
-# ============================================================
-# ACCELERATE SHIM — prevents unwrap_model TypeError
-# ============================================================
+import torch
+
+# ========== 1) ACCELERATE COMPAT SHIM (put FIRST) ==========
+# Fixes: TypeError: Accelerator.unwrap_model() got an unexpected keyword argument 'keep_torch_compile'
+import sys, inspect, traceback
 def accelerate_compat_shim():
     try:
         if "accelerate" in sys.modules:
             accelerate = sys.modules["accelerate"]
         else:
-            import accelerate
+            import accelerate  # noqa: F401
+            accelerate = sys.modules["accelerate"]
 
-        ver = getattr(accelerate, "__version__", "unknown")
-        print(f"[shim] accelerate imported from: {getattr(accelerate, '__file__', 'unknown')}")
-        print(f"[shim] accelerate.__version__ = {ver}")
+        print(f"[shim] accelerate file: {getattr(accelerate, '__file__', 'unknown')}")
+        print(f"[shim] accelerate version: {getattr(accelerate, '__version__', 'unknown')}")
 
-        sig = None
         try:
             sig = inspect.signature(accelerate.Accelerator.unwrap_model)
-            print(f"[shim] unwrap_model signature: {sig}")
+            params = list(sig.parameters.keys())
         except Exception as e:
-            print("[shim] Could not inspect unwrap_model:", e)
+            print("[shim] Could not inspect unwrap_model signature:", e)
+            params = []
 
-        needs_shim = True
-        if sig is not None:
-            if "keep_torch_compile" in list(sig.parameters.keys()):
-                needs_shim = False
-
-        if needs_shim:
-            print("[shim] Applying unwrap_model compatibility patch...")
-            _orig_unwrap = accelerate.Accelerator.unwrap_model
+        if "keep_torch_compile" not in params:
+            print("[shim] Patching Accelerator.unwrap_model for missing keep_torch_compile...")
+            _orig = accelerate.Accelerator.unwrap_model
 
             def _unwrap_compat(self, model, *args, **kwargs):
-                try:
-                    return _orig_unwrap(self, model, *args, **kwargs)
-                except TypeError:
-                    kwargs.pop("keep_torch_compile", None)
-                    return _orig_unwrap(self, model, *args, **kwargs)
-                except Exception:
-                    kwargs.pop("keep_torch_compile", None)
-                    return _orig_unwrap(self, model)
+                # ignore unknown kwargs (e.g., keep_torch_compile) on older accelerate
+                kwargs.pop("keep_torch_compile", None)
+                return _orig(self, model, *args, **kwargs)
 
             accelerate.Accelerator.unwrap_model = _unwrap_compat
-            print("[shim] ✅ Applied unwrap_model shim.")
+            print("[shim] unwrap_model shim applied.")
         else:
-            print("[shim] No shim needed.")
+            print("[shim] unwrap_model already supports keep_torch_compile — no shim needed.")
     except Exception as e:
-        print("[shim] ERROR applying accelerate shim:", e)
-        traceback.print_exc()
+        print("[shim] ERROR applying shim:", e)
+        print(traceback.format_exc())
 
-# run shim before importing transformers/Trainer
 accelerate_compat_shim()
+# ===========================================================
 
-# ============================================================
-# IMPORTS
-# ============================================================
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
-    DataCollatorWithPadding
+    DataCollatorForLanguageModeling,
+    BitsAndBytesConfig,
 )
-from peft import LoraConfig, get_peft_model, PeftModel
-from transformers import BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-DATA_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
-BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/gemma1b_qlora_multilingual_finetune_fast"
-
-MAX_LEN = 512
-NUM_EPOCHS = 1
-SAVE_STEPS = 1000
-BATCH_SIZE = 1
-GRAD_ACCUM = 16
-LR = 2e-4
+# --------- PATHS (edit if needed) ---------
+DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
+BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"     # local Gemma 3 1B folder
+OUTPUT_DIR = "/workspace/data/KZ_2117574/fast/run_gemma1b_lora"
+# ------------------------------------------
 
 
-# ============================================================
-# SAFE READERS
-# ============================================================
+# --------- SPEED KNOBS (safe defaults) ---------
+MAX_LEN = 384            # shorten sequences to speed up attention
+TRAIN_FRACTION = 0.10    # use 10% of train for a fast run
+DEV_FRACTION   = 0.25    # use 25% of dev for faster eval
+SAVE_EVERY_STEPS = 2000  # resumable without too much I/O
+SEED = 42
+random.seed(SEED)
+# -----------------------------------------------
+
+
 def read_jsonl(path):
-    records = []
+    """Safe JSONL reader; skips broken lines."""
+    out = []
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
             try:
-                records.append(json.loads(line))
-            except Exception:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
                 continue
-    return records
+    return out
 
 
-def make_examples(root):
+def make_examples(split_root: str) -> List[Dict[str, str]]:
+    """
+    Build training/eval examples:
+      - Summarization: prompt + gold summary
+      - QnA: prompt + gold answer (same language)
+    We concatenate input+target into one string for causal LM training.
+    """
     examples = []
-    for lang in os.listdir(root):
-        lang_path = os.path.join(root, lang)
+    for lang in os.listdir(split_root):
+        lang_path = os.path.join(split_root, lang)
         if not os.path.isdir(lang_path):
             continue
 
         dlg_dir = os.path.join(lang_path, "Dialogues")
-        sum_dir = os.path.join(lang_path, "Summary_Text")
+        txt_dir = os.path.join(lang_path, "Summary_Text")
         qna_dir = os.path.join(lang_path, "QnA")
 
-        # --- Summarization ---
-        if os.path.isdir(dlg_dir) and os.path.isdir(sum_dir):
+        # Summaries
+        if os.path.isdir(dlg_dir) and os.path.isdir(txt_dir):
             for fn in os.listdir(dlg_dir):
                 if not fn.endswith(".jsonl"):
                     continue
                 dlg_path = os.path.join(dlg_dir, fn)
-
-                dialogues = []
-                for x in read_jsonl(dlg_path):
+                # collect dialogue utterances (string or list-safe)
+                utterances = []
+                for rec in read_jsonl(dlg_path):
                     try:
-                        val = x.get("dialogue", "") if isinstance(x, dict) else str(x)
+                        val = rec.get("dialogue", "") if isinstance(rec, dict) else str(rec)
                         if isinstance(val, list):
                             val = " ".join(map(str, val))
-                        dialogues.append(str(val))
+                        utterances.append(str(val))
                     except Exception:
                         continue
-
-                dialogue_text = "\n".join(dialogues).strip()
+                dialogue_text = "\n".join(utterances).strip()
                 if not dialogue_text:
                     continue
 
-                sum_path = os.path.join(sum_dir, fn.replace(".jsonl", "_summary.txt"))
+                sum_path = os.path.join(txt_dir, fn.replace(".jsonl", "_summary.txt"))
                 if os.path.exists(sum_path):
                     try:
                         with open(sum_path, "r", encoding="utf-8") as f:
                             summary = f.read().strip()
                         if summary:
-                            prompt = (
-                                f"Summarize the following doctor–patient dialogue in English:\n"
-                                f"{dialogue_text}\nSummary:"
+                            # single concatenated training string (model learns to produce the "Summary:")
+                            text = (
+                                "Summarize the following doctor–patient dialogue in English.\n"
+                                "Organize into sections like Context, Presentation, Assessment, Plan, and Follow-up.\n\n"
+                                f"Dialogue:\n{dialogue_text}\n\nSummary:\n{summary}"
                             )
-                            examples.append({"text": prompt, "labels": summary})
+                            examples.append({"text": text})
+                        # if summary empty -> skip
                     except Exception:
-                        continue
+                        pass
 
-        # --- QnA ---
+        # QnA
         if os.path.isdir(qna_dir):
             for fn in os.listdir(qna_dir):
                 if not fn.endswith(".json"):
@@ -155,7 +158,8 @@ def make_examples(root):
                 try:
                     with open(os.path.join(qna_dir, fn), "r", encoding="utf-8") as f:
                         data = json.load(f)
-                except Exception:
+                except Exception as e:
+                    print(f"⚠️ Skipped malformed QnA {fn}: {e}")
                     continue
                 if not isinstance(data, dict):
                     continue
@@ -169,137 +173,119 @@ def make_examples(root):
                     a = qa.get("answer", "")
                     if not q or not a:
                         continue
-                    prompt = f"Answer the following question in the same language as the dialogue:\nQuestion: {q}\nAnswer:"
-                    examples.append({"text": prompt, "labels": a})
-
-    print(f"✅ Loaded {len(examples)} examples from {root}")
+                    # single concatenated training string
+                    text = (
+                        "Answer the following question in the same language as the question.\n\n"
+                        f"Question: {q}\n\nAnswer: {a}"
+                    )
+                    examples.append({"text": text})
+    print(f"✅ Built {len(examples):,} examples from {split_root}")
     return examples
 
 
-# ============================================================
-# LOAD DATA
-# ============================================================
-train_data = make_examples(os.path.join(DATA_DIR, "train"))
-dev_data = make_examples(os.path.join(DATA_DIR, "dev"))
-print(f"✅ Train: {len(train_data)}, Dev: {len(dev_data)}")
+print("📥 Loading data...")
+train_examples = make_examples(os.path.join(DATA_DIR, "train"))
+dev_examples   = make_examples(os.path.join(DATA_DIR, "dev"))
+
+# Subsample for a fast, within-time run
+random.shuffle(train_examples)
+random.shuffle(dev_examples)
+train_examples = train_examples[: int(TRAIN_FRACTION * len(train_examples))]
+dev_examples   = dev_examples[: int(DEV_FRACTION   * len(dev_examples))]
+print(f"⚡ Using {len(train_examples):,} train / {len(dev_examples):,} dev examples")
+
+train_ds = Dataset.from_list(train_examples)
+dev_ds   = Dataset.from_list(dev_examples)
 
 
-# ============================================================
-# MODEL + QLORA
-# ============================================================
-bnb_cfg = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16
-)
-
+# ----- Tokenizer & Model (4-bit QLoRA) -----
+print("🧠 Loading tokenizer/model...")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
+bnb_cfg = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
     device_map="auto",
-    quantization_config=bnb_cfg
+    quantization_config=bnb_cfg,
 )
 
+# Light LoRA: fewer trainable params for speed
 lora_cfg = LoraConfig(
-    r=8,
-    lora_alpha=32,
-    target_modules=["q_proj", "v_proj"],
-    lora_dropout=0.05,
-    task_type="CAUSAL_LM"
+    r=4,
+    lora_alpha=16,
+    target_modules=["q_proj"],     # lighter than ["q_proj","v_proj"]
+    lora_dropout=0.1,
+    task_type="CAUSAL_LM",
 )
 model = get_peft_model(model, lora_cfg)
 model.print_trainable_parameters()
 
 
-# ============================================================
-# TOKENIZATION FUNCTION (FIXED)
-# ============================================================
-def tokenize_fn(examples):
-    prompts = [str(x).strip() for x in examples["text"]]
-    targets = [str(y).strip() for y in examples["labels"]]
+# ----- Tokenization function -----
+# IMPORTANT: we train as pure causal LM on a SINGLE concatenated string.
+# Labels are created by the collator; we do *not* attach our own "labels".
+def tok_fn(batch):
+    return tokenizer(
+        batch["text"],
+        truncation=True,
+        max_length=MAX_LEN,
+        padding=False  # dynamic padding in collator
+    )
 
-    tokenized_prompts = tokenizer(prompts, truncation=True, max_length=256, padding=False)
-    prompt_lens = [len(x) for x in tokenized_prompts["input_ids"]]
+train_ds = train_ds.map(tok_fn, batched=True, num_proc=4, remove_columns=["text"])
+dev_ds   = dev_ds.map(tok_fn,   batched=True, num_proc=2, remove_columns=["text"])
 
-    full_texts = [p + " " + t for p, t in zip(prompts, targets)]
-    tokenized_full = tokenizer(full_texts, truncation=True, max_length=MAX_LEN, padding=False)
-
-    input_ids = tokenized_full["input_ids"]
-    attention_mask = tokenized_full["attention_mask"]
-
-    labels = []
-    for i, ids in enumerate(input_ids):
-        l = ids.copy()
-        cutoff = min(prompt_lens[i], len(l))
-        for j in range(cutoff):
-            l[j] = -100
-        labels.append(l)
-
-    return {
-        "input_ids": input_ids,
-        "attention_mask": attention_mask,
-        "labels": labels
-    }
-
-train_ds = Dataset.from_list(train_data).map(tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"])
-dev_ds = Dataset.from_list(dev_data).map(tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"])
-
-data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
-
-
-# ============================================================
-# TRAINING CONFIG
-# ============================================================
-from transformers import TrainingArguments, Trainer, TrainerCallback
-
-class SavePeftAdapterCallback(TrainerCallback):
-    def __init__(self, out_dir, save_steps=1000):
-        self.out_dir = out_dir
-        self.save_steps = save_steps
-        os.makedirs(out_dir, exist_ok=True)
-    def on_step_end(self, args, state, control, **kwargs):
-        if state.global_step % self.save_steps == 0 and state.global_step > 0:
-            model = kwargs.get("model")
-            if hasattr(model, "save_pretrained"):
-                ckpt = os.path.join(self.out_dir, f"adapter_step_{state.global_step}")
-                model.save_pretrained(ckpt)
-                print(f"[callback] Saved adapter checkpoint at step {state.global_step}")
-
-args = TrainingArguments(
-    output_dir=OUTPUT_DIR,
-    per_device_train_batch_size=BATCH_SIZE,
-    gradient_accumulation_steps=GRAD_ACCUM,
-    num_train_epochs=NUM_EPOCHS,
-    learning_rate=LR,
-    fp16=True,
-    evaluation_strategy="epoch",
-    save_strategy="steps",
-    save_steps=SAVE_STEPS,
-    save_total_limit=3,
-    logging_steps=50,
-    report_to="none",
-    dataloader_num_workers=4
+# Collator will pad and create labels for causal LM
+data_collator = DataCollatorForLanguageModeling(
+    tokenizer=tokenizer,
+    mlm=False
 )
 
+# ----- Training args -----
+use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+args = TrainingArguments(
+    output_dir=OUTPUT_DIR,
+    overwrite_output_dir=True,
+    per_device_train_batch_size=1,
+    per_device_eval_batch_size=1,
+    gradient_accumulation_steps=8,
+    num_train_epochs=1,                    # 1 epoch for speed; bump later if time remains
+    learning_rate=2e-4,
+    fp16=not use_bf16,
+    bf16=use_bf16,
+    gradient_checkpointing=True,
+    optim="paged_adamw_32bit",
+    logging_steps=50,
+    evaluation_strategy="epoch",
+    save_strategy="steps",
+    save_steps=SAVE_EVERY_STEPS,
+    save_total_limit=2,                    # keep last 2 checkpoints
+    load_best_model_at_end=False,
+    report_to="none",
+    seed=SEED,
+)
 
-# ============================================================
-# TRAIN
-# ============================================================
 trainer = Trainer(
     model=model,
     args=args,
     train_dataset=train_ds,
     eval_dataset=dev_ds,
     data_collator=data_collator,
-    callbacks=[SavePeftAdapterCallback(OUTPUT_DIR, SAVE_STEPS)]
+    tokenizer=tokenizer,
 )
 
-print("🚀 Starting fine-tuning...")
-trainer.train()
-trainer.save_model(OUTPUT_DIR)
+print("🚀 Starting fine-tuning … (resumable)")
+trainer.train(resume_from_checkpoint=True)
+
+print("💾 Saving adapter & tokenizer …")
+trainer.save_model(OUTPUT_DIR)            # saves PEFT adapter weights
 tokenizer.save_pretrained(OUTPUT_DIR)
-print("✅ Training complete! Model saved to:", OUTPUT_DIR)
+print("✅ Done. Adapter dir:", OUTPUT_DIR)
