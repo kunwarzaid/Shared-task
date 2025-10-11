@@ -216,7 +216,7 @@ model.print_trainable_parameters()
 
 
 # ============================================================
-# TOKENIZATION FUNCTION (FIXED)
+# TOKENIZATION FUNCTION
 # ============================================================
 def tokenize_fn(examples):
     prompts = [str(x).strip() for x in examples["text"]]
@@ -239,28 +239,25 @@ def tokenize_fn(examples):
             l[j] = -100
         labels.append(l)
 
-    return {
-        "input_ids": input_ids,
-        "attention_mask": attention_mask,
-        "labels": labels
-    }
+    return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
+
 
 train_ds = Dataset.from_list(train_data).map(tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"])
 dev_ds = Dataset.from_list(dev_data).map(tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"])
-
 data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
 
 # ============================================================
 # TRAINING CONFIG
 # ============================================================
-from transformers import TrainingArguments, Trainer, TrainerCallback
+from transformers import Trainer, TrainingArguments, TrainerCallback
 
 class SavePeftAdapterCallback(TrainerCallback):
     def __init__(self, out_dir, save_steps=1000):
         self.out_dir = out_dir
         self.save_steps = save_steps
         os.makedirs(out_dir, exist_ok=True)
+
     def on_step_end(self, args, state, control, **kwargs):
         if state.global_step % self.save_steps == 0 and state.global_step > 0:
             model = kwargs.get("model")
@@ -268,6 +265,7 @@ class SavePeftAdapterCallback(TrainerCallback):
                 ckpt = os.path.join(self.out_dir, f"adapter_step_{state.global_step}")
                 model.save_pretrained(ckpt)
                 print(f"[callback] Saved adapter checkpoint at step {state.global_step}")
+
 
 args = TrainingArguments(
     output_dir=OUTPUT_DIR,
@@ -282,13 +280,34 @@ args = TrainingArguments(
     save_total_limit=3,
     logging_steps=50,
     report_to="none",
-    dataloader_num_workers=4
+    dataloader_num_workers=4,
 )
 
 
 # ============================================================
-# TRAIN
+# TRAIN (with resumable safetensors checkpoints)
 # ============================================================
+def find_latest_checkpoint(output_dir):
+    ckpts = [
+        os.path.join(output_dir, d)
+        for d in os.listdir(output_dir)
+        if d.startswith("checkpoint-") and os.path.isdir(os.path.join(output_dir, d))
+    ]
+    if not ckpts:
+        return None
+    ckpts = sorted(ckpts, key=lambda x: int(x.split("-")[-1]))
+    return ckpts[-1]
+
+
+def convert_checkpoint_to_safetensors(model, src_path, dst_path):
+    os.makedirs(dst_path, exist_ok=True)
+    print(f"🔄 Converting checkpoint from {src_path} to {dst_path} (safetensors format)...")
+    model = PeftModel.from_pretrained(model, src_path)
+    model.save_pretrained(dst_path, safe_serialization=True)
+    print(f"✅ Safetensors checkpoint saved at: {dst_path}")
+    return dst_path
+
+
 trainer = Trainer(
     model=model,
     args=args,
@@ -298,55 +317,31 @@ trainer = Trainer(
     callbacks=[SavePeftAdapterCallback(OUTPUT_DIR, SAVE_STEPS)]
 )
 
-print("🚀 Starting fine-tuning...")
-#trainer.train()
-import os
+latest_ckpt = find_latest_checkpoint(OUTPUT_DIR)
+safe_ckpt = None
 
-def convert_checkpoint_to_safetensors(src_path, dst_path):
-    """
-    Converts a model checkpoint to safetensors format safely.
-    Only converts model weights — optimizer states are ignored (for PEFT fine-tuning).
-    """
-    os.makedirs(dst_path, exist_ok=True)
-
-    print(f"🔄 Converting checkpoint from {src_path} to {dst_path} (safetensors format)...")
-
-    # Load the model from the checkpoint
-    #model = AutoModelForCausalLM.from_pretrained(
-    #    BASE_MODEL,
-     #   device_map="auto",
-      #  quantization_config=bnb_cfg
-    #)
-    model = PeftModel.from_pretrained(model, src_path)
-
-    # Save it as safetensors
-    model.save_pretrained(dst_path, safe_serialization=True)
-
-    print(f"✅ Safetensors checkpoint saved at: {dst_path}")
-    return dst_path
-
-
-# Example usage:
-latest_ckpt = "/workspace/data/KZ_2117574/gemma1b_qlora_multilingual_finetune_fast/checkpoint-7000"
-safe_ckpt = latest_ckpt + "-safe"
-
-# Convert only if safetensors folder doesn’t exist yet
-if not os.path.exists(safe_ckpt):
-    convert_checkpoint_to_safetensors(latest_ckpt, safe_ckpt)
+if latest_ckpt:
+    print(f"🧭 Found existing checkpoint: {latest_ckpt}")
+    torch_ver = tuple(map(int, torch.__version__.split(".")[:2]))
+    if torch_ver < (2, 6):
+        safe_ckpt = latest_ckpt + "-safe"
+        if not os.path.exists(safe_ckpt):
+            safe_ckpt = convert_checkpoint_to_safetensors(model, latest_ckpt, safe_ckpt)
+        else:
+            print(f"⚡ Using existing safetensors checkpoint: {safe_ckpt}")
+    else:
+        safe_ckpt = latest_ckpt
 else:
-    print(f"⚡ Using existing safetensors checkpoint: {safe_ckpt}")
+    print("🆕 No existing checkpoint found. Starting fresh training run.")
+    safe_ckpt = None
 
-#latest_ckpt = None
-#if os.path.isdir(OUTPUT_DIR):
- ##  if ckpts:
-   #     latest_ckpt = sorted(ckpts, key=lambda x: int(x.split("-")[-1]))[-1]
+print("🚀 Starting fine-tuning (with resumable checkpoints)...")
 
-#print("🚀 Starting fine-tuning (with resumable checkpoints)...")
 if safe_ckpt:
     print(f"🔄 Resuming from {safe_ckpt}")
     trainer.train(resume_from_checkpoint=safe_ckpt)
 else:
-    print("✨ Starting fresh training run...")
+    print("✨ Starting fresh training...")
     trainer.train()
 
 trainer.save_model(OUTPUT_DIR)
