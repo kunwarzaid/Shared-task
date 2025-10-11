@@ -1,58 +1,10 @@
-# --- Verify LoRA/PEFT trainable params (fix for 'does not require grad' issue) ---
-print("🔍 Checking model trainable parameters...")
+model = get_peft_model(model, lora_cfg)
 model.print_trainable_parameters()
 
-# Force-enable requires_grad on LoRA / adapter params if none are trainable
-trainable = sum(p.requires_grad for _, p in model.named_parameters())
-if trainable == 0:
-    print("⚠️ No trainable parameters detected — forcing LoRA/adapters to requires_grad=True")
-    fixed = 0
-    for name, param in model.named_parameters():
-        if any(k in name for k in ["lora", "adapter", "alpha", "A", "B", "q_proj", "v_proj"]):
-            param.requires_grad = True
-            fixed += 1
-    print(f"✅ Forced {fixed} parameters to be trainable.")
-
-# Double-check at least one parameter is trainable
-if sum(p.requires_grad for _, p in model.named_parameters()) == 0:
-    raise RuntimeError("❌ Still no trainable parameters found — LoRA adapter not applied correctly.")
-
-# --- Debug one forward pass to ensure loss has grad ---
-print("🧪 Testing one forward pass to confirm loss.requires_grad...")
-from torch.utils.data import DataLoader
-dl = DataLoader(train_ds, batch_size=1, collate_fn=data_collator)
-batch = next(iter(dl))
-batch = {k: v.to(model.device) for k, v in batch.items()}
-
-model.train()
-outputs = model(**batch)
-loss = outputs.loss if hasattr(outputs, "loss") else outputs[0]
-print("➡️ Sample loss:", loss.item(), " | requires_grad:", getattr(loss, "requires_grad", None))
-
-if not loss.requires_grad:
-    raise RuntimeError("❌ Loss is detached from graph — check LoRA configuration.")
-
-del dl, batch, outputs, loss
-torch.cuda.empty_cache()
-
-# --- Safe resume logic ---
-import os
-
-latest_ckpt = None
-if os.path.isdir(OUTPUT_DIR):
-    ckpts = [os.path.join(OUTPUT_DIR, d) for d in os.listdir(OUTPUT_DIR) if d.startswith("checkpoint-")]
-    if ckpts:
-        latest_ckpt = sorted(ckpts, key=lambda x: int(x.split("-")[-1]))[-1]
-
-print("🚀 Starting fine-tuning (with resumable checkpoints)...")
-if latest_ckpt:
-    print(f"🔄 Resuming from {latest_ckpt}")
-    trainer.train(resume_from_checkpoint=latest_ckpt)
-else:
-    print("✨ Starting fresh training run...")
-    trainer.train()
-
-print("💾 Saving fine-tuned adapter and tokenizer...")
-trainer.save_model(OUTPUT_DIR)
-tokenizer.save_pretrained(OUTPUT_DIR)
-print(f"✅ Training complete. Model saved at: {OUTPUT_DIR}")
+# 🔧 Critical fix for 'does not require grad' issue
+try:
+    model.gradient_checkpointing_disable()
+    model.config.use_cache = False
+    print("✅ Disabled gradient checkpointing and caching to ensure gradient flow.")
+except Exception as e:
+    print("⚠️ Could not disable gradient checkpointing:", e)
