@@ -1,85 +1,36 @@
 import os
 import json
-from pathlib import Path
-from typing import List, Dict
 import torch
-import sys, importlib, inspect, traceback
-
-# =============================================================================
-# ----------------------------- ACCELERATE COMPAT SHIM -------------------------
-# =============================================================================
-def accelerate_compat_shim():
-    try:
-        if "accelerate" in sys.modules:
-            accelerate = sys.modules["accelerate"]
-        else:
-            import accelerate
-
-        ver = getattr(accelerate, "__version__", "unknown")
-        print(f"[shim] accelerate imported from: {getattr(accelerate, '__file__', 'unknown')}")
-        print(f"[shim] accelerate.__version__ = {ver}")
-
-        try:
-            sig = inspect.signature(accelerate.Accelerator.unwrap_model)
-            print(f"[shim] unwrap_model signature: {sig}")
-        except Exception as e:
-            print("[shim] Could not inspect unwrap_model signature:", e)
-            sig = None
-
-        needs_shim = True
-        if sig is not None:
-            params = list(sig.parameters.keys())
-            if "keep_torch_compile" in params:
-                needs_shim = False
-
-        if needs_shim:
-            print("[shim] Applying compatibility shim to Accelerator.unwrap_model() ...")
-            _orig_unwrap = accelerate.Accelerator.unwrap_model
-
-            def _unwrap_compat(self, model, *args, **kwargs):
-                try:
-                    return _orig_unwrap(self, model, *args, **kwargs)
-                except TypeError:
-                    kwargs.pop("keep_torch_compile", None)
-                    return _orig_unwrap(self, model, *args, **kwargs)
-                except Exception:
-                    kwargs.pop("keep_torch_compile", None)
-                    return _orig_unwrap(self, model)
-
-            accelerate.Accelerator.unwrap_model = _unwrap_compat
-            print("[shim] shim applied successfully.")
-        else:
-            print("[shim] No shim needed.")
-    except Exception as e:
-        print("[shim] ERROR while applying accelerate shim:", e)
-        print(traceback.format_exc())
-
-accelerate_compat_shim()
-# =============================================================================
-
-
-# ------------------------------ IMPORTS --------------------------------------
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
-    DataCollatorForLanguageModeling
+    DataCollatorWithPadding
 )
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, PeftModel
 from transformers import BitsAndBytesConfig
 
-
-# ------------------------------ PATHS ----------------------------------------
+# ============================
+# CONFIG
+# ============================
 DATA_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/fast/gemma1b_qlora_multilingual_finetune"
 BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/gemma1b_qlora_multilingual_finetune_fast"
 
+MAX_LEN = 512          # shorter seq = faster training
+NUM_EPOCHS = 1         # to finish within 10 hours
+SAVE_STEPS = 1000
+BATCH_SIZE = 1
+GRAD_ACCUM = 16        # effective batch size 16
+LR = 2e-4
 
-# ------------------------------ UTILITIES ------------------------------------
+# ============================
+# SAFE READERS
+# ============================
+
 def read_jsonl(path):
-    """Read JSONL file safely, skip broken lines."""
     records = []
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
@@ -88,13 +39,12 @@ def read_jsonl(path):
                 continue
             try:
                 records.append(json.loads(line))
-            except json.JSONDecodeError:
+            except Exception:
                 continue
     return records
 
 
 def make_examples(root):
-    """Load Summarization + QnA data into text-label pairs."""
     examples = []
     for lang in os.listdir(root):
         lang_path = os.path.join(root, lang)
@@ -111,18 +61,15 @@ def make_examples(root):
                 if not fn.endswith(".jsonl"):
                     continue
                 dlg_path = os.path.join(dlg_dir, fn)
-                dialogues = []
 
+                dialogues = []
                 for x in read_jsonl(dlg_path):
                     try:
-                        if isinstance(x, dict):
-                            val = x.get("dialogue", "")
-                        else:
-                            val = str(x)
+                        val = x.get("dialogue", "") if isinstance(x, dict) else str(x)
                         if isinstance(val, list):
                             val = " ".join(map(str, val))
                         dialogues.append(str(val))
-                    except Exception as e:
+                    except Exception:
                         continue
 
                 dialogue_text = "\n".join(dialogues).strip()
@@ -148,21 +95,16 @@ def make_examples(root):
             for fn in os.listdir(qna_dir):
                 if not fn.endswith(".json"):
                     continue
-                qna_path = os.path.join(qna_dir, fn)
                 try:
-                    with open(qna_path, "r", encoding="utf-8") as f:
+                    with open(os.path.join(qna_dir, fn), "r", encoding="utf-8") as f:
                         data = json.load(f)
-                except Exception as e:
-                    print(f"⚠️ Skipped malformed QnA file {fn}: {e}")
+                except Exception:
                     continue
-
                 if not isinstance(data, dict):
                     continue
-
                 qs = data.get("questions", [])
                 if not isinstance(qs, list):
                     continue
-
                 for qa in qs:
                     if not isinstance(qa, dict):
                         continue
@@ -170,27 +112,29 @@ def make_examples(root):
                     a = qa.get("answer", "")
                     if not q or not a:
                         continue
-                    prompt = (
-                        "Answer the following question in the same language as the dialogue:\n"
-                        f"Question: {q}\nAnswer:"
-                    )
+                    prompt = f"Answer the following question in the same language as the dialogue:\nQuestion: {q}\nAnswer:"
                     examples.append({"text": prompt, "labels": a})
+
     print(f"✅ Loaded {len(examples)} examples from {root}")
     return examples
 
 
-# ------------------------------ LOAD DATA ------------------------------------
+# ============================
+# LOAD DATA
+# ============================
 train_data = make_examples(os.path.join(DATA_DIR, "train"))
 dev_data = make_examples(os.path.join(DATA_DIR, "dev"))
-print(f"✅ Loaded {len(train_data)} train and {len(dev_data)} dev examples.")
+print(f"✅ Train: {len(train_data)}, Dev: {len(dev_data)}")
 
 
-# ------------------------------ MODEL + QLoRA --------------------------------
+# ============================
+# TOKENIZER & MODEL
+# ============================
 bnb_cfg = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_use_double_quant=True,
     bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.bfloat16
+    bnb_4bit_compute_dtype=torch.float16
 )
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
@@ -203,6 +147,9 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_cfg
 )
 
+# ============================
+# APPLY LORA
+# ============================
 lora_cfg = LoraConfig(
     r=8,
     lora_alpha=32,
@@ -214,50 +161,90 @@ model = get_peft_model(model, lora_cfg)
 model.print_trainable_parameters()
 
 
-# ------------------------------ TOKENIZATION ---------------------------------
+# ============================
+# TOKENIZATION FUNCTION (FIXED)
+# ============================
 def tokenize_fn(examples):
-    """Concatenate input and label text for causal LM."""
-    full_texts = [f"{x.strip()} {y.strip()}" for x, y in zip(examples["text"], examples["labels"])]
-    tokenized = tokenizer(full_texts, truncation=True, max_length=1024, padding=False)
-    tokenized["labels"] = tokenized["input_ids"].copy()
-    return tokenized
+    prompts = ["" if x is None else str(x).strip() for x in examples["text"]]
+    targets = ["" if y is None else str(y).strip() for y in examples["labels"]]
 
+    tokenized_prompts = tokenizer(prompts, truncation=True, max_length=256, padding=False)
+    prompt_lens = [len(x) for x in tokenized_prompts["input_ids"]]
 
-train_ds = Dataset.from_list(train_data).map(
-    tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"]
-)
-dev_ds = Dataset.from_list(dev_data).map(
-    tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"]
-)
+    full_texts = [p + " " + t for p, t in zip(prompts, targets)]
+    tokenized_full = tokenizer(full_texts, truncation=True, max_length=MAX_LEN, padding=False)
 
-data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    input_ids = tokenized_full["input_ids"]
+    attention_mask = tokenized_full["attention_mask"]
 
+    labels = []
+    for i, ids in enumerate(input_ids):
+        l = ids.copy()
+        cutoff = min(prompt_lens[i], len(l))
+        for j in range(cutoff):
+            l[j] = -100
+        labels.append(l)
 
-# ------------------------------ TRAINING -------------------------------------
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "labels": labels
+    }
+
+train_ds = Dataset.from_list(train_data).map(tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"])
+dev_ds = Dataset.from_list(dev_data).map(tokenize_fn, batched=True, num_proc=4, remove_columns=["text", "labels"])
+
+data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
+
+# ============================
+# TRAINING SETUP
+# ============================
 args = TrainingArguments(
     output_dir=OUTPUT_DIR,
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=8,
-    num_train_epochs=2,
-    learning_rate=2e-4,
+    per_device_train_batch_size=BATCH_SIZE,
+    gradient_accumulation_steps=GRAD_ACCUM,
+    num_train_epochs=NUM_EPOCHS,
+    learning_rate=LR,
     fp16=True,
     evaluation_strategy="epoch",
-    save_strategy="epoch",
-    logging_steps=20,
-    report_to="none"
+    save_strategy="steps",
+    save_steps=SAVE_STEPS,
+    save_total_limit=3,
+    logging_steps=50,
+    report_to="none",
+    dataloader_num_workers=4,
+    dataloader_pin_memory=True
 )
 
+# Callback to save adapter fast
+from transformers import TrainerCallback
+class SavePeftAdapterCallback(TrainerCallback):
+    def __init__(self, out_dir, save_steps=1000):
+        self.out_dir = out_dir
+        self.save_steps = save_steps
+        os.makedirs(out_dir, exist_ok=True)
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step % self.save_steps == 0 and state.global_step > 0:
+            model = kwargs.get("model")
+            if isinstance(model, PeftModel) or hasattr(model, "save_pretrained"):
+                ckpt = os.path.join(self.out_dir, f"adapter_step_{state.global_step}")
+                model.save_pretrained(ckpt)
+                print(f"[callback] Saved adapter at step {state.global_step} -> {ckpt}")
+
+# ============================
+# TRAIN
+# ============================
 trainer = Trainer(
     model=model,
     args=args,
     train_dataset=train_ds,
     eval_dataset=dev_ds,
     data_collator=data_collator,
+    callbacks=[SavePeftAdapterCallback(OUTPUT_DIR, SAVE_STEPS)]
 )
 
 print("🚀 Starting fine-tuning...")
 trainer.train()
-
 trainer.save_model(OUTPUT_DIR)
 tokenizer.save_pretrained(OUTPUT_DIR)
-print(f"✅ Training complete! Model saved to: {OUTPUT_DIR}")
+print("✅ Training complete! Model saved to:", OUTPUT_DIR)
