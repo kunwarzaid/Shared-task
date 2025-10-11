@@ -1,21 +1,41 @@
- Starting fine-tuning (with resumable checkpoints)...
-🔄 Resuming from /workspace/data/KZ_2117574/gemma1b_qlora_multilingual_finetune_fast/checkpoint-7000
+# ============================================================
+# OPTIONAL: Convert checkpoint to safetensors (for safety + resume)
+# ============================================================
+import os
+import torch
+from transformers import AutoModelForCausalLM
+from peft import PeftModel
 
-�Traceback (most recent call last):
-  File "/workspace/table-to-text-flan-t5/finetune_sharedtask_fast.py", line 314, in <module>
+def convert_checkpoint_to_safetensors(src_path, dst_path):
+    """
+    Converts a model checkpoint to safetensors format safely.
+    Only converts model weights — optimizer states are ignored (for PEFT fine-tuning).
+    """
+    os.makedirs(dst_path, exist_ok=True)
 
-�    trainer.train(resume_from_checkpoint=latest_ckpt)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2325, in train
+    print(f"🔄 Converting checkpoint from {src_path} to {dst_path} (safetensors format)...")
 
-�    return inner_training_loop(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2510, in _inner_training_loop
+    # Load the model from the checkpoint
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        device_map="auto",
+        quantization_config=bnb_cfg
+    )
+    model = PeftModel.from_pretrained(model, src_path)
 
-�    self._load_optimizer_and_scheduler(resume_from_checkpoint)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 3589, in _load_optimizer_and_scheduler
+    # Save it as safetensors
+    model.save_pretrained(dst_path, safe_serialization=True)
 
-�    check_torch_load_is_safe()
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 1647, in check_torch_load_is_safe
+    print(f"✅ Safetensors checkpoint saved at: {dst_path}")
+    return dst_path
 
-k    raise ValueError(
-ValueError: Due to a serious vulnerability issue in `torch.load`, even with `weights_only=True`, we now require users to upgrade torch to at least v2.6 in order to use the function. This version restriction does not apply when loading files with safetensors.
-See the vulnerability report here https://nvd.nist.gov/vuln/detail/CVE-2025-32434
+
+# Example usage:
+latest_ckpt = "/workspace/data/KZ_2117574/gemma1b_qlora_multilingual_finetune_fast/checkpoint-7000"
+safe_ckpt = latest_ckpt + "-safe"
+
+# Convert only if safetensors folder doesn’t exist yet
+if not os.path.exists(safe_ckpt):
+    convert_checkpoint_to_safetensors(latest_ckpt, safe_ckpt)
+else:
+    print(f"⚡ Using existing safetensors checkpoint: {safe_ckpt}")
