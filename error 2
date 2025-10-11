@@ -1,6 +1,62 @@
 import os
 import json
 import torch
+import sys, importlib, inspect, traceback
+
+# ============================================================
+# ACCELERATE SHIM — prevents unwrap_model TypeError
+# ============================================================
+def accelerate_compat_shim():
+    try:
+        if "accelerate" in sys.modules:
+            accelerate = sys.modules["accelerate"]
+        else:
+            import accelerate
+
+        ver = getattr(accelerate, "__version__", "unknown")
+        print(f"[shim] accelerate imported from: {getattr(accelerate, '__file__', 'unknown')}")
+        print(f"[shim] accelerate.__version__ = {ver}")
+
+        sig = None
+        try:
+            sig = inspect.signature(accelerate.Accelerator.unwrap_model)
+            print(f"[shim] unwrap_model signature: {sig}")
+        except Exception as e:
+            print("[shim] Could not inspect unwrap_model:", e)
+
+        needs_shim = True
+        if sig is not None:
+            if "keep_torch_compile" in list(sig.parameters.keys()):
+                needs_shim = False
+
+        if needs_shim:
+            print("[shim] Applying unwrap_model compatibility patch...")
+            _orig_unwrap = accelerate.Accelerator.unwrap_model
+
+            def _unwrap_compat(self, model, *args, **kwargs):
+                try:
+                    return _orig_unwrap(self, model, *args, **kwargs)
+                except TypeError:
+                    kwargs.pop("keep_torch_compile", None)
+                    return _orig_unwrap(self, model, *args, **kwargs)
+                except Exception:
+                    kwargs.pop("keep_torch_compile", None)
+                    return _orig_unwrap(self, model)
+
+            accelerate.Accelerator.unwrap_model = _unwrap_compat
+            print("[shim] ✅ Applied unwrap_model shim.")
+        else:
+            print("[shim] No shim needed.")
+    except Exception as e:
+        print("[shim] ERROR applying accelerate shim:", e)
+        traceback.print_exc()
+
+# run shim before importing transformers/Trainer
+accelerate_compat_shim()
+
+# ============================================================
+# IMPORTS
+# ============================================================
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
@@ -12,24 +68,25 @@ from transformers import (
 from peft import LoraConfig, get_peft_model, PeftModel
 from transformers import BitsAndBytesConfig
 
-# ============================
-# CONFIG
-# ============================
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
 DATA_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
 BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"
 OUTPUT_DIR = "/workspace/data/KZ_2117574/gemma1b_qlora_multilingual_finetune_fast"
 
-MAX_LEN = 512          # shorter seq = faster training
-NUM_EPOCHS = 1         # to finish within 10 hours
+MAX_LEN = 512
+NUM_EPOCHS = 1
 SAVE_STEPS = 1000
 BATCH_SIZE = 1
-GRAD_ACCUM = 16        # effective batch size 16
+GRAD_ACCUM = 16
 LR = 2e-4
 
-# ============================
-# SAFE READERS
-# ============================
 
+# ============================================================
+# SAFE READERS
+# ============================================================
 def read_jsonl(path):
     records = []
     with open(path, "r", encoding="utf-8") as f:
@@ -119,17 +176,17 @@ def make_examples(root):
     return examples
 
 
-# ============================
+# ============================================================
 # LOAD DATA
-# ============================
+# ============================================================
 train_data = make_examples(os.path.join(DATA_DIR, "train"))
 dev_data = make_examples(os.path.join(DATA_DIR, "dev"))
 print(f"✅ Train: {len(train_data)}, Dev: {len(dev_data)}")
 
 
-# ============================
-# TOKENIZER & MODEL
-# ============================
+# ============================================================
+# MODEL + QLORA
+# ============================================================
 bnb_cfg = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_use_double_quant=True,
@@ -147,9 +204,6 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_cfg
 )
 
-# ============================
-# APPLY LORA
-# ============================
 lora_cfg = LoraConfig(
     r=8,
     lora_alpha=32,
@@ -161,12 +215,12 @@ model = get_peft_model(model, lora_cfg)
 model.print_trainable_parameters()
 
 
-# ============================
+# ============================================================
 # TOKENIZATION FUNCTION (FIXED)
-# ============================
+# ============================================================
 def tokenize_fn(examples):
-    prompts = ["" if x is None else str(x).strip() for x in examples["text"]]
-    targets = ["" if y is None else str(y).strip() for y in examples["labels"]]
+    prompts = [str(x).strip() for x in examples["text"]]
+    targets = [str(y).strip() for y in examples["labels"]]
 
     tokenized_prompts = tokenizer(prompts, truncation=True, max_length=256, padding=False)
     prompt_lens = [len(x) for x in tokenized_prompts["input_ids"]]
@@ -196,9 +250,25 @@ dev_ds = Dataset.from_list(dev_data).map(tokenize_fn, batched=True, num_proc=4, 
 
 data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding=True, return_tensors="pt")
 
-# ============================
-# TRAINING SETUP
-# ============================
+
+# ============================================================
+# TRAINING CONFIG
+# ============================================================
+from transformers import TrainingArguments, Trainer, TrainerCallback
+
+class SavePeftAdapterCallback(TrainerCallback):
+    def __init__(self, out_dir, save_steps=1000):
+        self.out_dir = out_dir
+        self.save_steps = save_steps
+        os.makedirs(out_dir, exist_ok=True)
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step % self.save_steps == 0 and state.global_step > 0:
+            model = kwargs.get("model")
+            if hasattr(model, "save_pretrained"):
+                ckpt = os.path.join(self.out_dir, f"adapter_step_{state.global_step}")
+                model.save_pretrained(ckpt)
+                print(f"[callback] Saved adapter checkpoint at step {state.global_step}")
+
 args = TrainingArguments(
     output_dir=OUTPUT_DIR,
     per_device_train_batch_size=BATCH_SIZE,
@@ -212,28 +282,13 @@ args = TrainingArguments(
     save_total_limit=3,
     logging_steps=50,
     report_to="none",
-    dataloader_num_workers=4,
-    dataloader_pin_memory=True
+    dataloader_num_workers=4
 )
 
-# Callback to save adapter fast
-from transformers import TrainerCallback
-class SavePeftAdapterCallback(TrainerCallback):
-    def __init__(self, out_dir, save_steps=1000):
-        self.out_dir = out_dir
-        self.save_steps = save_steps
-        os.makedirs(out_dir, exist_ok=True)
-    def on_step_end(self, args, state, control, **kwargs):
-        if state.global_step % self.save_steps == 0 and state.global_step > 0:
-            model = kwargs.get("model")
-            if isinstance(model, PeftModel) or hasattr(model, "save_pretrained"):
-                ckpt = os.path.join(self.out_dir, f"adapter_step_{state.global_step}")
-                model.save_pretrained(ckpt)
-                print(f"[callback] Saved adapter at step {state.global_step} -> {ckpt}")
 
-# ============================
+# ============================================================
 # TRAIN
-# ============================
+# ============================================================
 trainer = Trainer(
     model=model,
     args=args,
