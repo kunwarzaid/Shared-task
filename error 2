@@ -1,4 +1,288 @@
-�{'eval_loss': 3.096264123916626, 'eval_runtime': 482.0975, 'eval_samples_per_second': 6.876, 'eval_steps_per_second': 6.876, 'epoch': 2.0}
-{'train_runtime': 13764.8344, 'train_samples_per_second': 3.244, 'train_steps_per_second': 0.406, 'train_loss': 2.8212687675454213, 'epoch': 2.0}
-💾 Saving fine-tuned adapter and tokenizer...
-✅ Training complete. Model saved at: /workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora
+import os
+import json
+import zipfile
+import argparse
+from pathlib import Path
+from typing import List, Dict, Any
+import torch
+
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    BitsAndBytesConfig,
+)
+from peft import PeftModel
+
+# -----------------------
+# Configuration
+# -----------------------
+MAX_INPUT_TOKENS = 6144
+MAX_NEW_TOKENS_SUMMARY = 300
+MAX_NEW_TOKENS_JSON = 600
+MAX_NEW_TOKENS_QNA = 200
+
+TEMPERATURE = 0.3
+TOP_P = 0.9
+REPETITION_PENALTY = 1.1
+
+DIALOGUE_DIRNAME = "Dialogues"
+SUMMARY_TEXT_DIRNAME = "Summary_Text"
+SUMMARY_JSON_DIRNAME = "Summary_Json"
+QNA_DIRNAME = "QnA"
+
+# -----------------------
+# Helper functions
+# -----------------------
+
+def unzip_if_needed(zip_path: Path, extract_to: Path):
+    """Unzip test data if not already extracted."""
+    if not extract_to.exists():
+        print(f"📦 Extracting test data from {zip_path}...")
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(extract_to)
+        print(f"✅ Extracted to {extract_to}")
+    else:
+        print(f"📂 Test data already extracted at {extract_to}")
+
+def safe_read_jsonl(path: Path) -> List[Dict[str, Any]]:
+    rows = []
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return rows
+
+def clip_tokens(tokenizer, text: str, max_tokens: int) -> str:
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    ids = ids[-max_tokens:]
+    return tokenizer.decode(ids, skip_special_tokens=True)
+
+def gen_text(model, tokenizer, prompt: str, max_new_tokens: int) -> str:
+    inputs = tokenizer(prompt.strip(), return_tensors="pt").to(model.device)
+    with torch.no_grad():
+        out = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=TEMPERATURE,
+            top_p=TOP_P,
+            repetition_penalty=REPETITION_PENALTY,
+            do_sample=True,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+    return tokenizer.decode(out[0], skip_special_tokens=True)
+
+def try_extract_json(text: str):
+    text = text.strip()
+    if "```" in text:
+        for block in text.split("```"):
+            block = block.strip().removeprefix("json").strip()
+            try:
+                return json.loads(block)
+            except Exception:
+                pass
+    try:
+        return json.loads(text)
+    except Exception:
+        start, end = text.find("{"), text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            try:
+                return json.loads(text[start:end+1])
+            except Exception:
+                pass
+    return None
+
+def gen_json(model, tokenizer, prompt: str, max_new_tokens: int) -> Dict[str, Any]:
+    txt = gen_text(model, tokenizer, prompt, max_new_tokens)
+    obj = try_extract_json(txt)
+    if obj:
+        return obj
+    strict_prompt = (
+        prompt
+        + "\n\nIMPORTANT: Return ONLY a valid JSON object. No explanations."
+    )
+    txt2 = gen_text(model, tokenizer, strict_prompt, max_new_tokens)
+    obj2 = try_extract_json(txt2)
+    return obj2 or {}
+
+def write_json(path: Path, obj: Dict[str, Any]):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+
+def write_text(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
+
+# -----------------------
+# Prompts
+# -----------------------
+
+JSON_TEMPLATE = {
+  "patient_identifiers": None,
+  "demographics": {"age": None, "sex": None},
+  "visit": {"date_time": None, "type": None},
+  "chief_complaint": None,
+  "onset_duration": None,
+  "symptom_description": None,
+  "aggravating_factors": None,
+  "relieving_factors": None,
+  "associated_symptoms": [],
+  "past_medical_history": None,
+  "past_surgical_history": None,
+  "family_history": None,
+  "current_medications": [],
+  "allergies": None,
+  "social_history": [],
+  "functional_status": None,
+  "vital_signs": None,
+  "examination_findings": None,
+  "investigations": [],
+  "assessment_primary_diagnosis": None,
+  "differential_diagnoses": [],
+  "management_plan": None,
+  "tests_referrals_planned": [],
+  "follow_up_plan": None,
+  "chronology_response_to_treatment": None,
+  "patient_concerns_preferences_consent": None,
+  "safety_issues_red_flags": None,
+  "coding_terms": None,
+  "conversation_metadata": {"timestamps": [], "speaker_labels": []}
+}
+
+def build_summary_text_prompt(dialogue_text: str):
+    return (
+        "Summarize the following doctor–patient dialogue in English.\n\n"
+        f"Dialogue:\n{dialogue_text}\n\nSummary:"
+    )
+
+def build_summary_json_prompt(dialogue_text: str):
+    schema = json.dumps(JSON_TEMPLATE, indent=2)
+    return (
+        "From the following doctor–patient dialogue, extract structured clinical information.\n"
+        "Return ONLY valid JSON matching this schema:\n"
+        f"{schema}\n\nDialogue:\n{dialogue_text}\n\nJSON:"
+    )
+
+def build_qna_prompt(question: str, lang: str):
+    return (
+        f"Answer the following patient question in {lang}. "
+        f"Respond concisely and factually.\n\nQuestion: {question}\nAnswer:"
+    )
+
+LANG_HINTS = {
+    "English": "English",
+    "Hindi": "Hindi",
+    "Gujarati": "Gujarati",
+    "Bangla": "Bangla",
+    "Assamese": "Assamese",
+    "Kannada": "Kannada",
+    "Marathi": "Marathi",
+    "Tamil": "Tamil",
+    "Telugu": "Telugu",
+}
+
+# -----------------------
+# Inference pipeline
+# -----------------------
+
+def run_inference(base_model, adapter_dir, zip_path, extract_dir, output_dir):
+    unzip_if_needed(zip_path, extract_dir)
+
+    # Load tokenizer and model
+    bnb_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        bnb_4bit_quant_type="nf4",
+    )
+    print("🔻 Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(adapter_dir)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    print("🔻 Loading base + adapter model...")
+    base = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        device_map="auto",
+        quantization_config=bnb_cfg,
+        torch_dtype=torch.bfloat16,
+    )
+    model = PeftModel.from_pretrained(base, adapter_dir)
+    model.eval()
+
+    langs = [p for p in Path(extract_dir).iterdir() if p.is_dir()]
+    print(f"🌍 Found {len(langs)} languages: {[p.name for p in langs]}")
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        lang_hint = LANG_HINTS.get(lang, "the same language")
+        out_lang = Path(output_dir) / lang
+        dlg_dir = lang_dir / DIALOGUE_DIRNAME
+        qna_dir = lang_dir / QNA_DIRNAME
+
+        # Summaries
+        if dlg_dir.exists():
+            for dlg_file in dlg_dir.glob("*.jsonl"):
+                try:
+                    rows = safe_read_jsonl(dlg_file)
+                    dialogue = " ".join(
+                        str(r.get("dialogue", "")) if isinstance(r, dict) else str(r)
+                        for r in rows
+                    )
+                    dialogue = clip_tokens(tokenizer, dialogue, MAX_INPUT_TOKENS)
+                    text_prompt = build_summary_text_prompt(dialogue)
+                    json_prompt = build_summary_json_prompt(dialogue)
+                    text_out = gen_text(model, tokenizer, text_prompt, MAX_NEW_TOKENS_SUMMARY)
+                    json_out = gen_json(model, tokenizer, json_prompt, MAX_NEW_TOKENS_JSON) or JSON_TEMPLATE
+
+                    write_text(out_lang / SUMMARY_TEXT_DIRNAME / f"{dlg_file.stem}_summary.txt", text_out)
+                    write_json(out_lang / SUMMARY_JSON_DIRNAME / f"{dlg_file.stem}_summary.json", json_out)
+                except Exception as e:
+                    print(f"⚠️ Skipped {dlg_file.name}: {e}")
+
+        # QnA
+        if qna_dir.exists():
+            for qna_file in qna_dir.glob("*.json"):
+                try:
+                    data = json.load(open(qna_file, encoding="utf-8"))
+                    out_qs = {"questions": []}
+                    for qa in data.get("questions", []):
+                        q = qa.get("question", "").strip()
+                        if not q:
+                            continue
+                        prompt = build_qna_prompt(q, lang_hint)
+                        ans = gen_text(model, tokenizer, prompt, MAX_NEW_TOKENS_QNA)
+                        ans = ans.replace("Answer:", "").strip()
+                        out_qs["questions"].append({"question": q, "answer": ans})
+                    write_json(out_lang / QNA_DIRNAME / f"{qna_file.stem}_answers.json", out_qs)
+                except Exception as e:
+                    print(f"⚠️ Skipped {qna_file.name}: {e}")
+
+    print(f"✅ Inference completed. Results saved to {output_dir}")
+
+# -----------------------
+# CLI
+# -----------------------
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base_model", required=True)
+    ap.add_argument("--adapter_dir", required=True)
+    ap.add_argument("--zip_path", required=True)
+    ap.add_argument("--extract_dir", required=True)
+    ap.add_argument("--output_dir", required=True)
+    args = ap.parse_args()
+
+    run_inference(
+        base_model=args.base_model,
+        adapter_dir=args.adapter_dir,
+        zip_path=Path(args.zip_path),
+        extract_dir=Path(args.extract_dir),
+        output_dir=Path(args.output_dir),
+    )
