@@ -1,269 +1,698 @@
-import os, json, time, random, re
-from pathlib import Path
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
-from indic_transliteration import sanscript, transliterate
+# ============================================
+# Colab All-in-One: Trustworthy Med-Guard Pipeline + Evaluation
+# Vertex AI (Gemini 2.5 Pro/Flash)
+# ============================================
 
-# =========================
-# PATHS
-# =========================
-BASE_MODEL   = "/workspace/data/KZ_2117574/gemma_3_1b"
-ADAPTER_DIR  = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
-TRAIN_DIR    = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
-TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_Final"
+# --- Colab / GCP setup helpers (uncomment when needed) ---
+# from google.colab import auth
+# auth.authenticate_user()
+# !gcloud config set project YOUR_PROJECT_ID
 
-# =========================
-# CONSTANTS
-# =========================
-SEED = 42
-FEWSHOT_PER_LANG = 2
-MODEL_MAX = 4096
-CHUNK_SIZE = 1200
-MAX_NEW_TOKENS_SUMMARY = 300
-MAX_NEW_TOKENS_JSON = 600
-MAX_NEW_TOKENS_QNA = 200
+import os, json, time, random, re, csv, math, difflib, traceback
+from difflib import get_close_matches
+from typing import Dict, Any, Tuple, List
+import pandas as pd
+import matplotlib.pyplot as plt
 
-TEMPERATURE_JSON = 0.3
-TOP_P_JSON = 0.95
-TEMPERATURE_QNA = 0.7
-TOP_P_QNA = 0.9
-REP_PENALTY = 1.07
+# Vertex AI
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
-LANG_HINTS = {
-    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati", "Bangla": "Bangla",
-    "Assamese": "Assamese", "Kannada": "Kannada", "Marathi": "Marathi",
-    "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
+# -----------------------------
+# Project/Location (EDIT THESE)
+# -----------------------------
+YOUR_PROJECT_ID = "med-guard-473206"
+YOUR_GCP_LOCATION = "us-central1"
+
+VERTEX_AI_MODEL_MAP = {
+    "gemini-2.5-pro": "gemini-2.5-pro",
+    "gemini-2.5-flash": "gemini-2.5-flash",
 }
 
-SANSCRIPT_MAP = {
-    "Hindi": sanscript.DEVANAGARI,
-    "Gujarati": sanscript.GUJARATI,
-    "Bangla": sanscript.BENGALI,
-    "Assamese": sanscript.ASSAMESE,
-    "Tamil": sanscript.TAMIL,
-    "Telugu": sanscript.TELUGU,
-    "Kannada": sanscript.KANNADA,
-    "Marathi": sanscript.DEVANAGARI,
-    "Dogri": sanscript.DEVANAGARI,
+# -----------------------------
+# Logging
+# -----------------------------
+colab_config = {}
+LOG_LEVELS = {
+    "DEBUG": 1, "INFO": 2, "THINKING": 2, "WORKFLOW": 2, "PATIENT": 3,
+    "DOCTOR": 3, "MEASUREMENT": 3, "HEADER": 4, "STATS": 4, "FINAL_STATS": 4,
+    "STATE_CHANGE": 4, "EVAL": 4, "WARN": 5, "ERROR": 6, "CRITICAL": 7
 }
+def log_trace(message, level="INFO"):
+    cfg = colab_config.get("log_level", "INFO").upper()
+    cfg_num = LOG_LEVELS.get(cfg, 2)
+    msg_num = LOG_LEVELS.get(level.upper(), 2)
+    if msg_num >= cfg_num:
+        ts = time.strftime("%H:%M:%S")
+        print(f"[{ts}][{level.upper()}] {str(message)}")
 
-JSON_TEMPLATE = {
-  "patient_identifiers": None, "demographics": {"age": None, "sex": None},
-  "visit": {"date_time": None, "type": None},
-  "chief_complaint": None, "onset_duration": None, "symptom_description": None,
-  "aggravating_factors": None, "relieving_factors": None,
-  "associated_symptoms": [], "past_medical_history": None,
-  "past_surgical_history": None, "family_history": None,
-  "current_medications": [], "allergies": None, "social_history": [],
-  "functional_status": None, "vital_signs": None, "examination_findings": None,
-  "investigations": [], "assessment_primary_diagnosis": None,
-  "differential_diagnoses": [], "management_plan": None,
-  "tests_referrals_planned": [], "follow_up_plan": None,
-  "chronology_response_to_treatment": None,
-  "patient_concerns_preferences_consent": None,
-  "safety_issues_red_flags": None, "coding_terms": None,
-  "conversation_metadata": {"timestamps": [], "speaker_labels": []}
-}
-
-# =========================
-# HELPERS
-# =========================
-def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path):
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            s = line.strip()
-            if not s: continue
-            try: rows.append(json.loads(s))
-            except json.JSONDecodeError: continue
-    return rows
-
-def romanize_text(text, lang):
-    if lang not in SANSCRIPT_MAP: return text
+# -----------------------------
+# Vertex AI query with backoff
+# -----------------------------
+def query_model(model_id, project_id, location, prompt, system_prompt,
+                tries=5, base_delay=5.0, max_delay=60.0, request_timeout=60.0):
+    """
+    Vertex AI wrapper with exponential backoff + jitter.
+    Returns response.text or an "Error: ..." string (never raises to caller).
+    """
     try:
-        return transliterate.transliterate(text, SANSCRIPT_MAP[lang], sanscript.ITRANS)
-    except Exception:
-        return text
+        vertexai.init(project=project_id, location=location)
+        model = GenerativeModel(model_id, system_instruction=system_prompt)
+    except Exception as e:
+        log_trace(f"Vertex init error: {e}", "CRITICAL")
+        return f"Error: Vertex init failed: {e}"
 
-def deromanize_text(text, lang):
-    if lang not in SANSCRIPT_MAP: return text
-    try:
-        return transliterate.transliterate(text, sanscript.ITRANS, SANSCRIPT_MAP[lang])
-    except Exception:
-        return text
-
-def join_dialogue_jsonl(rows):
-    return "\n".join(str(r.get("dialogue", "")) if isinstance(r, dict) else str(r) for r in rows)
-
-def chunk_text_by_tokens(tokenizer, text, chunk_size):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    chunks = []
-    for i in range(0, len(ids), chunk_size):
-        sub = tokenizer.decode(ids[i:i + chunk_size], skip_special_tokens=True)
-        chunks.append(sub)
-    return chunks
-
-def clean_answer(ans):
-    ans = re.sub(r"^Answer\s*[:\-]*\s*", "", ans.strip(), flags=re.IGNORECASE)
-    return ans.strip()
-
-def try_extract_json(text):
-    text = text.strip()
-    candidates = re.findall(r"\{.*\}", text, flags=re.DOTALL)
-    for c in candidates:
+    last_exc = None
+    for attempt in range(tries):
         try:
-            return json.loads(c)
-        except Exception:
-            continue
-    return None
+            # NOTE: vertex SDK doesn't expose per-call timeout directly;
+            # rely on underlying GRPC timeout via environment if needed.
+            resp = model.generate_content(
+                prompt, generation_config={"temperature": 0.2}
+            )
+            return resp.text
+        except Exception as e:
+            last_exc = e
+            msg = str(e)
+            # Friendly hint on 429
+            if "429" in msg or "Resource exhausted" in msg:
+                log_trace(f"Vertex 429/throttled (try {attempt+1}/{tries}): {e}", "WARN")
+            else:
+                log_trace(f"Vertex call error (try {attempt+1}/{tries}): {e}", "ERROR")
 
-def write_json(path, obj):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    json.dump(obj, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            delay = min(max_delay, base_delay * (2 ** attempt))
+            delay *= (0.5 + random.random())  # jitter
+            log_trace(f"Retrying in {delay:.1f}s...", "WARN")
+            time.sleep(delay)
 
-def write_text(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    open(path, "w", encoding="utf-8").write(text.strip() + "\n")
+    return f"Error: Vertex query failed after {tries} attempts. Last exception: {last_exc}"
 
-# =========================
-# PROMPTS
-# =========================
-def build_summary_prompt(dialogue):
-    return (
-        "You are a clinical summarization assistant.\n"
-        "Summarize the following doctor–patient dialogue clearly and concisely in English.\n"
-        "Focus on diagnosis, symptoms, and management.\nReturn only the summary text.\n\n"
-        f"### Dialogue:\n{dialogue}\n\n### Summary:"
-    )
+# -----------------------------
+# Utilities
+# -----------------------------
+def parse_llm_response_with_thinking(full_response: str, agent_name="Agent") -> Tuple[str, str]:
+    thinking, action_text = "", full_response or ""
+    m = re.search(r"<thinking_process>(.*?)</thinking_process>", action_text, re.DOTALL | re.IGNORECASE)
+    if m:
+        thinking = m.group(1).strip()
+        action_text = action_text[m.end():].strip()
+    if thinking:
+        log_trace(f"{agent_name} thinking: {thinking[:200]}...", "THINKING")
+    return thinking, action_text
 
-def build_json_prompt(dialogue):
-    schema = json.dumps(JSON_TEMPLATE, indent=2, ensure_ascii=False)
-    return (
-        "You are a clinical assistant.\n"
-        "Extract structured information from the dialogue below.\n"
-        "Populate the JSON schema accurately. Use null or [] if not mentioned.\n"
-        "Return ONLY valid JSON.\n\n"
-        f"### Schema:\n{schema}\n\n### Dialogue:\n{dialogue}\n\n### JSON:"
-    )
+def get_patient_summary(conversation_history, initial_patient_data) -> str:
+    info = initial_patient_data.get('Patient_Actor', {})
+    demographics = info.get('Demographics', '')
+    history = info.get('History', '')
+    meds = info.get('Current_Medication', '') or info.get('Medications', '')
+    parts = []
+    if demographics: parts.append(f"Demographics: {demographics}")
+    if history: parts.append(f"History: {history}")
+    if meds: parts.append(f"Medications: {meds}")
+    return "\n".join(parts) if parts else "No summary available."
 
-def build_qna_prompt(question, lang_hint):
-    return (
-        f"You are a medical assistant answering patient questions in {lang_hint}.\n"
-        "Answer clearly and concisely.\n"
-        f"### Question: {question}\n### Answer:"
-    )
+# -----------------------------
+# Scenario loaders
+# -----------------------------
+class ScenarioMedQA:
+    def __init__(self, scenario_dict):
+        self.scenario_dict = scenario_dict
+        self.exam_data = scenario_dict.get("OSCE_Examination", {})
+        self.diagnosis = self.exam_data.get("Correct_Diagnosis", "Unknown")
+    def diagnosis_information(self): return self.diagnosis
 
-# =========================
-# GENERATION
-# =========================
-def gen_text(model, tokenizer, prompt, max_new_tokens, temp=0.7, top_p=0.9):
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=MODEL_MAX).to(model.device)
-    with torch.inference_mode():
-        out = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=True,
-            temperature=temp,
-            top_p=top_p,
-            repetition_penalty=REP_PENALTY,
-            pad_token_id=tokenizer.eos_token_id,
+class ScenarioLoaderMedQA:
+    def __init__(self, file_path="agentclinic_medqa.jsonl"):
+        self.scenarios = []
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        self.scenarios.append(ScenarioMedQA(json.loads(line)))
+        except FileNotFoundError:
+            log_trace(f"Dataset file '{file_path}' not found.", "CRITICAL")
+        self.num_scenarios = len(self.scenarios)
+    def get_scenario(self, idx):
+        return self.scenarios[idx] if 0 <= idx < len(self.scenarios) else None
+
+# -----------------------------
+# Agents
+# -----------------------------
+class PatientAgent:
+    def __init__(self, scenario: ScenarioMedQA, backend_config: Dict[str, Any]):
+        self.scenario = scenario
+        self.backend_config = backend_config
+        self.full_profile = scenario.exam_data
+
+    def _sys(self):
+        return (
+            "You are a simulated patient. Use ONLY this patient profile to answer.\n"
+            "- For history -> 'Patient_Actor'\n- For exam -> 'Physical_Examination_Findings'\n"
+            "- For lab/imaging -> 'Test_Results'. If not present, say you don't know.\n\n"
+            "Profile:\n{profile}"
         )
-    return tokenizer.decode(out[0], skip_special_tokens=True).strip()
 
-def gen_json(model, tokenizer, prompt, max_new_tokens):
-    txt = gen_text(model, tokenizer, prompt, max_new_tokens, temp=TEMPERATURE_JSON, top_p=TOP_P_JSON)
-    obj = try_extract_json(txt)
-    if obj: return obj
-    txt2 = gen_text(model, tokenizer, prompt + "\nReturn ONLY valid JSON.", max_new_tokens)
-    obj2 = try_extract_json(txt2)
-    return obj2 or JSON_TEMPLATE
+    def inference_patient(self, doctor_question: str) -> str:
+        sys_prompt = self._sys().format(profile=json.dumps(self.full_profile, indent=2))
+        user_prompt = f"Doctor asked: {doctor_question}\nPatient answer (brief):"
+        ans = query_model(**self.backend_config, prompt=user_prompt, system_prompt=sys_prompt)
+        return (ans or "").strip()
 
-# =========================
-# MAIN PIPELINE
-# =========================
-def main():
-    random.seed(SEED)
-    torch.set_grad_enabled(False)
-    bnb_cfg = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16, bnb_4bit_quant_type="nf4")
+class MeasurementAgent:
+    """
+    Robust matcher (fixed from earlier issues):
+      1) exact normalized key
+      2) token Jaccard >= 0.5
+      3) difflib fuzzy cutoff 0.6
+      4) LLM fallback (returns value or 'Test not found')
+    """
+    def __init__(self, scenario, llm_config, llm_fallback=True):
+        if hasattr(scenario, "exam_data"):
+            self.patient_data = scenario.exam_data.get("Test_Results", {}) or {}
+        elif isinstance(scenario, dict):
+            self.patient_data = scenario.get("Test_Results", {}) or {}
+        else:
+            self.patient_data = {}
+        self.llm_config = llm_config
+        self.llm_fallback = llm_fallback
 
-    tprint("🚀 Loading model and tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR, use_fast=False)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+        self._flat = self._flatten(self.patient_data)
+        self._norm_to_key = {self._normalize(k): k for k in self._flat.keys()}
+        self.available_tests = list(self._flat.keys())
 
-    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, device_map="auto",
-                                                quantization_config=bnb_cfg, torch_dtype=torch.float16)
-    model = PeftModel.from_pretrained(base, ADAPTER_DIR)
-    model.eval()
-    tprint("✅ Model loaded successfully.")
+    def _flatten(self, data, parent_key="", sep="_"):
+        out = {}
+        if not isinstance(data, dict): return out
+        for k, v in data.items():
+            nk = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                out.update(self._flatten(v, nk, sep))
+            else:
+                out[nk] = v
+        return out
 
-    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
-    tprint(f"Found {len(langs)} languages: {[p.name for p in langs]}")
+    def _normalize(self, text: str) -> str:
+        if not text: return ""
+        t = str(text).lower()
+        t = re.sub(r"[_\-\(\)\/]", " ", t)
+        t = re.sub(r"[^a-z0-9\s]", " ", t)
+        t = re.sub(r"\s+", " ", t).strip()
+        return t
 
-    for lang_dir in langs:
-        lang = lang_dir.name
-        lang_hint = LANG_HINTS.get(lang, "the same language")
-        out_lang = Path(OUTPUT_DIR) / lang
-        dlg_dir = lang_dir / "Dialogues"
-        qna_dir = lang_dir / "QnA"
+    def _jacc(self, a: str, b: str) -> float:
+        sa, sb = set(a.split()), set(b.split())
+        if not sa or not sb: return 0.0
+        return len(sa & sb) / len(sa | sb)
 
-        tprint(f"🗂 Processing: {lang}")
+    def get_result(self, test_name: str) -> str:
+        if not test_name:
+            return "RESULTS FOR <empty request>: Test not found."
+        norm_req = self._normalize(test_name)
 
-        # === Summaries ===
-        if dlg_dir.exists():
-            for p in sorted(dlg_dir.glob("*.jsonl")):
-                try:
-                    rows = safe_read_jsonl(p)
-                    dialogue = join_dialogue_jsonl(rows)
-                    roman_dialogue = romanize_text(dialogue, lang)
-                    chunks = chunk_text_by_tokens(tokenizer, roman_dialogue, CHUNK_SIZE)
+        # 1) exact normalized key
+        if norm_req in self._norm_to_key:
+            k = self._norm_to_key[norm_req]
+            return f"RESULTS FOR {k}: {self._flat[k]}"
 
-                    summaries = []
-                    for chunk in chunks:
-                        chunk_prompt = build_summary_prompt(chunk)
-                        out = gen_text(model, tokenizer, chunk_prompt, MAX_NEW_TOKENS_SUMMARY)
-                        summaries.append(out)
+        # 2) token jaccard
+        best, score = None, 0.0
+        for nk, ok in self._norm_to_key.items():
+            sc = self._jacc(norm_req, nk)
+            if sc > score: best, score = ok, sc
+        if best and score >= 0.5:
+            return f"RESULTS FOR {test_name} (matched {best}): {self._flat[best]}"
 
-                    full_summary_en = " ".join(summaries)
-                    json_prompt = build_json_prompt(full_summary_en)
-                    json_out = gen_json(model, tokenizer, json_prompt, MAX_NEW_TOKENS_JSON)
+        # 3) difflib fuzzy
+        close = get_close_matches(norm_req, list(self._norm_to_key.keys()), n=1, cutoff=0.6)
+        if close:
+            ok = self._norm_to_key[close[0]]
+            return f"RESULTS FOR {test_name} (matched {ok}): {self._flat[ok]}"
 
-                    # De-romanize summary text and JSON keys that contain text
-                    summary_native = deromanize_text(full_summary_en, lang)
-                    for k, v in json_out.items():
-                        if isinstance(v, str):
-                            json_out[k] = deromanize_text(v, lang)
+        # 4) LLM fallback (semantic mapping to VALUE)
+        if self.llm_fallback and self.llm_config:
+            sys_prompt = (
+                "You map a doctor's requested test to the available keys and return ONLY the value.\n"
+                "If nothing matches, respond EXACTLY: Test not found\n\n"
+                f"Available keys:\n{json.dumps(self.available_tests, indent=2)}\n"
+                f"Flat data:\n{json.dumps(self._flat, indent=2)}"
+            )
+            user_prompt = f"Requested test: {test_name}\nReturn only the value or 'Test not found'."
+            try:
+                llm = query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+                llm = (llm or "").strip()
+                if not llm or "not found" in llm.lower():
+                    return f"RESULTS FOR {test_name}: Test not found."
+                return f"RESULTS FOR {test_name}: {llm}"
+            except Exception as e:
+                log_trace(f"LLM fallback failed: {e}", "ERROR")
+                return f"RESULTS FOR {test_name}: Test not found (LLM fallback error)."
 
-                    write_text(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", summary_native)
-                    write_json(out_lang / "Summary_Json" / f"{p.stem}_summary.json", json_out)
-                except Exception as e:
-                    tprint(f"⚠️ Skipped {p.name}: {e}")
+        return f"RESULTS FOR {test_name}: Test not found."
 
-        # === QnA ===
-        if qna_dir.exists():
-            for p in sorted(qna_dir.glob("*.json")):
-                try:
-                    data = json.load(open(p, encoding="utf-8"))
-                    out = {"questions": []}
-                    for qa in data.get("questions", []):
-                        q = qa.get("question", "").strip()
-                        if not q: continue
-                        roman_q = romanize_text(q, lang)
-                        prompt = build_qna_prompt(roman_q, lang_hint)
-                        ans = gen_text(model, tokenizer, prompt, MAX_NEW_TOKENS_QNA,
-                                       temp=TEMPERATURE_QNA, top_p=TOP_P_QNA)
-                        ans_native = deromanize_text(clean_answer(ans), lang)
-                        out["questions"].append({"question": q, "answer": ans_native})
-                    write_json(out_lang / "QnA" / f"{p.stem}_answers.json", out)
-                except Exception as e:
-                    tprint(f"⚠️ Skipped {p.name}: {e}")
+class TestSafetyAgent:
+    def __init__(self, llm_config):
+        self.llm_config = llm_config
+        self.sys = "You are a Test Safety Advisor. Output: Risk: [Low|Medium|High] | Reason: <one line>"
 
-    tprint(f"✅ Inference complete. Results saved to {OUTPUT_DIR}")
+    def assess(self, test, summary):
+        prompt = f"Assess safety for requested test: {test}\nPatient summary:\n{summary}"
+        return query_model(**self.llm_config, prompt=prompt, system_prompt=self.sys)
 
-if __name__ == "__main__":
-    main()
+class PrescriptionWriterAgent:
+    def __init__(self, llm_config):
+        self.llm_config = llm_config
+        self.sys = "You are a prescription writer for a simulation. Provide a concise Rx or 'No medication appropriate'."
+
+    def write(self, diagnosis, summary):
+        prompt = f"Diagnosis: {diagnosis}\nPatient summary:\n{summary}\nProvide medication, dose, route, frequency."
+        return query_model(**self.llm_config, prompt=prompt, system_prompt=self.sys)
+
+class SafetyAgent:
+    """LLM + optional CSV DDI check (simple pair list)."""
+    def __init__(self, llm_config, ddi_csv_file=None):
+        self.llm_config = llm_config
+        self.ddi_pairs = set()
+        if ddi_csv_file and os.path.exists(ddi_csv_file):
+            try:
+                with open(ddi_csv_file, newline='', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        if len(row) >= 2:
+                            a, b = row[0].strip().lower(), row[1].strip().lower()
+                            if a and b:
+                                self.ddi_pairs.add((a,b)); self.ddi_pairs.add((b,a))
+                log_trace(f"Loaded {len(self.ddi_pairs)//2} DDI pairs", "DEBUG")
+            except Exception as e:
+                log_trace(f"DDI CSV read fail: {e}", "WARN")
+        self.sys = "Medication safety reviewer. Output: SAFE / SAFE WITH CAUTION / UNSAFE + one-line reason."
+
+    def _extract_meds(self, txt: str) -> List[str]:
+        meds = re.findall(r"\b[A-Za-z][A-Za-z0-9\-]{1,}\b", txt or "")
+        meds = [m.lower() for m in meds if len(m) > 2]
+        out, seen = [], set()
+        for m in meds:
+            if m not in seen:
+                seen.add(m); out.append(m)
+        return out
+
+    def check(self, rx_txt, summary, use_ddi=True):
+        prompt = f"Evaluate Rx safety:\nRx:\n{rx_txt}\n\nPatient summary:\n{summary}\nReturn verdict + reason."
+        llm_eval = query_model(**self.llm_config, prompt=prompt, system_prompt=self.sys)
+        ddi = []
+        meds = self._extract_meds(rx_txt)
+        if use_ddi and self.ddi_pairs:
+            for i in range(len(meds)):
+                for j in range(i+1, len(meds)):
+                    if (meds[i], meds[j]) in self.ddi_pairs:
+                        ddi.append(f"{meds[i]}-{meds[j]}")
+        return {"llm_eval": llm_eval, "ddi_issues": ddi, "meds": meds}
+
+# -----------------------------
+# Doctor (with differentials + escape hatch + optional consensus)
+# -----------------------------
+class DoctorAgent:
+    def __init__(self, llm_config, max_turns=15, use_consensus=False, consensus_n=2):
+        self.llm_config = llm_config
+        self.max_turns = max_turns
+        self.unanswered_counter = 0
+        self.escape_hatch_threshold = 3
+        self.critical_keywords = ["vital", "blood pressure", "heart rate", "temperature",
+                                  "respiratory", "exam", "neurolog", "cranial", "ct", "mri",
+                                  "angiograph", "lab", "blood", "oxygen"]
+        self.differentials = []
+        self.use_consensus = use_consensus
+        self.consensus_n = max(1, consensus_n)
+
+    def _system_prompt(self, summary, available_tests):
+        return (
+            "You are Dr. Agent in an OSCE-style consult. Be concise, professional.\n"
+            "Rules:\n"
+            "1) Prefer targeted questions. Avoid repeating previously answered facts.\n"
+            "2) If enough info, give final diagnosis EXACTLY as: DIAGNOSIS READY: <Diagnosis>\n"
+            "3) To order tests, use EXACT: REQUEST TEST: <key>\n"
+            "4) Consider available tests only:\n- " + "\n- ".join(available_tests or []) + "\n\n"
+            f"PATIENT SUMMARY:\n{summary}\n"
+            "<thinking_process>Outline next step reasoning.</thinking_process>"
+        )
+
+    def _ask_consensus(self, sys_prompt, user_prompt):
+        if not self.use_consensus or self.consensus_n <= 1:
+            return query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+
+        # Sample multiple responses then simple vote on action type
+        candidates = []
+        for _ in range(self.consensus_n):
+            resp = query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+            candidates.append(resp or "")
+
+        # Heuristic: prefer responses that produce DIAGNOSIS or REQUEST TEST
+        def score_action(t):
+            u = (t or "").upper()
+            if "DIAGNOSIS READY:" in u: return 3
+            if "REQUEST TEST:" in u: return 2
+            return 1
+        best = max(candidates, key=score_action)
+        if len(set(candidates)) > 1: log_trace("Consensus disagreement detected between doctor LLMs.", "WARN")
+        return best
+
+    def _gen_initial_differentials(self, summary):
+        sys_p = "List top 5 differential diagnoses (comma-separated) for the presented summary only."
+        user_p = f"Summary:\n{summary}\nReturn 3-5 items, comma-separated, no explanation."
+        resp = query_model(**self.llm_config, prompt=user_p, system_prompt=sys_p) or ""
+        items = [x.strip() for x in resp.split(",") if x.strip()]
+        # Keep short, unique
+        uniq, seen = [], set()
+        for it in items:
+            k = it.lower()
+            if k not in seen:
+                seen.add(k); uniq.append(it)
+            if len(uniq) >= 5: break
+        self.differentials = uniq or self.differentials
+        if self.differentials:
+            log_trace(f"Current differentials: {self.differentials}", "WORKFLOW")
+
+    def register_response(self, doctor_action: str, patient_answer: str = None):
+        # Update stall counter
+        text = doctor_action or ""
+        if any(w in text.lower() for w in self.critical_keywords):
+            if not patient_answer or patient_answer.strip().lower() in ["", "not available", "unknown", "i don't know"]:
+                self.unanswered_counter += 1
+            else:
+                self.unanswered_counter = 0
+        elif text.upper().startswith("REQUEST TEST"):
+            self.unanswered_counter = 0
+
+    def reset_unanswered(self):
+        was = self.unanswered_counter
+        self.unanswered_counter = 0
+        log_trace(f"Doctor unanswered counter reset (was {was}).", "WORKFLOW")
+
+    def inference_doctor(self, current_input, convo, summary, available_tests, is_initial=False):
+        if is_initial and not self.differentials:
+            self._gen_initial_differentials(summary)
+
+        sys_prompt = self._system_prompt(summary, available_tests)
+        user_prompt = "Start the consultation." if is_initial else f"Last input: {current_input}"
+        full = self._ask_consensus(sys_prompt, user_prompt)
+        thinking, action = parse_llm_response_with_thinking(full or "", "Doctor")
+
+        # Escape hatch if stalled too long
+        if self.unanswered_counter >= self.escape_hatch_threshold and "DIAGNOSIS READY:" not in (action or "").upper():
+            return {
+                "text": "Assuming missing vitals/exam/tests are stable/unrevealing, I will provide a provisional diagnosis.\n"
+                        "DIAGNOSIS READY: Provisional diagnosis based on current evidence.",
+                "thinking_process": thinking
+            }
+        return {"text": (action or "").strip(), "thinking_process": thinking}
+
+# -----------------------------
+# Adjudicator
+# -----------------------------
+def compare_results(doc_dx: str, gt_dx: str, backend_config: Dict[str, Any]) -> str:
+    sys = "Expert adjudicator. Reply ONLY 'Yes' or 'No'."
+    prompt = f"Correct Diagnosis: '{gt_dx}'\nDoctor Diagnosis: '{doc_dx}'\nClinically equivalent? Yes/No."
+    ans = query_model(**backend_config, prompt=prompt, system_prompt=sys)
+    return "yes" if (ans or "").strip().lower().startswith("y") else "no"
+
+# -----------------------------
+# Main simulation
+# -----------------------------
+def run_experiment(config: Dict[str, Any], run_name: str = "run"):
+    global colab_config
+    colab_config = config
+    os.makedirs(run_name, exist_ok=True)
+
+    log_trace("Starting simulation...", "SYSTEM")
+    loader = ScenarioLoaderMedQA(config["dataset_file"])
+    if not loader.scenarios:
+        log_trace("No scenarios loaded. Exiting.", "CRITICAL")
+        return pd.DataFrame([])
+
+    results = []
+    for idx in config["scenario_indices"]:
+        scenario = loader.get_scenario(idx)
+        if not scenario:
+            log_trace(f"Skip invalid scenario {idx}", "WARN")
+            continue
+
+        log_trace(f"--- Scenario {idx}: {scenario.diagnosis_information()} ---", "HEADER")
+
+        doctor = DoctorAgent(config["doctor_llm_config"],
+                             max_turns=config.get("total_inferences", 15),
+                             use_consensus=config.get("use_consensus", False),
+                             consensus_n=config.get("consensus_n", 2))
+        patient = PatientAgent(scenario, config["patient_llm_config"])
+        measurement = MeasurementAgent(scenario, config["measurement_llm_config"],
+                                       llm_fallback=config.get("llm_fallback_for_measurement", True))
+        test_safety = TestSafetyAgent(config["test_safety_llm_config"]) if config.get("use_test_safety", False) else None
+        rx_writer = PrescriptionWriterAgent(config["rx_writer_llm_config"])
+        rx_safety = SafetyAgent(config["rx_safety_llm_config"], ddi_csv_file=config.get("ddi_csv_file")) \
+                    if config.get("use_rx_safety", False) else None
+
+        convo = []
+        current_input = "Patient enters."
+        is_initial = True
+        reached = False
+
+        for turn in range(config.get("total_inferences", 15)):
+            summary = get_patient_summary(convo, scenario.scenario_dict)
+            available_tests = measurement.available_tests
+
+            dr = doctor.inference_doctor(current_input, convo, summary, available_tests, is_initial=is_initial)
+            is_initial = False
+            dr_text = (dr.get("text") or "").strip()
+            convo.append({"role": "assistant", "content": dr_text})
+            log_trace(f"Doctor: {dr_text}", "DOCTOR")
+
+            # Diagnosis ready?
+            if "DIAGNOSIS READY:" in dr_text.upper():
+                m = re.search(r"DIAGNOSIS READY:\s*(.*)", dr_text, re.I)
+                final_dx = (m.group(1).strip() if m else "Not specified")
+                correctness = compare_results(final_dx, scenario.diagnosis_information(), config["moderator_llm_config"])
+                log_trace(f"Diagnosis reached: {final_dx} (Correct? {correctness})", "STATE_CHANGE")
+
+                rx_text = rx_writer.write(final_dx, summary)
+                log_trace(f"Prescription generated: {rx_text}", "PATIENT")
+
+                safety_eval = None; ddi_issues = []
+                if rx_safety and config.get("use_rx_safety", False):
+                    se = rx_safety.check(rx_text, summary, use_ddi=config.get("use_ddi_check", True))
+                    safety_eval = se.get("llm_eval")
+                    ddi_issues = se.get("ddi_issues", [])
+                    log_trace(f"Rx Safety (LLM): {safety_eval} | DDI: {ddi_issues}", "STATS")
+
+                results.append({
+                    "run": run_name, "scenario": idx,
+                    "diagnosis": final_dx, "correct": correctness == "yes",
+                    "rx": rx_text, "rx_safety": safety_eval, "ddi_issues": json.dumps(ddi_issues),
+                    "turns": turn + 1
+                })
+                reached = True
+                break
+
+            # Test request?
+            m = re.search(r"REQUEST TEST:\s*(.*)", dr_text, re.I)
+            if m:
+                tname = m.group(1).strip()
+                if test_safety and config.get("use_test_safety", False):
+                    ts = test_safety.assess(tname, summary)
+                    log_trace(f"Test safety: {ts}", "MEASUREMENT")
+                    convo.append({"role": "system", "content": ts})
+                tresult = measurement.get_result(tname)
+                log_trace(f"Test result: {tresult}", "MEASUREMENT")
+                convo.append({"role": "system", "content": tresult})
+                doctor.reset_unanswered()
+                current_input = tresult
+                continue
+
+            # Otherwise: ask patient
+            patient_ans = patient.inference_patient(dr_text)
+            convo.append({"role": "user", "content": patient_ans})
+            log_trace(f"Patient: {patient_ans}", "PATIENT")
+            doctor.register_response(dr_text, patient_ans)
+            current_input = patient_ans
+
+        if not reached:
+            log_trace("Timeout, no diagnosis.", "WARN")
+            results.append({
+                "run": run_name, "scenario": idx,
+                "diagnosis": "TIMEOUT", "correct": False,
+                "rx": None, "rx_safety": None, "ddi_issues": "[]",
+                "turns": config.get("total_inferences", 15)
+            })
+
+    df = pd.DataFrame(results)
+    df.to_csv(os.path.join(run_name, "experiment_results.csv"), index=False)
+    with open(os.path.join(run_name, "experiment_results.jsonl"), "w", encoding="utf-8") as f:
+        for r in results: f.write(json.dumps(r) + "\n")
+
+    # quick summary
+    total = len(df)
+    acc = (df["correct"].sum() / total * 100) if total else 0.0
+    avg_turns = df["turns"].mean() if total else 0.0
+    ddi_count = (df["ddi_issues"].apply(lambda x: len(json.loads(x or "[]")) > 0).sum()) if total else 0
+    unsafe_by_llm = df["rx_safety"].apply(lambda s: isinstance(s, str) and "unsafe" in s.lower()).sum() if "rx_safety" in df else 0
+    summary = {
+        "total_scenarios": total,
+        "accuracy_percent": acc,
+        "avg_turns": float(avg_turns),
+        "ddi_issues_count": int(ddi_count),
+        "unsafe_by_llm_count": int(unsafe_by_llm)
+    }
+    with open(os.path.join(run_name, "experiment_summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    log_trace(f"Experiment summary: {json.dumps(summary)}", "FINAL_STATS")
+    return df
+
+# -----------------------------
+# Evaluation helpers (separate pipeline)
+# -----------------------------
+def compute_metrics(df: pd.DataFrame):
+    if df.empty: return {}
+    total = len(df)
+    correct = df["correct"].sum()
+    metrics = {
+        "accuracy": correct / total * 100.0,
+        "avg_turns": df["turns"].mean() if "turns" in df else None,
+        "unsafe_rx_count": 0,
+        "unsafe_rx_rate": 0.0,
+        "timeout_rate": (df["diagnosis"].str.upper() == "TIMEOUT").mean() * 100.0
+    }
+    # unsafe if llm eval says unsafe or any DDI issue exists
+    unsafe_mask = df.apply(
+        lambda r: (isinstance(r.get("rx_safety"), str) and "unsafe" in (r.get("rx_safety") or "").lower()) or
+                  (len(json.loads(r.get("ddi_issues") or "[]")) > 0),
+        axis=1
+    )
+    metrics["unsafe_rx_count"] = int(unsafe_mask.sum())
+    metrics["unsafe_rx_rate"] = (unsafe_mask.mean() * 100.0) if total else 0.0
+    return metrics
+
+def evaluate_runs(root="experiments"):
+    rows = []
+    if not os.path.isdir(root):
+        log_trace(f"No experiments dir: {root}", "WARN")
+        return pd.DataFrame([])
+    for run_dir in sorted(os.listdir(root)):
+        run_path = os.path.join(root, run_dir)
+        csvf = os.path.join(run_path, "experiment_results.csv")
+        if not os.path.exists(csvf):
+            log_trace(f"[WARN] No CSV in {run_path}, skip.", "WARN")
+            continue
+        df = pd.read_csv(csvf)
+        m = compute_metrics(df)
+        m["run"] = run_dir
+        rows.append(m)
+    return pd.DataFrame(rows)
+
+def plot_runs(summary_df: pd.DataFrame, out_prefix="multi"):
+    if summary_df.empty:
+        log_trace("No runs to plot.", "WARN")
+        return
+    # Accuracy
+    plt.figure()
+    plt.bar(summary_df["run"], summary_df["accuracy"])
+    plt.ylabel("%"); plt.title("Accuracy per Run"); plt.xticks(rotation=30, ha="right")
+    plt.tight_layout(); plt.savefig(f"{out_prefix}_accuracy.png"); plt.close()
+    # Unsafe Rx
+    plt.figure()
+    plt.bar(summary_df["run"], summary_df["unsafe_rx_rate"])
+    plt.ylabel("%"); plt.title("Unsafe Rx Rate per Run"); plt.xticks(rotation=30, ha="right")
+    plt.tight_layout(); plt.savefig(f"{out_prefix}_unsafe.png"); plt.close()
+    # Timeout
+    plt.figure()
+    plt.bar(summary_df["run"], summary_df["timeout_rate"])
+    plt.ylabel("%"); plt.title("Timeout Rate per Run"); plt.xticks(rotation=30, ha="right")
+    plt.tight_layout(); plt.savefig(f"{out_prefix}_timeout.png"); plt.close()
+    log_trace(f"Saved plots: {out_prefix}_accuracy.png, {out_prefix}_unsafe.png, {out_prefix}_timeout.png", "EVAL")
+
+# -----------------------------
+# Example configs & quick runs
+# -----------------------------
+baseline_config = {
+    "log_level": "INFO",
+    "doctor_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "patient_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "measurement_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "test_safety_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "rx_writer_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "rx_safety_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "moderator_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "dataset_file": "agentclinic_medqa.jsonl",
+    "ddi_csv_file": "db_drug_interactions.csv",
+    "scenario_indices": list(range(0, 5)),      # adjust range for batch
+    "total_inferences": 15,
+    "use_test_safety": False,
+    "use_rx_safety": False,
+    "use_ddi_check": False,
+    "llm_fallback_for_measurement": True,
+    "use_consensus": False,      # off in baseline
+    "consensus_n": 2
+}
+
+safety_config = {
+    **baseline_config,
+    "use_test_safety": True,
+    "use_rx_safety": True,
+    "use_ddi_check": True,
+    "use_consensus": True,       # optional: consensus on, helps robustness
+    "consensus_n": 2
+}
+
+# -------------- Run examples --------------
+# Uncomment any of these to execute in Colab:
+
+# print("== Running BASELINE ==")
+# df_base = run_experiment(baseline_config, run_name="experiments_baseline")
+# print(df_base.head())
+
+# print("== Running SAFETY ==")
+# df_safe = run_experiment(safety_config, run_name="experiments_safety")
+# print(df_safe.head())
+
+# print("== Aggregate evaluation ==")
+# # If you ran multiple folders under "experiments_*", point evaluate_runs to a common root if desired.
+# # Below shows how to aggregate two specific runs:
+# agg = pd.concat([
+#     pd.read_csv("experiments_baseline/experiment_results.csv").assign(run="baseline"),
+#     pd.read_csv("experiments_safety/experiment_results.csv").assign(run="safety")
+# ], ignore_index=True)
+# display(agg.head())
+
+# # Compute metrics per run
+# m_base = compute_metrics(agg[agg["run"]=="baseline"])
+# m_safe = compute_metrics(agg[agg["run"]=="safety"])
+# print("BASELINE:", m_base)
+# print("SAFETY:", m_safe)
+
+# # Plot (saves PNGs in the working dir)
+# plt.figure(); 
+# plt.bar(["baseline","safety"], [m_base["accuracy"], m_safe["accuracy"]]); 
+# plt.title("Accuracy"); plt.ylabel("%"); plt.ylim(0,100); plt.show()
+
+# plt.figure(); 
+# plt.bar(["baseline","safety"], [m_base["unsafe_rx_rate"], m_safe["unsafe_rx_rate"]]); 
+# plt.title("Unsafe Rx Rate"); plt.ylabel("%"); plt.ylim(0,100); plt.show()
+
+print("✅ Notebook cell loaded. Configure & call run_experiment(...) to execute.")
