@@ -1,45 +1,46 @@
 import os, json, time, random
 from pathlib import Path
-from typing import List, Dict, Tuple
-
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 
-# =========================
-# PATHS (edit if needed)
-# =========================
-BASE_MODEL   = "/workspace/data/KZ_2117574/gemma_3_1b"
-ADAPTER_DIR  = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
-TRAIN_DIR    = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
-TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release"
-OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output"
+# ===============================================================
+# CONFIGURATION
+# ===============================================================
+BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"
+ADAPTER_DIR = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
+TRAIN_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
+TEST_DIR = "/workspace/data/KZ_2117574/test_data_release"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_Inference_Output"
 
-# =========================
-# RUNTIME / GENERATION
-# =========================
+# inference settings
 SEED = 42
-random.seed(SEED)
+FEWSHOT_PER_LANG = 2
+MODEL_MAX = 4096
+RESERVE_FOR_TASK = 3072  # more room for dialogues
 
-# keep budgets modest so few-shot fits comfortably on V100
-MODEL_MAX = 4096            # safe window for input
-FEWSHOT_PER_LANG = 2        # using 2 works best for speed/quality
-RESERVE_FOR_TASK = 1536     # keep for the *test* dialogue itself
+# generation settings
+MAX_NEW_TOKENS_SUMMARY = 300
+MAX_NEW_TOKENS_JSON = 500
+MAX_NEW_TOKENS_QNA = 200
 
-# new tokens
-MAX_NEW_TOKENS_SUMMARY = 220
-MAX_NEW_TOKENS_JSON    = 380
-MAX_NEW_TOKENS_QNA     = 140
-
-# decoding
-QNA_TEMP = 0.7
-QNA_TOPP = 0.9
-REP_PEN  = 1.07
+TEMPERATURE_JSON = 0.3
+TOP_P_JSON = 0.95
+TEMPERATURE_QNA = 0.7
+TOP_P_QNA = 0.9
+REP_PENALTY = 1.07
 
 LANG_HINTS = {
-    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati", "Bangla": "Bangla",
-    "Assamese": "Assamese", "Kannada": "Kannada", "Marathi": "Marathi",
-    "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
+    "English": "English",
+    "Hindi": "Hindi",
+    "Gujarati": "Gujarati",
+    "Bangla": "Bangla",
+    "Assamese": "Assamese",
+    "Kannada": "Kannada",
+    "Marathi": "Marathi",
+    "Tamil": "Tamil",
+    "Telugu": "Telugu",
+    "Dogri": "Dogri"
 }
 
 JSON_TEMPLATE = {
@@ -74,258 +75,197 @@ JSON_TEMPLATE = {
   "conversation_metadata": {"timestamps": [], "speaker_labels": []}
 }
 
-# -------------------------
-def tprint(msg:str):
+# ===============================================================
+# HELPER FUNCTIONS
+# ===============================================================
+def tprint(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
-def safe_read_jsonl(path: Path):
+def safe_read_jsonl(path):
     rows = []
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             s = line.strip()
-            if not s: continue
+            if not s:
+                continue
             try:
                 rows.append(json.loads(s))
             except json.JSONDecodeError:
                 continue
     return rows
 
-def read_text(path: Path) -> str:
+def read_text(path):
     try:
         return Path(path).read_text(encoding="utf-8", errors="replace").strip()
     except:
         return ""
 
-def clip_to_tokens(tok, text: str, max_tok: int) -> str:
+def clip_to_tokens(tok, text, max_tok):
     ids = tok.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tok: return text
-    ids = ids[-max_tok:]  # keep tail (most recent turns)
+    if len(ids) <= max_tok:
+        return text
+    ids = ids[-max_tok:]
     return tok.decode(ids, skip_special_tokens=True)
 
-def join_dialogue_jsonl(rows: List[dict]) -> str:
-    parts = []
-    for r in rows:
-        if isinstance(r, dict):
-            d = r.get("dialogue", "")
-        else:
-            d = str(r)
-        if isinstance(d, list):
-            d = " ".join(map(str, d))
-        parts.append(str(d))
-    return "\n".join(parts).strip()
+def join_dialogue_jsonl(rows):
+    return "\n".join(str(r.get("dialogue", "")) if isinstance(r, dict) else str(r) for r in rows)
 
-# -------------------------
-# Few-shot utilities
-# -------------------------
-def sample_fewshot_training(lang_dir: Path, tok, budget_tokens: int) -> Tuple[str, str, str]:
-    """
-    Returns 3 few-shot blocks as strings (summary, json, qna).
-    JSON few-shot is optional (we'll give 1 schema-only example + possibly one light example
-    by mirroring a few fields from the textual summary). To stay safe & fast, we do schema-only.
-    """
+# ===============================================================
+# FEW-SHOT EXAMPLE BUILDER
+# ===============================================================
+def sample_fewshot_training(lang_dir, tok, budget_tokens):
     dlg_dir = lang_dir / "Dialogues"
     sum_dir = lang_dir / "Summary_Text"
     qna_dir = lang_dir / "QnA"
 
-    fs_summary_blocks = []
-    fs_json_blocks    = []
-    fs_qna_blocks     = []
+    fs_summary_blocks, fs_json_blocks, fs_qna_blocks = [], [], []
 
-    # ---- Summaries few-shot ----
     if dlg_dir.exists() and sum_dir.exists():
-        files = sorted([p for p in dlg_dir.glob("*.jsonl")])
-        # deterministic small sampling
-        random.Random(SEED).shuffle(files)
+        files = list(dlg_dir.glob("*.jsonl"))
+        random.shuffle(files)
         for p in files[:FEWSHOT_PER_LANG]:
             rows = safe_read_jsonl(p)
             dial = join_dialogue_jsonl(rows)
-            sum_path = sum_dir / f"{p.stem}_summary.txt"
-            summ = read_text(sum_path)
+            summ_path = sum_dir / f"{p.stem}_summary.txt"
+            summ = read_text(summ_path)
             if dial and summ:
-                dial = clip_to_tokens(tok, dial, min(800, budget_tokens//FEWSHOT_PER_LANG))
-                summ = summ.strip()
-                fs_summary_blocks.append(
-                    f"Example:\nDialogue:\n{dial}\n\nSummary:\n{summ}\n"
-                )
+                dial = clip_to_tokens(tok, dial, min(800, budget_tokens // FEWSHOT_PER_LANG))
+                fs_summary_blocks.append(f"Example:\nDialogue:\n{dial}\n\nSummary:\n{summ}\n")
 
-    # ---- JSON few-shot (schema hint only to avoid token bloat) ----
+    # JSON few-shot: schema only
     schema = json.dumps(JSON_TEMPLATE, indent=2, ensure_ascii=False)
     fs_json_blocks.append(
         "Example (format only):\nDialogue:\n<short clinical conversation>\n\nJSON:\n" + schema + "\n"
     )
 
-    # ---- QnA few-shot ----
+    # QnA few-shot
     if qna_dir.exists():
-        files = sorted([p for p in qna_dir.glob("*.json")])
-        random.Random(SEED).shuffle(files)
+        files = list(qna_dir.glob("*.json"))
+        random.shuffle(files)
         taken = 0
         for p in files:
-            try:
-                data = json.loads(Path(p).read_text(encoding="utf-8"))
-            except Exception:
-                continue
+            data = json.loads(Path(p).read_text(encoding="utf-8"))
             for qa in data.get("questions", []):
-                q = str(qa.get("question","")).strip()
-                a = str(qa.get("answer","")).strip()
+                q = qa.get("question", "").strip()
+                a = qa.get("answer", "").strip()
                 if q and a:
-                    q = clip_to_tokens(tok, q, 150)
-                    a = clip_to_tokens(tok, a, 200)
-                    fs_qna_blocks.append(
-                        f"Example:\nQuestion: {q}\nAnswer: {a}\n"
-                    )
+                    fs_qna_blocks.append(f"Example:\nQuestion: {q}\nAnswer: {a}\n")
                     taken += 1
                     if taken >= FEWSHOT_PER_LANG:
                         break
             if taken >= FEWSHOT_PER_LANG:
                 break
 
-    return "\n".join(fs_summary_blocks).strip(), "\n".join(fs_json_blocks).strip(), "\n".join(fs_qna_blocks).strip()
+    return "\n".join(fs_summary_blocks), "\n".join(fs_json_blocks), "\n".join(fs_qna_blocks)
 
-# -------------------------
-# Prompt builders
-# -------------------------
-def build_summary_text_prompt(fewshot_block: str, dialogue_text: str) -> str:
-    head = "Below are examples followed by a new dialogue to summarize in English.\n"
-    if fewshot_block:
-        head += fewshot_block + "\n\n"
-    return head + f"Now summarize the following dialogue concisely and clinically:\nDialogue:\n{dialogue_text}\n\nSummary:"
+# ===============================================================
+# PROMPT BUILDERS
+# ===============================================================
+def build_summary_text_prompt(fewshot, dialogue):
+    head = "Below are examples followed by a new doctor-patient dialogue to summarize in English.\n"
+    if fewshot:
+        head += fewshot + "\n\n"
+    return head + f"Now summarize the following dialogue clearly and concisely:\nDialogue:\n{dialogue}\n\nSummary:"
 
-def build_summary_json_prompt(fewshot_block: str, dialogue_text: str) -> str:
-    head = (
-        "From the following doctor–patient dialogue, extract a structured clinical summary.\n"
-        "Return ONLY **valid JSON**, matching the given schema (use null/[] when unknown; do not invent).\n"
-    )
-    if fewshot_block:
-        head += fewshot_block + "\n\n"
+def build_summary_json_prompt(fewshot, dialogue):
     schema = json.dumps(JSON_TEMPLATE, indent=2, ensure_ascii=False)
-    head += "Schema:\n" + schema + "\n\n"
-    return head + f"Dialogue:\n{dialogue_text}\n\nJSON:"
-
-def build_qna_prompt(fewshot_block: str, question: str, lang_hint: str) -> str:
-    head = f"Below are examples of patient questions and short factual answers in {lang_hint}.\n"
-    if fewshot_block:
-        head += fewshot_block + "\n\n"
-    head += (
-        f"Now answer this new question **in {lang_hint}**, 2–4 sentences, clear and practical.\n"
-        f"Question: {question}\nAnswer:"
+    head = (
+        "You are a clinical assistant. Extract structured information from the dialogue below. "
+        "Populate each field from the conversation if available, otherwise use null or []. "
+        "Return ONLY valid JSON following this schema.\n"
     )
-    return head
+    if fewshot:
+        head += fewshot + "\n\n"
+    return head + f"Schema:\n{schema}\n\nDialogue:\n{dialogue}\n\nJSON:"
 
-# -------------------------
-# Generation helpers
-# -------------------------
-def gen_text(model, tokenizer, prompt, max_new_tokens, do_sample=False):
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True,
-                       max_length=MODEL_MAX, padding=False).to(model.device)
+def build_qna_prompt(fewshot, question, lang_hint):
+    head = f"Below are examples of patient questions and factual answers in {lang_hint}.\n"
+    if fewshot:
+        head += fewshot + "\n\n"
+    return head + f"Now answer this new question in {lang_hint}, clearly and briefly.\nQuestion: {question}\nAnswer:"
+
+# ===============================================================
+# GENERATION HELPERS
+# ===============================================================
+def gen_text(model, tokenizer, prompt, max_new_tokens, do_sample=False, temperature=0.7, top_p=0.9):
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=MODEL_MAX).to(model.device)
     with torch.inference_mode():
-        gen_kwargs = dict(
+        gen_kwargs = {
             **inputs,
-            max_new_tokens=max_new_tokens,
-            repetition_penalty=REP_PEN,
-            pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.eos_token_id
-        )
+            max_new_tokens: max_new_tokens,
+            repetition_penalty: REP_PENALTY,
+            pad_token_id: tokenizer.eos_token_id,
+            eos_token_id: tokenizer.eos_token_id
+        }
         if do_sample:
-            gen_kwargs.update(dict(do_sample=True, temperature=QNA_TEMP, top_p=QNA_TOPP))
+            gen_kwargs.update(dict(do_sample=True, temperature=temperature, top_p=top_p))
         else:
             gen_kwargs.update(dict(do_sample=False, num_beams=1))
         out = model.generate(**gen_kwargs)
-    text = tokenizer.decode(out[0], skip_special_tokens=True)
-    # drop echoed prompt if present
-    if text.startswith(prompt[:100]):
-        text = text[len(prompt):].strip()
-    return text.strip()
+    return tokenizer.decode(out[0], skip_special_tokens=True).strip()
 
-def try_extract_json(text: str):
-    s = text.strip()
-    # code block attempt
-    if "```" in s:
-        for part in s.split("```"):
-            part = part.strip()
-            if part.lower().startswith("json"):
-                part = part[4:].strip()
+def try_extract_json(text):
+    text = text.strip()
+    if "```" in text:
+        for block in text.split("```"):
+            block = block.strip()
+            if block.lower().startswith("json"):
+                block = block[4:].strip()
             try:
-                return json.loads(part)
-            except Exception:
-                pass
-    # plain attempt
+                return json.loads(block)
+            except:
+                continue
     try:
-        return json.loads(s)
-    except Exception:
-        # bracket slice
-        i, j = s.find("{"), s.rfind("}")
-        if i != -1 and j != -1 and j > i:
+        return json.loads(text)
+    except:
+        start, end = text.find("{"), text.rfind("}")
+        if start != -1 and end != -1:
             try:
-                return json.loads(s[i:j+1])
-            except Exception:
+                return json.loads(text[start:end+1])
+            except:
                 return None
     return None
 
 def gen_json(model, tokenizer, prompt, max_new_tokens):
-    text = gen_text(model, tokenizer, prompt, max_new_tokens, do_sample=False)
-    obj = try_extract_json(text)
-    if obj is None:
-        # one more strict attempt
-        strict = prompt + "\n\nReturn ONLY JSON. No explanations."
-        text2 = gen_text(model, tokenizer, strict, max_new_tokens, do_sample=False)
-        obj = try_extract_json(text2)
-    if not isinstance(obj, dict):
-        return JSON_TEMPLATE
-    # ensure schema keys exist
-    def fill_schema(template, got):
-        if isinstance(template, dict):
-            out = {}
-            for k, v in template.items():
-                out[k] = fill_schema(v, got.get(k, None) if isinstance(got, dict) else None)
-            return out
-        else:
-            return got if got is not None else template
-    return fill_schema(JSON_TEMPLATE, obj)
+    txt = gen_text(model, tokenizer, prompt, max_new_tokens, do_sample=True,
+                   temperature=TEMPERATURE_JSON, top_p=TOP_P_JSON)
+    obj = try_extract_json(txt)
+    return obj if isinstance(obj, dict) else JSON_TEMPLATE
 
-def clean_answer(ans: str) -> str:
-    # remove any leading 'Answer:' echoes
-    a = ans.strip()
-    for tag in ["Answer:", "answer:", "Ans:", "उत्तर:", "ઉત્તર:", "উত্তর:", "ಉತ್ತರ:", "ตอบ:", "जवाब:"]:
-        if a.startswith(tag): a = a[len(tag):].strip()
-    return a
+def clean_answer(ans):
+    for tag in ["Answer:", "answer:", "Ans:", "उत्तर:", "ઉત્તર:", "উত্তর:", "ಜವಾಬ:", "जवाब:"]:
+        if ans.strip().startswith(tag):
+            ans = ans[len(tag):]
+    return ans.strip()
 
-def write_text(path: Path, text: str):
+def write_json(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(text.strip()+"\n", encoding="utf-8")
+    json.dump(obj, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-def write_json(path: Path, obj: dict):
+def write_text(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+    open(path, "w", encoding="utf-8").write(text.strip() + "\n")
 
-# -------------------------
-# MAIN
-# -------------------------
+# ===============================================================
+# MAIN PIPELINE
+# ===============================================================
 def main():
     torch.set_grad_enabled(False)
+    random.seed(SEED)
 
-    # 4-bit on V100 + fp16 compute (bf16 is not supported on V100)
-    bnb_cfg = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
+    # 4-bit optimized for V100
+    bnb_cfg = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16, bnb_4bit_quant_type="nf4")
 
-    tprint("Starting V100-optimized inference")
-    tprint("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR, use_fast=False, local_files_only=True)
+    tprint("🚀 Loading model and tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR, use_fast=False)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    tprint("Loading base model (fp16, 4-bit) ...")
-    base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        torch_dtype=torch.float16,
-        quantization_config=bnb_cfg,
-        local_files_only=True
-    )
-    model = PeftModel.from_pretrained(base, ADAPTER_DIR, local_files_only=True)
+    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, device_map="auto",
+                                                quantization_config=bnb_cfg, torch_dtype=torch.float16)
+    model = PeftModel.from_pretrained(base, ADAPTER_DIR)
     model.eval()
+    tprint("✅ Model loaded successfully.")
 
     langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
     tprint(f"Found {len(langs)} languages: {[p.name for p in langs]}")
@@ -337,62 +277,44 @@ def main():
         dlg_dir = lang_dir / "Dialogues"
         qna_dir = lang_dir / "QnA"
 
-        tprint(f"► Language: {lang}")
+        tprint(f"🗂 Processing: {lang}")
 
-        # ---- Few-shot blocks from TRAIN ----
         train_lang_dir = Path(TRAIN_DIR) / lang
         fs_sum, fs_json, fs_qna = ("", "", "")
         if train_lang_dir.exists():
-            budget_for_examples = max(512, MODEL_MAX - RESERVE_FOR_TASK)
-            fs_sum, fs_json, fs_qna = sample_fewshot_training(train_lang_dir, tokenizer, budget_for_examples)
+            fs_sum, fs_json, fs_qna = sample_fewshot_training(train_lang_dir, tokenizer, 512)
+        print(f"Few-shot summary={len(fs_sum)} chars, json={len(fs_json)} chars, qna={len(fs_qna)} chars")
 
-        # ---- Summaries ----
+        # === Summaries ===
         if dlg_dir.exists():
-            files = sorted(dlg_dir.glob("*.jsonl"))
-            tprint(f"  Dialogues: {len(files)}")
-            for p in files:
-                try:
-                    rows = safe_read_jsonl(p)
-                    dial = join_dialogue_jsonl(rows)
-                    # clip dialogue to leave room for few-shot + instructions
-                    allowed = RESERVE_FOR_TASK
-                    dial = clip_to_tokens(tokenizer, dial, allowed)
+            for p in sorted(dlg_dir.glob("*.jsonl")):
+                rows = safe_read_jsonl(p)
+                dial = clip_to_tokens(tokenizer, join_dialogue_jsonl(rows), RESERVE_FOR_TASK)
+                text_prompt = build_summary_text_prompt(fs_sum, dial)
+                json_prompt = build_summary_json_prompt(fs_json, dial)
 
-                    # TEXT SUMMARY (deterministic)
-                    prompt_text = build_summary_text_prompt(fs_sum, dial)
-                    text_out = gen_text(model, tokenizer, prompt_text, MAX_NEW_TOKENS_SUMMARY, do_sample=False)
+                text_out = gen_text(model, tokenizer, text_prompt, MAX_NEW_TOKENS_SUMMARY)
+                json_out = gen_json(model, tokenizer, json_prompt, MAX_NEW_TOKENS_JSON)
 
-                    # JSON SUMMARY (deterministic + schema)
-                    prompt_json = build_summary_json_prompt(fs_json, dial)
-                    json_out = gen_json(model, tokenizer, prompt_json, MAX_NEW_TOKENS_JSON)
+                write_text(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", text_out)
+                write_json(out_lang / "Summary_Json" / f"{p.stem}_summary.json", json_out)
 
-                    write_text(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", text_out)
-                    write_json(out_lang / "Summary_Json" / f"{p.stem}_summary.json", json_out)
-                except Exception as e:
-                    tprint(f"  ⚠ Skipped {p.name}: {e}")
-
-        # ---- QnA ----
+        # === QnA ===
         if qna_dir.exists():
-            files = sorted(qna_dir.glob("*.json"))
-            tprint(f"  QnA files: {len(files)}")
-            for p in files:
-                try:
-                    data = json.loads(p.read_text(encoding="utf-8"))
-                except Exception as e:
-                    tprint(f"  ⚠ Skipped {p.name}: {e}")
-                    continue
-
+            for p in sorted(qna_dir.glob("*.json")):
+                data = json.load(open(p, encoding="utf-8"))
                 out = {"questions": []}
                 for qa in data.get("questions", []):
-                    q = str(qa.get("question","")).strip()
-                    if not q: continue
-                    prompt_q = build_qna_prompt(fs_qna, q, lang_hint)
-                    ans = gen_text(model, tokenizer, prompt_q, MAX_NEW_TOKENS_QNA, do_sample=True)
+                    q = qa.get("question", "").strip()
+                    if not q:
+                        continue
+                    prompt = build_qna_prompt(fs_qna, q, lang_hint)
+                    ans = gen_text(model, tokenizer, prompt, MAX_NEW_TOKENS_QNA,
+                                   do_sample=True, temperature=TEMPERATURE_QNA, top_p=TOP_P_QNA)
                     out["questions"].append({"question": q, "answer": clean_answer(ans)})
-
                 write_json(out_lang / "QnA" / f"{p.stem}_answers.json", out)
 
-    tprint(f"✅ Inference complete. Outputs at: {OUTPUT_DIR}")
+    tprint(f"✅ Inference complete. Results saved to {OUTPUT_DIR}")
 
 if __name__ == "__main__":
     main()
