@@ -38,11 +38,12 @@ LANG_HINTS = {
     "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
 }
 
+# Corrected transliteration map — Assamese uses Bengali script
 SANSCRIPT_MAP = {
     "Hindi": sanscript.DEVANAGARI,
     "Gujarati": sanscript.GUJARATI,
     "Bangla": sanscript.BENGALI,
-    "Assamese": sanscript.ASSAMESE,
+    "Assamese": sanscript.BENGALI,  # ✅ Fix: Assamese shares Bengali script mapping
     "Tamil": sanscript.TAMIL,
     "Telugu": sanscript.TELUGU,
     "Kannada": sanscript.KANNADA,
@@ -84,18 +85,21 @@ def safe_read_jsonl(path):
             except json.JSONDecodeError: continue
     return rows
 
+# --- Transliteration helpers ---
 def romanize_text(text, lang):
     if lang not in SANSCRIPT_MAP: return text
     try:
-        return transliterate.transliterate(text, SANSCRIPT_MAP[lang], sanscript.ITRANS)
-    except Exception:
+        return transliterate(text, SANSCRIPT_MAP[lang], sanscript.ITRANS)
+    except Exception as e:
+        print(f"⚠️ Romanisation failed for {lang}: {e}")
         return text
 
 def deromanize_text(text, lang):
     if lang not in SANSCRIPT_MAP: return text
     try:
-        return transliterate.transliterate(text, sanscript.ITRANS, SANSCRIPT_MAP[lang])
-    except Exception:
+        return transliterate(text, sanscript.ITRANS, SANSCRIPT_MAP[lang])
+    except Exception as e:
+        print(f"⚠️ De-romanisation failed for {lang}: {e}")
         return text
 
 def join_dialogue_jsonl(rows):
@@ -234,9 +238,10 @@ def main():
                     json_prompt = build_json_prompt(full_summary_en)
                     json_out = gen_json(model, tokenizer, json_prompt, MAX_NEW_TOKENS_JSON)
 
-                    # De-romanize summary text and JSON keys that contain text
                     summary_native = deromanize_text(full_summary_en, lang)
-                    for k, v in json_out.items():
+
+                    # Ensure string fields are correctly converted
+                    for k, v in list(json_out.items()):
                         if isinstance(v, str):
                             json_out[k] = deromanize_text(v, lang)
 
@@ -256,9 +261,9 @@ def main():
                         if not q: continue
                         roman_q = romanize_text(q, lang)
                         prompt = build_qna_prompt(roman_q, lang_hint)
-                        ans = gen_text(model, tokenizer, prompt, MAX_NEW_TOKENS_QNA,
-                                       temp=TEMPERATURE_QNA, top_p=TOP_P_QNA)
-                        ans_native = deromanize_text(clean_answer(ans), lang)
+                        ans_rom = gen_text(model, tokenizer, prompt, MAX_NEW_TOKENS_QNA,
+                                           temp=TEMPERATURE_QNA, top_p=TOP_P_QNA)
+                        ans_native = deromanize_text(clean_answer(ans_rom), lang)
                         out["questions"].append({"question": q, "answer": ans_native})
                     write_json(out_lang / "QnA" / f"{p.stem}_answers.json", out)
                 except Exception as e:
