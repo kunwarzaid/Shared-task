@@ -11,15 +11,13 @@ from indic_transliteration.sanscript import transliterate
 # =========================
 BASE_MODEL   = "/workspace/data/KZ_2117574/gemma_3_1b"
 ADAPTER_DIR  = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
-TRAIN_DIR    = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
 TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_romanized"
+OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_fixedjson"
 
 # =========================
 # CONSTANTS
 # =========================
 SEED = 42
-FEWSHOT_PER_LANG = 1
 MODEL_MAX = 4096
 CHUNK_SIZE = 1000
 MAX_NEW_TOKENS_SUMMARY = 300
@@ -38,7 +36,7 @@ LANG_HINTS = {
     "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
 }
 
-# ✅ Corrected: Assamese uses Bengali script
+# Assamese shares Bengali script
 SANSCRIPT_MAP = {
     "Hindi": sanscript.DEVANAGARI,
     "Gujarati": sanscript.GUJARATI,
@@ -85,21 +83,18 @@ def safe_read_jsonl(path):
             except json.JSONDecodeError: continue
     return rows
 
-# --- Transliteration helpers ---
 def romanize_text(text, lang):
     if lang not in SANSCRIPT_MAP: return text
     try:
         return transliterate(text, SANSCRIPT_MAP[lang], sanscript.ITRANS)
-    except Exception as e:
-        print(f"⚠️ Romanisation failed for {lang}: {e}")
+    except Exception:
         return text
 
 def deromanize_text(text, lang):
     if lang not in SANSCRIPT_MAP: return text
     try:
         return transliterate(text, sanscript.ITRANS, SANSCRIPT_MAP[lang])
-    except Exception as e:
-        print(f"⚠️ De-romanisation failed for {lang}: {e}")
+    except Exception:
         return text
 
 def join_dialogue_jsonl(rows):
@@ -119,21 +114,30 @@ def clean_answer(ans):
 
 def try_extract_json(text):
     text = text.strip()
-    candidates = re.findall(r"\{.*\}", text, flags=re.DOTALL)
-    for c in candidates:
+    text = re.sub(r"```(json)?", "", text)
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        snippet = text[start:end+1]
         try:
-            return json.loads(c)
+            return json.loads(snippet)
         except Exception:
-            continue
+            snippet = re.sub(r",\s*}", "}", snippet)
+            snippet = re.sub(r",\s*]", "]", snippet)
+            try:
+                return json.loads(snippet)
+            except Exception:
+                return None
     return None
 
 def write_json(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
-    json.dump(obj, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
 
 def write_text(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
-    open(path, "w", encoding="utf-8").write(text.strip() + "\n")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
 
 # =========================
 # PROMPTS
@@ -142,18 +146,19 @@ def build_summary_prompt(dialogue):
     return (
         "You are a clinical summarization assistant.\n"
         "Summarize the following doctor–patient dialogue clearly and concisely in English.\n"
-        "Focus on diagnosis, symptoms, and management.\nReturn only the summary text.\n\n"
+        "Focus on diagnosis, symptoms, and management.\n"
+        "Return only the summary text.\n\n"
         f"### Dialogue:\n{dialogue}\n\n### Summary:"
     )
 
 def build_json_prompt(dialogue):
     schema = json.dumps(JSON_TEMPLATE, indent=2, ensure_ascii=False)
     return (
-        "You are a clinical assistant.\n"
-        "Extract structured information from the dialogue below.\n"
-        "Populate the JSON schema accurately. Use null or [] if not mentioned.\n"
-        "Return ONLY valid JSON.\n\n"
-        f"### Schema:\n{schema}\n\n### Dialogue:\n{dialogue}\n\n### JSON:"
+        "You are a clinical information extraction assistant.\n"
+        "From the following doctor–patient dialogue, fill in the fields of the JSON schema below.\n"
+        "Use exact values from the dialogue when possible, otherwise use null or [].\n"
+        "Respond with ONLY valid JSON. Do not include any text outside the braces.\n\n"
+        f"### Schema:\n{schema}\n\n### Dialogue:\n{dialogue}\n\n### JSON:\n"
     )
 
 def build_qna_prompt(question, lang_hint):
@@ -183,8 +188,11 @@ def gen_text(model, tokenizer, prompt, max_new_tokens, temp=0.7, top_p=0.9):
 def gen_json(model, tokenizer, prompt, max_new_tokens):
     txt = gen_text(model, tokenizer, prompt, max_new_tokens, temp=TEMPERATURE_JSON, top_p=TOP_P_JSON)
     obj = try_extract_json(txt)
-    if obj: return obj
-    txt2 = gen_text(model, tokenizer, prompt + "\nReturn ONLY valid JSON.", max_new_tokens)
+    if obj:
+        return obj
+    # retry with stricter prompt
+    strict_prompt = prompt + "\nReturn ONLY valid JSON between braces. No text outside {}."
+    txt2 = gen_text(model, tokenizer, strict_prompt, max_new_tokens)
     obj2 = try_extract_json(txt2)
     return obj2 or JSON_TEMPLATE
 
@@ -229,23 +237,20 @@ def main():
                     roman_dialogue = romanize_text(dialogue, lang)
                     chunks = chunk_text_by_tokens(tokenizer, roman_dialogue, CHUNK_SIZE)
 
+                    # Summaries in English
                     summaries = []
                     for chunk in chunks:
                         chunk_prompt = build_summary_prompt(chunk)
                         out = gen_text(model, tokenizer, chunk_prompt, MAX_NEW_TOKENS_SUMMARY)
                         summaries.append(out)
-
                     full_summary_en = " ".join(summaries)
-                    json_prompt = build_json_prompt(full_summary_en)
+
+                    # ✅ JSON generated from dialogue, not summary
+                    json_prompt = build_json_prompt(roman_dialogue)
                     json_out = gen_json(model, tokenizer, json_prompt, MAX_NEW_TOKENS_JSON)
 
-                    # De-romanize summary text
-                    summary_native = deromanize_text(full_summary_en, lang)
-                    for k, v in json_out.items():
-                        if isinstance(v, str):
-                            json_out[k] = deromanize_text(v, lang)
-
-                    write_text(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", summary_native)
+                    # Save English summary and structured JSON
+                    write_text(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", full_summary_en)
                     write_json(out_lang / "Summary_Json" / f"{p.stem}_summary.json", json_out)
                 except Exception as e:
                     tprint(f"⚠️ Skipped {p.name}: {e}")
@@ -258,8 +263,7 @@ def main():
                     out = {"questions": []}
                     for qa in data.get("questions", []):
                         q = qa.get("question", "").strip()
-                        if not q:
-                            continue
+                        if not q: continue
                         roman_q = romanize_text(q, lang)
                         prompt = build_qna_prompt(roman_q, lang_hint)
                         ans_rom = gen_text(model, tokenizer, prompt, MAX_NEW_TOKENS_QNA,
