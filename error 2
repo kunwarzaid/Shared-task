@@ -1,17 +1,19 @@
 import os, json, time, random
 from pathlib import Path
+from typing import List, Dict, Tuple
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
 
-# ===============================================================
-# CONFIGURATION
-# ===============================================================
-BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"
-ADAPTER_DIR = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
-TRAIN_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
-TEST_DIR = "/workspace/data/KZ_2117574/test_data_release"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_Inference_Output"
+# =========================
+# PATHS (edit if needed)
+# =========================
+BASE_MODEL   = "/workspace/data/KZ_2117574/gemma_3_1b"
+ADAPTER_DIR  = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
+TRAIN_DIR    = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
+TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
+OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output"
 
 # inference settings
 SEED = 42
@@ -318,3 +320,30 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+Error
+/[12:33:05] 🚀 Loading model and tokenizer...
+
+2`torch_dtype` is deprecated! Use `dtype` instead!
+
+*[12:33:10] ✅ Model loaded successfully.
+
+�[12:33:10] Found 10 languages: ['Gujarati', 'Dogri', 'Hindi', 'Telugu', 'Assamese', 'English', 'Kannada', 'Bangla', 'Tamil', 'Marathi']
+[12:33:10] 🗂 Processing: Gujarati
+
+�Traceback (most recent call last):
+  File "/workspace/table-to-text-flan-t5/inference_shared_task_fast.py", line 322, in <module>
+
+=Few-shot summary=9486 chars, json=1056 chars, qna=1288 chars
+
+f    main()
+  File "/workspace/table-to-text-flan-t5/inference_shared_task_fast.py", line 298, in main
+
+�    text_out = gen_text(model, tokenizer, text_prompt, MAX_NEW_TOKENS_SUMMARY)
+  File "/workspace/table-to-text-flan-t5/inference_shared_task_fast.py", line 198, in gen_text
+
+Y    repetition_penalty: REP_PENALTY,
+NameError: name 'repetition_penalty' is not defined
+
+removing /jobs/275846
