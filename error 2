@@ -1,16 +1,14 @@
 import os, json, time, random, torch, multiprocessing as mp
 from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
 
 # ============================================================
 # CONFIG
 # ============================================================
 BASE_MODEL   = "/workspace/data/KZ_2117574/gemma_3_1b"
-ADAPTER_DIR  = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
 TRAIN_DIR    = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
 TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR   = "/workspace/data/KZ_2117574/Final_Inference_Output"
+OUTPUT_DIR   = "/workspace/data/KZ_2117574/Baseline_Gemma_FewShot_Output"
 
 SEED = 42
 FEWSHOT_PER_LANG = 2
@@ -203,21 +201,20 @@ def gen_json(model, tokenizer, prompt):
     return obj
 
 # ============================================================
-# WORKER PER GPU
+# GPU WORKER
 # ============================================================
 def process_languages(rank, langs):
     torch.cuda.set_device(rank)
     device = f"cuda:{rank}"
-    tprint(f"🧠 [GPU {rank}] Loading model...")
+    tprint(f"🧠 [GPU {rank}] Loading base Gemma model...")
 
     bnb_cfg = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16, bnb_4bit_quant_type="nf4")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR, use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=False)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, device_map={"": device},
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, device_map={"": device},
                                                 quantization_config=bnb_cfg, torch_dtype=torch.float16)
-    model = PeftModel.from_pretrained(base, ADAPTER_DIR)
     model.eval()
 
     for lang_dir in langs:
