@@ -1,6 +1,6 @@
 import os
 import json
-import zipfile
+import time
 from pathlib import Path
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
@@ -12,7 +12,6 @@ from peft import PeftModel
 
 BASE_MODEL = "/workspace/data/KZ_2117574/gemma_3_1b"
 ADAPTER_DIR = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
-ZIP_PATH = "/workspace/data/KZ_2117574/test_data_release.zip"
 EXTRACT_DIR = "/workspace/data/KZ_2117574/test_data_release"
 OUTPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_Inference_Output"
 
@@ -26,17 +25,15 @@ TOP_P = 0.9
 REPETITION_PENALTY = 1.1
 
 # ==============================================================
-# HELPERS
+# TIMESTAMP LOGGER
 # ==============================================================
 
-def unzip_if_needed(zip_path: Path, extract_to: Path):
-    if not extract_to.exists():
-        print(f"📦 Extracting test data from {zip_path} ...")
-        with zipfile.ZipFile(zip_path, "r") as z:
-            z.extractall(extract_to)
-        print(f"✅ Extracted to {extract_to}")
-    else:
-        print(f"📂 Test data already extracted at {extract_to}")
+def tprint(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+# ==============================================================
+# HELPERS
+# ==============================================================
 
 def safe_read_jsonl(path: Path):
     rows = []
@@ -185,7 +182,7 @@ def build_qna_prompt(question, lang):
 # ==============================================================
 
 def run_inference():
-    unzip_if_needed(Path(ZIP_PATH), Path(EXTRACT_DIR))
+    tprint("🚀 Starting inference...")
 
     # Load model
     bnb_cfg = BitsAndBytesConfig(
@@ -193,23 +190,31 @@ def run_inference():
         bnb_4bit_compute_dtype=torch.bfloat16,
         bnb_4bit_quant_type="nf4",
     )
-    print("🔻 Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR)
+
+    tprint("🔻 Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(
+        ADAPTER_DIR,
+        use_fast=False,
+        local_files_only=True
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    print("🔻 Loading base + adapter model...")
+    tprint("🔻 Loading base + adapter model...")
     base = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
         device_map="auto",
         quantization_config=bnb_cfg,
         torch_dtype=torch.bfloat16,
+        local_files_only=True,
     )
-    model = PeftModel.from_pretrained(base, ADAPTER_DIR)
+    model = PeftModel.from_pretrained(base, ADAPTER_DIR, local_files_only=True)
     model.eval()
 
+    tprint("✅ Model and tokenizer loaded.")
+
     langs = [p for p in Path(EXTRACT_DIR).iterdir() if p.is_dir()]
-    print(f"🌍 Found {len(langs)} languages: {[p.name for p in langs]}")
+    tprint(f"🌍 Found {len(langs)} languages: {[p.name for p in langs]}")
 
     for lang_dir in langs:
         lang = lang_dir.name
@@ -218,10 +223,13 @@ def run_inference():
         dlg_dir = lang_dir / "Dialogues"
         qna_dir = lang_dir / "QnA"
 
+        tprint(f"🗂 Processing language: {lang}")
+
         # Summaries
         if dlg_dir.exists():
             for dlg_file in dlg_dir.glob("*.jsonl"):
                 try:
+                    tprint(f"→ Generating summary for {dlg_file.name}")
                     rows = safe_read_jsonl(dlg_file)
                     dialogue = " ".join(
                         str(r.get("dialogue", "")) if isinstance(r, dict) else str(r)
@@ -242,6 +250,7 @@ def run_inference():
         if qna_dir.exists():
             for qna_file in qna_dir.glob("*.json"):
                 try:
+                    tprint(f"→ Generating QnA answers for {qna_file.name}")
                     data = json.load(open(qna_file, encoding="utf-8"))
                     out_qs = {"questions": []}
                     for qa in data.get("questions", []):
@@ -256,7 +265,7 @@ def run_inference():
                 except Exception as e:
                     print(f"⚠️ Skipped {qna_file.name}: {e}")
 
-    print(f"✅ Inference complete! Results saved to {OUTPUT_DIR}")
+    tprint(f"✅ Inference complete! Results saved to {OUTPUT_DIR}")
 
 # ==============================================================
 # MAIN
