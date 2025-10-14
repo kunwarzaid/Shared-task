@@ -12,14 +12,13 @@ from indic_transliteration.sanscript import transliterate
 BASE_MODEL   = "/workspace/data/KZ_2117574/gemma_3_1b"
 ADAPTER_DIR  = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
 TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_fixedjson"
+OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_fixedjson_fast"
 
 # =========================
 # CONSTANTS
 # =========================
 SEED = 42
 MODEL_MAX = 4096
-CHUNK_SIZE = 1000
 MAX_NEW_TOKENS_SUMMARY = 300
 MAX_NEW_TOKENS_JSON = 600
 MAX_NEW_TOKENS_QNA = 200
@@ -36,7 +35,6 @@ LANG_HINTS = {
     "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
 }
 
-# Assamese shares Bengali script
 SANSCRIPT_MAP = {
     "Hindi": sanscript.DEVANAGARI,
     "Gujarati": sanscript.GUJARATI,
@@ -50,28 +48,18 @@ SANSCRIPT_MAP = {
 }
 
 JSON_TEMPLATE = {
-  "patient_identifiers": None, "demographics": {"age": None, "sex": None},
-  "visit": {"date_time": None, "type": None},
-  "chief_complaint": None, "onset_duration": None, "symptom_description": None,
-  "aggravating_factors": None, "relieving_factors": None,
-  "associated_symptoms": [], "past_medical_history": None,
-  "past_surgical_history": None, "family_history": None,
-  "current_medications": [], "allergies": None, "social_history": [],
-  "functional_status": None, "vital_signs": None, "examination_findings": None,
-  "investigations": [], "assessment_primary_diagnosis": None,
-  "differential_diagnoses": [], "management_plan": None,
-  "tests_referrals_planned": [], "follow_up_plan": None,
-  "chronology_response_to_treatment": None,
-  "patient_concerns_preferences_consent": None,
-  "safety_issues_red_flags": None, "coding_terms": None,
-  "conversation_metadata": {"timestamps": [], "speaker_labels": []}
+  "chief_complaint": None,
+  "symptom_description": None,
+  "past_medical_history": None,
+  "assessment_primary_diagnosis": None,
+  "management_plan": None,
+  "follow_up_plan": None
 }
 
 # =========================
 # HELPERS
 # =========================
-def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+def tprint(msg): print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def safe_read_jsonl(path):
     rows = []
@@ -85,32 +73,16 @@ def safe_read_jsonl(path):
 
 def romanize_text(text, lang):
     if lang not in SANSCRIPT_MAP: return text
-    try:
-        return transliterate(text, SANSCRIPT_MAP[lang], sanscript.ITRANS)
-    except Exception:
-        return text
+    try: return transliterate(text, SANSCRIPT_MAP[lang], sanscript.ITRANS)
+    except: return text
 
 def deromanize_text(text, lang):
     if lang not in SANSCRIPT_MAP: return text
-    try:
-        return transliterate(text, sanscript.ITRANS, SANSCRIPT_MAP[lang])
-    except Exception:
-        return text
+    try: return transliterate(text, sanscript.ITRANS, SANSCRIPT_MAP[lang])
+    except: return text
 
 def join_dialogue_jsonl(rows):
     return "\n".join(str(r.get("dialogue", "")) if isinstance(r, dict) else str(r) for r in rows)
-
-def chunk_text_by_tokens(tokenizer, text, chunk_size):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    chunks = []
-    for i in range(0, len(ids), chunk_size):
-        sub = tokenizer.decode(ids[i:i + chunk_size], skip_special_tokens=True)
-        chunks.append(sub)
-    return chunks
-
-def clean_answer(ans):
-    ans = re.sub(r"^Answer\s*[:\-]*\s*", "", ans.strip(), flags=re.IGNORECASE)
-    return ans.strip()
 
 def try_extract_json(text):
     text = text.strip()
@@ -120,24 +92,12 @@ def try_extract_json(text):
         snippet = text[start:end+1]
         try:
             return json.loads(snippet)
-        except Exception:
+        except:
             snippet = re.sub(r",\s*}", "}", snippet)
             snippet = re.sub(r",\s*]", "]", snippet)
-            try:
-                return json.loads(snippet)
-            except Exception:
-                return None
+            try: return json.loads(snippet)
+            except: return None
     return None
-
-def write_json(path, obj):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-
-def write_text(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
 
 # =========================
 # PROMPTS
@@ -146,19 +106,27 @@ def build_summary_prompt(dialogue):
     return (
         "You are a clinical summarization assistant.\n"
         "Summarize the following doctor–patient dialogue clearly and concisely in English.\n"
-        "Focus on diagnosis, symptoms, and management.\n"
-        "Return only the summary text.\n\n"
+        "Focus on diagnosis, symptoms, and management.\nReturn only the summary text.\n\n"
         f"### Dialogue:\n{dialogue}\n\n### Summary:"
     )
 
 def build_json_prompt(dialogue):
-    schema = json.dumps(JSON_TEMPLATE, indent=2, ensure_ascii=False)
+    example_json = {
+        "chief_complaint": "Sore throat and voice change for 2 weeks",
+        "symptom_description": "Difficulty swallowing and mild pain in throat, worsens while eating",
+        "past_medical_history": "Smoker for 20 years, mild alcohol use",
+        "assessment_primary_diagnosis": "Possible head and neck carcinoma",
+        "management_plan": "FNAC, CT scan, and biopsy; follow-up in 2 weeks",
+        "follow_up_plan": "Return after pathology report"
+    }
+    example = json.dumps(example_json, indent=2, ensure_ascii=False)
     return (
-        "You are a clinical information extraction assistant.\n"
-        "From the following doctor–patient dialogue, fill in the fields of the JSON schema below.\n"
-        "Use exact values from the dialogue when possible, otherwise use null or [].\n"
-        "Respond with ONLY valid JSON. Do not include any text outside the braces.\n\n"
-        f"### Schema:\n{schema}\n\n### Dialogue:\n{dialogue}\n\n### JSON:\n"
+        "You are a clinical assistant extracting structured information from doctor–patient dialogues.\n"
+        "Follow the JSON example format below carefully.\n"
+        "Do not add explanations. Respond ONLY with valid JSON enclosed in braces.\n\n"
+        "### Example Dialogue:\nPatient has sore throat, voice change, and difficulty swallowing. Smoker 20 years.\n"
+        f"### Example JSON:\n{example}\n\n"
+        f"### Now extract structured information for this dialogue:\n{dialogue}\n\n### JSON:"
     )
 
 def build_qna_prompt(question, lang_hint):
@@ -187,10 +155,9 @@ def gen_text(model, tokenizer, prompt, max_new_tokens, temp=0.7, top_p=0.9):
 
 def gen_json(model, tokenizer, prompt, max_new_tokens):
     txt = gen_text(model, tokenizer, prompt, max_new_tokens, temp=TEMPERATURE_JSON, top_p=TOP_P_JSON)
+    print("\n=== RAW MODEL JSON OUTPUT ===\n", txt[:800], "\n==============================", flush=True)
     obj = try_extract_json(txt)
-    if obj:
-        return obj
-    # retry with stricter prompt
+    if obj: return obj
     strict_prompt = prompt + "\nReturn ONLY valid JSON between braces. No text outside {}."
     txt2 = gen_text(model, tokenizer, strict_prompt, max_new_tokens)
     obj2 = try_extract_json(txt2)
@@ -202,22 +169,22 @@ def gen_json(model, tokenizer, prompt, max_new_tokens):
 def main():
     random.seed(SEED)
     torch.set_grad_enabled(False)
-    bnb_cfg = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16, bnb_4bit_quant_type="nf4")
+    # use 8-bit for speed
+    bnb_cfg = BitsAndBytesConfig(load_in_8bit=True)
 
     tprint("🚀 Loading model and tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR, use_fast=False)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL, device_map="auto", quantization_config=bnb_cfg, torch_dtype=torch.float16
-    )
+    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, device_map="auto",
+                                                quantization_config=bnb_cfg)
     model = PeftModel.from_pretrained(base, ADAPTER_DIR)
     model.eval()
     tprint("✅ Model loaded successfully.")
 
     langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
-    tprint(f"Found {len(langs)} languages: {[p.name for p in langs]}")
+    tprint(f"Languages found: {[p.name for p in langs]}")
 
     for lang_dir in langs:
         lang = lang_dir.name
@@ -228,34 +195,37 @@ def main():
 
         tprint(f"🗂 Processing: {lang}")
 
-        # === Summaries ===
+        # Summaries
         if dlg_dir.exists():
-            for p in sorted(dlg_dir.glob("*.jsonl")):
+            files = sorted(dlg_dir.glob("*.jsonl"))
+            for idx, p in enumerate(files):
+                tprint(f"({idx+1}/{len(files)}) Dialogue: {p.name}")
                 try:
                     rows = safe_read_jsonl(p)
                     dialogue = join_dialogue_jsonl(rows)
                     roman_dialogue = romanize_text(dialogue, lang)
-                    chunks = chunk_text_by_tokens(tokenizer, roman_dialogue, CHUNK_SIZE)
 
-                    # Summaries in English
-                    summaries = []
-                    for chunk in chunks:
-                        chunk_prompt = build_summary_prompt(chunk)
-                        out = gen_text(model, tokenizer, chunk_prompt, MAX_NEW_TOKENS_SUMMARY)
-                        summaries.append(out)
-                    full_summary_en = " ".join(summaries)
+                    # Summary
+                    summary_prompt = build_summary_prompt(roman_dialogue)
+                    summary_en = gen_text(model, tokenizer, summary_prompt, MAX_NEW_TOKENS_SUMMARY)
 
-                    # ✅ JSON generated from dialogue, not summary
+                    # JSON
                     json_prompt = build_json_prompt(roman_dialogue)
                     json_out = gen_json(model, tokenizer, json_prompt, MAX_NEW_TOKENS_JSON)
 
-                    # Save English summary and structured JSON
-                    write_text(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", full_summary_en)
-                    write_json(out_lang / "Summary_Json" / f"{p.stem}_summary.json", json_out)
+                    # Save
+                    out_lang.mkdir(parents=True, exist_ok=True)
+                    (out_lang / "Summary_Text").mkdir(exist_ok=True)
+                    (out_lang / "Summary_Json").mkdir(exist_ok=True)
+                    with open(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", "w", encoding="utf-8") as f:
+                        f.write(summary_en)
+                    with open(out_lang / "Summary_Json" / f"{p.stem}_summary.json", "w", encoding="utf-8") as f:
+                        json.dump(json_out, f, ensure_ascii=False, indent=2)
+
                 except Exception as e:
                     tprint(f"⚠️ Skipped {p.name}: {e}")
 
-        # === QnA ===
+        # QnA
         if qna_dir.exists():
             for p in sorted(qna_dir.glob("*.json")):
                 try:
@@ -270,7 +240,9 @@ def main():
                                            temp=TEMPERATURE_QNA, top_p=TOP_P_QNA)
                         ans_native = deromanize_text(clean_answer(ans_rom), lang)
                         out["questions"].append({"question": q, "answer": ans_native})
-                    write_json(out_lang / "QnA" / f"{p.stem}_answers.json", out)
+                    (out_lang / "QnA").mkdir(exist_ok=True)
+                    with open(out_lang / "QnA" / f"{p.stem}_answers.json", "w", encoding="utf-8") as f:
+                        json.dump(out, f, ensure_ascii=False, indent=2)
                 except Exception as e:
                     tprint(f"⚠️ Skipped {p.name}: {e}")
 
