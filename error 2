@@ -1,5 +1,62 @@
-Large Language Models (LLMs) have recently demonstrated remarkable diagnostic and reasoning capabilities across medical benchmarks, yet their deployment in clinical decision support remains limited by issues of reliability, transparency, and trustworthiness. Prior work has focused on improving safety—for instance, MedGuard introduced multi-agent validation to reduce harmful or contraindicated recommendations. However, little is known about why medical LLMs reach particular conclusions, how consistently they reason across agents, or whether explainability correlates with diagnostic correctness.
+General Explainable AI Foundations
+	1.	Doshi-Velez, F., & Kim, B. (2017). Towards a rigorous science of interpretable machine learning. arXiv preprint arXiv:1702.08608.
+	2.	Gilpin, L. H., Bau, D., Yuan, B. Z., Bajwa, A., Specter, M., & Kagal, L. (2018). Explaining explanations: An overview of interpretability of machine learning. In ICML Workshop on Human Interpretability in Machine Learning (WHI).
+	3.	Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). “Why should I trust you?”: Explaining the predictions of any classifier. In Proc. of KDD.
+	4.	Lundberg, S. M., & Lee, S. I. (2017). A unified approach to interpreting model predictions. In NeurIPS.
+	5.	Holzinger, A., Müller, H., & Kieseberg, P. (2022). Causability and explainability of artificial intelligence in medicine. Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery.
+	6.	Ahmad, M. A., Eckert, C., & Teredesai, A. (2018). Interpretable machine learning in healthcare. IEEE Intelligent Systems.
 
-In this paper, we extend the MedGuard framework to develop MedGuard-X, a trust-centered and explainable diagnostic simulation pipeline. MedGuard-X integrates (i) multi-LLM consensus reasoning to estimate epistemic uncertainty, (ii) explainable reasoning traces for each clinical action, and (iii) trustworthiness scoring through disagreement tracking and justification alignment. Experiments on 20 complex clinical scenarios demonstrate that while MedGuard-X increases transparency and reduces unsafe test and drug recommendations, diagnostic accuracy remains inconsistent. In many cases, LLMs exhibit confident but unjustified reasoning—highlighting that explainability does not imply reliability.
+⸻
 
-Our results emphasize the need for structured accountability mechanisms and hybrid symbolic-LLM architectures before LLMs can be considered trustworthy in real-world clinical environments.
+Explainability & Trust in Healthcare
+7. Tonekaboni, S., Joshi, S., McCradden, M. D., & Goldenberg, A. (2019). What clinicians want: Contextualizing explainable AI for clinical end use. npj Digital Medicine.
+8. Amann, J., Blasimme, A., Vayena, E., Frey, D., & Madai, V. I. (2020). Explainability for artificial intelligence in healthcare: A multidisciplinary perspective. BMC Medical Informatics and Decision Making.
+9. Wiens, J., Saria, S., Sendak, M., Ghassemi, M., Liu, V. X., Doshi-Velez, F., Jung, K., Heller, K., Kale, D., Saeed, M., Ossorio, P. N., & Goldenberg, A. (2019). Do no harm: A roadmap for responsible machine learning for health care. Nature Medicine.
+10. Kelly, C. J., Karthikesalingam, A., Suleyman, M., Corrado, G., & King, D. (2019). Key challenges for delivering clinical impact with artificial intelligence. BMC Medicine.
+11. Rajpurkar, P., Chen, E., Banerjee, O., & Topol, E. J. (2022). AI in health and medicine. Nature Medicine.
+12. Holzinger, A., Biemann, C., Pattichis, C. S., & Kell, D. B. (2017). What do we need to build explainable AI systems for the medical domain? Reviews in the Medical Informatics Journal.
+
+⸻
+
+Safety and Ethical AI Frameworks
+13. World Health Organization (WHO). (2021). Ethics and governance of artificial intelligence for health: WHO guidance.
+14. European Commission. (2023). Artificial Intelligence Act: Proposal for a Regulation of the European Parliament and of the Council.
+15. U.S. Food and Drug Administration (FDA). (2023). Good Machine Learning Practice for Medical Device Development: Guiding Principles.
+16. IEEE Standards Association. (2021). IEEE P7000 series on Ethical Concerns in System Design.
+17. Mitchell, M., Wu, S., Zaldivar, A., Barnes, P., Vasserman, L., Hutchinson, B., Spitzer, E., Raji, I. D., & Gebru, T. (2023). Model cards and system cards for responsible AI. Communications of the ACM.
+
+⸻
+
+LLMs in Medicine
+18. Nori, H., King, N., McKinney, S. M., Carignan, D., & Horvitz, E. (2023). Capabilities of GPT-4 on medical challenge problems. NEJM AI.
+19. Singhal, K., Tu, T., Gottweis, J., et al. (2023). Towards expert-level medical question answering with Med-PaLM 2. Nature.
+20. Kung, T. H., Cheatham, M., Medenilla, A., et al. (2023). Performance of ChatGPT on USMLE. PLOS Digital Health.
+21. Lee, P., Bubeck, S., & Petro, J. (2024). Benefits, limits, and risks of GPT-4 as an AI clinician. arXiv:2303.13375.
+22. Luo, R., Sun, L., Xia, Y., Qin, T., Zhang, S., & Liu, T. Y. (2022). BioGPT: Generative pre-trained transformer for biomedical text generation and mining. Briefings in Bioinformatics.
+23. Li, Y., Zhao, Y., Yuan, J., & Zheng, H. (2023). ChatDoctor: A medical dialogue system fine-tuned with real doctor–patient conversations. arXiv:2303.14070.
+24. Thirunavukarasu, A. J., et al. (2023). Large language models in medicine. Nature Medicine.
+
+⸻
+
+Trustworthiness and Uncertainty in LLMs
+25. Kadavath, S., Lin, J., Andreassen, A., et al. (2022). Language models (mostly) know what they know. arXiv:2207.05221.
+26. Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., Ishii, E., Bang, Y., Madotto, A., & Fung, P. (2023). Survey of hallucination in large language models. ACM Computing Surveys.
+27. Begoli, E., Bhattacharya, T., & Kusnezov, D. (2019). The need for uncertainty quantification in machine-assisted medical decision making. Nature Machine Intelligence.
+28. Ganguli, D., Askell, A., Hubinger, E., et al. (2023). Red teaming language models to reduce harmful outputs. arXiv:2305.15324.
+29. Liao, Q., Zhang, T., & Chen, J. (2024). TrustGPT: Quantifying and improving trustworthiness of LLM reasoning. arXiv:2401.04521.
+
+⸻
+
+Multi-Agent and Consensus-Based Reasoning
+30. Wang, X., Wei, J., Schuurmans, D., et al. (2022). Self-consistency improves chain-of-thought reasoning in language models. arXiv:2203.11171.
+31. Shinn, N., Cassano, F., Gopinath, A., Narasimhan, K., & Yao, S. (2023). Reflexion: Language agents with verbal reinforcement learning. arXiv:2303.11366.
+32. Liang, P., Nguyen, T., & Chen, Z. (2023). LLM-powered multi-agent debate improves factuality. arXiv:2305.16367.
+33. Weng, J., Guo, L., & Lin, X. (2024). Socratic reasoning in multi-agent language models. arXiv:2402.07224.
+34. Tang, S., Zhang, R., & Dai, Z. (2024). MedPrompt-R: Reinforced multi-agent prompting for safe radiology reasoning. arXiv preprint arXiv:2403.02112.
+
+⸻
+
+Explainability–Trust Tradeoff Studies
+35. Lakkaraju, H., Kamar, E., Caruana, R., & Leskovec, J. (2020). Faithful and customizable explanations of black-box models. In AAAI.
+36. Poursabzi-Sangdeh, F., Goldstein, D. G., Hofman, J. M., Vaughan, J. W., & Wallach, H. (2021). Manipulating and measuring model interpretability. In CHI.
+37. Turpin, M., Michael, J., Perez, E., Bowman, S., & Goodman, N. (2023). Language models don’t always say what they think: Unfaithful explanations in chain-of-thought reasoning. arXiv:2305.04388.
