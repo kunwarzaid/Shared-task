@@ -1,265 +1,42 @@
-import os, json, time, random, re
-from pathlib import Path
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
-from indic_transliteration import sanscript
-from indic_transliteration.sanscript import transliterate
-
-# =========================
-# PATHS
-# =========================
-BASE_MODEL   = "/workspace/data/KZ_2117574/gemma_3_1b"
-ADAPTER_DIR  = "/workspace/data/KZ_2117574/less_para_gemma/run_gemma1b_lora"
-TRAIN_DIR    = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
-TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_fewshot_roman"
-
-# =========================
-# CONSTANTS
-# =========================
-SEED = 42
-MODEL_MAX = 4096
-RESERVE_FOR_JSON = 300
-MAX_NEW_TOKENS_SUMMARY = 300
-MAX_NEW_TOKENS_JSON = 600
-MAX_NEW_TOKENS_QNA = 200
-TEMPERATURE_JSON = 0.3
-TOP_P_JSON = 0.95
-TEMPERATURE_QNA = 0.7
-TOP_P_QNA = 0.9
-REP_PENALTY = 1.07
-
-LANG_HINTS = {
-    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati", "Bangla": "Bangla",
-    "Assamese": "Assamese", "Kannada": "Kannada", "Marathi": "Marathi",
-    "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
-}
-
-SANSCRIPT_MAP = {
-    "Hindi": sanscript.DEVANAGARI,
-    "Gujarati": sanscript.GUJARATI,
-    "Bangla": sanscript.BENGALI,
-    "Assamese": sanscript.BENGALI,
-    "Tamil": sanscript.TAMIL,
-    "Telugu": sanscript.TELUGU,
-    "Kannada": sanscript.KANNADA,
-    "Marathi": sanscript.DEVANAGARI,
-    "Dogri": sanscript.DEVANAGARI,
-}
-
-JSON_TEMPLATE = {
-  "chief_complaint": None,
-  "symptom_description": None,
-  "past_medical_history": None,
-  "assessment_primary_diagnosis": None,
-  "management_plan": None,
-  "follow_up_plan": None
-}
-
-# =========================
-# HELPERS
-# =========================
-def tprint(msg): print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path):
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            s = line.strip()
-            if not s: continue
-            try: rows.append(json.loads(s))
-            except json.JSONDecodeError: continue
-    return rows
-
-def romanize_text(text, lang):
-    if lang not in SANSCRIPT_MAP: return text
-    try: return transliterate(text, SANSCRIPT_MAP[lang], sanscript.ITRANS)
-    except: return text
-
-def deromanize_text(text, lang):
-    if lang not in SANSCRIPT_MAP: return text
-    try: return transliterate(text, sanscript.ITRANS, SANSCRIPT_MAP[lang])
-    except: return text
-
-def join_dialogue_jsonl(rows):
-    return "\n".join(str(r.get("dialogue", "")) if isinstance(r, dict) else str(r) for r in rows)
-
-def clip_to_max_context(tok, text):
-    ids = tok.encode(text, add_special_tokens=False)
-    if len(ids) <= MODEL_MAX - RESERVE_FOR_JSON:
-        return text
-    ids = ids[-(MODEL_MAX - RESERVE_FOR_JSON):]
-    return tok.decode(ids, skip_special_tokens=True)
-
-def try_extract_json(text):
-    text = text.strip()
-    text = re.sub(r"```(json)?", "", text)
-    start, end = text.find("{"), text.rfind("}")
-    if start != -1 and end != -1:
-        snippet = text[start:end+1]
-        try: return json.loads(snippet)
-        except: return None
-    return None
-
-# =========================
-# FEW-SHOT BUILDER
-# =========================
-def get_fewshot_example(lang_dir, tokenizer, lang):
-    dlg_dir = lang_dir / "Dialogues"
-    json_dir = lang_dir / "Summary_Json"
-    if not dlg_dir.exists() or not json_dir.exists(): return ("", "")
-    files = list(dlg_dir.glob("*.jsonl"))
-    random.shuffle(files)
-    for p in files:
-        jpath = json_dir / f"{p.stem}_summary.json"
-        if jpath.exists():
-            rows = safe_read_jsonl(p)
-            dlg = join_dialogue_jsonl(rows)
-            roman = romanize_text(clip_to_max_context(tokenizer, dlg), lang)
-            js = json.load(open(jpath, encoding="utf-8"))
-            return (roman, json.dumps(js, indent=2, ensure_ascii=False))
-    return ("", "")
-
-# =========================
-# PROMPTS
-# =========================
-def build_summary_prompt(dialogue):
-    return (
-        "You are a clinical summarization assistant.\n"
-        "Summarize the following doctor–patient dialogue clearly and concisely in English.\n"
-        "Focus on diagnosis, symptoms, and management.\nReturn only the summary text.\n\n"
-        f"### Dialogue:\n{dialogue}\n\n### Summary:"
-    )
-
 def build_json_prompt(dialogue, fewshot_dlg, fewshot_json):
-    example = f"### Example Dialogue:\n{fewshot_dlg}\n\n### Example JSON:\n{fewshot_json}\n\n" if fewshot_dlg else ""
+    """Builds a stronger JSON extraction prompt."""
+    example = ""
+    if fewshot_dlg and fewshot_json:
+        example = f"### Example Dialogue:\n{fewshot_dlg}\n\n### Example JSON:\n{fewshot_json}\n\n"
     schema = json.dumps(JSON_TEMPLATE, indent=2, ensure_ascii=False)
     return (
-        "You are a clinical assistant extracting structured information from doctor–patient dialogues.\n"
-        "Follow the example format and respond ONLY with valid JSON enclosed in braces.\n\n"
+        "You are a clinical information extraction system.\n"
+        "Your task is to extract structured information from doctor–patient dialogues.\n"
+        "Follow the example format and return ONLY valid JSON enclosed in braces `{}` — no extra text, explanation, or markdown.\n\n"
         f"{example}"
-        f"### Now extract structured information for this dialogue:\n{dialogue}\n\n"
-        f"Schema (for reference):\n{schema}\n\n### JSON:"
+        f"### New Dialogue:\n{dialogue}\n\n"
+        f"JSON schema (for reference only):\n{schema}\n\n"
+        "### JSON:"
     )
 
-def build_qna_prompt(question, lang_hint):
-    return (
-        f"You are a medical assistant answering patient questions in {lang_hint}.\n"
-        "Answer clearly and concisely.\n"
-        f"### Question: {question}\n### Answer:"
-    )
 
-# =========================
-# GENERATION
-# =========================
-def gen_text(model, tokenizer, prompt, max_new_tokens, temp=0.7, top_p=0.9):
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=MODEL_MAX).to(model.device)
-    with torch.inference_mode():
-        out = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=True,
-            temperature=temp,
-            top_p=top_p,
-            repetition_penalty=REP_PENALTY,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-    return tokenizer.decode(out[0], skip_special_tokens=True).strip()
-
-def gen_json(model, tokenizer, prompt, max_new_tokens):
-    txt = gen_text(model, tokenizer, prompt, max_new_tokens, temp=TEMPERATURE_JSON, top_p=TOP_P_JSON)
-    print("\n=== RAW MODEL JSON OUTPUT ===\n", txt[:700], "\n==============================", flush=True)
-    obj = try_extract_json(txt)
-    if obj: return obj
-    strict_prompt = prompt + "\nReturn ONLY valid JSON, nothing else."
-    txt2 = gen_text(model, tokenizer, strict_prompt, max_new_tokens)
-    obj2 = try_extract_json(txt2)
-    return obj2 or JSON_TEMPLATE
-
-# =========================
-# MAIN PIPELINE
-# =========================
-def main():
-    random.seed(SEED)
-    torch.set_grad_enabled(False)
-    bnb_cfg = BitsAndBytesConfig(load_in_8bit=True)
-
-    tprint("🚀 Loading model and tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(ADAPTER_DIR, use_fast=False)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    base = AutoModelForCausalLM.from_pretrained(BASE_MODEL, device_map="auto", quantization_config=bnb_cfg)
-    model = PeftModel.from_pretrained(base, ADAPTER_DIR)
-    model.eval()
-    tprint("✅ Model loaded successfully.")
-
-    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
-    tprint(f"Languages found: {[p.name for p in langs]}")
-
-    for lang_dir in langs:
-        lang = lang_dir.name
-        lang_hint = LANG_HINTS.get(lang, "the same language")
-        out_lang = Path(OUTPUT_DIR) / lang
-        dlg_dir = lang_dir / "Dialogues"
-        qna_dir = lang_dir / "QnA"
-
-        tprint(f"🗂 Processing: {lang}")
-
-        fewshot_dlg, fewshot_json = ("", "")
-        train_lang_dir = Path(TRAIN_DIR) / lang
-        if train_lang_dir.exists():
-            fewshot_dlg, fewshot_json = get_fewshot_example(train_lang_dir, tokenizer, lang)
-
-        # === Summaries + JSON ===
-        if dlg_dir.exists():
-            files = sorted(dlg_dir.glob("*.jsonl"))
-            for idx, p in enumerate(files):
-                tprint(f"({idx+1}/{len(files)}) Dialogue: {p.name}")
-                try:
-                    rows = safe_read_jsonl(p)
-                    dialogue = join_dialogue_jsonl(rows)
-                    roman_dialogue = romanize_text(clip_to_max_context(tokenizer, dialogue), lang)
-
-                    summary_prompt = build_summary_prompt(roman_dialogue)
-                    summary_en = gen_text(model, tokenizer, summary_prompt, MAX_NEW_TOKENS_SUMMARY)
-
-                    json_prompt = build_json_prompt(roman_dialogue, fewshot_dlg, fewshot_json)
-                    json_out = gen_json(model, tokenizer, json_prompt, MAX_NEW_TOKENS_JSON)
-
-                    out_lang.mkdir(parents=True, exist_ok=True)
-                    (out_lang / "Summary_Text").mkdir(exist_ok=True)
-                    (out_lang / "Summary_Json").mkdir(exist_ok=True)
-                    with open(out_lang / "Summary_Text" / f"{p.stem}_summary.txt", "w", encoding="utf-8") as f:
-                        f.write(summary_en)
-                    with open(out_lang / "Summary_Json" / f"{p.stem}_summary.json", "w", encoding="utf-8") as f:
-                        json.dump(json_out, f, ensure_ascii=False, indent=2)
-                except Exception as e:
-                    tprint(f"⚠️ Skipped {p.name}: {e}")
-
-        # === QnA ===
-        if qna_dir.exists():
-            for p in sorted(qna_dir.glob("*.json")):
-                try:
-                    data = json.load(open(p, encoding="utf-8"))
-                    out = {"questions": []}
-                    for qa in data.get("questions", []):
-                        q = qa.get("question", "").strip()
-                        if not q: continue
-                        roman_q = romanize_text(q, lang)
-                        prompt = build_qna_prompt(roman_q, lang_hint)
-                        ans_rom = gen_text(model, tokenizer, prompt, MAX_NEW_TOKENS_QNA,
-                                           temp=TEMPERATURE_QNA, top_p=TOP_P_QNA)
-                        ans_native = deromanize_text(ans_rom, lang)
-                        out["questions"].append({"question": q, "answer": ans_native})
-                    (out_lang / "QnA").mkdir(exist_ok=True)
-                    with open(out_lang / "QnA" / f"{p.stem}_answers.json", "w", encoding="utf-8") as f:
-                        json.dump(out, f, ensure_ascii=False, indent=2)
-                except Exception as e:
-                    tprint(f"⚠️ Skipped {p.name}: {e}")
-
-    tprint(f"✅ Inference complete. Results saved to {OUTPUT_DIR}")
-
-if __name__ == "__main__":
-    main()
+def try_extract_json(text):
+    """More tolerant JSON extractor with minor repair heuristics."""
+    text = text.strip()
+    text = text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
+    # Remove markdown artifacts
+    text = re.sub(r"```(json)?", "", text)
+    # Extract JSON-like portion
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end != -1:
+        snippet = text[start:end + 1]
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            try:
+                # Try minor repair: add closing braces, remove trailing commas
+                snippet = re.sub(r",\s*}", "}", snippet)
+                snippet = re.sub(r",\s*]", "]", snippet)
+                return json.loads(snippet)
+            except Exception:
+                pass
+    # Final fallback: look for key patterns
+    matches = re.findall(r'"([^"]+)":\s*"([^"]+)"', text)
+    if matches:
+        return {k: v for k, v in matches}
+    return None
