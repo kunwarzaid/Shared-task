@@ -5,15 +5,16 @@ from transformers import (
     AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
-    BitsAndBytesConfig
+    BitsAndBytesConfig,
+    TrainerCallback
 )
 from peft import LoraConfig, get_peft_model
 
+
 # ============================================================
-# ✅ ACCELERATE SHIM (unwrap_model patch)
+# ✅ ACCELERATE SHIM (unwrap_model fix)
 # ============================================================
 def accelerate_compat_shim():
-    """Patch Accelerate unwrap_model() if old signature causes TypeError."""
     try:
         import accelerate
         sig = inspect.signature(accelerate.Accelerator.unwrap_model)
@@ -25,19 +26,20 @@ def accelerate_compat_shim():
             accelerate.Accelerator.unwrap_model = _shim
             print("[shim] ✅ unwrap_model patched for Accelerate.")
         else:
-            print("[shim] No patch needed (Accelerate is up-to-date).")
+            print("[shim] No patch needed.")
     except Exception as e:
-        print("[shim] ⚠️ Could not apply Accelerate shim:", e)
+        print("[shim] ⚠️ Accelerate shim failed:", e)
         traceback.print_exc()
 
 accelerate_compat_shim()
+
 
 # ============================================================
 # ✅ CONFIG
 # ============================================================
 DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
 BASE_MODEL = "/workspace/data/KZ_2117574/Qwen2_1.5B"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual_safetensors"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual_final"
 
 SEED = 42
 CTX_MAX = 2048
@@ -50,6 +52,7 @@ NUM_EPOCHS = 1
 LR = 2e-4
 SAVE_STEPS = 1000
 FP16 = True
+
 
 # ============================================================
 # ✅ HELPERS
@@ -76,26 +79,23 @@ def join_dialogue(rows):
         else: parts.append(str(r))
     return "\n".join(parts).strip()
 
+
 # ============================================================
-# ✅ SAFE CONVERSION TO SAFETENSORS
+# ✅ SAFETENSORS CONVERTER
 # ============================================================
 def convert_to_safetensors_if_needed(path):
-    """Auto-convert all .bin files in a directory to .safetensors."""
-    if not os.path.isdir(path):
-        return
-    has_bin = any(f.endswith(".bin") for f in os.listdir(path))
-    if not has_bin:
-        return
-    print(f"[convert] ⚙️ Found legacy .bin files in {path}, converting to safetensors...")
-    try:
-        subprocess.run([
-            "python", "-m", "transformers.convert_old_checkpoints_to_safetensors",
-            "--model_name_or_path", path,
-            "--output_dir", path
-        ], check=True)
-        print(f"[convert] ✅ Conversion completed for {path}")
-    except Exception as e:
-        print(f"[convert] ⚠️ Conversion failed in {path}: {e}")
+    if not os.path.isdir(path): return
+    if any(f.endswith(".bin") for f in os.listdir(path)):
+        print(f"[convert] ⚙️ Converting .bin → .safetensors in {path} …")
+        try:
+            subprocess.run([
+                "python", "-m", "transformers.convert_old_checkpoints_to_safetensors",
+                "--model_name_or_path", path, "--output_dir", path
+            ], check=True)
+            print(f"[convert] ✅ Conversion done for {path}")
+        except Exception as e:
+            print(f"[convert] ⚠️ Conversion failed: {e}")
+
 
 # ============================================================
 # ✅ LOAD TRAINING DATA
@@ -109,7 +109,7 @@ def make_examples(split):
         summ=os.path.join(ldir,"Summary_Text")
         qna=os.path.join(ldir,"QnA")
 
-        # Summaries
+        # --- Summaries ---
         if os.path.isdir(dlg) and os.path.isdir(summ):
             for fn in os.listdir(dlg):
                 if not fn.endswith(".jsonl"): continue
@@ -123,7 +123,7 @@ def make_examples(split):
                 prompt=f"Summarize the following doctor–patient dialogue in English:\n{dialogue}\n\nSummary:"
                 examples.append({"prompt":prompt,"target":text})
 
-        # QnA
+        # --- QnA ---
         if os.path.isdir(qna):
             for fn in os.listdir(qna):
                 if not fn.endswith(".json"): continue
@@ -137,6 +137,7 @@ def make_examples(split):
                     examples.append({"prompt":prompt,"target":a})
     tprint(f"Loaded {len(examples)} examples from {split}")
     return examples
+
 
 # ============================================================
 # ✅ TOKENIZATION + CHUNKING
@@ -168,6 +169,7 @@ def map_fn(tokenizer):
         return out
     return _map
 
+
 # ============================================================
 # ✅ COLLATOR
 # ============================================================
@@ -184,6 +186,7 @@ class Collator:
             "attention_mask":torch.tensor(att),
             "labels":torch.tensor(lbl)
         }
+
 
 # ============================================================
 # ✅ MODEL + QLoRA
@@ -216,6 +219,24 @@ def build_model():
     model.print_trainable_parameters()
     return model
 
+
+# ============================================================
+# ✅ CALLBACK: Save adapter + trainer checkpoints
+# ============================================================
+class SavePeftAdapterCallback(TrainerCallback):
+    def __init__(self, out_dir, save_steps=1000):
+        self.out_dir = out_dir
+        self.save_steps = save_steps
+        os.makedirs(out_dir, exist_ok=True)
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step % self.save_steps == 0 and state.global_step > 0:
+            model = kwargs.get("model")
+            if hasattr(model, "save_pretrained"):
+                ckpt = os.path.join(self.out_dir, f"adapter_step_{state.global_step}")
+                model.save_pretrained(ckpt, safe_serialization=True)
+                print(f"[callback] 💾 Saved adapter-only checkpoint at step {state.global_step}")
+
+
 # ============================================================
 # ✅ TRAINING LOOP
 # ============================================================
@@ -246,18 +267,30 @@ def main():
         max_steps=28000
     )
 
-    trainer=Trainer(model=model,args=args,train_dataset=train,eval_dataset=dev,data_collator=Collator(tok))
+    trainer=Trainer(
+        model=model,
+        args=args,
+        train_dataset=train,
+        eval_dataset=dev,
+        data_collator=Collator(tok),
+        callbacks=[SavePeftAdapterCallback(OUTPUT_DIR, SAVE_STEPS)]
+    )
 
+    # ---- Resume from latest checkpoint
     ckpt=None
     if os.path.isdir(OUTPUT_DIR):
-        ckpts=[d for d in os.listdir(OUTPUT_DIR) if d.startswith("checkpoint-")]
+        ckpts=[d for d in os.listdir(OUTPUT_DIR) if d.startswith(("checkpoint-","adapter_step_"))]
         if ckpts:
-            ckpt=os.path.join(OUTPUT_DIR,sorted(ckpts,key=lambda x:int(x.split('-')[-1]))[-1])
-            convert_to_safetensors_if_needed(ckpt)  # ✅ Auto-convert legacy checkpoint if needed
+            ckpt=os.path.join(OUTPUT_DIR,sorted(ckpts,key=lambda x:int(''.join(filter(str.isdigit,x))) or 0)[-1])
+            convert_to_safetensors_if_needed(ckpt)
 
     if ckpt:
         tprint(f"Resuming from {ckpt}")
-        trainer.train(resume_from_checkpoint=ckpt)
+        if not os.path.exists(os.path.join(ckpt,"trainer_state.json")):
+            print(f"[resume] Trainer state missing; resuming weights only.")
+            trainer.train(resume_from_checkpoint=None)
+        else:
+            trainer.train(resume_from_checkpoint=ckpt)
     else:
         tprint("✨ Starting fresh training")
         trainer.train()
@@ -266,6 +299,7 @@ def main():
     trainer.save_model(OUTPUT_DIR)
     tok.save_pretrained(OUTPUT_DIR)
     tprint("✅ Training complete!")
+
 
 if __name__=="__main__":
     main()
