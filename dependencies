@@ -1,112 +1,1361 @@
-# ===============================================
-# 🧪 Diagnostic Accuracy Benchmark (LLM Baselines)
-# ChatDoctor-7B | Clinical-Camel-7B
-# Using AgentClinic-MedQA 10 scenarios
-# ===============================================
+# full_simulation_experiments_complete.py
+import os
+import json
+import time
+import random
+import re
+import csv
+import math
+import difflib
+import pandas as pd
+from typing import Dict, Any, Tuple, List
+from difflib import get_close_matches
+# --- Vertex AI Library ---
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
-!pip install transformers accelerate bitsandbytes tqdm -q
+# ---------------------------------------------------------------------
+# ⚠️ Update with your GCP project details
+# ---------------------------------------------------------------------
+YOUR_PROJECT_ID = "med-guard-473206"
+YOUR_GCP_LOCATION = "us-central1"
 
-import json, re, os, time
-import torch, pandas as pd
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-from google.colab import files
-
-# ------------------------------------------------
-# ⚙️ Configuration
-# ------------------------------------------------
-AGENTCLINIC_FILE = "agentclinic_medqa.jsonl"   # upload this if not already present
-NUM_SCENARIOS = 10
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-SAVE_DIR = "/content/diagnostic_comparison"
-os.makedirs(SAVE_DIR, exist_ok=True)
-
-MODELS = {
-    "ChatDoctor-7B": "lxe/ChatDoctor-7B",
-    "Clinical-Camel-7B": "ehsanaghaei/Clinical-Camel-7B"  # placeholder HF ID — replace if different
+VERTEX_AI_MODEL_MAP = {
+    "gemini-2.5-pro": "gemini-2.5-pro",
+    "gemini-2.5-flash": "gemini-2.5-flash"
 }
 
-# ------------------------------------------------
-# 🧩 Load AgentClinic scenarios
-# ------------------------------------------------
-if not os.path.exists(AGENTCLINIC_FILE):
-    print("⬆️ Please upload your agentclinic_medqa.jsonl file now.")
-    uploaded = files.upload()
+# runtime config (updated in main)
+colab_config = {}
 
-scenarios = []
-with open(AGENTCLINIC_FILE, "r", encoding="utf-8") as f:
-    for i, line in enumerate(f):
-        if i >= NUM_SCENARIOS: break
-        d = json.loads(line)
-        diag = d.get("OSCE_Examination", {}).get("Correct_Diagnosis", "Unknown")
-        actor = d.get("OSCE_Examination", {}).get("Patient_Actor", {})
-        hist = actor.get("History", "")
-        phys = actor.get("Physical_Examination_Findings", "")
-        labs = d.get("OSCE_Examination", {}).get("Test_Results", {})
-        summary = f"History: {hist}\nExam: {phys}\nLabs: {json.dumps(labs)}"
-        scenarios.append({"id": i, "summary": summary, "gt": diag})
+# ---------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------
+LOG_LEVELS = {
+    "DEBUG": 1, "INFO": 2, "THINKING": 2, "WORKFLOW": 2, "PATIENT": 3,
+    "DOCTOR": 3, "MEASUREMENT": 3, "HEADER": 4, "STATS": 4, "FINAL_STATS": 4,
+    "STATE_CHANGE": 4, "EVAL": 4, "WARN": 5, "ERROR": 6, "CRITICAL": 7
+}
 
-print(f"✅ Loaded {len(scenarios)} AgentClinic scenarios.")
+def log_trace(message, level="INFO"):
+    config_level_str = colab_config.get("log_level", "INFO").upper()
+    config_level_num = LOG_LEVELS.get(config_level_str, 2)
+    message_level_num = LOG_LEVELS.get(level.upper(), 2)
+    if message_level_num >= config_level_num:
+        timestamp = time.strftime("%H:%M:%S")
+        print(f"[{timestamp}][{level.upper()}] {str(message)}")
 
-# ------------------------------------------------
-# 🧠 Model inference utility
-# ------------------------------------------------
-def ask_model(model_name, model_id, summary):
-    """Query model for diagnosis and return raw text output."""
+# ---------------------------------------------------------------------
+# Vertex AI Query Wrapper
+
+
+def query_model(model_id, project_id, location, prompt, system_prompt,
+                tries=5, base_delay=5.0, max_delay=60.0):
+    """
+    Wrapper to call Vertex AI generative model.
+    - Retries with exponential backoff + jitter on transient errors (like 429).
+    - Returns string text (may contain thinking tag).
+    """
+    log_trace(f"Querying Vertex AI model {model_id} (prompt preview: {prompt[:100]!r})", "DEBUG")
     try:
-        tok = AutoTokenizer.from_pretrained(model_id)
-        mdl = AutoModelForCausalLM.from_pretrained(
-            model_id, device_map="auto", load_in_8bit=True)
-        pipe = pipeline(
-            "text-generation", model=mdl, tokenizer=tok,
-            device=0 if DEVICE=="cuda" else -1,
-            max_new_tokens=100, temperature=0.1)
-        prompt = (
-            "You are a clinical reasoning expert.\n"
-            "Given the following patient case, state the SINGLE most likely diagnosis.\n"
-            "Provide only the diagnosis name, no explanation.\n"
-            f"Case:\n{summary}\n\nDiagnosis:"
-        )
-        out = pipe(prompt, num_return_sequences=1)[0]["generated_text"]
-        m = re.search(r"Diagnosis[:\- ]*(.*)", out, re.I)
-        return m.group(1).split("\n")[0] if m else out.strip()
+        vertexai.init(project=project_id, location=location)
+        model = GenerativeModel(model_id, system_instruction=system_prompt)
     except Exception as e:
-        return f"Error: {e}"
+        log_trace(f"Vertex AI init error: {e}", "CRITICAL")
+        return f"Error: Vertex init failed: {e}"
 
-# ------------------------------------------------
-# ⚖️ Compare results (simple fuzzy match)
-# ------------------------------------------------
-def compare_diag(pred, gold):
-    """Heuristic comparison for string match."""
-    pred, gold = pred.lower(), gold.lower()
-    return gold in pred or pred in gold or \
-           len(set(pred.split()) & set(gold.split())) / len(set(gold.split())) > 0.5
+    last_exc = None
+    for attempt in range(tries):
+        try:
+            response = model.generate_content(prompt, generation_config={"temperature": 0.2})
+            return response.text
+        except Exception as e:
+            last_exc = e
+            log_trace(f"Vertex call error (attempt {attempt+1}/{tries}): {e}", "ERROR")
 
-# ------------------------------------------------
-# 🚀 Run benchmark
-# ------------------------------------------------
-records = []
-for model_name, model_id in MODELS.items():
-    print(f"\n=== Evaluating {model_name} ===")
-    for sc in tqdm(scenarios):
-        pred = ask_model(model_name, model_id, sc["summary"])
-        ok = compare_diag(pred, sc["gt"])
-        records.append({
-            "scenario": sc["id"],
-            "model": model_name,
-            "pred_diag": pred,
-            "gold_diag": sc["gt"],
-            "correct": ok
-        })
+            # Exponential backoff with jitter
+            delay = min(max_delay, base_delay * (2 ** attempt))
+            delay = delay * (0.5 + random.random())  # add jitter
+            log_trace(f"Retrying after {delay:.1f}s...", "WARN")
+            time.sleep(delay)
 
-# ------------------------------------------------
-# 💾 Save results
-# ------------------------------------------------
-df = pd.DataFrame(records)
-df.to_csv(f"{SAVE_DIR}/diagnostic_comparison.csv", index=False)
-summary = df.groupby("model")["correct"].mean().mul(100).round(2)
-print("\n=== Diagnostic Accuracy Summary ===")
-print(summary)
-summary.to_csv(f"{SAVE_DIR}/diagnostic_summary.csv")
+    return f"Error: Vertex query failed after {tries} attempts. Last exception: {last_exc}"
 
-print(f"\nAll results saved in: {SAVE_DIR}")
+
+# ---------------------------------------------------------------------
+# Utility
+# ---------------------------------------------------------------------
+def parse_llm_response_with_thinking(full_response: str, agent_name="Agent") -> Tuple[str, str]:
+    thinking_process, action_text = "", full_response or ""
+    think_match = re.search(r"<thinking_process>(.*?)</thinking_process>", full_response or "", re.DOTALL | re.IGNORECASE)
+    if think_match:
+        thinking_process = think_match.group(1).strip()
+        action_text = full_response[think_match.end():].strip()
+    if thinking_process:
+        log_trace(f"{agent_name} thinking: {thinking_process[:200]}...", "THINKING")
+    return thinking_process, action_text
+
+def get_patient_summary(conversation_history, initial_patient_data) -> str:
+    # Compact summary used for doctor context (expandable)
+    patient_info = initial_patient_data.get('Patient_Actor', {})
+    demographics = patient_info.get('Demographics', '')
+    history = patient_info.get('History', '')
+    meds = patient_info.get('Current_Medication', '') or patient_info.get('Medications', '')
+    parts = []
+    if demographics: parts.append(f"Demographics: {demographics}")
+    if history: parts.append(f"History: {history}")
+    if meds: parts.append(f"Medications: {meds}")
+    return "\n".join(parts) if parts else "No summary available."
+
+# ---------------------------------------------------------------------
+# Scenario loader
+# ---------------------------------------------------------------------
+class ScenarioMedQA:
+    def __init__(self, scenario_dict):
+        self.scenario_dict = scenario_dict
+        self.exam_data = self.scenario_dict.get("OSCE_Examination", {})
+        self.diagnosis = self.exam_data.get("Correct_Diagnosis", "Unknown")
+    def diagnosis_information(self) -> str:
+        return self.diagnosis
+
+class ScenarioLoaderMedQA:
+    def __init__(self, file_path="agentclinic_medqa.jsonl"):
+        self.scenarios = []
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line: continue
+                    self.scenarios.append(ScenarioMedQA(json.loads(line)))
+        except FileNotFoundError:
+            log_trace(f"Dataset file '{file_path}' not found.", "CRITICAL")
+        self.num_scenarios = len(self.scenarios)
+    def get_scenario(self, idx):
+        return self.scenarios[idx] if 0 <= idx < len(self.scenarios) else None
+
+# ---------------------------------------------------------------------
+# Agents
+# ---------------------------------------------------------------------
+class PatientAgent:
+    def __init__(self, scenario: ScenarioMedQA, backend_config: Dict[str, Any]):
+        self.scenario = scenario
+        self.backend_config = backend_config
+        self.agent_hist = ""
+        self.full_profile = self.scenario.exam_data
+    def system_prompt_template(self):
+        return (
+            "You are a simulated patient. Use ONLY this patient profile to answer. "
+            "For history -> use Patient_Actor, for exam -> Physical_Examination_Findings, "
+            "for lab/imaging -> Test_Results. If not present, say you don't know.\n\nProfile:\n{profile}"
+        )
+    def inference_patient(self, question_from_doctor: str) -> str:
+        s_profile = json.dumps(self.full_profile, indent=2)
+        sys_prompt = self.system_prompt_template().format(profile=s_profile)
+        user_prompt = f"Doctor asked: {question_from_doctor}\nPatient answer (brief):"
+        ans = query_model(**self.backend_config, prompt=user_prompt, system_prompt=sys_prompt)
+        ans = (ans or "").strip()
+        self.agent_hist += f"Doctor: {question_from_doctor}\nPatient: {ans}\n"
+        return ans
+
+class DoctorAgent:
+    """
+    DoctorAgent:
+    - Orchestrates the consultation.
+    - Uses LLM for reasoning and conversation.
+    - Tracks when critical information is missing and forces a provisional
+      diagnosis if stalled too long (escape hatch).
+    - Resets stall counter when critical data (e.g., tests or vitals) arrives.
+    """
+
+    def __init__(self, llm_config, max_turns=15):
+        self.llm_config = llm_config
+        self.max_turns = max_turns
+
+        # Escape hatch control
+        self.unanswered_counter = 0
+        self.escape_hatch_threshold = 3  # after 3 stalls, force diagnosis
+
+        # Critical cues (things doctor should always try to collect)
+        self.critical_keywords = [
+            "vital", "blood pressure", "heart rate", "temperature", "respiratory",
+            "exam", "neurolog", "cranial", "ct", "mri", "angiograph", "lab", "blood"
+        ]
+
+        # State
+        self.collected_findings = []
+        self.diagnosis = None
+
+    def inference_doctor(self, current_input, convo, summary, available_tests, is_initial=False):
+        """
+        Unified inference step for doctor.
+        Decides whether to ask, request test, or give diagnosis.
+        """
+        context = (
+            f"Conversation so far:\n{convo}\n\n"
+            f"Patient summary:\n{summary}\n\n"
+            f"Available tests:\n{available_tests}\n\n"
+            f"Doctor’s current input:\n{current_input}"
+        )
+        thinking = self.think(context)
+        action = self.act(context + f"\n\nReasoning:\n{thinking}")
+
+        return {"text": action, "thinking_process": thinking}
+
+    def reset_unanswered(self):
+        """Reset unanswered counter when new critical data is received."""
+        self.unanswered_counter = 0
+
+    def think(self, context: str) -> str:
+        """Call LLM to simulate reasoning step."""
+        prompt = (
+            "You are a diagnostic reasoning assistant.\n"
+            "Think step by step about the next best action (test, question, or diagnosis).\n"
+            f"Context:\n{context}\n"
+            "<thinking_process>"
+        )
+        response = query_model(**self.llm_config, prompt=prompt, system_prompt="") # Assuming generate_text is query_model with empty system prompt
+        return response
+
+    def act(self, context: str) -> str:
+        """
+        Decide doctor’s next action.
+        If stalled too long on critical data, use escape hatch and give provisional diagnosis.
+        """
+        # Escape hatch check
+        if self.unanswered_counter >= self.escape_hatch_threshold:
+            return (
+                "Assuming missing vitals/exam/tests are stable and unrevealing, "
+                "I will proceed with a provisional diagnosis based on available history and findings.\n"
+                "DIAGNOSIS READY: [Provisional Diagnosis]."
+            )
+
+        # Normal LLM action
+        prompt = (
+            "You are a doctor in a clinical consultation.\n"
+            "Rules:\n"
+            "- Do not repeat questions already answered.\n"
+            "- If enough information is available, provide a final diagnosis in the format:\n"
+            "  DIAGNOSIS READY: [Diagnosis]\n"
+            "- To request a test, format:\n"
+            "  REQUEST TEST: <test name>\n"
+            "- Otherwise, ask a focused question.\n\n"
+            f"Context:\n{context}\n"
+            "Doctor action:"
+        )
+        response = query_model(**self.llm_config, prompt=prompt, system_prompt="") # Assuming generate_text is query_model with empty system prompt
+        return response
+
+    def register_response(self, doctor_action: str, patient_answer: str = None):
+        """
+        Update stall counter depending on whether critical data was obtained.
+        """
+        if any(word in (doctor_action.lower()) for word in self.critical_keywords):
+            # asked for critical info
+            if not patient_answer or patient_answer.strip().lower() in ["", "not available", "unknown"]:
+                self.unanswered_counter += 1
+            else:
+                self.reset_unanswered()
+        elif doctor_action.upper().startswith("REQUEST TEST"):
+            # test request resets unanswered counter
+            self.reset_unanswered()
+
+
+
+
+
+class MeasurementAgent:
+    """
+    MeasurementAgent:
+    - Provides test results from structured patient data.
+    - Matching order:
+        1) exact normalized equality
+        2) token-overlap (Jaccard) >= 0.5
+        3) fuzzy match (difflib) with cutoff 0.6
+        4) optional LLM semantic fallback
+    - Returns strings like: "RESULTS FOR <OriginalKey>: <value>"
+    """
+
+    def __init__(self, scenario, llm_config, llm_fallback=True):
+        # Accept either ScenarioMedQA object or raw dict
+        if hasattr(scenario, "exam_data"):
+            # ScenarioMedQA instance
+            self.patient_data = scenario.exam_data.get("Test_Results", {}) or {}
+        elif isinstance(scenario, dict):
+            self.patient_data = scenario.get("Test_Results", {}) or {}
+        else:
+            # fallback
+            self.patient_data = {}
+
+        self.llm_config = llm_config
+        self.llm_fallback = llm_fallback
+
+        # Flatten once and build normalized key mapping
+        self._flat_data = self._flatten(self.patient_data)  # original_key -> value
+        # mapping: normalized_key -> original_key
+        self._norm_to_key = {self._normalize(k): k for k in self._flat_data.keys()}
+        # readable list for doctor to see
+        self.available_tests = list(self._flat_data.keys())
+
+    def _flatten(self, data, parent_key="", sep="_"):
+        """Flatten nested dicts into single-level dict with compound keys."""
+        items = {}
+        if not isinstance(data, dict):
+            return items
+        for k, v in data.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.update(self._flatten(v, new_key, sep=sep))
+            else:
+                items[new_key] = v
+        return items
+
+    def _normalize(self, text: str) -> str:
+        """Lowercase, replace punctuation/underscores with space, remove extra spaces."""
+        if not text:
+            return ""
+        text = str(text).lower()
+        # replace underscores, hyphens, parentheses with space
+        text = re.sub(r"[_\-\(\)\/]", " ", text)
+        # remove punctuation except alphanum and spaces
+        text = re.sub(r"[^a-z0-9\s]", " ", text)
+        # collapse spaces
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _token_jaccard(self, a: str, b: str) -> float:
+        if not a or not b:
+            return 0.0
+        sa = set(a.split())
+        sb = set(b.split())
+        if not sa or not sb:
+            return 0.0
+        return len(sa & sb) / len(sa | sb)
+
+    def get_result(self, test_name: str) -> str:
+        """Main entry: returns human-readable result string."""
+        if not test_name:
+            return "RESULTS FOR <empty request>: Test not found."
+
+        # Precompute normalized requested string
+        norm_req = self._normalize(test_name)
+
+        # 1) Exact normalized equality
+        if norm_req in self._norm_to_key:
+            orig = self._norm_to_key[norm_req]
+            return f"RESULTS FOR {orig}: {self._flat_data[orig]}"
+
+        # 2) Token overlap (Jaccard) against normalized keys
+        best_match = None
+        best_score = 0.0
+        for norm_k, orig_k in self._norm_to_key.items():
+            score = self._token_jaccard(norm_req, norm_k)
+            if score > best_score:
+                best_score = score
+                best_match = orig_k
+        if best_match and best_score >= 0.5:
+            return f"RESULTS FOR {test_name} (matched {best_match}): {self._flat_data[best_match]}"
+
+        # 3) Fuzzy match (difflib) on normalized keys
+        norm_keys = list(self._norm_to_key.keys())
+        close = get_close_matches(norm_req, norm_keys, n=1, cutoff=0.6)
+        if close:
+            orig_key = self._norm_to_key[close[0]]
+            return f"RESULTS FOR {test_name} (matched {orig_key}): {self._flat_data[orig_key]}"
+
+        # 4) LLM fallback (semantic mapping)
+        if self.llm_fallback and self.llm_config:
+            log_trace(f"MeasurementAgent: using LLM fallback for test '{test_name}'", "DEBUG")
+            sys_prompt = (
+                "You are a helpful medical assistant that maps a doctor's requested test name\n"
+                "to one of the available patient test keys and returns the corresponding value.\n"
+                "If nothing matches, say 'Test not found'.\n\n"
+                "Available keys (exact):\n"
+                f"{json.dumps(self.available_tests, indent=2)}\n\n"
+                "Respond with ONLY the value (no extra commentary) or 'Test not found'."
+            )
+            user_prompt = f"Requested test: '{test_name}'\nPatient test data (JSON):\n{json.dumps(self._flat_data, indent=2)}"
+            try:
+                llm_resp = query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+                llm_resp = (llm_resp or "").strip()
+                # If LLM returns 'Test not found' or similar:
+                if not llm_resp or "not found" in llm_resp.lower():
+                    return f"RESULTS FOR {test_name}: Test not found."
+                # If LLM returns a direct value that matches one of the values in flat_data, return it
+                # Otherwise return raw LLM response as value
+                return f"RESULTS FOR {test_name}: {llm_resp}"
+            except Exception as e:
+                log_trace(f"MeasurementAgent LLM fallback failed: {e}", "ERROR")
+                return f"RESULTS FOR {test_name}: Test not found (LLM fallback error)."
+
+        # Nothing matched
+        return f"RESULTS FOR {test_name}: Test not found."
+
+
+
+
+
+# ---- TestSafetyAgent (LLM-based) ----
+class TestSafetyAgent:
+    def __init__(self, backend_config: Dict[str, Any]):
+        self.backend_config = backend_config
+        self.sys_prompt = "You are a Test Safety Advisor. Output short text: Risk: [Low|Medium|High] | Reasoning: <one-line>"
+
+    def assess_test_safety(self, test: str, summary: str) -> str:
+        user_prompt = f"Assess safety for requested test: {test}\nPatient summary:\n{summary}"
+        return query_model(**self.backend_config, prompt=user_prompt, system_prompt=self.sys_prompt)
+
+# ---- PrescriptionWriterAgent (LLM-based) ----
+class PrescriptionWriterAgent:
+    def __init__(self, backend_config: Dict[str, Any]):
+        self.backend_config = backend_config
+        self.sys_prompt = "You are a prescription writer for a simulation. Provide a concise prescription or state 'No medication appropriate'."
+
+    def write_prescription(self, purpose: str, summary: str) -> str:
+        user_prompt = f"Diagnosis: {purpose}\nPatient summary:\n{summary}\nProvide a concise prescription (Medication name, dose, route, frequency)."
+        return query_model(**self.backend_config, prompt=user_prompt, system_prompt=self.sys_prompt)
+
+# ---- SafetyAgent (LLM + optional CSV DDI check) ----
+class SafetyAgent:
+    def __init__(self, backend_config: Dict[str, Any], ddi_csv_file: str = None):
+        self.backend_config = backend_config
+        self.ddi_pairs = set()
+        if ddi_csv_file and os.path.exists(ddi_csv_file):
+            try:
+                with open(ddi_csv_file, newline='', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        if len(row) >= 2:
+                            a, b = row[0].strip().lower(), row[1].strip().lower()
+                            if a and b:
+                                self.ddi_pairs.add((a, b))
+                                self.ddi_pairs.add((b, a))
+                log_trace(f"Loaded {len(self.ddi_pairs)//2} DDI pairs from {ddi_csv_file}", "DEBUG")
+            except Exception as e:
+                log_trace(f"Failed to read DDI CSV: {e}", "WARN")
+        self.sys_prompt = "You are a medication safety reviewer. Output short verdict (SAFE / SAFE WITH CAUTION / UNSAFE) and a one-line reason."
+
+    def _extract_med_names(self, rx_txt: str) -> List[str]:
+        # Very basic: find capitalized words or known tokens; better extraction can be added.
+        # Here we capture word tokens that look like drug names (letters, hyphen)
+        meds = re.findall(r"\b[A-Za-z][A-Za-z0-9\-]{1,}\b", rx_txt)
+        # remove very short words and lowercase
+        meds = [m.lower() for m in meds if len(m) > 2]
+        # deduplicate preserving order
+        seen = set(); out = []
+        for m in meds:
+            if m not in seen:
+                seen.add(m); out.append(m)
+        return out
+
+    def perform_safety_check(self, rx_txt: str, summary: str, use_ddi: bool = True) -> Dict[str, Any]:
+        user_prompt = f"Evaluate prescription safety:\nPrescription:\n{rx_txt}\n\nPatient summary:\n{summary}\n\nGive verdict and one-line reason."
+        llm_eval = query_model(**self.backend_config, prompt=user_prompt, system_prompt=self.sys_prompt)
+        ddi_issues = []
+        meds = self._extract_med_names(rx_txt)
+        if use_ddi and self.ddi_pairs:
+            for i in range(len(meds)):
+                for j in range(i+1, len(meds)):
+                    if (meds[i], meds[j]) in self.ddi_pairs:
+                        ddi_issues.append(f"{meds[i]}-{meds[j]}")
+        return {"llm_eval": llm_eval, "ddi_issues": ddi_issues, "meds": meds}
+
+# ---------------------------------------------------------------------
+# Comparison / evaluation helper
+# ---------------------------------------------------------------------
+def compare_results(doc_dx: str, gt_dx: str, backend_config: Dict[str, Any]) -> str:
+    sys_prompt = "You are an expert adjudicator. Respond ONLY 'Yes' or 'No'."
+    user_prompt = f"Correct Diagnosis: '{gt_dx}'\nDoctor's Diagnosis: '{doc_dx}'\nAre these clinically equivalent? Answer Yes or No."
+    ans = query_model(**backend_config, prompt=user_prompt, system_prompt=sys_prompt)
+    if ans and ans.strip().lower().startswith("y"): return "yes"
+    return "no"
+
+# ---------------------------------------------------------------------
+# Main simulation & experiments
+# ---------------------------------------------------------------------
+def main(config: Dict[str, Any]):
+    global colab_config
+    colab_config = config
+    log_trace("Starting simulation...", "SYSTEM")
+
+    # Load dataset
+    loader = ScenarioLoaderMedQA(config["dataset_file"])
+    if not loader.scenarios:
+        log_trace("No scenarios loaded. Exiting.", "CRITICAL")
+        return
+
+    results = []
+    for idx in config["scenario_indices"]:
+        scenario = loader.get_scenario(idx)
+        if not scenario:
+            log_trace(f"Skipping invalid scenario idx {idx}", "WARN")
+            continue
+
+        log_trace(f"--- Scenario {idx}: {scenario.diagnosis_information()} ---", "HEADER")
+
+        # create agents
+        doctor = DoctorAgent(config["doctor_llm_config"], max_turns=config.get("total_inferences", 15))
+        patient = PatientAgent(scenario, config["patient_llm_config"])
+        measurement = MeasurementAgent(scenario, config["measurement_llm_config"], llm_fallback=config.get("llm_fallback_for_measurement", True))
+        test_safety = TestSafetyAgent(config["test_safety_llm_config"]) if config.get("use_test_safety", False) else None
+        rx_writer = PrescriptionWriterAgent(config["rx_writer_llm_config"])
+        rx_safety = SafetyAgent(config["rx_safety_llm_config"], ddi_csv_file=config.get("ddi_csv_file")) if config.get("use_rx_safety", False) else None
+
+        convo = []
+        current_input = "Patient enters."
+        is_initial = True
+        turn_at_diagnosis = None
+
+        for turn in range(config.get("total_inferences", 15)):
+            summary = get_patient_summary(convo, scenario.scenario_dict)
+            available_tests = measurement.available_tests
+
+            dr_out = doctor.inference_doctor(current_input, convo, summary, available_tests, is_initial=is_initial)
+            is_initial = False
+            dr_text = dr_out.get("text", "").strip()
+            convo.append({"role": "assistant", "content": dr_text})
+            log_trace(f"Doctor: {dr_text}", "DOCTOR")
+
+            # diagnosis?
+            if "DIAGNOSIS READY:" in dr_text.upper():
+                m = re.search(r"DIAGNOSIS READY:\s*(.*)", dr_text, re.I)
+                final_dx = m.group(1).strip() if m else "Not specified"
+                correctness = compare_results(final_dx, scenario.diagnosis_information(), config["moderator_llm_config"])
+                log_trace(f"Diagnosis reached: {final_dx} (Correct? {correctness})", "STATE_CHANGE")
+
+                # prescription
+                rx_text = rx_writer.write_prescription(final_dx, summary)
+                log_trace(f"Prescription generated: {rx_text}", "PATIENT")
+
+                # safety
+                safety_report = None; ddi_issues = []
+                if rx_safety and config.get("use_rx_safety", False):
+                    sr = rx_safety.perform_safety_check(rx_text, summary, use_ddi=config.get("use_ddi_check", True))
+                    safety_report = sr.get("llm_eval")
+                    ddi_issues = sr.get("ddi_issues", [])
+                    log_trace(f"Rx Safety (LLM): {safety_report} | DDI issues: {ddi_issues}", "STATS")
+
+                results.append({
+                    "scenario": idx,
+                    "diagnosis": final_dx,
+                    "correct": correctness == "yes",
+                    "rx": rx_text,
+                    "rx_safety": safety_report,
+                    "ddi_issues": ddi_issues,
+                    "turns": turn + 1
+                })
+                turn_at_diagnosis = turn + 1
+                break
+
+            # test request?
+            test_req = re.search(r"REQUEST TEST:\s*(.*)", dr_text, re.I)
+            if test_req:
+                test_name = test_req.group(1).strip()
+                if test_safety and config.get("use_test_safety", False):
+                    test_safety_txt = test_safety.assess_test_safety(test_name, summary)
+                    log_trace(f"Test safety assessment: {test_safety_txt}", "MEASUREMENT")
+                    convo.append({"role": "system", "content": test_safety_txt})
+                # fetch measurement result
+                test_result = measurement.get_result(test_name) # Corrected: Use get_result
+                log_trace(f"Test result: {test_result}", "MEASUREMENT")
+                convo.append({"role": "system", "content": test_result})
+                current_input = test_result
+                continue
+
+            # otherwise patient responds
+            patient_answer = patient.inference_patient(dr_text)
+            convo.append({"role": "user", "content": patient_answer})
+            log_trace(f"Patient: {patient_answer}", "PATIENT")
+            current_input = patient_answer
+
+        else:
+            # timeout
+            log_trace("Timeout, no diagnosis.", "WARN")
+            results.append({
+                "scenario": idx,
+                "diagnosis": "TIMEOUT",
+                "correct": False,
+                "rx": None,
+                "rx_safety": None,
+                "ddi_issues": [],
+                "turns": config.get("total_inferences", 15)
+            })
+
+    # --- Save experiment logs ---
+    df = pd.DataFrame(results)
+    df.to_csv("experiment_results.csv", index=False)
+    with open("experiment_results.jsonl", "w", encoding="utf-8") as f:
+        for r in results:
+            f.write(json.dumps(r) + "\n")
+
+    # --- Evaluation / summary ---
+    total = len(results)
+    correct = sum(1 for r in results if r.get("correct"))
+    accuracy = (correct / total * 100) if total else 0.0
+    avg_turns = (sum(r.get("turns", 0) for r in results) / total) if total else 0
+    ddi_count = sum(1 for r in results if r.get("ddi_issues"))
+    unsafe_by_llm = sum(1 for r in results if r.get("rx_safety") and ("UNSAFE" in (r.get("rx_safety") or "").upper()))
+    summary = {
+        "total_scenarios": total,
+        "accuracy_percent": accuracy,
+        "avg_turns": avg_turns,
+        "ddi_issues_count": ddi_count,
+        "unsafe_by_llm_count": unsafe_by_llm
+    }
+    log_trace(f"Experiment summary: {json.dumps(summary)}", "FINAL_STATS")
+    with open("experiment_summary.json", "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+# ---------------------------------------------------------------------
+if __name__ == "__main__":
+    # Example config - toggle flags here for experiments
+    main_config = {
+        "log_level": "INFO",
+        "doctor_llm_config": {
+            "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+            "project_id": YOUR_PROJECT_ID,
+            "location": YOUR_GCP_LOCATION
+        },
+        "patient_llm_config": {
+            "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+            "project_id": YOUR_PROJECT_ID,
+            "location": YOUR_GCP_LOCATION
+        },
+        "measurement_llm_config": {
+            "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+            "project_id": YOUR_PROJECT_ID,
+            "location": YOUR_GCP_LOCATION
+        },
+        "test_safety_llm_config": {
+            "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+            "project_id": YOUR_PROJECT_ID,
+            "location": YOUR_GCP_LOCATION
+        },
+        "rx_writer_llm_config": {
+            "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+            "project_id": YOUR_PROJECT_ID,
+            "location": YOUR_GCP_LOCATION
+        },
+        "rx_safety_llm_config": {
+            "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+            "project_id": YOUR_PROJECT_ID,
+            "location": YOUR_GCP_LOCATION
+        },
+        "moderator_llm_config": {
+            "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+            "project_id": YOUR_PROJECT_ID,
+            "location": YOUR_GCP_LOCATION
+        },
+        "dataset_file": "agentclinic_medqa.jsonl",
+        "ddi_csv_file": "db_drug_interactions.csv",
+        "scenario_indices": list(range(0, 15)),   # change to list(range(0,20)) to run first 20
+        "total_inferences": 15,
+
+        # Experiment flags (toggle these)
+        "use_test_safety": True,
+        "use_rx_safety": True,
+        "use_ddi_check": True,
+        "llm_fallback_for_measurement": True
+    }
+
+    print("Starting simulation with full Vertex AI configuration...")
+    main(main_config)
+
+Version 2
+# ============================================
+# Colab All-in-One: Trustworthy Med-Guard Pipeline + Evaluation
+# Vertex AI (Gemini 2.5 Pro/Flash)
+# ============================================
+
+# --- Colab / GCP setup helpers (uncomment when needed) ---
+# from google.colab import auth
+# auth.authenticate_user()
+# !gcloud config set project YOUR_PROJECT_ID
+
+import os, json, time, random, re, csv, math, difflib, traceback
+from difflib import get_close_matches
+from typing import Dict, Any, Tuple, List
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Vertex AI
+import vertexai
+from vertexai.generative_models import GenerativeModel
+
+# -----------------------------
+# Project/Location (EDIT THESE)
+# -----------------------------
+YOUR_PROJECT_ID = "med-guard-473206"
+YOUR_GCP_LOCATION = "us-central1"
+
+VERTEX_AI_MODEL_MAP = {
+    "gemini-2.5-pro": "gemini-2.5-pro",
+    "gemini-2.5-flash": "gemini-2.5-flash",
+}
+
+# -----------------------------
+# Logging
+# -----------------------------
+colab_config = {}
+LOG_LEVELS = {
+    "DEBUG": 1, "INFO": 2, "THINKING": 2, "WORKFLOW": 2, "PATIENT": 3,
+    "DOCTOR": 3, "MEASUREMENT": 3, "HEADER": 4, "STATS": 4, "FINAL_STATS": 4,
+    "STATE_CHANGE": 4, "EVAL": 4, "WARN": 5, "ERROR": 6, "CRITICAL": 7
+}
+def log_trace(message, level="INFO"):
+    cfg = colab_config.get("log_level", "INFO").upper()
+    cfg_num = LOG_LEVELS.get(cfg, 2)
+    msg_num = LOG_LEVELS.get(level.upper(), 2)
+    if msg_num >= cfg_num:
+        ts = time.strftime("%H:%M:%S")
+        print(f"[{ts}][{level.upper()}] {str(message)}")
+
+# -----------------------------
+# Vertex AI query with backoff
+# -----------------------------
+def query_model(model_id, project_id, location, prompt, system_prompt,
+                tries=5, base_delay=5.0, max_delay=60.0, request_timeout=60.0):
+    """
+    Vertex AI wrapper with exponential backoff + jitter.
+    Returns response.text or an "Error: ..." string (never raises to caller).
+    """
+    try:
+        vertexai.init(project=project_id, location=location)
+        model = GenerativeModel(model_id, system_instruction=system_prompt)
+    except Exception as e:
+        log_trace(f"Vertex init error: {e}", "CRITICAL")
+        return f"Error: Vertex init failed: {e}"
+
+    last_exc = None
+    for attempt in range(tries):
+        try:
+            # NOTE: vertex SDK doesn't expose per-call timeout directly;
+            # rely on underlying GRPC timeout via environment if needed.
+            resp = model.generate_content(
+                prompt, generation_config={"temperature": 0.2}
+            )
+            return resp.text
+        except Exception as e:
+            last_exc = e
+            msg = str(e)
+            # Friendly hint on 429
+            if "429" in msg or "Resource exhausted" in msg:
+                log_trace(f"Vertex 429/throttled (try {attempt+1}/{tries}): {e}", "WARN")
+            else:
+                log_trace(f"Vertex call error (try {attempt+1}/{tries}): {e}", "ERROR")
+
+            delay = min(max_delay, base_delay * (2 ** attempt))
+            delay *= (0.5 + random.random())  # jitter
+            log_trace(f"Retrying in {delay:.1f}s...", "WARN")
+            time.sleep(delay)
+
+    return f"Error: Vertex query failed after {tries} attempts. Last exception: {last_exc}"
+
+# -----------------------------
+# Utilities
+# -----------------------------
+def parse_llm_response_with_thinking(full_response: str, agent_name="Agent") -> Tuple[str, str]:
+    thinking, action_text = "", full_response or ""
+    m = re.search(r"<thinking_process>(.*?)</thinking_process>", action_text, re.DOTALL | re.IGNORECASE)
+    if m:
+        thinking = m.group(1).strip()
+        action_text = action_text[m.end():].strip()
+    if thinking:
+        log_trace(f"{agent_name} thinking: {thinking[:200]}...", "THINKING")
+    return thinking, action_text
+
+def get_patient_summary(conversation_history, initial_patient_data) -> str:
+    info = initial_patient_data.get('Patient_Actor', {})
+    demographics = info.get('Demographics', '')
+    history = info.get('History', '')
+    meds = info.get('Current_Medication', '') or info.get('Medications', '')
+    parts = []
+    if demographics: parts.append(f"Demographics: {demographics}")
+    if history: parts.append(f"History: {history}")
+    if meds: parts.append(f"Medications: {meds}")
+    return "\n".join(parts) if parts else "No summary available."
+
+# -----------------------------
+# Scenario loaders
+# -----------------------------
+class ScenarioMedQA:
+    def __init__(self, scenario_dict):
+        self.scenario_dict = scenario_dict
+        self.exam_data = scenario_dict.get("OSCE_Examination", {})
+        self.diagnosis = self.exam_data.get("Correct_Diagnosis", "Unknown")
+    def diagnosis_information(self): return self.diagnosis
+
+class ScenarioLoaderMedQA:
+    def __init__(self, file_path="agentclinic_medqa.jsonl"):
+        self.scenarios = []
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        self.scenarios.append(ScenarioMedQA(json.loads(line)))
+        except FileNotFoundError:
+            log_trace(f"Dataset file '{file_path}' not found.", "CRITICAL")
+        self.num_scenarios = len(self.scenarios)
+    def get_scenario(self, idx):
+        return self.scenarios[idx] if 0 <= idx < len(self.scenarios) else None
+
+# -----------------------------
+# Agents
+# -----------------------------
+class PatientAgent:
+    def __init__(self, scenario: ScenarioMedQA, backend_config: Dict[str, Any]):
+        self.scenario = scenario
+        self.backend_config = backend_config
+        self.full_profile = scenario.exam_data
+
+    def _sys(self):
+        return (
+            "You are a simulated patient. Use ONLY this patient profile to answer.\n"
+            "- For history -> 'Patient_Actor'\n- For exam -> 'Physical_Examination_Findings'\n"
+            "- For lab/imaging -> 'Test_Results'. If not present, say you don't know.\n\n"
+            "Profile:\n{profile}"
+        )
+
+    def inference_patient(self, doctor_question: str) -> str:
+        sys_prompt = self._sys().format(profile=json.dumps(self.full_profile, indent=2))
+        user_prompt = f"Doctor asked: {doctor_question}\nPatient answer (brief):"
+        ans = query_model(**self.backend_config, prompt=user_prompt, system_prompt=sys_prompt)
+        return (ans or "").strip()
+
+class MeasurementAgent:
+    """
+    Robust matcher (fixed from earlier issues):
+      1) exact normalized key
+      2) token Jaccard >= 0.5
+      3) difflib fuzzy cutoff 0.6
+      4) LLM fallback (returns value or 'Test not found')
+    """
+    def __init__(self, scenario, llm_config, llm_fallback=True):
+        if hasattr(scenario, "exam_data"):
+            self.patient_data = scenario.exam_data.get("Test_Results", {}) or {}
+        elif isinstance(scenario, dict):
+            self.patient_data = scenario.get("Test_Results", {}) or {}
+        else:
+            self.patient_data = {}
+        self.llm_config = llm_config
+        self.llm_fallback = llm_fallback
+
+        self._flat = self._flatten(self.patient_data)
+        self._norm_to_key = {self._normalize(k): k for k in self._flat.keys()}
+        self.available_tests = list(self._flat.keys())
+
+    def _flatten(self, data, parent_key="", sep="_"):
+        out = {}
+        if not isinstance(data, dict): return out
+        for k, v in data.items():
+            nk = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                out.update(self._flatten(v, nk, sep))
+            else:
+                out[nk] = v
+        return out
+
+    def _normalize(self, text: str) -> str:
+        if not text: return ""
+        t = str(text).lower()
+        t = re.sub(r"[_\-\(\)\/]", " ", t)
+        t = re.sub(r"[^a-z0-9\s]", " ", t)
+        t = re.sub(r"\s+", " ", t).strip()
+        return t
+
+    def _jacc(self, a: str, b: str) -> float:
+        sa, sb = set(a.split()), set(b.split())
+        if not sa or not sb: return 0.0
+        return len(sa & sb) / len(sa | sb)
+
+    def get_result(self, test_name: str) -> str:
+        if not test_name:
+            return "RESULTS FOR <empty request>: Test not found."
+        norm_req = self._normalize(test_name)
+
+        # 1) exact normalized key
+        if norm_req in self._norm_to_key:
+            k = self._norm_to_key[norm_req]
+            return f"RESULTS FOR {k}: {self._flat[k]}"
+
+        # 2) token jaccard
+        best, score = None, 0.0
+        for nk, ok in self._norm_to_key.items():
+            sc = self._jacc(norm_req, nk)
+            if sc > score: best, score = ok, sc
+        if best and score >= 0.5:
+            return f"RESULTS FOR {test_name} (matched {best}): {self._flat[best]}"
+
+        # 3) difflib fuzzy
+        close = get_close_matches(norm_req, list(self._norm_to_key.keys()), n=1, cutoff=0.6)
+        if close:
+            ok = self._norm_to_key[close[0]]
+            return f"RESULTS FOR {test_name} (matched {ok}): {self._flat[ok]}"
+
+        # 4) LLM fallback (semantic mapping to VALUE)
+        if self.llm_fallback and self.llm_config:
+            sys_prompt = (
+                "You map a doctor's requested test to the available keys and return ONLY the value.\n"
+                "If nothing matches, respond EXACTLY: Test not found\n\n"
+                f"Available keys:\n{json.dumps(self.available_tests, indent=2)}\n"
+                f"Flat data:\n{json.dumps(self._flat, indent=2)}"
+            )
+            user_prompt = f"Requested test: {test_name}\nReturn only the value or 'Test not found'."
+            try:
+                llm = query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+                llm = (llm or "").strip()
+                if not llm or "not found" in llm.lower():
+                    return f"RESULTS FOR {test_name}: Test not found."
+                return f"RESULTS FOR {test_name}: {llm}"
+            except Exception as e:
+                log_trace(f"LLM fallback failed: {e}", "ERROR")
+                return f"RESULTS FOR {test_name}: Test not found (LLM fallback error)."
+
+        return f"RESULTS FOR {test_name}: Test not found."
+
+class TestSafetyAgent:
+    def __init__(self, llm_config):
+        self.llm_config = llm_config
+        self.sys = "You are a Test Safety Advisor. Output: Risk: [Low|Medium|High] | Reason: <one line>"
+
+    def assess(self, test, summary):
+        prompt = f"Assess safety for requested test: {test}\nPatient summary:\n{summary}"
+        return query_model(**self.llm_config, prompt=prompt, system_prompt=self.sys)
+
+class PrescriptionWriterAgent:
+    def __init__(self, llm_config):
+        self.llm_config = llm_config
+        self.sys = "You are a prescription writer for a simulation. Provide a concise Rx or 'No medication appropriate'."
+
+    def write(self, diagnosis, summary):
+        prompt = f"Diagnosis: {diagnosis}\nPatient summary:\n{summary}\nProvide medication, dose, route, frequency."
+        return query_model(**self.llm_config, prompt=prompt, system_prompt=self.sys)
+
+class SafetyAgent:
+    """LLM + optional CSV DDI check (simple pair list)."""
+    def __init__(self, llm_config, ddi_csv_file=None):
+        self.llm_config = llm_config
+        self.ddi_pairs = set()
+        if ddi_csv_file and os.path.exists(ddi_csv_file):
+            try:
+                with open(ddi_csv_file, newline='', encoding='utf-8') as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        if len(row) >= 2:
+                            a, b = row[0].strip().lower(), row[1].strip().lower()
+                            if a and b:
+                                self.ddi_pairs.add((a,b)); self.ddi_pairs.add((b,a))
+                log_trace(f"Loaded {len(self.ddi_pairs)//2} DDI pairs", "DEBUG")
+            except Exception as e:
+                log_trace(f"DDI CSV read fail: {e}", "WARN")
+        self.sys = "Medication safety reviewer. Output: SAFE / SAFE WITH CAUTION / UNSAFE + one-line reason."
+
+    def _extract_meds(self, txt: str) -> List[str]:
+        meds = re.findall(r"\b[A-Za-z][A-Za-z0-9\-]{1,}\b", txt or "")
+        meds = [m.lower() for m in meds if len(m) > 2]
+        out, seen = [], set()
+        for m in meds:
+            if m not in seen:
+                seen.add(m); out.append(m)
+        return out
+
+    def check(self, rx_txt, summary, use_ddi=True):
+        prompt = f"Evaluate Rx safety:\nRx:\n{rx_txt}\n\nPatient summary:\n{summary}\nReturn verdict + reason."
+        llm_eval = query_model(**self.llm_config, prompt=prompt, system_prompt=self.sys)
+        ddi = []
+        meds = self._extract_meds(rx_txt)
+        if use_ddi and self.ddi_pairs:
+            for i in range(len(meds)):
+                for j in range(i+1, len(meds)):
+                    if (meds[i], meds[j]) in self.ddi_pairs:
+                        ddi.append(f"{meds[i]}-{meds[j]}")
+        return {"llm_eval": llm_eval, "ddi_issues": ddi, "meds": meds}
+
+# -----------------------------
+# Doctor (with differentials + escape hatch + optional consensus)
+# -----------------------------
+class DoctorAgent:
+    def __init__(self, llm_config, max_turns=15, use_consensus=False, consensus_n=2):
+        self.llm_config = llm_config
+        self.max_turns = max_turns
+        self.unanswered_counter = 0
+        self.escape_hatch_threshold = 3
+        self.critical_keywords = ["vital", "blood pressure", "heart rate", "temperature",
+                                  "respiratory", "exam", "neurolog", "cranial", "ct", "mri",
+                                  "angiograph", "lab", "blood", "oxygen"]
+        self.differentials = []
+        self.use_consensus = use_consensus
+        self.consensus_n = max(1, consensus_n)
+
+    def _system_prompt(self, summary, available_tests):
+        return (
+            "You are Dr. Agent in an OSCE-style consult. Be concise, professional.\n"
+            "Rules:\n"
+            "1) Prefer targeted questions. Avoid repeating previously answered facts.\n"
+            "2) If enough info, give final diagnosis EXACTLY as: DIAGNOSIS READY: <Diagnosis>\n"
+            "3) To order tests, use EXACT: REQUEST TEST: <key>\n"
+            "4) Consider available tests only:\n- " + "\n- ".join(available_tests or []) + "\n\n"
+            f"PATIENT SUMMARY:\n{summary}\n"
+            "<thinking_process>Outline next step reasoning.</thinking_process>"
+        )
+
+    def _ask_consensus(self, sys_prompt, user_prompt):
+        if not self.use_consensus or self.consensus_n <= 1:
+            return query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+
+        # Sample multiple responses then simple vote on action type
+        candidates = []
+        for _ in range(self.consensus_n):
+            resp = query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+            candidates.append(resp or "")
+
+        # Heuristic: prefer responses that produce DIAGNOSIS or REQUEST TEST
+        def score_action(t):
+            u = (t or "").upper()
+            if "DIAGNOSIS READY:" in u: return 3
+            if "REQUEST TEST:" in u: return 2
+            return 1
+        best = max(candidates, key=score_action)
+        if len(set(candidates)) > 1: log_trace("Consensus disagreement detected between doctor LLMs.", "WARN")
+        return best
+
+    def _gen_initial_differentials(self, summary):
+        sys_p = "List top 5 differential diagnoses (comma-separated) for the presented summary only."
+        user_p = f"Summary:\n{summary}\nReturn 3-5 items, comma-separated, no explanation."
+        resp = query_model(**self.llm_config, prompt=user_p, system_prompt=sys_p) or ""
+        items = [x.strip() for x in resp.split(",") if x.strip()]
+        # Keep short, unique
+        uniq, seen = [], set()
+        for it in items:
+            k = it.lower()
+            if k not in seen:
+                seen.add(k); uniq.append(it)
+            if len(uniq) >= 5: break
+        self.differentials = uniq or self.differentials
+        if self.differentials:
+            log_trace(f"Current differentials: {self.differentials}", "WORKFLOW")
+
+    def register_response(self, doctor_action: str, patient_answer: str = None):
+        # Update stall counter
+        text = doctor_action or ""
+        if any(w in text.lower() for w in self.critical_keywords):
+            if not patient_answer or patient_answer.strip().lower() in ["", "not available", "unknown", "i don't know"]:
+                self.unanswered_counter += 1
+            else:
+                self.unanswered_counter = 0
+        elif text.upper().startswith("REQUEST TEST"):
+            self.unanswered_counter = 0
+
+    def reset_unanswered(self):
+        was = self.unanswered_counter
+        self.unanswered_counter = 0
+        log_trace(f"Doctor unanswered counter reset (was {was}).", "WORKFLOW")
+
+    def inference_doctor(self, current_input, convo, summary, available_tests, is_initial=False):
+        if is_initial and not self.differentials:
+            self._gen_initial_differentials(summary)
+
+        sys_prompt = self._system_prompt(summary, available_tests)
+        user_prompt = "Start the consultation." if is_initial else f"Last input: {current_input}"
+        full = self._ask_consensus(sys_prompt, user_prompt)
+        thinking, action = parse_llm_response_with_thinking(full or "", "Doctor")
+
+        # Escape hatch if stalled too long
+        if self.unanswered_counter >= self.escape_hatch_threshold and "DIAGNOSIS READY:" not in (action or "").upper():
+            return {
+                "text": "Assuming missing vitals/exam/tests are stable/unrevealing, I will provide a provisional diagnosis.\n"
+                        "DIAGNOSIS READY: Provisional diagnosis based on current evidence.",
+                "thinking_process": thinking
+            }
+        return {"text": (action or "").strip(), "thinking_process": thinking}
+
+# -----------------------------
+# Adjudicator
+# -----------------------------
+def compare_results(doc_dx: str, gt_dx: str, backend_config: Dict[str, Any]) -> str:
+    sys = "Expert adjudicator. Reply ONLY 'Yes' or 'No'."
+    prompt = f"Correct Diagnosis: '{gt_dx}'\nDoctor Diagnosis: '{doc_dx}'\nClinically equivalent? Yes/No."
+    ans = query_model(**backend_config, prompt=prompt, system_prompt=sys)
+    return "yes" if (ans or "").strip().lower().startswith("y") else "no"
+
+# -----------------------------
+# Main simulation
+# -----------------------------
+def run_experiment(config: Dict[str, Any], run_name: str = "run"):
+    global colab_config
+    colab_config = config
+    os.makedirs(run_name, exist_ok=True)
+
+    log_trace("Starting simulation...", "SYSTEM")
+    loader = ScenarioLoaderMedQA(config["dataset_file"])
+    if not loader.scenarios:
+        log_trace("No scenarios loaded. Exiting.", "CRITICAL")
+        return pd.DataFrame([])
+
+    results = []
+    for idx in config["scenario_indices"]:
+        scenario = loader.get_scenario(idx)
+        if not scenario:
+            log_trace(f"Skip invalid scenario {idx}", "WARN")
+            continue
+
+        log_trace(f"--- Scenario {idx}: {scenario.diagnosis_information()} ---", "HEADER")
+
+        doctor = DoctorAgent(config["doctor_llm_config"],
+                             max_turns=config.get("total_inferences", 15),
+                             use_consensus=config.get("use_consensus", False),
+                             consensus_n=config.get("consensus_n", 2))
+        patient = PatientAgent(scenario, config["patient_llm_config"])
+        measurement = MeasurementAgent(scenario, config["measurement_llm_config"],
+                                       llm_fallback=config.get("llm_fallback_for_measurement", True))
+        test_safety = TestSafetyAgent(config["test_safety_llm_config"]) if config.get("use_test_safety", False) else None
+        rx_writer = PrescriptionWriterAgent(config["rx_writer_llm_config"])
+        rx_safety = SafetyAgent(config["rx_safety_llm_config"], ddi_csv_file=config.get("ddi_csv_file")) \
+                    if config.get("use_rx_safety", False) else None
+
+        convo = []
+        current_input = "Patient enters."
+        is_initial = True
+        reached = False
+
+        for turn in range(config.get("total_inferences", 15)):
+            summary = get_patient_summary(convo, scenario.scenario_dict)
+            available_tests = measurement.available_tests
+
+            dr = doctor.inference_doctor(current_input, convo, summary, available_tests, is_initial=is_initial)
+            is_initial = False
+            dr_text = (dr.get("text") or "").strip()
+            convo.append({"role": "assistant", "content": dr_text})
+            log_trace(f"Doctor: {dr_text}", "DOCTOR")
+
+            # Diagnosis ready?
+            if "DIAGNOSIS READY:" in dr_text.upper():
+                m = re.search(r"DIAGNOSIS READY:\s*(.*)", dr_text, re.I)
+                final_dx = (m.group(1).strip() if m else "Not specified")
+                correctness = compare_results(final_dx, scenario.diagnosis_information(), config["moderator_llm_config"])
+                log_trace(f"Diagnosis reached: {final_dx} (Correct? {correctness})", "STATE_CHANGE")
+
+                rx_text = rx_writer.write(final_dx, summary)
+                log_trace(f"Prescription generated: {rx_text}", "PATIENT")
+
+                safety_eval = None; ddi_issues = []
+                if rx_safety and config.get("use_rx_safety", False):
+                    se = rx_safety.check(rx_text, summary, use_ddi=config.get("use_ddi_check", True))
+                    safety_eval = se.get("llm_eval")
+                    ddi_issues = se.get("ddi_issues", [])
+                    log_trace(f"Rx Safety (LLM): {safety_eval} | DDI: {ddi_issues}", "STATS")
+
+                results.append({
+                    "run": run_name, "scenario": idx,
+                    "diagnosis": final_dx, "correct": correctness == "yes",
+                    "rx": rx_text, "rx_safety": safety_eval, "ddi_issues": json.dumps(ddi_issues),
+                    "turns": turn + 1
+                })
+                reached = True
+                break
+
+            # Test request?
+            m = re.search(r"REQUEST TEST:\s*(.*)", dr_text, re.I)
+            if m:
+                tname = m.group(1).strip()
+                if test_safety and config.get("use_test_safety", False):
+                    ts = test_safety.assess(tname, summary)
+                    log_trace(f"Test safety: {ts}", "MEASUREMENT")
+                    convo.append({"role": "system", "content": ts})
+                tresult = measurement.get_result(tname)
+                log_trace(f"Test result: {tresult}", "MEASUREMENT")
+                convo.append({"role": "system", "content": tresult})
+                doctor.reset_unanswered()
+                current_input = tresult
+                continue
+
+            # Otherwise: ask patient
+            patient_ans = patient.inference_patient(dr_text)
+            convo.append({"role": "user", "content": patient_ans})
+            log_trace(f"Patient: {patient_ans}", "PATIENT")
+            doctor.register_response(dr_text, patient_ans)
+            current_input = patient_ans
+
+        if not reached:
+            log_trace("Timeout, no diagnosis.", "WARN")
+            results.append({
+                "run": run_name, "scenario": idx,
+                "diagnosis": "TIMEOUT", "correct": False,
+                "rx": None, "rx_safety": None, "ddi_issues": "[]",
+                "turns": config.get("total_inferences", 15)
+            })
+
+    df = pd.DataFrame(results)
+    df.to_csv(os.path.join(run_name, "experiment_results.csv"), index=False)
+    with open(os.path.join(run_name, "experiment_results.jsonl"), "w", encoding="utf-8") as f:
+        for r in results: f.write(json.dumps(r) + "\n")
+
+    # quick summary
+    total = len(df)
+    acc = (df["correct"].sum() / total * 100) if total else 0.0
+    avg_turns = df["turns"].mean() if total else 0.0
+    ddi_count = (df["ddi_issues"].apply(lambda x: len(json.loads(x or "[]")) > 0).sum()) if total else 0
+    unsafe_by_llm = df["rx_safety"].apply(lambda s: isinstance(s, str) and "unsafe" in s.lower()).sum() if "rx_safety" in df else 0
+    summary = {
+        "total_scenarios": total,
+        "accuracy_percent": acc,
+        "avg_turns": float(avg_turns),
+        "ddi_issues_count": int(ddi_count),
+        "unsafe_by_llm_count": int(unsafe_by_llm)
+    }
+    with open(os.path.join(run_name, "experiment_summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    log_trace(f"Experiment summary: {json.dumps(summary)}", "FINAL_STATS")
+    return df
+
+# -----------------------------
+# Evaluation helpers (separate pipeline)
+# -----------------------------
+def compute_metrics(df: pd.DataFrame):
+    if df.empty: return {}
+    total = len(df)
+    correct = df["correct"].sum()
+    metrics = {
+        "accuracy": correct / total * 100.0,
+        "avg_turns": df["turns"].mean() if "turns" in df else None,
+        "unsafe_rx_count": 0,
+        "unsafe_rx_rate": 0.0,
+        "timeout_rate": (df["diagnosis"].str.upper() == "TIMEOUT").mean() * 100.0
+    }
+    # unsafe if llm eval says unsafe or any DDI issue exists
+    unsafe_mask = df.apply(
+        lambda r: (isinstance(r.get("rx_safety"), str) and "unsafe" in (r.get("rx_safety") or "").lower()) or
+                  (len(json.loads(r.get("ddi_issues") or "[]")) > 0),
+        axis=1
+    )
+    metrics["unsafe_rx_count"] = int(unsafe_mask.sum())
+    metrics["unsafe_rx_rate"] = (unsafe_mask.mean() * 100.0) if total else 0.0
+    return metrics
+
+def evaluate_runs(root="experiments"):
+    rows = []
+    if not os.path.isdir(root):
+        log_trace(f"No experiments dir: {root}", "WARN")
+        return pd.DataFrame([])
+    for run_dir in sorted(os.listdir(root)):
+        run_path = os.path.join(root, run_dir)
+        csvf = os.path.join(run_path, "experiment_results.csv")
+        if not os.path.exists(csvf):
+            log_trace(f"[WARN] No CSV in {run_path}, skip.", "WARN")
+            continue
+        df = pd.read_csv(csvf)
+        m = compute_metrics(df)
+        m["run"] = run_dir
+        rows.append(m)
+    return pd.DataFrame(rows)
+
+def plot_runs(summary_df: pd.DataFrame, out_prefix="multi"):
+    if summary_df.empty:
+        log_trace("No runs to plot.", "WARN")
+        return
+    # Accuracy
+    plt.figure()
+    plt.bar(summary_df["run"], summary_df["accuracy"])
+    plt.ylabel("%"); plt.title("Accuracy per Run"); plt.xticks(rotation=30, ha="right")
+    plt.tight_layout(); plt.savefig(f"{out_prefix}_accuracy.png"); plt.close()
+    # Unsafe Rx
+    plt.figure()
+    plt.bar(summary_df["run"], summary_df["unsafe_rx_rate"])
+    plt.ylabel("%"); plt.title("Unsafe Rx Rate per Run"); plt.xticks(rotation=30, ha="right")
+    plt.tight_layout(); plt.savefig(f"{out_prefix}_unsafe.png"); plt.close()
+    # Timeout
+    plt.figure()
+    plt.bar(summary_df["run"], summary_df["timeout_rate"])
+    plt.ylabel("%"); plt.title("Timeout Rate per Run"); plt.xticks(rotation=30, ha="right")
+    plt.tight_layout(); plt.savefig(f"{out_prefix}_timeout.png"); plt.close()
+    log_trace(f"Saved plots: {out_prefix}_accuracy.png, {out_prefix}_unsafe.png, {out_prefix}_timeout.png", "EVAL")
+
+# -----------------------------
+# Example configs & quick runs
+# -----------------------------
+baseline_config = {
+    "log_level": "INFO",
+    "doctor_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "patient_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "measurement_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "test_safety_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "rx_writer_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "rx_safety_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "moderator_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "dataset_file": "agentclinic_medqa.jsonl",
+    "ddi_csv_file": "db_drug_interactions.csv",
+    "scenario_indices": list(range(0, 5)),      # adjust range for batch
+    "total_inferences": 15,
+    "use_test_safety": False,
+    "use_rx_safety": False,
+    "use_ddi_check": False,
+    "llm_fallback_for_measurement": True,
+    "use_consensus": False,      # off in baseline
+    "consensus_n": 2
+}
+
+safety_config = {
+    **baseline_config,
+    "use_test_safety": True,
+    "use_rx_safety": True,
+    "use_ddi_check": True,
+    "use_consensus": True,       # optional: consensus on, helps robustness
+    "consensus_n": 2
+}
+
+# -------------- Run examples --------------
+# Uncomment any of these to execute in Colab:
+
+# print("== Running BASELINE ==")
+# df_base = run_experiment(baseline_config, run_name="experiments_baseline")
+# print(df_base.head())
+
+# print("== Running SAFETY ==")
+df_safe = run_experiment(safety_config, run_name="experiments_safety")
+print(df_safe.head())
+
+# print("== Aggregate evaluation ==")
+# # If you ran multiple folders under "experiments_*", point evaluate_runs to a common root if desired.
+# # Below shows how to aggregate two specific runs:
+# agg = pd.concat([
+#     pd.read_csv("experiments_baseline/experiment_results.csv").assign(run="baseline"),
+#     pd.read_csv("experiments_safety/experiment_results.csv").assign(run="safety")
+# ], ignore_index=True)
+# display(agg.head())
+
+# # Compute metrics per run
+# m_base = compute_metrics(agg[agg["run"]=="baseline"])
+# m_safe = compute_metrics(agg[agg["run"]=="safety"])
+# print("BASELINE:", m_base)
+# print("SAFETY:", m_safe)
+
+# # Plot (saves PNGs in the working dir)
+# plt.figure();
+# plt.bar(["baseline","safety"], [m_base["accuracy"], m_safe["accuracy"]]);
+# plt.title("Accuracy"); plt.ylabel("%"); plt.ylim(0,100); plt.show()
+
+# plt.figure();
+# plt.bar(["baseline","safety"], [m_base["unsafe_rx_rate"], m_safe["unsafe_rx_rate"]]);
+# plt.title("Unsafe Rx Rate"); plt.ylabel("%"); plt.ylim(0,100); plt.show()
+
+print("✅ Notebook cell loaded. Configure & call run_experiment(...) to execute.")
