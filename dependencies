@@ -1,4 +1,4 @@
-import os, json, torch, inspect, traceback, subprocess
+import os, json, torch, inspect, traceback
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
@@ -12,7 +12,7 @@ from peft import LoraConfig, get_peft_model
 
 
 # ============================================================
-# ✅ ACCELERATE SHIM (unwrap_model fix)
+# ✅ ACCELERATE SHIM (unwrap_model fix for older versions)
 # ============================================================
 def accelerate_compat_shim():
     try:
@@ -35,7 +35,7 @@ accelerate_compat_shim()
 
 
 # ============================================================
-# ✅ CONFIG
+# ✅ CONFIGURATION
 # ============================================================
 DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
 BASE_MODEL = "/workspace/data/KZ_2117574/Qwen2_1.5B"
@@ -57,7 +57,8 @@ FP16 = True
 # ============================================================
 # ✅ HELPERS
 # ============================================================
-def tprint(msg): print(f"[{msg}]", flush=True)
+def tprint(msg): 
+    print(f"[{msg}]", flush=True)
 
 def safe_read_jsonl(path):
     rows=[]
@@ -76,25 +77,9 @@ def join_dialogue(rows):
             val=r.get("dialogue","")
             if isinstance(val,list): val=" ".join(map(str,val))
             parts.append(str(val))
-        else: parts.append(str(r))
+        else:
+            parts.append(str(r))
     return "\n".join(parts).strip()
-
-
-# ============================================================
-# ✅ SAFETENSORS CONVERTER
-# ============================================================
-def convert_to_safetensors_if_needed(path):
-    if not os.path.isdir(path): return
-    if any(f.endswith(".bin") for f in os.listdir(path)):
-        print(f"[convert] ⚙️ Converting .bin → .safetensors in {path} …")
-        try:
-            subprocess.run([
-                "python", "-m", "transformers.convert_old_checkpoints_to_safetensors",
-                "--model_name_or_path", path, "--output_dir", path
-            ], check=True)
-            print(f"[convert] ✅ Conversion done for {path}")
-        except Exception as e:
-            print(f"[convert] ⚠️ Conversion failed: {e}")
 
 
 # ============================================================
@@ -104,7 +89,8 @@ def make_examples(split):
     examples=[]
     for lang in os.listdir(split):
         ldir=os.path.join(split,lang)
-        if not os.path.isdir(ldir): continue
+        if not os.path.isdir(ldir): 
+            continue
         dlg=os.path.join(ldir,"Dialogues")
         summ=os.path.join(ldir,"Summary_Text")
         qna=os.path.join(ldir,"QnA")
@@ -135,7 +121,8 @@ def make_examples(split):
                     if not q or not a: continue
                     prompt=f"Answer the following question in the same language:\nQuestion: {q}\nAnswer:"
                     examples.append({"prompt":prompt,"target":a})
-    tprint(f"Loaded {len(examples)} examples from {split}")
+
+    tprint(f"✅ Loaded {len(examples)} examples from {split}")
     return examples
 
 
@@ -144,7 +131,8 @@ def make_examples(split):
 # ============================================================
 def build_tokenizer(path):
     tok=AutoTokenizer.from_pretrained(path, use_fast=True)
-    if tok.pad_token is None: tok.pad_token=tok.eos_token
+    if tok.pad_token is None: 
+        tok.pad_token=tok.eos_token
     return tok
 
 def sliding_chunks(ids,size,overlap):
@@ -208,6 +196,7 @@ def build_model():
     model.config.use_cache=False
     if hasattr(model,"enable_input_require_grads"):
         model.enable_input_require_grads()
+
     lora=LoraConfig(
         r=8,
         lora_alpha=32,
@@ -221,7 +210,7 @@ def build_model():
 
 
 # ============================================================
-# ✅ CALLBACK: Save adapter + trainer checkpoints
+# ✅ CALLBACK: Save adapter checkpoints
 # ============================================================
 class SavePeftAdapterCallback(TrainerCallback):
     def __init__(self, out_dir, save_steps=1000):
@@ -238,7 +227,7 @@ class SavePeftAdapterCallback(TrainerCallback):
 
 
 # ============================================================
-# ✅ TRAINING LOOP
+# ✅ TRAINING LOOP (safe resume for Torch < 2.6)
 # ============================================================
 def main():
     torch.manual_seed(SEED)
@@ -276,21 +265,23 @@ def main():
         callbacks=[SavePeftAdapterCallback(OUTPUT_DIR, SAVE_STEPS)]
     )
 
-    # ---- Resume from latest checkpoint
+    # ---- Resume safely from latest checkpoint
     ckpt=None
     if os.path.isdir(OUTPUT_DIR):
         ckpts=[d for d in os.listdir(OUTPUT_DIR) if d.startswith(("checkpoint-","adapter_step_"))]
         if ckpts:
             ckpt=os.path.join(OUTPUT_DIR,sorted(ckpts,key=lambda x:int(''.join(filter(str.isdigit,x))) or 0)[-1])
-            convert_to_safetensors_if_needed(ckpt)
 
     if ckpt:
-        tprint(f"Resuming from {ckpt}")
-        if not os.path.exists(os.path.join(ckpt,"trainer_state.json")):
-            print(f"[resume] Trainer state missing; resuming weights only.")
-            trainer.train(resume_from_checkpoint=None)
-        else:
+        tprint(f"Resuming safely from {ckpt}")
+        try:
             trainer.train(resume_from_checkpoint=ckpt)
+        except ValueError as e:
+            if "vulnerability issue in `torch.load`" in str(e):
+                print("[safe-resume] ⚠️ Torch < 2.6 detected; resuming weights only (optimizer reset).")
+                trainer.train(resume_from_checkpoint=None)
+            else:
+                raise
     else:
         tprint("✨ Starting fresh training")
         trainer.train()
@@ -303,34 +294,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
-
-Error
-U/usr/bin/python: No module named transformers.convert_old_checkpoints_to_safetensors
-
-�trainable params: 1,089,536 || all params: 1,544,803,840 || trainable%: 0.07052908413277896
-[convert] ⚙️ Converting .bin → .safetensors in /workspace/data/KZ_2117574/qwen15b_lora_multilingual/checkpoint-11000 …
-[convert] ⚠️ Conversion failed: Command '['python', '-m', 'transformers.convert_old_checkpoints_to_safetensors', '--model_name_or_path', '/workspace/data/KZ_2117574/qwen15b_lora_multilingual/checkpoint-11000', '--output_dir', '/workspace/data/KZ_2117574/qwen15b_lora_multilingual/checkpoint-11000']' returned non-zero exit status 1.
-[Resuming from /workspace/data/KZ_2117574/qwen15b_lora_multilingual/checkpoint-11000]
-
-lTraceback (most recent call last):
-  File "/workspace/table-to-text-flan-t5/qwen.py", line 305, in <module>
-
-P    main()
-  File "/workspace/table-to-text-flan-t5/qwen.py", line 293, in main
-
-�    trainer.train(resume_from_checkpoint=ckpt)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2325, in train
-
-�    return inner_training_loop(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2510, in _inner_training_loop
-
-�    self._load_optimizer_and_scheduler(resume_from_checkpoint)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 3589, in _load_optimizer_and_scheduler
-
-�    check_torch_load_is_safe()
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/import_utils.py", line 1647, in check_torch_load_is_safe
-
-k    raise ValueError(
-ValueError: Due to a serious vulnerability issue in `torch.load`, even with `weights_only=True`, we now require users to upgrade torch to at least v2.6 in order to use the function. This version restriction does not apply when loading files with safetensors.
-See the vulnerability report here https://nvd.nist.gov/vuln/detail/CVE-2025-32434
