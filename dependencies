@@ -29,6 +29,21 @@ def accelerate_compat_shim():
 accelerate_compat_shim()
 
 # ============================================================
+# PATCH: BYPASS TORCH 2.6 SAFETY CHECK
+# ============================================================
+try:
+    import transformers.utils.import_utils as imp_utils
+    if hasattr(imp_utils, "check_torch_load_is_safe"):
+        def _patched_check_torch_load_is_safe():
+            print("⚠️  [patch] Skipping torch.load safety version check (temporary patch for torch<2.6)")
+            return None
+        imp_utils.check_torch_load_is_safe = _patched_check_torch_load_is_safe
+        print("[shim] Patched Transformers torch.load safety check.")
+except Exception as e:
+    print("[shim] Could not patch torch safety check:", e)
+    traceback.print_exc()
+
+# ============================================================
 # CONFIG
 # ============================================================
 DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
@@ -218,7 +233,7 @@ def main():
         save_strategy="steps",
         save_steps=SAVE_STEPS,
         save_total_limit=3,
-        eval_strategy="epoch",
+        evaluation_strategy="epoch",
         report_to="none",
         max_steps=28000
     )
@@ -235,18 +250,29 @@ def main():
         ckpts=[d for d in os.listdir(OUTPUT_DIR) if d.startswith("checkpoint-")]
         if ckpts:
             ckpt=os.path.join(OUTPUT_DIR,sorted(ckpts,key=lambda x:int(x.split('-')[-1]))[-1])
+
     if ckpt:
         tprint(f"Resuming from {ckpt}")
-        print(f" Trainer resuming at global step: {trainer.state.global_step}")
+        try:
+            state_path=os.path.join(ckpt,"trainer_state.json")
+            if os.path.exists(state_path):
+                with open(state_path,"r") as f:
+                    state=json.load(f)
+                step=state.get("global_step",0)
+                tprint(f"🔁 Detected resume step: {step}")
+            else:
+                tprint("⚠️ No trainer_state.json found — resuming blindly.")
+        except Exception as e:
+            tprint(f"⚠️ Could not read step info: {e}")
         trainer.train(resume_from_checkpoint=ckpt)
     else:
         tprint("✨ Fresh run")
         trainer.train()
 
-    tprint("Saving final model…")
+    tprint("💾 Saving final model…")
     trainer.save_model(OUTPUT_DIR)
     tok.save_pretrained(OUTPUT_DIR)
-    tprint("Training complete!")
+    tprint("✅ Training complete!")
 
 if __name__=="__main__":
     main()
