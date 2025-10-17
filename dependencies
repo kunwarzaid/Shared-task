@@ -1,81 +1,368 @@
-{
-  "patient_identifiers": null,
-  "demographics": {
-    "age": null,
-    "sex": null
-  },
-  "visit": {
-    "date_time": null,
-    "type": null
-  },
-  "chief_complaint": "Chronic throat irritation with progressive voice change and swallowing discomfort.",
-  "onset_duration": null,
-  "symptom_description": "Persistent throat irritation with hoarseness and swallowing discomfort; no acute pain reported yet.",
-  "aggravating_factors": null,
-  "relieving_factors": null,
-  "associated_symptoms": [],
-  "past_medical_history": null,
-  "past_surgical_history": null,
-  "family_history": null,
-  "current_medications": [],
-  "allergies": null,
-  "social_history": [],
-  "functional_status": null,
-  "vital_signs": null,
-  "examination_findings": null,
-  "investigations": [],
-  "assessment_primary_diagnosis": "Laryngeal cancer or other head-and-neck malignancy is suspected due to persistent throat symptoms, significant weight loss, and tobacco/alcohol use.",
-  "differential_diagnoses": [],
-  "management_plan": "Immediate cessation of tobacco and reduction of alcohol; initiation of nicotine replacement therapy (NRT), counseling, and referral to a quit-line.",
-  "tests_referrals_planned": [],
-  "follow_up_plan": null,
-  "chronology_response_to_treatment": null,
-  "patient_concerns_preferences_consent": null,
-  "safety_issues_red_flags": null,
-  "coding_terms": null,
-  "conversation_metadata": {
-    "timestamps": [],
-    "speaker_labels": []
-  }
+import os
+import json
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
+
+# ==============================
+# CONFIG
+# ==============================
+BASE_MODEL   = "/workspace/data/KZ_2117574/Qwen2_1.5B"   # your Qwen base
+ADAPTER_DIR  = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual"  # fine-tuned LoRA root
+TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
+OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_FieldQA"
+
+# generation / batching
+MAX_CONTEXT_TOKENS      = 8192        # safe big budget; reduce if VRAM tight
+MAX_NEW_TOKENS_SUMMARY  = 192
+MAX_NEW_TOKENS_ANSWER   = 64
+BATCH_SIZE              = 2           # raise if you have spare VRAM
+
+# deterministic, fast extraction
+DO_SAMPLE = False
+TEMPERATURE = 0.0
+TOP_P = 1.0
+REPETITION_PENALTY = 1.0
+
+# fill policy
+FILL_MISSING_TEXT = "N/A"
+FILL_MISSING_LIST: List[str] = []
+
+LANG_HINTS = {
+    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati", "Bangla": "Bangla",
+    "Assamese": "Assamese", "Kannada": "Kannada", "Marathi": "Marathi",
+    "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
 }
 
-{
-  "patient_identifiers": null,
-  "demographics": {
-    "age": null,
-    "sex": null
-  },
-  "visit": {
-    "date_time": null,
-    "type": null
-  },
-  "chief_complaint": null,
-  "onset_duration": null,
-  "symptom_description": null,
-  "aggravating_factors": null,
-  "relieving_factors": null,
+# ==============================
+# JSON SCHEMA AND QUESTIONS
+# ==============================
+# (path, question, type) where type ∈ {"text","list"}
+JSON_FIELDS: List[Tuple[Tuple[str, ...], str, str]] = [
+    (("patient_identifiers",), "From the dialogue, are any patient identifiers given (name, MRN, phone)? If none, reply N/A.", "text"),
+
+    (("demographics","age"), "What is the patient's age?", "text"),
+    (("demographics","sex"), "What is the patient's sex or gender? Reply Male/Female/Other or N/A.", "text"),
+
+    (("visit","date_time"), "Is any visit date or time mentioned? If none, reply N/A.", "text"),
+    (("visit","type"), "What is the type of visit (OPD, follow-up, new consult, emergency)? If unknown, reply N/A.", "text"),
+
+    (("chief_complaint",), "What is the chief complaint?", "text"),
+    (("onset_duration",), "When did the symptoms start and for how long? Provide duration text.", "text"),
+    (("symptom_description",), "Briefly describe the key symptoms.", "text"),
+    (("aggravating_factors",), "What aggravates the symptoms? If none, reply N/A.", "text"),
+    (("relieving_factors",), "What relieves the symptoms? If none, reply N/A.", "text"),
+    (("associated_symptoms",), "List associated symptoms, comma-separated. If none, reply N/A.", "list"),
+
+    (("past_medical_history",), "Summarize any past medical history mentioned. If none, reply N/A.", "text"),
+    (("past_surgical_history",), "Summarize any past surgical history. If none, reply N/A.", "text"),
+    (("family_history",), "Is any family history noted? If none, reply N/A.", "text"),
+
+    (("current_medications",), "List current medications, comma-separated. If none, reply N/A.", "list"),
+    (("allergies",), "Are any allergies mentioned? If none, reply N/A.", "text"),
+    (("social_history",), "Summarize social history (tobacco, alcohol, occupation), comma-separated items. If none, reply N/A.", "list"),
+    (("functional_status",), "What is the patient's functional status? If none, reply N/A.", "text"),
+
+    (("vital_signs",), "Were any vitals mentioned? If none, reply N/A.", "text"),
+    (("examination_findings",), "Briefly list examination findings.", "text"),
+    (("investigations",), "List investigations mentioned (e.g., FNAC, CT, MRI, blood tests), comma-separated.", "list"),
+
+    (("assessment_primary_diagnosis",), "What condition is suspected or diagnosed?", "text"),
+    (("differential_diagnoses",), "List differential diagnoses, comma-separated. If none, reply N/A.", "list"),
+    (("management_plan",), "Summarize the management/treatment plan.", "text"),
+    (("tests_referrals_planned",), "List tests/referrals planned, comma-separated.", "list"),
+    (("follow_up_plan",), "Summarize follow-up plan (timeline, purpose).", "text"),
+
+    (("chronology_response_to_treatment",), "Describe any response to treatment over time mentioned. If none, reply N/A.", "text"),
+    (("patient_concerns_preferences_consent",), "Note patient concerns, preferences, or consent points. If none, reply N/A.", "text"),
+    (("safety_issues_red_flags",), "Mention any red flags or urgent symptoms discussed. If none, reply N/A.", "text"),
+    (("coding_terms",), "If any coding/ICD terms were explicitly mentioned, list them. If none, reply N/A.", "text"),
+
+    (("conversation_metadata","timestamps",), "List any timestamps mentioned. If none, reply N/A.", "list"),
+    (("conversation_metadata","speaker_labels",), "List the speaker labels used (e.g., Doctor, Patient, Family), comma-separated.", "list"),
+]
+
+JSON_TEMPLATE = {
+  "patient_identifiers": None,
+  "demographics": {"age": None, "sex": None},
+  "visit": {"date_time": None, "type": None},
+  "chief_complaint": None,
+  "onset_duration": None,
+  "symptom_description": None,
+  "aggravating_factors": None,
+  "relieving_factors": None,
   "associated_symptoms": [],
-  "past_medical_history": null,
-  "past_surgical_history": null,
-  "family_history": null,
+  "past_medical_history": None,
+  "past_surgical_history": None,
+  "family_history": None,
   "current_medications": [],
-  "allergies": null,
+  "allergies": None,
   "social_history": [],
-  "functional_status": null,
-  "vital_signs": null,
-  "examination_findings": null,
+  "functional_status": None,
+  "vital_signs": None,
+  "examination_findings": None,
   "investigations": [],
-  "assessment_primary_diagnosis": "Voice change with dysphagia for about two months.",
+  "assessment_primary_diagnosis": None,
   "differential_diagnoses": [],
-  "management_plan": "Comprehensive oral examination, neck lymph node assessment, laryngoscopy; CT/MRI imaging if indicated; biopsy if indicated.",
+  "management_plan": None,
   "tests_referrals_planned": [],
-  "follow_up_plan": null,
-  "chronology_response_to_treatment": null,
-  "patient_concerns_preferences_consent": null,
-  "safety_issues_red_flags": null,
-  "coding_terms": null,
-  "conversation_metadata": {
-    "timestamps": [],
-    "speaker_labels": []
-  }
+  "follow_up_plan": None,
+  "chronology_response_to_treatment": None,
+  "patient_concerns_preferences_consent": None,
+  "safety_issues_red_flags": None,
+  "coding_terms": None,
+  "conversation_metadata": {"timestamps": [], "speaker_labels": []}
 }
+
+# ==============================
+# UTILS
+# ==============================
+def tprint(msg: str):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def safe_read_jsonl(path: Path) -> List[Dict[str, Any]]:
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            s = line.strip()
+            if not s:
+                continue
+            try:
+                rows.append(json.loads(s))
+            except Exception:
+                continue
+    return rows
+
+def join_dialogue_jsonl(rows: List[Dict[str, Any]]) -> str:
+    parts = []
+    for r in rows:
+        if isinstance(r, dict):
+            val = r.get("dialogue", "")
+            if isinstance(val, list):
+                val = " ".join(map(str, val))
+            parts.append(str(val))
+        else:
+            parts.append(str(r))
+    return "\n".join(parts).strip()
+
+def clip_tokens(tokenizer, text: str, max_tokens: int) -> str:
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    ids = ids[-max_tokens:]
+    return tokenizer.decode(ids, skip_special_tokens=True)
+
+def write_json(path: Path, obj: Any):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+
+def write_text(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
+
+# ==============================
+# MODEL LOADING
+# ==============================
+def find_latest_adapter(dir_path: str) -> str:
+    root = Path(dir_path)
+    if not root.exists():
+        return dir_path
+    cand = [d for d in root.iterdir() if d.is_dir() and d.name.startswith("adapter_step_")]
+    if not cand:
+        return dir_path
+    latest = sorted(cand, key=lambda p: int(p.name.split("_")[-1]))[-1]
+    tprint(f"🧭 Using latest adapter: {latest}")
+    return str(latest)
+
+def load_model_and_tokenizer():
+    bnb_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
+    )
+    tprint("🔻 Loading base model...")
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        torch_dtype=torch.float16,
+        device_map="auto",
+        quantization_config=bnb_cfg,
+    )
+    tprint("🔻 Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # attach LoRA if present
+    if Path(ADAPTER_DIR).exists():
+        adapter = find_latest_adapter(ADAPTER_DIR)
+        try:
+            tprint("🔻 Attaching LoRA adapter...")
+            model = PeftModel.from_pretrained(model, adapter)
+        except Exception as e:
+            tprint(f"⚠️ Could not load adapter from {adapter}, continuing with base. Error: {e}")
+
+    model.eval()
+    return model, tokenizer
+
+# ==============================
+# CHAT GENERATION (Qwen-style)
+# ==============================
+def chat_generate_batch(model, tokenizer, messages_list: List[List[Dict[str,str]]], max_new_tokens: int) -> List[str]:
+    """
+    messages_list: list of message lists, each like:
+      [{"role":"system","content":"..."}, {"role":"user","content":"..."}]
+    Uses Qwen chat template and returns ONLY assistant completions (no prompt echo).
+    """
+    texts = [
+        tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+        for msgs in messages_list
+    ]
+    inputs = tokenizer(
+        texts, padding=True, truncation=True, max_length=MAX_CONTEXT_TOKENS, return_tensors="pt"
+    ).to(model.device)
+
+    with torch.no_grad():
+        gen_out = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=DO_SAMPLE,
+            temperature=TEMPERATURE,
+            top_p=TOP_P,
+            repetition_penalty=REPETITION_PENALTY,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    # slice to only assistant part (HF pattern)
+    out_only = []
+    for input_ids, output_ids in zip(inputs.input_ids, gen_out):
+        trimmed = output_ids[len(input_ids):]
+        out_only.append(tokenizer.decode(trimmed, skip_special_tokens=True).strip())
+    return out_only
+
+# ==============================
+# PROMPTS
+# ==============================
+def build_summary_messages(dialogue_text: str) -> List[Dict[str,str]]:
+    return [
+        {"role": "system", "content":
+         "You are a clinical summarization assistant. "
+         "Write a concise English summary focusing on diagnosis, symptoms, key findings, and management plan. "
+         "Return only the summary text."
+        },
+        {"role": "user", "content": f"Dialogue:\n{dialogue_text}"}
+    ]
+
+def build_field_messages(dialogue_text: str, summary_text: str, question: str) -> List[Dict[str,str]]:
+    return [
+        {"role": "system", "content":
+         "You extract clinical facts from the given dialogue and summary. "
+         "Answer concisely. If the information is not present, reply exactly: N/A. "
+         "For list questions, return a comma-separated list; if none, reply exactly: N/A."
+        },
+        {"role": "user", "content":
+         f"Context (summary):\n{summary_text}\n\nContext (dialogue):\n{dialogue_text}\n\nQuestion: {question}"
+        }
+    ]
+
+# ==============================
+# FIELD WRITERS
+# ==============================
+def set_nested(d: Dict[str, Any], path: Tuple[str, ...], value: Any):
+    obj = d
+    for k in path[:-1]:
+        if obj.get(k) is None or not isinstance(obj.get(k), dict):
+            obj[k] = {}
+        obj = obj[k]
+    obj[path[-1]] = value
+
+def normalize_answer(ans: str, ftype: str):
+    ans = (ans or "").strip()
+    if ans == "" or ans.lower() in {"n/a", "na", "not available", "unknown"}:
+        return FILL_MISSING_LIST if ftype == "list" else FILL_MISSING_TEXT
+    if ftype == "list":
+        # split by comma and clean
+        parts = [p.strip() for p in ans.split(",") if p.strip()]
+        return parts if parts else FILL_MISSING_LIST
+    return ans
+
+# ==============================
+# PIPELINE
+# ==============================
+def run_inference():
+    model, tokenizer = load_model_and_tokenizer()
+
+    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
+    tprint(f"🌍 Found {len(langs)} languages: {[p.name for p in langs]}")
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        out_lang = Path(OUTPUT_DIR) / lang
+        dlg_dir = lang_dir / "Dialogues"
+
+        tprint(f"🗂 Language: {lang}")
+        if not dlg_dir.exists():
+            tprint("  • No Dialogues folder, skipping.")
+            continue
+
+        files = sorted(dlg_dir.glob("*.jsonl"))
+        tprint(f"  • Dialogues: {len(files)}")
+
+        for f in files:
+            out_text = out_lang / "Summary_Text" / f"{f.stem}_summary.txt"
+            out_json = out_lang / "Summary_Json" / f"{f.stem}_summary.json"
+
+            # skip finished files
+            if out_text.exists() and out_json.exists():
+                tprint(f"    - Skipping {f.name} (already done)")
+                continue
+
+            try:
+                rows = safe_read_jsonl(f)
+                dialogue = join_dialogue_jsonl(rows)
+                # keep plenty of context while staying VRAM-safe
+                dialogue_clip = clip_tokens(tokenizer, dialogue, MAX_CONTEXT_TOKENS - 1024)
+
+                # ===== summary (English) =====
+                summary = chat_generate_batch(
+                    model, tokenizer, [build_summary_messages(dialogue_clip)], MAX_NEW_TOKENS_SUMMARY
+                )[0]
+                write_text(out_text, summary)
+
+                # ===== per-field extraction =====
+                record = json.loads(json.dumps(JSON_TEMPLATE))  # deep copy
+                # do in small batches for speed
+                batch_msgs = []
+                batch_meta = []  # (path, ftype)
+                for path, question, ftype in JSON_FIELDS:
+                    msgs = build_field_messages(dialogue_clip, summary, question)
+                    batch_msgs.append(msgs)
+                    batch_meta.append((path, ftype))
+
+                    if len(batch_msgs) == BATCH_SIZE:
+                        outs = chat_generate_batch(model, tokenizer, batch_msgs, MAX_NEW_TOKENS_ANSWER)
+                        for (pth, ftype_), ans in zip(batch_meta, outs):
+                            set_nested(record, pth, normalize_answer(ans, ftype_))
+                        batch_msgs, batch_meta = [], []
+
+                if batch_msgs:
+                    outs = chat_generate_batch(model, tokenizer, batch_msgs, MAX_NEW_TOKENS_ANSWER)
+                    for (pth, ftype_), ans in zip(batch_meta, outs):
+                        set_nested(record, pth, normalize_answer(ans, ftype_))
+
+                write_json(out_json, record)
+                torch.cuda.empty_cache()
+
+            except Exception as e:
+                tprint(f"    ⚠️ Failed {f.name}: {e}")
+
+    tprint(f"✅ Inference complete! Results saved to {OUTPUT_DIR}")
+
+
+if __name__ == "__main__":
+    run_inference()
