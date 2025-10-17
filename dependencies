@@ -1,11 +1,273 @@
-%[08:54:04] 🔻 Loading tokenizer...
+# ============================================================
+# inference_qwen_lora_final.py
+# ============================================================
+# • Uses LoRA fine-tuned Qwen-1.5B-Instruct model
+# • Summaries & JSON: English only
+# • QnA: same language as dialogue
+# • Resumes safely and skips completed outputs
+# ============================================================
 
-�[08:54:04] 🧭 Using latest adapter: /workspace/data/KZ_2117574/qwen15b_lora_multilingual/adapter_step_28000
-[08:54:04] 🔻 Attaching LoRA adapter...
+import os, json, time, re
+from pathlib import Path
+from tqdm import tqdm
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
 
-�[08:54:04] 🌍 Found 10 languages: ['Gujarati', 'Dogri', 'Hindi', 'Telugu', 'Assamese', 'English', 'Kannada', 'Bangla', 'Tamil', 'Marathi']
-[08:54:04] 🗂 Language: Gujarati
+# ============================================================
+# PATHS
+# ============================================================
+BASE_MODEL   = "/workspace/data/KZ_2117574/Qwen2_1.5B"
+ADAPTER_DIR  = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual"
+TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
+OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_qwen"
 
-[08:54:04]   • Dialogues: 52
+# ============================================================
+# CONFIG
+# ============================================================
+MAX_INPUT_TOKENS       = 32000     # leverage Qwen-1.5B-Instruct long context
+MAX_NEW_TOKENS_SUMMARY = 400
+MAX_NEW_TOKENS_JSON    = 300
+MAX_NEW_TOKENS_QNA     = 200
+BATCH_SIZE             = 2
+TEMPERATURE             = 0.3
 
-�The following generation flags are not valid and may be ignored: ['temperature', 'top_k']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+torch.set_grad_enabled(False)
+
+LANG_HINTS = {
+    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati",
+    "Bangla": "Bangla", "Assamese": "Assamese", "Kannada": "Kannada",
+    "Marathi": "Marathi", "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
+}
+
+# ============================================================
+# PROMPTS
+# ============================================================
+SYSTEM_PROMPT_SUMMARY = (
+    "You are a professional clinical summarization assistant. "
+    "Read the multilingual doctor–patient dialogue and produce a concise, coherent summary in fluent English only. "
+    "Focus on diagnosis, symptoms, investigations, and management plan. "
+    "Do NOT use any non-English words or transliterations."
+)
+
+SYSTEM_PROMPT_JSON = (
+    "You are a clinical information extraction assistant. "
+    "Fill each field of the schema in English based on the dialogue and summary. "
+    "If data is missing, write 'N/A'. Keep answers short and clinical."
+)
+
+SYSTEM_PROMPT_QNA = (
+    "You are a multilingual clinical assistant. "
+    "Answer questions in the SAME LANGUAGE as the question, factually and politely."
+)
+
+# ============================================================
+# UTILITIES
+# ============================================================
+def tprint(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def safe_read_jsonl(path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            s = line.strip()
+            if s:
+                try: rows.append(json.loads(s))
+                except: continue
+    return rows
+
+def write_json(path, obj):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+
+def write_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
+
+def clip_tokens(tokenizer, text, max_tokens):
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    ids = ids[-max_tokens:]
+    return tokenizer.decode(ids, skip_special_tokens=True)
+
+# ============================================================
+# SCHEMA QUESTIONS
+# ============================================================
+JSON_FIELDS = {
+    "patient_identifiers": "Identify the patient by name or ID if mentioned.",
+    "demographics.age": "What is the patient's age?",
+    "demographics.sex": "What is the patient's sex?",
+    "visit.date_time": "When did the consultation or visit occur?",
+    "visit.type": "What type of visit was it (in-person, telemedicine, etc.)?",
+    "chief_complaint": "What is the main complaint?",
+    "onset_duration": "How long have the symptoms been present?",
+    "symptom_description": "Describe the main symptoms mentioned.",
+    "aggravating_factors": "What makes the symptoms worse?",
+    "relieving_factors": "What improves the symptoms?",
+    "associated_symptoms": "List any other associated symptoms.",
+    "past_medical_history": "Summarize relevant past medical history.",
+    "past_surgical_history": "Summarize past surgeries if mentioned.",
+    "family_history": "Summarize family medical history.",
+    "current_medications": "List current medications if any.",
+    "allergies": "Any allergies?",
+    "social_history": "Include lifestyle or habits (smoking, alcohol, etc.).",
+    "functional_status": "Describe the patient’s functional status.",
+    "vital_signs": "List any vital signs or physical findings.",
+    "examination_findings": "Summarize examination findings.",
+    "investigations": "List investigations or tests performed or planned.",
+    "assessment_primary_diagnosis": "What is the main working diagnosis?",
+    "differential_diagnoses": "List possible differential diagnoses.",
+    "management_plan": "Summarize the management plan or treatment options.",
+    "tests_referrals_planned": "What tests or referrals are planned?",
+    "follow_up_plan": "What is the follow-up plan?",
+    "chronology_response_to_treatment": "Describe progress or response to treatment.",
+    "patient_concerns_preferences_consent": "Summarize patient concerns or consent.",
+    "safety_issues_red_flags": "Mention any red flags or safety concerns.",
+    "coding_terms": "Provide clinical coding terms (ICD or SNOMED) if possible."
+}
+
+# ============================================================
+# BUILD CHAT MESSAGES (Qwen format)
+# ============================================================
+def build_messages(system_prompt, user_prompt):
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+def chat_generate(model, tokenizer, messages, max_new_tokens):
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer([text], return_tensors="pt").to(model.device)
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=TEMPERATURE,
+            top_p=0.9,
+            pad_token_id=tokenizer.eos_token_id
+        )
+    generated_ids = outputs[0][len(inputs.input_ids[0]):]
+    return tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+
+# ============================================================
+# MODEL LOADING
+# ============================================================
+def find_latest_adapter(path):
+    dirs = [d for d in Path(path).iterdir() if d.is_dir() and d.name.startswith("adapter_step_")]
+    if not dirs:
+        return path
+    return sorted(dirs, key=lambda x: int(x.name.split("_")[-1]))[-1]
+
+def load_model():
+    tprint("🔻 Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    bnb_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
+    )
+
+    tprint("🔻 Loading base model...")
+    base = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        device_map="auto",
+        quantization_config=bnb_cfg,
+        torch_dtype=torch.float16
+    )
+
+    adapter = find_latest_adapter(ADAPTER_DIR)
+    tprint(f"🧭 Using adapter: {adapter}")
+    model = PeftModel.from_pretrained(base, adapter)
+    model.eval()
+    return model, tokenizer
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+def main():
+    model, tokenizer = load_model()
+    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
+    tprint(f"🌍 Found {len(langs)} languages: {[p.name for p in langs]}")
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        lang_hint = LANG_HINTS.get(lang, "the same language")
+        out_lang = Path(OUTPUT_DIR) / lang
+        dlg_dir = lang_dir / "Dialogues"
+        qna_dir = lang_dir / "QnA"
+
+        tprint(f"🗂 Language: {lang}")
+
+        # ---- Summaries ----
+        if dlg_dir.exists():
+            files = sorted(dlg_dir.glob("*.jsonl"))
+            tprint(f"  • Dialogues: {len(files)}")
+
+            for i, f in enumerate(tqdm(files, desc=f"{lang} dialogues"), 1):
+                out_sum_txt = out_lang / "Summary_Text" / f"{f.stem}_summary.txt"
+                out_sum_json = out_lang / "Summary_Json" / f"{f.stem}_summary.json"
+                if out_sum_txt.exists() and out_sum_json.exists():
+                    continue  # skip completed
+
+                rows = safe_read_jsonl(f)
+                dialogue = " ".join(
+                    str(r.get("dialogue", "")) if isinstance(r, dict) else str(r)
+                    for r in rows
+                )
+                dialogue_clip = clip_tokens(tokenizer, dialogue, MAX_INPUT_TOKENS)
+
+                # === English Summary ===
+                msgs = build_messages(SYSTEM_PROMPT_SUMMARY, f"Dialogue:\n{dialogue_clip}")
+                summary = chat_generate(model, tokenizer, msgs, MAX_NEW_TOKENS_SUMMARY)
+                write_text(out_sum_txt, summary)
+
+                # === JSON Field-by-Field Extraction ===
+                json_obj = {}
+                for j, (field, q) in enumerate(JSON_FIELDS.items(), 1):
+                    tprint(f"    → [{i}/{len(files)}:{j}/{len(JSON_FIELDS)}] {field}")
+                    user_prompt = (
+                        f"Summary:\n{summary}\n\nDialogue:\n{dialogue_clip}\n\n"
+                        f"Question: {q}"
+                    )
+                    msgs = build_messages(SYSTEM_PROMPT_JSON, user_prompt)
+                    ans = chat_generate(model, tokenizer, msgs, MAX_NEW_TOKENS_JSON)
+                    json_obj[field] = ans
+                write_json(out_sum_json, json_obj)
+
+        # ---- QnA ----
+        if qna_dir.exists():
+            qfiles = sorted(qna_dir.glob("*.json"))
+            tprint(f"  • QnA files: {len(qfiles)}")
+
+            for qf in tqdm(qfiles, desc=f"{lang} QnA"):
+                try:
+                    data = json.load(open(qf, encoding="utf-8"))
+                except Exception:
+                    tprint(f"    - Skipped malformed {qf.name}")
+                    continue
+                qs = [q.get("question", "").strip() for q in data.get("questions", []) if q.get("question")]
+                if not qs: continue
+
+                answers = []
+                for q in qs:
+                    msgs = build_messages(SYSTEM_PROMPT_QNA, f"Question ({lang_hint}): {q}")
+                    ans = chat_generate(model, tokenizer, msgs, MAX_NEW_TOKENS_QNA)
+                    answers.append(ans)
+
+                out_payload = {"questions": [{"question": q, "answer": a} for q, a in zip(qs, answers)]}
+                write_json(out_lang / "QnA" / f"{qf.stem}_answers.json", out_payload)
+
+        torch.cuda.empty_cache()
+
+    tprint(f"✅ Inference complete! Results saved to {OUTPUT_DIR}")
+
+# ============================================================
+if __name__ == "__main__":
+    main()
