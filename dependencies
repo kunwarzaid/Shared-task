@@ -1,10 +1,10 @@
-import os, json, time
+import os, json, time, re
 from pathlib import Path
 from typing import List, Dict, Any
+from tqdm import tqdm
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
-from tqdm import tqdm
 
 # ============================================================
 # CONFIG
@@ -12,14 +12,14 @@ from tqdm import tqdm
 BASE_MODEL  = "/workspace/data/KZ_2117574/Qwen2_1.5B"
 ADAPTER_DIR = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual"
 EXTRACT_DIR = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR  = "/workspace/data/KZ_2117574/Inference_Output_Qwen"
+OUTPUT_DIR  = "/workspace/data/KZ_2117574/Inference_Output_Batched"
 
 CTX_LIMIT_INPUT         = 8192
 CHUNK_TARGET_TOKENS     = 4096
 CHUNK_OVERLAP_TOKENS    = 256
 MAX_NEW_TOKENS_SUMMARY  = 300
-MAX_NEW_TOKENS_JSON     = 450
 MAX_NEW_TOKENS_QNA      = 200
+MAX_NEW_TOKENS_FIELD    = 256
 BATCH_SIZE              = 2
 
 LANG_HINTS = {
@@ -29,16 +29,15 @@ LANG_HINTS = {
 }
 
 # ============================================================
-# HELPERS
+# UTILITIES
 # ============================================================
-def tprint(msg: str):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+def tprint(msg): print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def safe_read_jsonl(path: Path):
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+    rows=[]
+    with open(path,"r",encoding="utf-8",errors="replace") as f:
         for line in f:
-            s = line.strip()
+            s=line.strip()
             if s:
                 try: rows.append(json.loads(s))
                 except: continue
@@ -46,16 +45,20 @@ def safe_read_jsonl(path: Path):
 
 def write_json(path: Path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
+    tmp = path.with_suffix(".tmp")
+    with open(tmp,"w",encoding="utf-8") as f:
+        json.dump(obj,f,ensure_ascii=False,indent=2)
+    tmp.replace(path)
 
 def write_text(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
+    tmp = path.with_suffix(".tmp")
+    with open(tmp,"w",encoding="utf-8") as f:
+        f.write(text.strip()+"\n")
+    tmp.replace(path)
 
-def chunk_list(lst, n):
-    for i in range(0, len(lst), n):
+def chunk_list(lst,n):
+    for i in range(0,len(lst),n):
         yield lst[i:i+n]
 
 # ============================================================
@@ -94,203 +97,179 @@ JSON_TEMPLATE = {
 }
 
 # ============================================================
-# PROMPT BUILDERS (apply_chat_template)
+# PROMPTS
 # ============================================================
-def build_summary_prompt(tokenizer, dialogue_text):
-    msgs = [
-        {"role": "system", "content":
+def build_summary_prompt(tok, dialogue):
+    msgs=[
+        {"role":"system","content":
          "You are a clinical summarization assistant. "
-         "Write a concise English summary focusing on diagnosis, symptoms, findings, and management plan."},
-        {"role": "user", "content": f"Dialogue:\n{dialogue_text}"}
+         "Write a concise English summary focusing on diagnosis, symptoms, and management."},
+        {"role":"user","content":f"Dialogue:\n{dialogue}"}
     ]
-    return tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+    return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
-def build_meta_summary_prompt(tokenizer, chunk_summaries):
-    joined = "\n\n".join(f"- {s}" for s in chunk_summaries)
-    msgs = [
-        {"role": "system", "content":
-         "Integrate the following partial summaries into one coherent English clinical summary. "
-         "Return only the final summary text."},
-        {"role": "user", "content": f"Partial summaries:\n{joined}"}
+def build_meta_summary_prompt(tok, partial_summaries):
+    combined = "\n\n".join(f"- {s}" for s in partial_summaries)
+    msgs=[
+        {"role":"system","content":"Combine these partial summaries into one clear English summary."},
+        {"role":"user","content":combined}
     ]
-    return tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+    return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
-def build_json_prompt_from_summary(tokenizer, english_summary, fewshot_pair=None):
-    schema_str = json.dumps(JSON_TEMPLATE, indent=2, ensure_ascii=False)
-    msgs = [{"role": "system", "content":
-        "You are a clinical assistant extracting structured information. "
-        "Return ONLY valid JSON strictly matching the schema; no extra text."}]
-    if fewshot_pair:
-        ex_sum, ex_json = fewshot_pair
-        msgs.append({"role": "user", "content": f"Summary:\n{ex_sum}\n\nSchema:\n{schema_str}"})
-        msgs.append({"role": "assistant", "content": json.dumps(ex_json, ensure_ascii=False, indent=2)})
-    msgs.append({"role": "user", "content": f"Summary:\n{english_summary}\n\nSchema:\n{schema_str}"})
-    return tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-
-def build_qna_prompt(tokenizer, question, lang_hint):
-    msgs = [
-        {"role": "system", "content":
-         f"You are a helpful medical assistant responding ONLY in {lang_hint}. "
-         f"Provide clear factual answers in {lang_hint}."},
-        {"role": "user", "content": question}
+def build_qna_prompt(tok, question, lang):
+    msgs=[
+        {"role":"system","content":f"You are a medical assistant replying in {lang}. Answer concisely and accurately in {lang}."},
+        {"role":"user","content":question}
     ]
-    return tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+    return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
 # ============================================================
-# GENERATION HELPERS
+# GENERATION
 # ============================================================
-def clean_output(text): return text.split("<|im_end|>")[0].strip()
+def clean_output(t): return t.split("<|im_end|>")[0].strip()
 
-def try_extract_json(text):
-    text = text.strip()
-    if "```" in text:
-        for block in text.split("```"):
-            b = block.strip()
-            if b.lower().startswith("json"): b = b[4:].strip()
-            try: return json.loads(b)
-            except: pass
-    try: return json.loads(text)
-    except:
-        s, e = text.find("{"), text.rfind("}")
-        if s != -1 and e > s:
-            try: return json.loads(text[s:e+1])
-            except: return None
-    return None
-
-def generate_batch(model, tokenizer, prompts, max_new_tokens):
-    inputs = tokenizer(prompts, padding=True, truncation=True,
-                       max_length=CTX_LIMIT_INPUT, return_tensors="pt").to(model.device)
+def generate_batch(model,tok,prompts,max_new_tokens):
+    inputs=tok(prompts,padding=True,truncation=True,
+               max_length=CTX_LIMIT_INPUT,return_tensors="pt").to(model.device)
     with torch.no_grad():
-        outs = model.generate(**inputs,
-                              max_new_tokens=max_new_tokens,
-                              do_sample=False,
-                              num_beams=1,
-                              pad_token_id=tokenizer.eos_token_id)
-    gen = [o[len(i):] for i, o in zip(inputs.input_ids, outs)]
-    dec = tokenizer.batch_decode(gen, skip_special_tokens=True)
-    return [clean_output(x) for x in dec]
+        outs=model.generate(**inputs,max_new_tokens=max_new_tokens,
+                            do_sample=False,num_beams=1,
+                            pad_token_id=tok.eos_token_id)
+    gens=[o[len(i):] for i,o in zip(inputs.input_ids,outs)]
+    decs=tok.batch_decode(gens,skip_special_tokens=True)
+    return [clean_output(x) for x in decs]
 
 # ============================================================
-# TOKEN CHUNKING
+# MULTI-FIELD EXTRACTION
 # ============================================================
-def split_into_chunks_by_tokens(text, tokenizer, chunk_tokens, overlap_tokens):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= chunk_tokens:
-        return [text]
-    chunks = []
-    step = chunk_tokens - overlap_tokens
-    for i in range(0, len(ids), step):
-        sub = ids[i:i+chunk_tokens]
-        chunks.append(tokenizer.decode(sub, skip_special_tokens=True))
-        if i+chunk_tokens >= len(ids): break
+def extract_schema_fields_batched(model, tokenizer, dialogue, summary):
+    field_groups = [
+        ["chief_complaint", "onset_duration", "symptom_description"],
+        ["assessment_primary_diagnosis", "management_plan", "follow_up_plan"],
+        ["safety_issues_red_flags"]
+    ]
+
+    results = {}
+    for group in field_groups:
+        group_names = ", ".join(f.replace("_", " ") for f in group)
+        prompt = tokenizer.apply_chat_template([
+            {"role": "system", "content":
+             f"You are a clinical assistant extracting structured information. "
+             f"Read the dialogue and summary and extract each of the following fields clearly and concisely: {group_names}. "
+             "Return answers in the following format:\n"
+             + "\n".join([f"{g.replace('_', ' ').title()}: ..." for g in group])},
+            {"role": "user", "content":
+             f"Dialogue:\n{dialogue[:2500]}\n\nSummary:\n{summary}\n\nAnswer:"}
+        ], tokenize=False, add_generation_prompt=True)
+
+        gen = generate_batch(model, tokenizer, [prompt], MAX_NEW_TOKENS_FIELD)[0]
+        for g in group:
+            pattern = rf"{g.replace('_',' ').title()}:\s*(.*)"
+            match = re.search(pattern, gen, re.IGNORECASE)
+            results[g] = match.group(1).strip() if match else None
+
+    return results
+
+# ============================================================
+# CHUNKING
+# ============================================================
+def split_into_chunks_by_tokens(text,tok,chunk_tokens,overlap_tokens):
+    ids=tok.encode(text,add_special_tokens=False)
+    if len(ids)<=chunk_tokens: return [text]
+    chunks=[]; step=chunk_tokens-overlap_tokens
+    for i in range(0,len(ids),step):
+        sub=ids[i:i+chunk_tokens]
+        chunks.append(tok.decode(sub,skip_special_tokens=True))
+        if i+chunk_tokens>=len(ids): break
     return chunks
 
 # ============================================================
 # MODEL LOADING
 # ============================================================
 def find_latest_adapter(path):
-    dirs = [d for d in Path(path).iterdir() if d.is_dir() and d.name.startswith("adapter_step_")]
-    return sorted(dirs, key=lambda x: int(x.name.split("_")[-1]))[-1] if dirs else path
+    dirs=[d for d in Path(path).iterdir() if d.is_dir() and d.name.startswith("adapter_step_")]
+    return sorted(dirs,key=lambda x:int(x.name.split("_")[-1]))[-1] if dirs else path
 
 # ============================================================
-# MAIN
+# MAIN PIPELINE
 # ============================================================
 def run_inference():
-    tprint("🚀 QLoRA Inference — Chunked Long Dialogue Mode")
+    tprint("🚀 Starting batched field-wise inference for Qwen")
 
-    bnb_cfg = BitsAndBytesConfig(
-        load_in_4bit=True, bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
+    cfg=BitsAndBytesConfig(load_in_4bit=True,bnb_4bit_quant_type="nf4",
+                           bnb_4bit_compute_dtype=torch.float16)
+    adapter=find_latest_adapter(ADAPTER_DIR)
 
-    adapter_path = find_latest_adapter(ADAPTER_DIR)
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL, device_map="auto",
-        quantization_config=bnb_cfg, torch_dtype=torch.float16
-    )
-    model = PeftModel.from_pretrained(base, adapter_path)
+    tok=AutoTokenizer.from_pretrained(BASE_MODEL,use_fast=True)
+    if tok.pad_token is None: tok.pad_token=tok.eos_token
+    base=AutoModelForCausalLM.from_pretrained(BASE_MODEL,
+        device_map="auto",quantization_config=cfg,torch_dtype=torch.float16)
+    model=PeftModel.from_pretrained(base,adapter)
     model.eval()
 
-    FEWSHOT_SUMMARY = (
-        "35-year-old male with 3-week progressive throat pain and dysphonia. "
-        "Endoscopic exam and biopsy planned; CT/MRI for TNM staging. "
-        "Counseled on dental hygiene and follow-up."
-    )
-    FEWSHOT_JSON = {
-        "chief_complaint": "Throat pain and voice change for 3 weeks",
-        "investigations": ["Endoscopy", "Biopsy", "CT/MRI for staging"],
-        "assessment_primary_diagnosis": "Possible head and neck carcinoma",
-        "management_plan": "Proceed with imaging and MDT review",
-        "follow_up_plan": "Review after biopsy and imaging results"
-    }
-
-    langs = [p for p in Path(EXTRACT_DIR).iterdir() if p.is_dir()]
+    langs=[p for p in Path(EXTRACT_DIR).iterdir() if p.is_dir()]
     for lang_dir in langs:
-        lang = lang_dir.name
-        lang_hint = LANG_HINTS.get(lang, "the same language")
-        out_lang = Path(OUTPUT_DIR) / lang
-        dlg_dir, qna_dir = lang_dir / "Dialogues", lang_dir / "QnA"
+        lang=lang_dir.name
+        lang_hint=LANG_HINTS.get(lang,"the same language")
+        out_lang=Path(OUTPUT_DIR)/lang
+        dlg_dir,qna_dir=lang_dir/"Dialogues",lang_dir/"QnA"
+        tprint(f"🗂 Processing {lang}")
 
-        tprint(f"🗂 {lang}: processing")
-
-        # ----- Summaries -----
+        # ---- SUMMARIZATION + JSON FILL ----
         if dlg_dir.exists():
-            files = sorted(dlg_dir.glob("*.jsonl"))
-            for f in tqdm(files, desc=f"{lang} dialogues"):
-                start_time = time.time()
+            for f in tqdm(sorted(dlg_dir.glob("*.jsonl")),desc=f"{lang} dialogues"):
+                text_out=out_lang/"Summary_Text"/f"{f.stem}_summary.txt"
+                json_out=out_lang/"Summary_Json"/f"{f.stem}_summary.json"
+                if text_out.exists() and json_out.exists():
+                    continue
+
                 try:
-                    rows = safe_read_jsonl(f)
-                    dialogue = " ".join(
-                        str(r.get("dialogue", "")) if isinstance(r, dict) else str(r) for r in rows
-                    )
-                    chunks = split_into_chunks_by_tokens(dialogue, tokenizer, CHUNK_TARGET_TOKENS, CHUNK_OVERLAP_TOKENS)
+                    rows=safe_read_jsonl(f)
+                    dialogue=" ".join(
+                        (r.get("dialogue","") if isinstance(r,dict) else str(r))
+                        for r in rows)
+                    chunks=split_into_chunks_by_tokens(dialogue,tok,CHUNK_TARGET_TOKENS,CHUNK_OVERLAP_TOKENS)
+                    chunk_prompts=[build_summary_prompt(tok,c) for c in chunks]
+                    chunk_summaries=[]
+                    for batch in chunk_list(chunk_prompts,BATCH_SIZE):
+                        chunk_summaries+=generate_batch(model,tok,batch,MAX_NEW_TOKENS_SUMMARY)
 
-                    chunk_prompts = [build_summary_prompt(tokenizer, c) for c in chunks]
-                    chunk_summaries = []
-                    for batch in chunk_list(chunk_prompts, BATCH_SIZE):
-                        chunk_summaries.extend(generate_batch(model, tokenizer, batch, MAX_NEW_TOKENS_SUMMARY))
+                    meta_prompt=build_meta_summary_prompt(tok,chunk_summaries)
+                    summary=generate_batch(model,tok,[meta_prompt],MAX_NEW_TOKENS_SUMMARY)[0]
+                    write_text(text_out,summary)
 
-                    meta_prompt = build_meta_summary_prompt(tokenizer, chunk_summaries)
-                    final_summary = generate_batch(model, tokenizer, [meta_prompt], MAX_NEW_TOKENS_SUMMARY)[0]
-                    write_text(out_lang / "Summary_Text" / f"{f.stem}_summary.txt", final_summary)
-
-                    json_prompt = build_json_prompt_from_summary(tokenizer, final_summary, (FEWSHOT_SUMMARY, FEWSHOT_JSON))
-                    json_out = generate_batch(model, tokenizer, [json_prompt], MAX_NEW_TOKENS_JSON)[0]
-                    parsed = try_extract_json(json_out)
-                    if parsed is None:
-                        retry = json_prompt + "\nReturn ONLY valid JSON."
-                        json_out2 = generate_batch(model, tokenizer, [retry], MAX_NEW_TOKENS_JSON)[0]
-                        parsed = try_extract_json(json_out2)
-                    write_json(out_lang / "Summary_Json" / f"{f.stem}_summary.json", parsed or JSON_TEMPLATE)
+                    filled_fields = extract_schema_fields_batched(model, tok, dialogue, summary)
+                    json_filled = JSON_TEMPLATE.copy()
+                    for k,v in filled_fields.items():
+                        if k in json_filled:
+                            json_filled[k]=v
+                        elif k in json_filled["demographics"]:
+                            json_filled["demographics"][k]=v
+                    write_json(json_out,json_filled)
                 except Exception as e:
-                    tprint(f"⚠️ {f.name} failed: {e}")
-                finally:
-                    tprint(f"⏱ {f.name} took {time.time() - start_time:.1f}s")
+                    tprint(f"⚠️ Skipped {f.name}: {e}")
 
-        # ----- QnA -----
+        # ---- QnA ----
         if qna_dir.exists():
-            qfiles = sorted(qna_dir.glob("*.json"))
-            for qf in tqdm(qfiles, desc=f"{lang} QnA"):
+            for qf in tqdm(sorted(qna_dir.glob("*.json")),desc=f"{lang} QnA"):
+                out_file=out_lang/"QnA"/f"{qf.stem}_answers.json"
+                if out_file.exists(): continue
                 try:
-                    data = json.load(open(qf, encoding="utf-8"))
+                    data=json.load(open(qf,encoding="utf-8"))
                 except: continue
-                qs = [q.get("question", "").strip() for q in data.get("questions", []) if q.get("question")]
-                answers = []
-                for batch in chunk_list(qs, BATCH_SIZE):
-                    prompts = [build_qna_prompt(tokenizer, q, lang_hint) for q in batch]
-                    outs = generate_batch(model, tokenizer, prompts, MAX_NEW_TOKENS_QNA)
-                    answers.extend([o.replace("Answer:", "").strip() for o in outs])
-                out = {"questions": [{"question": q, "answer": a} for q, a in zip(qs, answers)]}
-                write_json(out_lang / "QnA" / f"{qf.stem}_answers.json", out)
+                qs=[q.get("question","").strip() for q in data.get("questions",[]) if q.get("question")]
+                ans=[]
+                for batch in chunk_list(qs,BATCH_SIZE):
+                    pr=[build_qna_prompt(tok,q,lang_hint) for q in batch]
+                    outs=generate_batch(model,tok,pr,MAX_NEW_TOKENS_QNA)
+                    ans+=[o.replace("Answer:","").strip() for o in outs]
+                out={"questions":[{"question":q,"answer":a} for q,a in zip(qs,ans)]}
+                write_json(out_file,out)
 
         torch.cuda.empty_cache()
 
-    tprint(f"✅ Inference complete — results saved to {OUTPUT_DIR}")
+    tprint("✅ Inference complete — results saved.")
 
 # ============================================================
-if __name__ == "__main__":
+if __name__=="__main__":
     run_inference()
