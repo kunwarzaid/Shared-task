@@ -1,434 +1,150 @@
-# ============================================================
-# inference_qwen_qlora_final.py
-# ============================================================
-# Qwen 1.5B-Instruct + LoRA inference (4-bit) with:
-# - Proper ChatML prompting
-# - Few-shot JSON (1 example from training data)
-# - Clean decoding (no prompt echo)
-# - English summaries, multilingual QnA
-# ============================================================
+Text otput
+system
+You are a clinical summarization assistant. Write a concise English summary focusing on diagnosis, symptoms, key findings, and management plan. Return only the summary text.
 
-import os
-import json
-import time
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+user
+Dialogue:
+ડૉક્ટર સાહેબ, હું આર્યન દેસાઈ છું, વય 35, અમદાવાદનો રહેવાસી. ગળા અને ગળાના નજીક અંકુશિત દુખાવો છે, લગભગ ત્રણ અઠવાડિયેથી વધી રહ્યો છે, ખાસ કરીને ગરમ ખાધા પછી.
+સારું આર્યન, આ મુલાકાતમાં હું લક્ષણો વિશે પૂછીને તમારી history સમજીશ. ગળાનો દુખાવો ક્યારે શરૂ થયો, ગરમ ખાવા પછી વધારે થાય છે, અવાજમાં ફેરફાર આવ્યો કે નહીં?
+હા ડૉક્ટર, ત્રણ અઠવાડિયાથી આ સમસ્યા છે. ગરમ વસ્તુઓ પછી ખાસ તો વધારે વેતર લાગે છે, ચર્ચા કરતા સમયે આવાજ થોડો હલદ્દો બની જાય છે, પસારમાં ગળા કંઠાઈ લાગે છે.
+Step 1: પહેલુ પગલુ એ મોં, ગળો અને નેકની તપાસ કરવી. જરૂર પડે તો હું નાની કૅમેરા (એન્ડોસ્કોપ) વડે voice box અને ગળીની અંદર દેખી શકું.
+Step 2: નિદાન ચોકસાઈ માટે બાયોપ્સી લેવાશે. neck lumpમાંથી નાની નમૂના લઈને pathology પાસે મોકલીશું; આ પ્રક્રિયા સામાન્ય રીતે સુરક્ષિત હોય છે.
+આ સારું છે. પરિણામ કેટલા દિવસમાં આવશે? pathologyનું જવાબ મળવાંએ પછી શું કરવું છે તે જાણી લેવા ઈચ્છું.
+પોતે pathologyનાresults સામાન્ય રીતે 3-7 દિવસમાં આવે છે. પરિણામ મળ્યા પછી હું અને ટીમ આગળના પગલાં વિશે ચર્ચા કરીશું, જરૂર પડે તો MDT ટીમને મળાવીશું.
+ઠીક છે. biopsy પછી ક્યારે CT અથવા MRI કરવું પડશે તે પણ સમજાવી દો, કેમ કે આ સ્કેનસ્ટેજિંગમાં મદદરૂપ લાગે.
+Step 3: હા, ત્યારબાદ CT કે MRI કરાશે. આ સ્કેનથી ટ્યુમરનું કદ, વિસ્તરણ અને નોડોમાં અસર દેખાશે; સ્ટેજીંગ માટે આ માહિતી ખૂબ જરૂરી છે.
+ટેસ્ટો પછી સ્ટેજ ક્યારે સુધી નક્કી થશે? TNM કેવો માપદંડ છે અને I થી IV સુધીના ધોરણ કેવી રીતે લાગુ પડે?
+Step 4: TNM માપદંડમાં TTumorનું કદ, Nenliફનો લિમ્ફ નોડ, અને M metastasis હોય તો તેના આધારે સ્ટેજ I થી IV સુધીની રેંક આવે છે. સ્ટેજ I સિમ્પલ, IV બહુએડવાન્ઝડ હોય છે.
+તો એટલે Stage III શું 뜻ે? ટ્યુમર કદ અને નોડ્સે કયા આંકડાઓ બતાવે છે?
+ઉદાહરણ તરીકે, Stage IIIમાં ટ્યુમર કદ મોટો બની શકે અને નેકના લિમ્ફ નોડોમાં અસર હોવી શકે, પરંતુ જેનેના સ્ટેજ સંપૂર્ણપણે નક્કી થયેયા પછી જ સঠিক નિર્ણય થાય.
+એના પછી prognosis શું બોલું છો? Stage IIIમાં સારું શક્ય છે કે જોખમ વધારે?
+Prognosis સ્ટેજ પર નિર્ભર હોય છે, પરંતુ હાલમાં નંબર અપાય મેળવ્યા વગર નિર્ધારણ કરવું સઘન નથી. સ્ટેજિંગ પછી જ ಆರಂಭિક અંદાજ માહિતીમાં આવે.
+ટ્રીટમેન્ટ વિકલ્પો કયા કયા હોઈ શકે? સರ್ಜરી, રેડિયેશન, કેમો કે બીજી કોઈ સારવાર?
+વિકલ્પો ચોક્કસપણે સ્ટેજ, ફક્તો અને અન્ય આરોગ્ય પર આધારે રાખવામાં આવે. સામાન્ય રીતે સર્જરી, રેડિયેશન અને કેમોના સંયોજન અથવા ટાર્ગેટેડ થેરાપીનો વિચાર થાય.
+HPV વિષે શું સમજવું જરૂરી છે? Vaccination વિશે counselling મળશે કે કેમ?
+HPV વિષે ટેસ્ટ અને counselling શક્ય છે. guideline પ્રમાણે 26 વર્ષ સુધી વેક્સિનેશન સામાન્ય રીતે યોગ્ય, 26 વર્ષ બાદ counselling પછી વિચારવામાં આવે; તમે 35 છો, counselling દરમિયાન ચર્ચા કરીશું.
+હું counselling વિશે વિચારતો છું. કેટલા સત્રો કરે છે અને લગભગ ખર્ચ કે આવતી ખર્ચા કેવી રીતે હશે?
+Counsellingના સત્રોની સંખ્યા અલગ-અલગ હોય શકે, સામાન્ય રીતે બે થી ચાર સત્રો હોય છે. ખર્ચ રાજ્ય-પંચાયત પર નિર્ભર, અમે ગુજરાતી PDFs અને ઓનલાઈન સાધન આપશું.
+ડેન્ટલ હાઈજીન કઇ વિધી જરૂરી છે? ટ્રીટમેન્ટ પહેલા ડેન્ટલ ચેક-અપ કરવો જરૂરી છે કે નહી?
+ડેન્ટલ હાઈજીન ખુબ મહત્ર્વપૂર્ણ છે. ડેન્ટલ રિફરલ કરીશું અને biopsy/ત્રીટમેન્ટ પહેલાં દાંતના સ્વચ્છતા યોગ્ય રાખવાનું કહશું.
+પરિવારullo હમણાં join કરશે તો કેટલી મદદ મળશે? અમારા પરિવારને કઈ રીતે જોડવું તે માર્ગદર્શન આપશો?
+ફેમિલી જોડાણનું આયોજન અમે કરીશું. Gujarati ભાષાના સામગ્રીમાં education resources ફેલો અને porodના સભ્યોને પણ બેત્ર બનાવીને સમજાવાશે.
+હું આર્યનની બહેન શ્વેતા છું. આалапના ટેસ્ટ, સ્ટેજ અને ડાયনોચની યોજનાઓ સમજૂંવા માટે અહીં આવ્યો/આයું છું.
+Welcome. Step 1 ની ચર્ચાાણથી શરૂ કરીએ. અમે પ્રાઈવસીના સંબંધમાં સંપૂર્ણ સ્પષ્ટતા આપશું અને તમારું પ્રશ્ન પુછવામાં કોઈ આશંકા રહેશે નહીં.
+આ સારી વાત છે. biopsy શું ડરાવવું છે કે painless રીતે થાય છે? નાની નમૂના કેટલાય પોઝથી લેવામાં આવે吗?
+Biopsy સામાન્ય રીતે લોકલ એનેસ્થિસિયા હેઠળ સારી રીતે થાય છે અને બહુ દુઃખદ નહીં હશે. નમૂના neck lumpમાંથી નાનો થવો છે; સૌથી ઓછા ડિસ્ટર્બન્સ રહે છે.
+CT કે MRI માટે તૈયાર થવું હોય તો શું કરવું જોઈએ? કયા દિવસ નિશ્ચિત કરવું?
+CT કે MRI માટે નિર્ધારીત દિવસ રાખાશે. ખાવા-પીવામાં થોડોabant; ડીના પહેલા ખાનગી ચેકઅપ પેપરwork તૈયાર રાખવું.
+આપણા కుటుంబમાંoths કોઈ બે દિવસમાં અવગતિ હોય તો શું scheduling સરળતાથી કરી શકાય?
+હા, અમે family-inclusive scheduling રાખીશું; follow-up 2-3 અઠવાડિયે રહેશે, એ સમયે biopsy-স্কેનના પરિણામ અને પ્રકારણ સમીક્ષા થશે.
+સારું, આગામી દિવસોમાં આ તમામ પગલાં કેટલો ખેંચાઈ જશે અને પ્રવાસ જેવા શક્યતા રહેશે?
+આ કામગીરીમાં થોડો સમય લાગે, પરંતુ અમે સ્પષ્ટ ટાઈમલાઈન આપીશું. ફુલ ડોક્ટર્સની ટીમ તમને જેના પર જવાબદારી હોય તેને સમજાવશે.
+અમે આłów લોકો સાથે મળીને આ દરેક પગલાંના ખર્ચ અને સહાય વિશે જાણવા ઈચ્છીએ છીએ, કોઈ સરકારી યોજના કે રાહત મળે?
+સોશિયલ વર્કર તમારી સાથે હશે; सरकारी અનેạng hospital schemes વિશે માર્ગદર્શન આપીશું, વધુમાં સ્થિતિ મુજબ સહાય મળી શકે.
+થોઈને નક્કી કરવું કે અમે smokeless tobacco અને alcohol બચાવશું, ઘર માં secondhand ધુમ્રપાન ઘટાડવું.
+અત્યારે સૌથી અગત્યનું નેવી તે છે કે તમે બીમારી સામે લડવા માટે તમારો પોતાનો ઠોસ નિર્ણય કરો. અમે resources અને ઓનલાઇન materials આપવા તૈયાર છીએ.
+સારું, હવે હું અને ოჯახ મળીને counselling અને સ્કેન-બાયોપ્સી દ્વારા આગળ વધશું.
+Excellent. Follow-up 2-3 અઠવાડિયે રહેશે; biopsy-result, imaging અને staging અંગે નવી માહિતી સાથે ફરી વાત થશે.
+જો કોઈred flags દેખાય તો તરત જ અત્રે આવશો: અખંડ પરીસ્થિતિમાં વોઇસ ફેરફાર, ગળામાં પેઢો, દિવસોમાં ઓછા ખોરાક.
+આ સંભાળ જાળવીએ છીએ. તમે વાત કરો છો તો હું敢. અમે હવે આગળના પગલાં માટે તૈયાર છીએ.
+હું પણ આ યોજનામાં ભાગ લઉં છું. હું કોઈ દસ્તાવેજો કે માસ્ટર-પ્લાન જરૂર પડે ત્યારે તૈયાર કરી દઉં.
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
+assistant
+સારું છે. આ સમયમાં આ પગલાંને કાર્યક્રમ પર પણ સમજાવી શકે છે. અમે પરિવારને સમાવેશ કરીશું અને counseling વિશે સમાવેશ કરીશું. અમે આગળના પગલાં માટે તમારી પરિવારને સમાવેશ કરીશું અને તમારી પરિવારને સમાવેશ કરીશું. તમારી પરિવારને �
 
-# =========================
-# PATHS (edit if needed)
-# =========================
-BASE_MODEL   = "/workspace/data/KZ_2117574/Qwen2_1.5B"
-ADAPTER_DIR  = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual"   # fine-tuned LoRA root or latest adapter dir
-TRAIN_DIR    = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train"
-TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_Qwen"
 
-# =========================
-# GENERATION LIMITS
-# =========================
-# Qwen-1.5B-Instruct default context is 32k in recent releases, but be conservative if unsure.
-CTX_MAX = 8192                      # input prompt (we keep a buffer below)
-MAX_NEW_TOKENS_SUMMARY = 300
-MAX_NEW_TOKENS_JSON    = 500
-MAX_NEW_TOKENS_QNA     = 200
-
-TEMPERATURE_SUMMARY = 0.2           # keep deterministic/compact
-TOP_P_SUMMARY       = 0.9
-TEMPERATURE_JSON    = 0.1           # JSON should be stable
-TOP_P_JSON          = 0.9
-TEMPERATURE_QNA     = 0.7           # allow some creativity in answers
-TOP_P_QNA           = 0.9
-
-BATCH_SIZE = 4                      # drop to 1-2 if you hit OOM on V100 32GB
-REPETITION_PENALTY = 1.05
-
-LANG_HINTS = {
-    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati",
-    "Bangla": "Bangla", "Assamese": "Assamese", "Kannada": "Kannada",
-    "Marathi": "Marathi", "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
-}
-
-JSON_TEMPLATE = {
-  "patient_identifiers": None,
-  "demographics": {"age": None, "sex": None},
-  "visit": {"date_time": None, "type": None},
-  "chief_complaint": None,
-  "onset_duration": None,
-  "symptom_description": None,
-  "aggravating_factors": None,
-  "relieving_factors": None,
+Json 
+{
+  "patient_identifiers": null,
+  "demographics": {
+    "age": null,
+    "sex": null
+  },
+  "visit": {
+    "date_time": null,
+    "type": null
+  },
+  "chief_complaint": null,
+  "onset_duration": null,
+  "symptom_description": null,
+  "aggravating_factors": null,
+  "relieving_factors": null,
   "associated_symptoms": [],
-  "past_medical_history": None,
-  "past_surgical_history": None,
-  "family_history": None,
+  "past_medical_history": null,
+  "past_surgical_history": null,
+  "family_history": null,
   "current_medications": [],
-  "allergies": None,
+  "allergies": null,
   "social_history": [],
-  "functional_status": None,
-  "vital_signs": None,
-  "examination_findings": None,
+  "functional_status": null,
+  "vital_signs": null,
+  "examination_findings": null,
   "investigations": [],
-  "assessment_primary_diagnosis": None,
+  "assessment_primary_diagnosis": null,
   "differential_diagnoses": [],
-  "management_plan": None,
+  "management_plan": null,
   "tests_referrals_planned": [],
-  "follow_up_plan": None,
-  "chronology_response_to_treatment": None,
-  "patient_concerns_preferences_consent": None,
-  "safety_issues_red_flags": None,
-  "coding_terms": None,
-  "conversation_metadata": {"timestamps": [], "speaker_labels": []}
+  "follow_up_plan": null,
+  "chronology_response_to_treatment": null,
+  "patient_concerns_preferences_consent": null,
+  "safety_issues_red_flags": null,
+  "coding_terms": null,
+  "conversation_metadata": {
+    "timestamps": [],
+    "speaker_labels": []
+  }
 }
 
-# =========================
-# TINY UTILS
-# =========================
-def tprint(msg: str):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def write_json(path: Path, obj: Any):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-
-def write_text(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
-
-def safe_read_jsonl(path: Path) -> List[Dict[str, Any]]:
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            s = line.strip()
-            if not s:
-                continue
-            try:
-                rows.append(json.loads(s))
-            except json.JSONDecodeError:
-                continue
-    return rows
-
-def join_dialogue_jsonl(rows: List[Any]) -> str:
-    return "\n".join(str(r.get("dialogue", "")) if isinstance(r, dict) else str(r) for r in rows)
-
-def clip_to_tokens(tok, text: str, max_tokens: int) -> str:
-    ids = tok.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    ids = ids[-max_tokens:]
-    return tok.decode(ids, skip_special_tokens=True)
-
-# =========================
-# CHATML HELPERS (Qwen)
-# =========================
-def chatml(system: str, user: str, assistant: Optional[str] = None) -> str:
-    """Format ChatML for Qwen (no extra BOS/EOS; tokenizer will handle)."""
-    s = []
-    s.append("<|im_start|>system\n" + system.strip() + "\n<|im_end|>")
-    s.append("<|im_start|>user\n" + user.strip() + "\n<|im_end|>")
-    if assistant is None:
-        s.append("<|im_start|>assistant\n")   # we stop here; model generates assistant
-    else:
-        s.append("<|im_start|>assistant\n" + assistant.strip() + "\n<|im_end|>")
-    return "\n".join(s)
-
-def extract_assistant_only(generated: str) -> str:
-    """Return only the last assistant block; strip tags & any echoed prompt."""
-    # If model returns full chat, slice last assistant block
-    if "<|im_start|>assistant" in generated:
-        part = generated.split("<|im_start|>assistant")[-1]
-        # cut at the next <|im_end|> if present
-        if "<|im_end|>" in part:
-            part = part.split("<|im_end|>")[0]
-        return part.strip()
-    return generated.strip()
-
-# =========================
-# PROMPT BUILDERS
-# =========================
-def build_summary_chatml(dialogue_text: str) -> str:
-    system = (
-        "You are a clinical summarization assistant. "
-        "Write a concise English summary focusing on diagnosis, symptoms, key findings, and management plan. "
-        "Return only the summary text."
-    )
-    user = f"Dialogue:\n{dialogue_text}"
-    return chatml(system, user)
-
-def build_qna_chatml(question: str, lang_hint: str) -> str:
-    system = (
-        f"You are a medical assistant answering patient questions in {lang_hint}. "
-        f"Answer clearly and concisely in {lang_hint}. Do not include explanations about being an AI."
-    )
-    user = f"Question:\n{question}"
-    return chatml(system, user)
-
-def build_json_chatml(dialogue_text: str,
-                      schema: Dict[str, Any],
-                      fewshot_pair: Optional[Tuple[str, Dict[str, Any]]] = None) -> str:
-    """Few-shot JSON prompt using one training example (dialogue -> minimal JSON)."""
-    system = (
-        "You are a clinical information extraction assistant. "
-        "From the given doctor–patient dialogue, produce ONLY valid JSON strictly matching the schema. "
-        "If a field is not mentioned, use null or []. Do not add extra keys."
-    )
-    schema_str = json.dumps(schema, ensure_ascii=False, indent=2)
-
-    # Few-shot example if provided
-    blocks = []
-    if fewshot_pair:
-        fs_dialogue, fs_json = fewshot_pair
-        fs_user = f"(EXAMPLE) Dialogue:\n{fs_dialogue}\n\nSchema:\n{schema_str}\n\nExtract JSON."
-        fs_assistant = json.dumps(fs_json, ensure_ascii=False, indent=2)
-        blocks.append(chatml(system, fs_user, fs_assistant))
-
-    # Now the real task
-    user = f"Dialogue:\n{dialogue_text}\n\nSchema:\n{schema_str}\n\nExtract JSON (return ONLY JSON):"
-    blocks.append(chatml(system, user))
-
-    # We only want the last assistant to be generated
-    # The last block ends with "<|im_start|>assistant\n"
-    return "\n".join(blocks)
-
-# =========================
-# FEW-SHOT JSON BUILDER (from training data)
-# =========================
-def find_one_training_example_for_json(train_lang_dir: Path) -> Optional[Tuple[str, Dict[str, Any]]]:
-    """
-    Use one training dialogue + its summary to build a minimal JSON example.
-    This stabilizes formatting; we keep it simple (symptom_description <- summary).
-    """
-    dlg_dir = train_lang_dir / "Dialogues"
-    sum_dir = train_lang_dir / "Summary_Text"
-    if not (dlg_dir.exists() and sum_dir.exists()):
-        return None
-
-    # Find a short dialogue so the example doesn't bloat the prompt
-    files = sorted(dlg_dir.glob("*.jsonl"))
-    for p in files:
-        try:
-            rows = safe_read_jsonl(p)
-            dial = join_dialogue_jsonl(rows)
-            if not dial:
-                continue
-            # read summary
-            s_path = sum_dir / f"{p.stem}_summary.txt"
-            if not s_path.exists():
-                continue
-            summary = Path(s_path).read_text(encoding="utf-8", errors="replace").strip()
-            if not summary:
-                continue
-
-            # Keep example dialogue short
-            if len(dial) > 2000:
-                dial = dial[:2000]
-
-            # Build a minimal but valid JSON for the example
-            fs_json = JSON_TEMPLATE.copy()
-            fs_json = json.loads(json.dumps(fs_json))  # deep copy
-            fs_json["symptom_description"] = summary
-            fs_json["chief_complaint"] = None
-            return (dial, fs_json)
-        except Exception:
-            continue
-    return None
-
-# =========================
-# JSON PARSING
-# =========================
-def try_extract_json(g: str) -> Optional[Dict[str, Any]]:
-    text = extract_assistant_only(g)
-    # Try direct parse
-    try:
-        return json.loads(text)
-    except Exception:
-        pass
-    # Try to find the first {...} block
-    start, end = text.find("{"), text.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        chunk = text[start:end+1]
-        try:
-            return json.loads(chunk)
-        except Exception:
-            return None
-    return None
-
-# =========================
-# GENERATION
-# =========================
-def generate_batch(model, tokenizer, prompts: List[str],
-                   max_new_tokens: int, temperature: float, top_p: float) -> List[str]:
-    inputs = tokenizer(
-        prompts,
-        padding=True,
-        truncation=True,
-        max_length=CTX_MAX - max_new_tokens - 32,  # leave headroom
-        return_tensors="pt"
-    ).to(model.device)
-
-    with torch.no_grad():
-        out = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=(temperature > 0),
-            temperature=temperature,
-            top_p=top_p,
-            num_beams=1,
-            repetition_penalty=REPETITION_PENALTY,
-            pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-        )
-    texts = tokenizer.batch_decode(out, skip_special_tokens=True)
-    # Keep only assistant part
-    return [extract_assistant_only(x) for x in texts]
-
-# =========================
-# ADAPTER PICKER
-# =========================
-def find_latest_adapter(dir_path: Path) -> Path:
-    """
-    If you saved adapter-only checkpoints as adapter_step_XXXX, prefer the latest one.
-    Otherwise just return the main ADAPTER_DIR (which may itself be an adapter folder).
-    """
-    if not dir_path.exists():
-        return dir_path
-    cands = [p for p in dir_path.iterdir() if p.is_dir() and p.name.startswith("adapter_step_")]
-    if not cands:
-        return dir_path
-    latest = sorted(cands, key=lambda p: int(p.name.split("_")[-1]))[-1]
-    tprint(f"🧭 Using latest adapter: {latest.name}")
-    return latest
-
-# =========================
-# MAIN PIPELINE
-# =========================
-def run_inference():
-    tprint("🚀 Starting inference with Qwen 1.5B-Instruct + LoRA")
-
-    # 4-bit config (V100-friendly)
-    bnb_cfg = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
-    )
-
-    # Tokenizer (use base tokenizer to preserve chat template)
-    tprint("🔻 Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    # Base + adapter
-    tprint("🔻 Loading base model (4-bit)...")
-    base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        quantization_config=bnb_cfg,
-        torch_dtype=torch.float16,
-    )
-
-    adapter_path = find_latest_adapter(Path(ADAPTER_DIR))
-    tprint("🔻 Loading LoRA adapter...")
-    model = PeftModel.from_pretrained(base, str(adapter_path))
-    model.eval()
-
-    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
-    tprint(f"🌍 Found {len}(langs) languages: {[p.name for p in langs]}")
-
-    for lang_dir in langs:
-        lang = lang_dir.name
-        lang_hint = LANG_HINTS.get(lang, "the same language")
-        out_lang = Path(OUTPUT_DIR) / lang
-        dlg_dir = lang_dir / "Dialogues"
-        qna_dir = lang_dir / "QnA"
-
-        tprint(f"🗂 Language: {lang}")
-
-        # Few-shot JSON example from training data (same language if available)
-        fewshot_pair = None
-        train_lang_dir = Path(TRAIN_DIR) / lang
-        if train_lang_dir.exists():
-            fewshot_pair = find_one_training_example_for_json(train_lang_dir)
-
-        # ========== Summaries ==========
-        if dlg_dir.exists():
-            files = sorted(dlg_dir.glob("*.jsonl"))
-            tprint(f"  • Dialogues: {len(files)}")
-
-            # pre-read & stage
-            items: List[Tuple[Path, str]] = []
-            for f in files:
-                try:
-                    rows = safe_read_jsonl(f)
-                    text = join_dialogue_jsonl(rows)
-                    if not text:
-                        continue
-                    # Keep enough room for generation
-                    clipped = clip_to_tokens(tokenizer, text, CTX_MAX - MAX_NEW_TOKENS_SUMMARY - 64)
-                    items.append((f, clipped))
-                except Exception:
-                    continue
-
-            # TEXT SUMMARY (English)
-            for i in range(0, len(items), BATCH_SIZE):
-                batch = items[i:i+BATCH_SIZE]
-                prompts = [build_summary_chatml(d) for _, d in batch]
-                outs = generate_batch(model, tokenizer, prompts,
-                                      MAX_NEW_TOKENS_SUMMARY, TEMPERATURE_SUMMARY, TOP_P_SUMMARY)
-                for (f, _), s in zip(batch, outs):
-                    write_text(out_lang / "Summary_Text" / f"{f.stem}_summary.txt", s)
-
-            # JSON (schema)
-            for i in range(0, len(items), BATCH_SIZE):
-                batch = items[i:i+BATCH_SIZE]
-                prompts = [build_json_chatml(d, JSON_TEMPLATE, fewshot_pair) for _, d in batch]
-                outs = generate_batch(model, tokenizer, prompts,
-                                      MAX_NEW_TOKENS_JSON, TEMPERATURE_JSON, TOP_P_JSON)
-                for (f, _), g in zip(batch, outs):
-                    obj = try_extract_json(g)
-                    write_json(out_lang / "Summary_Json" / f"{f.stem}_summary.json", obj or JSON_TEMPLATE)
-
-        # ========== QnA ==========
-        if qna_dir.exists():
-            qfiles = sorted(qna_dir.glob("*.json"))
-            tprint(f"  • QnA files: {len(qfiles)}")
-            for qf in qfiles:
-                try:
-                    data = json.load(open(qf, encoding="utf-8"))
-                except Exception:
-                    tprint(f"    - Skipped malformed {qf.name}")
-                    continue
-
-                qs = [q.get("question", "").strip()
-                      for q in data.get("questions", []) if isinstance(q, dict)]
-                qs = [q for q in qs if q]
-
-                answers: List[str] = []
-                for i in range(0, len(qs), BATCH_SIZE):
-                    batch = qs[i:i+BATCH_SIZE]
-                    prompts = [build_qna_chatml(q, lang_hint) for q in batch]
-                    outs = generate_batch(model, tokenizer, prompts,
-                                          MAX_NEW_TOKENS_QNA, TEMPERATURE_QNA, TOP_P_QNA)
-                    # Clean any leftover "Answer:" etc.
-                    outs = [x.split("\n")[0].strip().removeprefix("Answer:").strip() for x in outs]
-                    answers.extend(outs)
-
-                out_payload = {"questions": [
-                    {"question": q, "answer": a} for q, a in zip(qs, answers)
-                ]}
-                write_json(out_lang / "QnA" / f"{qf.stem}_answers.json", out_payload)
-
-        torch.cuda.empty_cache()
-
-    tprint(f"✅ Inference complete! Results saved to {OUTPUT_DIR}")
-
-# =========================
-# RUN
-# =========================
-if __name__ == "__main__":
-    run_inference()
+Qna
+{
+  "questions": [
+    {
+      "question": "જો બાયોપ્સી કેન્સરની પુષ્ટિ કરે છે, તો સારવાર કેટલી વહેલી શરૂ થશે, અને એમ. ડી. ટી. કેટલી ઝડપથી યોજના નક્કી કરશે, તમે જાણો છો?",
+      "answer": "system"
+    },
+    {
+      "question": "શું તમે ત્રીજા તબક્કાને સરળ શબ્દોમાં સમજાવી શકો છો-રોજિંદી ભાષામાં ગાંઠના કદ અને ગરદનના લસિકા ગાંઠો માટે તેનો શું અર્થ થાય છે?",
+      "answer": "system"
+    },
+    {
+      "question": "શસ્ત્રક્રિયા, કિરણોત્સર્ગ અને કિમોચિકિત્સા સાથે ત્રીજા તબક્કામાં ઉપચાર અથવા લાંબા ગાળાના નિયંત્રણની શક્યતાઓ શું છે?",
+      "answer": "system"
+    },
+    {
+      "question": "શું કોઈ વૈકલ્પિક ઉપચાર પદ્ધતિઓ અથવા ક્લિનિકલ ટ્રાયલ્સ છે જેમાં હું જોડાઈ શકું?",
+      "answer": "system"
+    },
+    {
+      "question": "શું એચ. પી. વી. રસીકરણ મારી ઉંમરે (35) કેન્સર નિવારણ અથવા ભવિષ્યના રક્ષણ માટે ઉપયોગી છે?",
+      "answer": "system"
+    },
+    {
+      "question": "ખર્ચ અને યોજનાઓનું શું-શું સરકારી સબસિડી દરેક વસ્તુને આવરી લેશે?",
+      "answer": "system"
+    },
+    {
+      "question": "બાયોપ્સી કેટલી પીડાદાયક છે અને શું રક્તસ્રાવ અથવા ચેપ જેવા જોખમો છે?",
+      "answer": "system"
+    },
+    {
+      "question": "સારવાર રોજિંદા જીવનને કેવી રીતે અસર કરશે-કામ, ખાવું, બોલવું?",
+      "answer": "system"
+    },
+    {
+      "question": "સારવાર પહેલાં દંત સ્વચ્છતા શા માટે મહત્વપૂર્ણ છે અને આપણે શું કરવું જોઈએ?",
+      "answer": "system"
+    },
+    {
+      "question": "પરિવાર કેવી રીતે સામેલ હોવો જોઈએ-કેટલા લોકોએ પરામર્શમાં હાજરી આપવી જોઈએ અને ગોપનીયતાને કેવી રીતે સંતુલિત કરવી જોઈએ?",
+      "answer": "system"
+    },
+    {
+      "question": "આ સારવારની સામાન્ય આડઅસરો શું છે, અને આપણે તેમને ઘરે કેવી રીતે સંચાલિત કરી શકીએ?",
+      "answer": "system"
+    },
+    {
+      "question": "જો નવા પરીક્ષણો તબક્કો બદલે છે, તો યોજના કેટલી ઝડપથી બદલાઈ શકે છે અને તમે અમને કેવી રીતે અપડેટ રાખશો?",
+      "answer": "system"
+    }
+  ]
+}
