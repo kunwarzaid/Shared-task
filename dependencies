@@ -1,275 +1,81 @@
-import os, json, time, re
-from pathlib import Path
-from typing import List, Dict, Any
-from tqdm import tqdm
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
-
-# ============================================================
-# CONFIG
-# ============================================================
-BASE_MODEL  = "/workspace/data/KZ_2117574/Qwen2_1.5B"
-ADAPTER_DIR = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual"
-EXTRACT_DIR = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
-OUTPUT_DIR  = "/workspace/data/KZ_2117574/Inference_Output_Batched"
-
-CTX_LIMIT_INPUT         = 8192
-CHUNK_TARGET_TOKENS     = 4096
-CHUNK_OVERLAP_TOKENS    = 256
-MAX_NEW_TOKENS_SUMMARY  = 300
-MAX_NEW_TOKENS_QNA      = 200
-MAX_NEW_TOKENS_FIELD    = 256
-BATCH_SIZE              = 2
-
-LANG_HINTS = {
-    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati",
-    "Bangla": "Bangla", "Assamese": "Assamese", "Kannada": "Kannada",
-    "Marathi": "Marathi", "Tamil": "Tamil", "Telugu": "Telugu"
-}
-
-# ============================================================
-# UTILITIES
-# ============================================================
-def tprint(msg): print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path: Path):
-    rows=[]
-    with open(path,"r",encoding="utf-8",errors="replace") as f:
-        for line in f:
-            s=line.strip()
-            if s:
-                try: rows.append(json.loads(s))
-                except: continue
-    return rows
-
-def write_json(path: Path, obj):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with open(tmp,"w",encoding="utf-8") as f:
-        json.dump(obj,f,ensure_ascii=False,indent=2)
-    tmp.replace(path)
-
-def write_text(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    with open(tmp,"w",encoding="utf-8") as f:
-        f.write(text.strip()+"\n")
-    tmp.replace(path)
-
-def chunk_list(lst,n):
-    for i in range(0,len(lst),n):
-        yield lst[i:i+n]
-
-# ============================================================
-# JSON SCHEMA
-# ============================================================
-JSON_TEMPLATE = {
-  "patient_identifiers": None,
-  "demographics": {"age": None, "sex": None},
-  "visit": {"date_time": None, "type": None},
-  "chief_complaint": None,
-  "onset_duration": None,
-  "symptom_description": None,
-  "aggravating_factors": None,
-  "relieving_factors": None,
+{
+  "patient_identifiers": null,
+  "demographics": {
+    "age": null,
+    "sex": null
+  },
+  "visit": {
+    "date_time": null,
+    "type": null
+  },
+  "chief_complaint": "Chronic throat irritation with progressive voice change and swallowing discomfort.",
+  "onset_duration": null,
+  "symptom_description": "Persistent throat irritation with hoarseness and swallowing discomfort; no acute pain reported yet.",
+  "aggravating_factors": null,
+  "relieving_factors": null,
   "associated_symptoms": [],
-  "past_medical_history": None,
-  "past_surgical_history": None,
-  "family_history": None,
+  "past_medical_history": null,
+  "past_surgical_history": null,
+  "family_history": null,
   "current_medications": [],
-  "allergies": None,
+  "allergies": null,
   "social_history": [],
-  "functional_status": None,
-  "vital_signs": None,
-  "examination_findings": None,
+  "functional_status": null,
+  "vital_signs": null,
+  "examination_findings": null,
   "investigations": [],
-  "assessment_primary_diagnosis": None,
+  "assessment_primary_diagnosis": "Laryngeal cancer or other head-and-neck malignancy is suspected due to persistent throat symptoms, significant weight loss, and tobacco/alcohol use.",
   "differential_diagnoses": [],
-  "management_plan": None,
+  "management_plan": "Immediate cessation of tobacco and reduction of alcohol; initiation of nicotine replacement therapy (NRT), counseling, and referral to a quit-line.",
   "tests_referrals_planned": [],
-  "follow_up_plan": None,
-  "chronology_response_to_treatment": None,
-  "patient_concerns_preferences_consent": None,
-  "safety_issues_red_flags": None,
-  "coding_terms": None,
-  "conversation_metadata": {"timestamps": [], "speaker_labels": []}
+  "follow_up_plan": null,
+  "chronology_response_to_treatment": null,
+  "patient_concerns_preferences_consent": null,
+  "safety_issues_red_flags": null,
+  "coding_terms": null,
+  "conversation_metadata": {
+    "timestamps": [],
+    "speaker_labels": []
+  }
 }
 
-# ============================================================
-# PROMPTS
-# ============================================================
-def build_summary_prompt(tok, dialogue):
-    msgs=[
-        {"role":"system","content":
-         "You are a clinical summarization assistant. "
-         "Write a concise English summary focusing on diagnosis, symptoms, and management."},
-        {"role":"user","content":f"Dialogue:\n{dialogue}"}
-    ]
-    return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-
-def build_meta_summary_prompt(tok, partial_summaries):
-    combined = "\n\n".join(f"- {s}" for s in partial_summaries)
-    msgs=[
-        {"role":"system","content":"Combine these partial summaries into one clear English summary."},
-        {"role":"user","content":combined}
-    ]
-    return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-
-def build_qna_prompt(tok, question, lang):
-    msgs=[
-        {"role":"system","content":f"You are a medical assistant replying in {lang}. Answer concisely and accurately in {lang}."},
-        {"role":"user","content":question}
-    ]
-    return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
-
-# ============================================================
-# GENERATION
-# ============================================================
-def clean_output(t): return t.split("<|im_end|>")[0].strip()
-
-def generate_batch(model,tok,prompts,max_new_tokens):
-    inputs=tok(prompts,padding=True,truncation=True,
-               max_length=CTX_LIMIT_INPUT,return_tensors="pt").to(model.device)
-    with torch.no_grad():
-        outs=model.generate(**inputs,max_new_tokens=max_new_tokens,
-                            do_sample=False,num_beams=1,
-                            pad_token_id=tok.eos_token_id)
-    gens=[o[len(i):] for i,o in zip(inputs.input_ids,outs)]
-    decs=tok.batch_decode(gens,skip_special_tokens=True)
-    return [clean_output(x) for x in decs]
-
-# ============================================================
-# MULTI-FIELD EXTRACTION
-# ============================================================
-def extract_schema_fields_batched(model, tokenizer, dialogue, summary):
-    field_groups = [
-        ["chief_complaint", "onset_duration", "symptom_description"],
-        ["assessment_primary_diagnosis", "management_plan", "follow_up_plan"],
-        ["safety_issues_red_flags"]
-    ]
-
-    results = {}
-    for group in field_groups:
-        group_names = ", ".join(f.replace("_", " ") for f in group)
-        prompt = tokenizer.apply_chat_template([
-            {"role": "system", "content":
-             f"You are a clinical assistant extracting structured information. "
-             f"Read the dialogue and summary and extract each of the following fields clearly and concisely: {group_names}. "
-             "Return answers in the following format:\n"
-             + "\n".join([f"{g.replace('_', ' ').title()}: ..." for g in group])},
-            {"role": "user", "content":
-             f"Dialogue:\n{dialogue[:2500]}\n\nSummary:\n{summary}\n\nAnswer:"}
-        ], tokenize=False, add_generation_prompt=True)
-
-        gen = generate_batch(model, tokenizer, [prompt], MAX_NEW_TOKENS_FIELD)[0]
-        for g in group:
-            pattern = rf"{g.replace('_',' ').title()}:\s*(.*)"
-            match = re.search(pattern, gen, re.IGNORECASE)
-            results[g] = match.group(1).strip() if match else None
-
-    return results
-
-# ============================================================
-# CHUNKING
-# ============================================================
-def split_into_chunks_by_tokens(text,tok,chunk_tokens,overlap_tokens):
-    ids=tok.encode(text,add_special_tokens=False)
-    if len(ids)<=chunk_tokens: return [text]
-    chunks=[]; step=chunk_tokens-overlap_tokens
-    for i in range(0,len(ids),step):
-        sub=ids[i:i+chunk_tokens]
-        chunks.append(tok.decode(sub,skip_special_tokens=True))
-        if i+chunk_tokens>=len(ids): break
-    return chunks
-
-# ============================================================
-# MODEL LOADING
-# ============================================================
-def find_latest_adapter(path):
-    dirs=[d for d in Path(path).iterdir() if d.is_dir() and d.name.startswith("adapter_step_")]
-    return sorted(dirs,key=lambda x:int(x.name.split("_")[-1]))[-1] if dirs else path
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
-def run_inference():
-    tprint("🚀 Starting batched field-wise inference for Qwen")
-
-    cfg=BitsAndBytesConfig(load_in_4bit=True,bnb_4bit_quant_type="nf4",
-                           bnb_4bit_compute_dtype=torch.float16)
-    adapter=find_latest_adapter(ADAPTER_DIR)
-
-    tok=AutoTokenizer.from_pretrained(BASE_MODEL,use_fast=True)
-    if tok.pad_token is None: tok.pad_token=tok.eos_token
-    base=AutoModelForCausalLM.from_pretrained(BASE_MODEL,
-        device_map="auto",quantization_config=cfg,torch_dtype=torch.float16)
-    model=PeftModel.from_pretrained(base,adapter)
-    model.eval()
-
-    langs=[p for p in Path(EXTRACT_DIR).iterdir() if p.is_dir()]
-    for lang_dir in langs:
-        lang=lang_dir.name
-        lang_hint=LANG_HINTS.get(lang,"the same language")
-        out_lang=Path(OUTPUT_DIR)/lang
-        dlg_dir,qna_dir=lang_dir/"Dialogues",lang_dir/"QnA"
-        tprint(f"🗂 Processing {lang}")
-
-        # ---- SUMMARIZATION + JSON FILL ----
-        if dlg_dir.exists():
-            for f in tqdm(sorted(dlg_dir.glob("*.jsonl")),desc=f"{lang} dialogues"):
-                text_out=out_lang/"Summary_Text"/f"{f.stem}_summary.txt"
-                json_out=out_lang/"Summary_Json"/f"{f.stem}_summary.json"
-                if text_out.exists() and json_out.exists():
-                    continue
-
-                try:
-                    rows=safe_read_jsonl(f)
-                    dialogue=" ".join(
-                        (r.get("dialogue","") if isinstance(r,dict) else str(r))
-                        for r in rows)
-                    chunks=split_into_chunks_by_tokens(dialogue,tok,CHUNK_TARGET_TOKENS,CHUNK_OVERLAP_TOKENS)
-                    chunk_prompts=[build_summary_prompt(tok,c) for c in chunks]
-                    chunk_summaries=[]
-                    for batch in chunk_list(chunk_prompts,BATCH_SIZE):
-                        chunk_summaries+=generate_batch(model,tok,batch,MAX_NEW_TOKENS_SUMMARY)
-
-                    meta_prompt=build_meta_summary_prompt(tok,chunk_summaries)
-                    summary=generate_batch(model,tok,[meta_prompt],MAX_NEW_TOKENS_SUMMARY)[0]
-                    write_text(text_out,summary)
-
-                    filled_fields = extract_schema_fields_batched(model, tok, dialogue, summary)
-                    json_filled = JSON_TEMPLATE.copy()
-                    for k,v in filled_fields.items():
-                        if k in json_filled:
-                            json_filled[k]=v
-                        elif k in json_filled["demographics"]:
-                            json_filled["demographics"][k]=v
-                    write_json(json_out,json_filled)
-                except Exception as e:
-                    tprint(f"⚠️ Skipped {f.name}: {e}")
-
-        # ---- QnA ----
-        if qna_dir.exists():
-            for qf in tqdm(sorted(qna_dir.glob("*.json")),desc=f"{lang} QnA"):
-                out_file=out_lang/"QnA"/f"{qf.stem}_answers.json"
-                if out_file.exists(): continue
-                try:
-                    data=json.load(open(qf,encoding="utf-8"))
-                except: continue
-                qs=[q.get("question","").strip() for q in data.get("questions",[]) if q.get("question")]
-                ans=[]
-                for batch in chunk_list(qs,BATCH_SIZE):
-                    pr=[build_qna_prompt(tok,q,lang_hint) for q in batch]
-                    outs=generate_batch(model,tok,pr,MAX_NEW_TOKENS_QNA)
-                    ans+=[o.replace("Answer:","").strip() for o in outs]
-                out={"questions":[{"question":q,"answer":a} for q,a in zip(qs,ans)]}
-                write_json(out_file,out)
-
-        torch.cuda.empty_cache()
-
-    tprint("✅ Inference complete — results saved.")
-
-# ============================================================
-if __name__=="__main__":
-    run_inference()
+{
+  "patient_identifiers": null,
+  "demographics": {
+    "age": null,
+    "sex": null
+  },
+  "visit": {
+    "date_time": null,
+    "type": null
+  },
+  "chief_complaint": null,
+  "onset_duration": null,
+  "symptom_description": null,
+  "aggravating_factors": null,
+  "relieving_factors": null,
+  "associated_symptoms": [],
+  "past_medical_history": null,
+  "past_surgical_history": null,
+  "family_history": null,
+  "current_medications": [],
+  "allergies": null,
+  "social_history": [],
+  "functional_status": null,
+  "vital_signs": null,
+  "examination_findings": null,
+  "investigations": [],
+  "assessment_primary_diagnosis": "Voice change with dysphagia for about two months.",
+  "differential_diagnoses": [],
+  "management_plan": "Comprehensive oral examination, neck lymph node assessment, laryngoscopy; CT/MRI imaging if indicated; biopsy if indicated.",
+  "tests_referrals_planned": [],
+  "follow_up_plan": null,
+  "chronology_response_to_treatment": null,
+  "patient_concerns_preferences_consent": null,
+  "safety_issues_red_flags": null,
+  "coding_terms": null,
+  "conversation_metadata": {
+    "timestamps": [],
+    "speaker_labels": []
+  }
+}
