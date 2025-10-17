@@ -1,66 +1,331 @@
-{
-  "patient_identifiers": "The patient's name was not explicitly given in the dialogue. The only identifier provided was \"Rama Patel\" which appears to be an individual rather than a specific case. The rest of the conversation focuses on his history, risk factors, diagnostic plan, and subsequent treatment considerations. No explicit ID number or unique identifier was provided in this excerpt. If you have additional questions about the patient’s identity that aren’t answered here, please let me know and we can try to identify it later.",
-  "demographics.age": "The patient’s age is 42 years old.",
-  "demographics.sex": "The patient is female (Rama Patel). She reports ongoing throat discomfort and hoarseness over several months, along with some breathing difficulties. There are no explicit gender-specific instructions given in this conversation. The focus remains on her age, symptom presentation, and risk factors rather than specifying gender.",
-  "visit.date_time": "The conversation does not specify a specific date for the consultation. The dialogue focuses on the patient's symptoms, risk factors, diagnostic plan, and follow-up logistics rather than a concrete date. The next step would typically be scheduling an actual visit and obtaining test results. The clinician emphasizes that the patient should expect to return with test results and receive a clear treatment plan after those results are available. No specific date was given in the provided text. We can proceed by asking about dates and timelines once we have a definitive date.",
-  "visit.type": "The visit described is an outpatient, face-to-face physical exam with diagnostic procedures and discussion of possible biopsy. It did not include any imaging like CT or MRI unless ordered by the clinician. The team emphasized that the patient should prepare questions ahead of time and that they would communicate results promptly after tests. No specific diagnosis or treatment plan was presented here; only the context of a routine clinic visit with potential biopsy and imaging if indicated. The focus was on risk assessment, symptom documentation, and establishing a clear pathway forward rather than definitive diagnoses or treatments. A follow-up schedule was mentioned but no concrete date was given. The conversation also touched on cost considerations, access to care, and family involvement. Overall, this was a structured, stepwise approach to evaluating suspected head-and-neck pathology without immediate treatment.",
-  "chief_complaint": "The primary symptom that brought Rama Patel into the clinic was persistent throat discomfort lasting over two months, along with hoarseness and difficulty speaking. There were also reports of occasional coughing and some breathlessness. The clinician emphasized that these symptoms raised concern for possible head and neck cancer due to the combination of tobacco and alcohol use. These risk factors were highlighted as increasing the likelihood of an underlying condition requiring further investigation. The diagnostic pathway included comprehensive exams, targeted lab tests, and possibly endoscopy, followed by imaging (CT/MRI) if abnormalities were found. A strong emphasis was placed on family involvement and patient education, including dietary recommendations (fruits and vegetables), dental hygiene, and cessation support. The plan also outlined the role of HPV testing and dental hygiene in guiding future evaluations. Finally, the team committed to providing clear timelines and ongoing communication throughout the process. The dialogue ended with the patient expressing willingness to proceed with the proposed investigations and to involve her family in the discussion.",
-  "onset_duration": "The duration of symptoms was described as \"two months,\" which suggests that the patient has had these symptoms for some time but not necessarily since diagnosis. The prompt discussion of this period highlights ongoing concern about the timing of the onset of throat discomfort, hoarseness, and breathing issues, prompting immediate attention and diagnostic steps. This timeframe also informs the clinician's focus on evaluating the cause and guiding subsequent investigations. The emphasis on symptom persistence underscores the need for timely investigation and management.",
-  "symptom_description": "The main symptoms described by the patient include persistent throat discomfort, hoarseness, and difficulty speaking, along with occasional coughing and breathlessness. There was no mention of weight loss or fever. The clinician emphasized that these symptoms raise concern for possible head-and-neck pathology and prompted an urgent diagnostic workup including a thorough mouth/throat exam, laryngoscopy, and possibly endoscopic evaluation of nasal passages. Imaging (CT/MRI) would be considered if abnormalities were found. The emphasis throughout was on early detection, rapid referral, and ongoing monitoring to guide subsequent treatment decisions. The team also highlighted the importance of family involvement and providing clear explanations and documentation to facilitate understanding and adherence. Finally, the plan included discussing cost considerations, insurance options, and dietary guidance tailored to the condition. The dialogue ended with a call-to-action to proceed with the diagnostic workup promptly.",
-  "aggravating_factors": "The symptoms worsen due to irritation from dry air, which can cause throat pain, hoarseness, and difficulty swallowing. The combination of tobacco and alcohol increases mucosal irritation and inflammation, leading to more pronounced symptoms. Additionally, the presence of dental issues like gum bleeding and periodontal disease adds an inflammatory burden that exacerbates symptoms. These factors together create a cumulative effect on the throat and voice, making it harder to breathe and speak comfortably. This context underscores the need for effective symptomatic relief, preventive measures, and ongoing monitoring.",
-  "relieving_factors": "The questions focus on improving symptoms during the visit:\n\n1. What can we do to improve swallowing and voice function?\n- Speech therapy and swallow training are recommended to address dysphagia and voice changes due to throat issues.\n- A speech therapist will design an individualized program tailored to the patient’s needs.\n\n2. How does nutrition support help manage symptoms?\n- Nutritionists will tailor a diet that promotes healing and reduces inflammation while maintaining adequate caloric intake.\n- The diet should include soft foods, protein-rich options, and hydration; dietary modifications will be explained step-by-step.\n\n3. Which lifestyle changes are advised to reduce risk and improve recovery?\n- Quitting tobacco completely and limiting alcohol significantly lowers the risk of progression and recurrence.\n- Regular exercise, stress reduction, and good sleep are suggested to support overall health and immune function.\n\n4. What kind of dental hygiene measures are recommended?\n- Daily brushing twice daily, flossing, and regular dental check-ups are essential.\n- Hydration and avoiding irritants like spicy foods are also important.\n\n5. What is the role of radiation therapy and chemotherapy?\n- Radiation therapy typically involves daily treatments over several weeks; side effects depend on dose and location.\n- Chemotherapy might be added in some cases, especially in advanced stages, but its use varies by stage and tumor characteristics.\n- Side effects such as skin irritation, fatigue, nausea, and appetite changes are anticipated.\n\n6. What is the prognosis and what factors influence it?\n- Prognosis",
-  "associated_symptoms": "Yes, additional symptoms noted by the patient include:\n\n- Persistent throat discomfort lasting several months.\n- Hoarseness affecting speech.\n- Occasional coughing.\n- Mild breathlessness during activities.\n- Poor dental hygiene and low fruit/vegetable intake.\n- No significant weight loss reported.\n\nThese symptoms raise concern for possible throat pathology beyond just chronic throat irritation. The diagnostic pathway includes detailed oral/throat exams, laryngoscopy, imaging (CT/MRI), and possibly biopsy to confirm diagnosis. A multidisciplinary approach will guide subsequent treatment decisions. The team emphasizes ongoing symptom monitoring, dietary improvement, and supportive counseling throughout the process. The patient expresses willingness to proceed with testing and follow-up. We will continue to address questions and provide clear explanations along the way.",
-  "past_medical_history": "The patient has no significant past medical history noted in the dialogue. The focus remains on risk factors, symptoms, and diagnostic plan rather than a full medical history. There is no mention of chronic conditions that would impact diagnosis or treatment planning. The emphasis is on risk-factor modification, symptom documentation, and immediate diagnostic steps. No specific diagnoses or treatments were described beyond the outlined steps. The conversation centers on establishing a baseline for future evaluations and providing clear, stepwise instructions for the upcoming visit.",
-  "past_surgical_history": "No past surgery details were provided in the dialogue. The focus was on risk factor assessment, diagnostic workup, and immediate management rather than surgical history. The team would gather this information during the visit and then refer to the surgeon if any specific questions arose. The patient will be asked to report any previous surgeries or treatments that might affect prognosis or future care. This step helps tailor the approach to individual circumstances. If there are any known surgeries, we would document them and proceed accordingly. The conversation centers on establishing baseline risk, guiding diagnostics, and preparing for subsequent treatment planning.",
-  "family_history": "The conversation does not contain any specific mention of a family member’s medical history. It focuses on the patient's symptoms, risk factors, diagnostic plan, and upcoming appointments rather than family history. The clinician emphasizes that family involvement will play a role in decision-making but does not include detailed family history questions here. If you would like me to add any specific aspects related to family history later, please let me know!",
-  "current_medications": "None of the patients mentioned specific medications during this visit. The clinician would ask about current medications if they were present. If no medications are listed, we would proceed with standard assessments without additional medication notes. If there are any questions later, we can revisit them after the full history and physical exam. For now, the focus remains on diagnostic steps and risk-factor assessment rather than prescribing medications.",
-  "allergies": "None of the patients mentioned any known food allergies or severe reactions to medications. They were prepared to proceed with the diagnostic plan despite possible allergic reactions. We will document any known allergies before proceeding further. If there are any unexpected reactions during procedures, we would reassess promptly. The team will stay informed and adjust accordingly.",
-  "social_history": "The conversation does not mention specific smoking cessation strategies or nicotine replacement therapy (NRT) approaches, but it emphasizes the combined risk of tobacco and alcohol use and provides advice on quitting. The clinician offers a quit plan that includes counseling, nicotine replacement therapy, and support groups, along with dietary guidance (fruits and vegetables). There is no direct discussion of NRT dosages or specific products. The emphasis remains on behavior change, family involvement, and ongoing monitoring rather than prescribing medication. A future question might ask about NRT dosage and how to access resources. Overall, the focus is on initiating a structured quitting program while maintaining an active family involvement approach.",
-  "functional_status": "The patient reports significant dysphagia (difficulty swallowing) that worsens during meals and affects eating efficiency. The report does not mention voice changes or weight loss beyond noting hoarseness and breathlessness. There is no mention of neck lymph node enlargement or other systemic symptoms suggestive of metastasis. The clinician emphasizes that these symptoms warrant further investigation and diagnostic steps. The patient expresses anxiety but requests clear explanations and practical advice on what to expect next. The emphasis remains on a structured diagnostic pathway including imaging and biopsy, followed by staging and a tailored treatment plan. The team stresses ongoing communication, family involvement, and access to financial assistance and supportive services. Overall, the focus is on initiating an urgent diagnostic workup to determine whether cancer is present and guide subsequent management. No definitive diagnosis was made yet. The dialogue centers on the need for comprehensive evaluation, documentation, and a staged approach to confirm diagnosis and initiate therapy. The patient seeks reassurance and clarity on what to expect next.",
-  "vital_signs": "None of the patients mentioned vital signs or physical findings during this visit. The conversation focused on diagnostic planning, risk assessment, and educational counseling rather than immediate vital signs. The clinician emphasized ongoing monitoring and follow-up, including dietary and dental advice, cessation resources, and family involvement. No specific vital signs were recorded here. The next step was to proceed with the diagnostic plan and schedule the next appointment.",
-  "examination_findings": "The conversation does not contain any diagnostic findings or imaging results. The dialogue focuses on risk assessment, patient history, and an upcoming visit plan rather than reporting specific diagnostic results. There is no mention of imaging results such as CT/MRI, pathology reports, or staging information. The clinician emphasizes ongoing risk reduction and preparation for future evaluations. The next step is to schedule a follow-up visit to review test results and finalize the treatment plan. No diagnosis or definitive findings were presented in this exchange. The focus remains on risk assessment, symptom management, and preparing for further investigations. If you have additional questions about imaging or results, please ask during the actual visit.",
-  "investigations": "The following tests were planned:\n\n1. Oral/throat exam and laryngoscopy\n2. Blood tests (CBC, liver function tests)\n3. Imaging studies (CT/MRI) as indicated by findings\n4. Endoscopy (to visualize the airway/larynx)\n5. FNAC (fine-needle aspiration cytology) for neck lymph nodes\n6. HPV testing\n7. Dental hygiene advice and referral to dental services\n8. Nutritional counseling and dietary recommendations\n9. Smoking cessation plan and nicotine replacement therapy options\n10. Follow-up schedule and reminders\n\nNote: The actual sequence could vary depending on the clinician’s workflow and patient needs. The above list represents what would typically happen during an initial visit. The team will tailor the plan to the patient's specific situation. The patient expressed concern about costs and asked how these tests can be covered. We noted that some tests may have cost subsidies or government schemes available, but exact coverage depends on the hospital policy. The team will explain options and help navigate them. The patient also requested a step-by-step explanation of the process so she understands it better.",
-  "assessment_primary_diagnosis": "The primary diagnostic focus was anophthalmic exophthalmos (bulging eye) associated with neck swelling, which prompted ENT referral and further investigation into head-and-neck pathology. The clinician emphasized that this symptom profile raised suspicion for a malignant process such as squamous cell carcinoma, but definitive diagnosis would require histopathology after biopsy. Imaging (CT or MRI) was planned to delineate tumor extent and aid staging. No firm diagnosis has been made yet; the plan remains to proceed with biopsy and obtain final pathology results to guide subsequent treatment decisions. The team also addressed supportive care considerations, including dietary guidance, dental hygiene, and cessation resources for tobacco and alcohol use. A multidisciplinary approach involving ENT, oncology, radiology, and nutritionists will shape the treatment pathway once the biopsy result is available. The patient and family were advised to prepare questions and stay engaged in the process. The overall goal is to identify the exact cause, stage disease, and tailor a comprehensive treatment plan. The visit concluded with a clear plan to schedule biopsy and obtain pathology results promptly.",
-  "differential_diagnoses": "The list of potential differential diagnoses includes:\n\n1. Chronic upper airway irritation due to reflux or other causes\n2. Laryngopharyngeal disorders such as laryngopharyngeal reflux or vocal cord dysfunction\n3. Infections affecting the throat/mouth area\n4. Gastrointestinal issues like gastroesophageal reflux disease (GERD)\n5. Throat conditions related to inflammation or infection\n6. Thyroid-related issues\n7. General respiratory or systemic causes not yet diagnosed\n\nIf any of these are suspected, further diagnostic steps will be taken—such as detailed history-taking, physical examination, and possibly additional tests (blood work, imaging). The clinician will tailor the approach based on what is found during the initial evaluations.",
-  "management_plan": "The dialogue outlines an ongoing risk assessment and diagnostic pathway for Rama Patel, focusing on tobacco/alcohol risk reduction, oral health maintenance, and early detection of head-and-neck cancer. Key elements include:\n\n1. Risk-factor modification\n- Quitting tobacco completely and reducing alcohol significantly; counseling and nicotine replacement therapy offered.\n- Family involvement emphasized; spouse invited to join meetings and decisions.\n- Counseling available via phone or online; cost considerations acknowledged.\n\n2. Oral/dental health and preventive measures\n- Regular dental check-ups recommended every six months; emphasis on good oral hygiene.\n- Diet guidance: increase fruit and vegetable intake; limit sugary foods/drinks.\n- Hydration and overall healthy eating promoted.\n\n3. Screening and surveillance strategy\n- Routine screenings planned: mouth/throat exams, neck palpation, laryngoscopy if indicated; blood tests as part of routine screening.\n- Imaging (CT/MRI) considered only if abnormal findings arise; timing guided by test results.\n- Follow-up schedule outlined: next appointment scheduled for the following week; ongoing monitoring and adjustments based on test results.\n\n4. Pathway and next steps\n- Stepwise approach: step-by-step progression from risk assessment to screening and then definitive diagnosis/treatment.\n- Test results will guide subsequent steps; immediate next appointment set for the coming week.\n- Written materials and contact details provided for future reference.\n\n5. Supportive services and logistics\n- Government schemes and social workers to assist with costs and access to resources.",
-  "tests_referrals_planned": "The plan includes several diagnostic steps that will guide the treatment pathway:\n\n1. Comprehensive physical exam of the throat, neck, and larynx.\n2. Laryngoscopy if indicated.\n3. Blood tests to assess overall health and possible cancer biomarkers.\n4. Imaging studies (CT or MRI) to visualize structures and aid staging.\n5. Depending on findings, biopsy may be performed under local anesthesia; results typically available in days to weeks.\n6. Pathology reports will inform staging and subsequent treatment decisions.\n7. A multidisciplinary team (MDT) meeting will determine the exact stage and tailor the treatment plan after pathology results.\n\nIn essence, these tests aim to establish the extent of disease and guide the choice between surgery, radiotherapy, chemotherapy, or combinations thereof. The MDT will integrate the pathology report into their final recommendations. The patient and family will receive clear explanations and timelines for each step.",
-  "follow_up_plan": "The follow-up plan includes:\n\n1. Complete diagnostic workup: Continue with blood tests, imaging (CT/MRI), and any necessary biopsy.\n2. Imaging timing: Decide between CT and MRI based on findings; CT is often used first due to its faster turnaround.\n3. Pathology results: Biopsy results will guide staging and subsequent treatment decisions.\n4. Staging framework: TNM system explained; Stage III typically involves larger tumor and/or nodal involvement without distant metastasis.\n5. Treatment planning: Based on stage, possible modalities include surgery, radiotherapy, chemotherapy, or combinations; multimodal therapy is common.\n6. Supportive care: Nutrition, dental hygiene, and psychological support emphasized; ongoing counseling and resources offered.\n7. Multidisciplinary team: A multidisciplinary team (MDT) will coordinate care; patient and family advised to attend appointments together.\n8. Family involvement: Encouraged to participate in discussions and decisions; documentation and questions prepared for MDT meetings.\n9. Financial and logistical considerations: Discussion of government schemes, insurance coverage, and cost estimates; assistance offered to navigate these aspects.\n10. Follow-up schedule: Regular check-ins every few weeks until definitive staging and treatment plan are established; scheduling adjusted as results come in.\n\nIn essence, the plan prioritizes completing diagnostics, obtaining pathology results, and applying the TNM staging framework to determine the most appropriate treatment pathway while ensuring comprehensive supportive care and clear communication throughout the process. The patient",
-  "chronology_response_to_treatment": "The dialogue does not contain any specific mention of treatment progression or responses. The focus remains on risk assessment, preventive measures, and ongoing monitoring rather than detailing treatment outcomes. The clinician emphasizes continued risk reduction, active family involvement, and clear communication about upcoming tests and follow-ups. No explicit treatment-related feedback is provided beyond the diagnostic process described in the dialogue. The emphasis centers on ongoing monitoring, supportive care, and readiness for further interventions if new signs arise. There is no direct reference to tumor stage or final treatment decisions. The conversation ends with an invitation to report any new symptoms or changes, indicating that this discussion continues into future visits. The patient expresses willingness to proceed with the plan and seek help if needed. Overall, it is a structured, step-by-step approach to risk assessment, screening, and follow-up without detailed treatment specifics.",
-  "patient_concerns_preferences_consent": "The conversation centers on a 42-year-old woman who reports throat discomfort for about two months, hoarseness, difficulty speaking, and intermittent breathlessness. She has a history of smokeless tobacco (khaini/gutkha/pan masala) and occasional cigarette smoking, along with alcohol use. There is concern about combined tobacco and alcohol exposure increasing her risk for head and neck cancer. The diagnostic plan includes mouth/throat exams, laryngoscopy, and possible biopsy; imaging (CT/MRI) may be ordered if abnormalities are found. Family involvement is encouraged, and she asks how to access financial assistance and what resources are available. The clinician emphasizes that combined tobacco and alcohol use increases cancer risk and stresses the need for prompt testing and follow-up. No specific diagnoses were made yet; the focus is on initiating an investigation and establishing a structured follow-up pathway. The plan involves completing tests, discussing results, and developing a treatment plan contingent on the outcome. A step-by-step timeline is outlined, including the sequence of procedures, timelines, and potential costs, with the clinician providing supportive counseling throughout. The team also discusses HPV-related considerations and dental hygiene practices during the visit. Finally, the patient expresses willingness to proceed with the proposed investigations and to involve her family in future discussions. The dialogue ends with the clinician confirming the next steps and scheduling follow-up appointments.",
-  "safety_issues_red_flags": "The red flag discussion highlights that certain symptoms raise concern:\n\n1) Persistent throat discomfort lasting more than two months warrants urgent attention.\n2) Hoarseness and difficulty speaking suggest possible voice changes or throat pathology.\n3) Possible tumor-like findings noted by the patient.\n4) The team emphasizes that these symptoms require prompt evaluation and diagnostic testing to determine whether there is an underlying condition requiring further investigation.\n\nThe clinician’s approach centers on recognizing these signs promptly and initiating appropriate investigations to address them. The emphasis remains on timely evaluation, informed decision-making, and supportive measures such as cessation counseling and dietary guidance to reduce risk factors like tobacco and alcohol. The patient expresses willingness to proceed with recommended tests and follow-up, and the team commits to providing clear explanations and ongoing communication throughout the process. No specific red-flag criteria were specified beyond the above list, but the overall message is that red-flag symptoms should prompt immediate action.",
-  "coding_terms": "No specific codes were assigned in this dialogue. The focus was on diagnostic and management steps rather than generating ICD or SNOMED codes. The clinician would typically assign codes after finalizing staging and treatment plans using established guidelines like TNM. For now, we'll leave the fields blank until those stages are determined. If you'd like, I can explain how these codes might look in practice once staging is finalized. Please let me know if you need further clarification on code assignment later."
+import os, json, time, re
+from pathlib import Path
+from typing import Dict, Any
+from tqdm import tqdm
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
+from langdetect import detect, DetectorFactory
+
+DetectorFactory.seed = 42
+torch.set_grad_enabled(False)
+
+# -----------------------
+# PATHS
+# -----------------------
+BASE_MODEL   = "/workspace/data/KZ_2117574/Qwen2.5-1.5B-Instruct"  # or your local path
+ADAPTER_DIR  = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual"
+TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
+OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_qwen"
+
+# -----------------------
+# RUNTIME
+# -----------------------
+MAX_INPUT_TOKENS       = 32000         # Qwen2.5 supports 32k
+MAX_NEW_TOKENS_SUMMARY = 512
+MAX_NEW_TOKENS_JSON    = 120
+MAX_NEW_TOKENS_QNA     = 200
+BATCH_SIZE             = 2
+TEMPERATURE            = 0.0           # deterministic for consistency
+
+LANG_HINTS = {
+    "English": "English", "Hindi": "Hindi", "Gujarati": "Gujarati",
+    "Bangla": "Bangla", "Assamese": "Assamese", "Kannada": "Kannada",
+    "Marathi": "Marathi", "Tamil": "Tamil", "Telugu": "Telugu", "Dogri": "Dogri"
 }
 
-Text
-{
-  "patient_identifiers": "The patient's name was not explicitly given in the dialogue. The only identifier provided was \"Rama Patel\" which appears to be an individual rather than a specific case. The rest of the conversation focuses on his history, risk factors, diagnostic plan, and subsequent treatment considerations. No explicit ID number or unique identifier was provided in this excerpt. If you have additional questions about the patient’s identity that aren’t answered here, please let me know and we can try to identify it later.",
-  "demographics.age": "The patient’s age is 42 years old.",
-  "demographics.sex": "The patient is female (Rama Patel). She reports ongoing throat discomfort and hoarseness over several months, along with some breathing difficulties. There are no explicit gender-specific instructions given in this conversation. The focus remains on her age, symptom presentation, and risk factors rather than specifying gender.",
-  "visit.date_time": "The conversation does not specify a specific date for the consultation. The dialogue focuses on the patient's symptoms, risk factors, diagnostic plan, and follow-up logistics rather than a concrete date. The next step would typically be scheduling an actual visit and obtaining test results. The clinician emphasizes that the patient should expect to return with test results and receive a clear treatment plan after those results are available. No specific date was given in the provided text. We can proceed by asking about dates and timelines once we have a definitive date.",
-  "visit.type": "The visit described is an outpatient, face-to-face physical exam with diagnostic procedures and discussion of possible biopsy. It did not include any imaging like CT or MRI unless ordered by the clinician. The team emphasized that the patient should prepare questions ahead of time and that they would communicate results promptly after tests. No specific diagnosis or treatment plan was presented here; only the context of a routine clinic visit with potential biopsy and imaging if indicated. The focus was on risk assessment, symptom documentation, and establishing a clear pathway forward rather than definitive diagnoses or treatments. A follow-up schedule was mentioned but no concrete date was given. The conversation also touched on cost considerations, access to care, and family involvement. Overall, this was a structured, stepwise approach to evaluating suspected head-and-neck pathology without immediate treatment.",
-  "chief_complaint": "The primary symptom that brought Rama Patel into the clinic was persistent throat discomfort lasting over two months, along with hoarseness and difficulty speaking. There were also reports of occasional coughing and some breathlessness. The clinician emphasized that these symptoms raised concern for possible head and neck cancer due to the combination of tobacco and alcohol use. These risk factors were highlighted as increasing the likelihood of an underlying condition requiring further investigation. The diagnostic pathway included comprehensive exams, targeted lab tests, and possibly endoscopy, followed by imaging (CT/MRI) if abnormalities were found. A strong emphasis was placed on family involvement and patient education, including dietary recommendations (fruits and vegetables), dental hygiene, and cessation support. The plan also outlined the role of HPV testing and dental hygiene in guiding future evaluations. Finally, the team committed to providing clear timelines and ongoing communication throughout the process. The dialogue ended with the patient expressing willingness to proceed with the proposed investigations and to involve her family in the discussion.",
-  "onset_duration": "The duration of symptoms was described as \"two months,\" which suggests that the patient has had these symptoms for some time but not necessarily since diagnosis. The prompt discussion of this period highlights ongoing concern about the timing of the onset of throat discomfort, hoarseness, and breathing issues, prompting immediate attention and diagnostic steps. This timeframe also informs the clinician's focus on evaluating the cause and guiding subsequent investigations. The emphasis on symptom persistence underscores the need for timely investigation and management.",
-  "symptom_description": "The main symptoms described by the patient include persistent throat discomfort, hoarseness, and difficulty speaking, along with occasional coughing and breathlessness. There was no mention of weight loss or fever. The clinician emphasized that these symptoms raise concern for possible head-and-neck pathology and prompted an urgent diagnostic workup including a thorough mouth/throat exam, laryngoscopy, and possibly endoscopic evaluation of nasal passages. Imaging (CT/MRI) would be considered if abnormalities were found. The emphasis throughout was on early detection, rapid referral, and ongoing monitoring to guide subsequent treatment decisions. The team also highlighted the importance of family involvement and providing clear explanations and documentation to facilitate understanding and adherence. Finally, the plan included discussing cost considerations, insurance options, and dietary guidance tailored to the condition. The dialogue ended with a call-to-action to proceed with the diagnostic workup promptly.",
-  "aggravating_factors": "The symptoms worsen due to irritation from dry air, which can cause throat pain, hoarseness, and difficulty swallowing. The combination of tobacco and alcohol increases mucosal irritation and inflammation, leading to more pronounced symptoms. Additionally, the presence of dental issues like gum bleeding and periodontal disease adds an inflammatory burden that exacerbates symptoms. These factors together create a cumulative effect on the throat and voice, making it harder to breathe and speak comfortably. This context underscores the need for effective symptomatic relief, preventive measures, and ongoing monitoring.",
-  "relieving_factors": "The questions focus on improving symptoms during the visit:\n\n1. What can we do to improve swallowing and voice function?\n- Speech therapy and swallow training are recommended to address dysphagia and voice changes due to throat issues.\n- A speech therapist will design an individualized program tailored to the patient’s needs.\n\n2. How does nutrition support help manage symptoms?\n- Nutritionists will tailor a diet that promotes healing and reduces inflammation while maintaining adequate caloric intake.\n- The diet should include soft foods, protein-rich options, and hydration; dietary modifications will be explained step-by-step.\n\n3. Which lifestyle changes are advised to reduce risk and improve recovery?\n- Quitting tobacco completely and limiting alcohol significantly lowers the risk of progression and recurrence.\n- Regular exercise, stress reduction, and good sleep are suggested to support overall health and immune function.\n\n4. What kind of dental hygiene measures are recommended?\n- Daily brushing twice daily, flossing, and regular dental check-ups are essential.\n- Hydration and avoiding irritants like spicy foods are also important.\n\n5. What is the role of radiation therapy and chemotherapy?\n- Radiation therapy typically involves daily treatments over several weeks; side effects depend on dose and location.\n- Chemotherapy might be added in some cases, especially in advanced stages, but its use varies by stage and tumor characteristics.\n- Side effects such as skin irritation, fatigue, nausea, and appetite changes are anticipated.\n\n6. What is the prognosis and what factors influence it?\n- Prognosis",
-  "associated_symptoms": "Yes, additional symptoms noted by the patient include:\n\n- Persistent throat discomfort lasting several months.\n- Hoarseness affecting speech.\n- Occasional coughing.\n- Mild breathlessness during activities.\n- Poor dental hygiene and low fruit/vegetable intake.\n- No significant weight loss reported.\n\nThese symptoms raise concern for possible throat pathology beyond just chronic throat irritation. The diagnostic pathway includes detailed oral/throat exams, laryngoscopy, imaging (CT/MRI), and possibly biopsy to confirm diagnosis. A multidisciplinary approach will guide subsequent treatment decisions. The team emphasizes ongoing symptom monitoring, dietary improvement, and supportive counseling throughout the process. The patient expresses willingness to proceed with testing and follow-up. We will continue to address questions and provide clear explanations along the way.",
-  "past_medical_history": "The patient has no significant past medical history noted in the dialogue. The focus remains on risk factors, symptoms, and diagnostic plan rather than a full medical history. There is no mention of chronic conditions that would impact diagnosis or treatment planning. The emphasis is on risk-factor modification, symptom documentation, and immediate diagnostic steps. No specific diagnoses or treatments were described beyond the outlined steps. The conversation centers on establishing a baseline for future evaluations and providing clear, stepwise instructions for the upcoming visit.",
-  "past_surgical_history": "No past surgery details were provided in the dialogue. The focus was on risk factor assessment, diagnostic workup, and immediate management rather than surgical history. The team would gather this information during the visit and then refer to the surgeon if any specific questions arose. The patient will be asked to report any previous surgeries or treatments that might affect prognosis or future care. This step helps tailor the approach to individual circumstances. If there are any known surgeries, we would document them and proceed accordingly. The conversation centers on establishing baseline risk, guiding diagnostics, and preparing for subsequent treatment planning.",
-  "family_history": "The conversation does not contain any specific mention of a family member’s medical history. It focuses on the patient's symptoms, risk factors, diagnostic plan, and upcoming appointments rather than family history. The clinician emphasizes that family involvement will play a role in decision-making but does not include detailed family history questions here. If you would like me to add any specific aspects related to family history later, please let me know!",
-  "current_medications": "None of the patients mentioned specific medications during this visit. The clinician would ask about current medications if they were present. If no medications are listed, we would proceed with standard assessments without additional medication notes. If there are any questions later, we can revisit them after the full history and physical exam. For now, the focus remains on diagnostic steps and risk-factor assessment rather than prescribing medications.",
-  "allergies": "None of the patients mentioned any known food allergies or severe reactions to medications. They were prepared to proceed with the diagnostic plan despite possible allergic reactions. We will document any known allergies before proceeding further. If there are any unexpected reactions during procedures, we would reassess promptly. The team will stay informed and adjust accordingly.",
-  "social_history": "The conversation does not mention specific smoking cessation strategies or nicotine replacement therapy (NRT) approaches, but it emphasizes the combined risk of tobacco and alcohol use and provides advice on quitting. The clinician offers a quit plan that includes counseling, nicotine replacement therapy, and support groups, along with dietary guidance (fruits and vegetables). There is no direct discussion of NRT dosages or specific products. The emphasis remains on behavior change, family involvement, and ongoing monitoring rather than prescribing medication. A future question might ask about NRT dosage and how to access resources. Overall, the focus is on initiating a structured quitting program while maintaining an active family involvement approach.",
-  "functional_status": "The patient reports significant dysphagia (difficulty swallowing) that worsens during meals and affects eating efficiency. The report does not mention voice changes or weight loss beyond noting hoarseness and breathlessness. There is no mention of neck lymph node enlargement or other systemic symptoms suggestive of metastasis. The clinician emphasizes that these symptoms warrant further investigation and diagnostic steps. The patient expresses anxiety but requests clear explanations and practical advice on what to expect next. The emphasis remains on a structured diagnostic pathway including imaging and biopsy, followed by staging and a tailored treatment plan. The team stresses ongoing communication, family involvement, and access to financial assistance and supportive services. Overall, the focus is on initiating an urgent diagnostic workup to determine whether cancer is present and guide subsequent management. No definitive diagnosis was made yet. The dialogue centers on the need for comprehensive evaluation, documentation, and a staged approach to confirm diagnosis and initiate therapy. The patient seeks reassurance and clarity on what to expect next.",
-  "vital_signs": "None of the patients mentioned vital signs or physical findings during this visit. The conversation focused on diagnostic planning, risk assessment, and educational counseling rather than immediate vital signs. The clinician emphasized ongoing monitoring and follow-up, including dietary and dental advice, cessation resources, and family involvement. No specific vital signs were recorded here. The next step was to proceed with the diagnostic plan and schedule the next appointment.",
-  "examination_findings": "The conversation does not contain any diagnostic findings or imaging results. The dialogue focuses on risk assessment, patient history, and an upcoming visit plan rather than reporting specific diagnostic results. There is no mention of imaging results such as CT/MRI, pathology reports, or staging information. The clinician emphasizes ongoing risk reduction and preparation for future evaluations. The next step is to schedule a follow-up visit to review test results and finalize the treatment plan. No diagnosis or definitive findings were presented in this exchange. The focus remains on risk assessment, symptom management, and preparing for further investigations. If you have additional questions about imaging or results, please ask during the actual visit.",
-  "investigations": "The following tests were planned:\n\n1. Oral/throat exam and laryngoscopy\n2. Blood tests (CBC, liver function tests)\n3. Imaging studies (CT/MRI) as indicated by findings\n4. Endoscopy (to visualize the airway/larynx)\n5. FNAC (fine-needle aspiration cytology) for neck lymph nodes\n6. HPV testing\n7. Dental hygiene advice and referral to dental services\n8. Nutritional counseling and dietary recommendations\n9. Smoking cessation plan and nicotine replacement therapy options\n10. Follow-up schedule and reminders\n\nNote: The actual sequence could vary depending on the clinician’s workflow and patient needs. The above list represents what would typically happen during an initial visit. The team will tailor the plan to the patient's specific situation. The patient expressed concern about costs and asked how these tests can be covered. We noted that some tests may have cost subsidies or government schemes available, but exact coverage depends on the hospital policy. The team will explain options and help navigate them. The patient also requested a step-by-step explanation of the process so she understands it better.",
-  "assessment_primary_diagnosis": "The primary diagnostic focus was anophthalmic exophthalmos (bulging eye) associated with neck swelling, which prompted ENT referral and further investigation into head-and-neck pathology. The clinician emphasized that this symptom profile raised suspicion for a malignant process such as squamous cell carcinoma, but definitive diagnosis would require histopathology after biopsy. Imaging (CT or MRI) was planned to delineate tumor extent and aid staging. No firm diagnosis has been made yet; the plan remains to proceed with biopsy and obtain final pathology results to guide subsequent treatment decisions. The team also addressed supportive care considerations, including dietary guidance, dental hygiene, and cessation resources for tobacco and alcohol use. A multidisciplinary approach involving ENT, oncology, radiology, and nutritionists will shape the treatment pathway once the biopsy result is available. The patient and family were advised to prepare questions and stay engaged in the process. The overall goal is to identify the exact cause, stage disease, and tailor a comprehensive treatment plan. The visit concluded with a clear plan to schedule biopsy and obtain pathology results promptly.",
-  "differential_diagnoses": "The list of potential differential diagnoses includes:\n\n1. Chronic upper airway irritation due to reflux or other causes\n2. Laryngopharyngeal disorders such as laryngopharyngeal reflux or vocal cord dysfunction\n3. Infections affecting the throat/mouth area\n4. Gastrointestinal issues like gastroesophageal reflux disease (GERD)\n5. Throat conditions related to inflammation or infection\n6. Thyroid-related issues\n7. General respiratory or systemic causes not yet diagnosed\n\nIf any of these are suspected, further diagnostic steps will be taken—such as detailed history-taking, physical examination, and possibly additional tests (blood work, imaging). The clinician will tailor the approach based on what is found during the initial evaluations.",
-  "management_plan": "The dialogue outlines an ongoing risk assessment and diagnostic pathway for Rama Patel, focusing on tobacco/alcohol risk reduction, oral health maintenance, and early detection of head-and-neck cancer. Key elements include:\n\n1. Risk-factor modification\n- Quitting tobacco completely and reducing alcohol significantly; counseling and nicotine replacement therapy offered.\n- Family involvement emphasized; spouse invited to join meetings and decisions.\n- Counseling available via phone or online; cost considerations acknowledged.\n\n2. Oral/dental health and preventive measures\n- Regular dental check-ups recommended every six months; emphasis on good oral hygiene.\n- Diet guidance: increase fruit and vegetable intake; limit sugary foods/drinks.\n- Hydration and overall healthy eating promoted.\n\n3. Screening and surveillance strategy\n- Routine screenings planned: mouth/throat exams, neck palpation, laryngoscopy if indicated; blood tests as part of routine screening.\n- Imaging (CT/MRI) considered only if abnormal findings arise; timing guided by test results.\n- Follow-up schedule outlined: next appointment scheduled for the following week; ongoing monitoring and adjustments based on test results.\n\n4. Pathway and next steps\n- Stepwise approach: step-by-step progression from risk assessment to screening and then definitive diagnosis/treatment.\n- Test results will guide subsequent steps; immediate next appointment set for the coming week.\n- Written materials and contact details provided for future reference.\n\n5. Supportive services and logistics\n- Government schemes and social workers to assist with costs and access to resources.",
-  "tests_referrals_planned": "The plan includes several diagnostic steps that will guide the treatment pathway:\n\n1. Comprehensive physical exam of the throat, neck, and larynx.\n2. Laryngoscopy if indicated.\n3. Blood tests to assess overall health and possible cancer biomarkers.\n4. Imaging studies (CT or MRI) to visualize structures and aid staging.\n5. Depending on findings, biopsy may be performed under local anesthesia; results typically available in days to weeks.\n6. Pathology reports will inform staging and subsequent treatment decisions.\n7. A multidisciplinary team (MDT) meeting will determine the exact stage and tailor the treatment plan after pathology results.\n\nIn essence, these tests aim to establish the extent of disease and guide the choice between surgery, radiotherapy, chemotherapy, or combinations thereof. The MDT will integrate the pathology report into their final recommendations. The patient and family will receive clear explanations and timelines for each step.",
-  "follow_up_plan": "The follow-up plan includes:\n\n1. Complete diagnostic workup: Continue with blood tests, imaging (CT/MRI), and any necessary biopsy.\n2. Imaging timing: Decide between CT and MRI based on findings; CT is often used first due to its faster turnaround.\n3. Pathology results: Biopsy results will guide staging and subsequent treatment decisions.\n4. Staging framework: TNM system explained; Stage III typically involves larger tumor and/or nodal involvement without distant metastasis.\n5. Treatment planning: Based on stage, possible modalities include surgery, radiotherapy, chemotherapy, or combinations; multimodal therapy is common.\n6. Supportive care: Nutrition, dental hygiene, and psychological support emphasized; ongoing counseling and resources offered.\n7. Multidisciplinary team: A multidisciplinary team (MDT) will coordinate care; patient and family advised to attend appointments together.\n8. Family involvement: Encouraged to participate in discussions and decisions; documentation and questions prepared for MDT meetings.\n9. Financial and logistical considerations: Discussion of government schemes, insurance coverage, and cost estimates; assistance offered to navigate these aspects.\n10. Follow-up schedule: Regular check-ins every few weeks until definitive staging and treatment plan are established; scheduling adjusted as results come in.\n\nIn essence, the plan prioritizes completing diagnostics, obtaining pathology results, and applying the TNM staging framework to determine the most appropriate treatment pathway while ensuring comprehensive supportive care and clear communication throughout the process. The patient",
-  "chronology_response_to_treatment": "The dialogue does not contain any specific mention of treatment progression or responses. The focus remains on risk assessment, preventive measures, and ongoing monitoring rather than detailing treatment outcomes. The clinician emphasizes continued risk reduction, active family involvement, and clear communication about upcoming tests and follow-ups. No explicit treatment-related feedback is provided beyond the diagnostic process described in the dialogue. The emphasis centers on ongoing monitoring, supportive care, and readiness for further interventions if new signs arise. There is no direct reference to tumor stage or final treatment decisions. The conversation ends with an invitation to report any new symptoms or changes, indicating that this discussion continues into future visits. The patient expresses willingness to proceed with the plan and seek help if needed. Overall, it is a structured, step-by-step approach to risk assessment, screening, and follow-up without detailed treatment specifics.",
-  "patient_concerns_preferences_consent": "The conversation centers on a 42-year-old woman who reports throat discomfort for about two months, hoarseness, difficulty speaking, and intermittent breathlessness. She has a history of smokeless tobacco (khaini/gutkha/pan masala) and occasional cigarette smoking, along with alcohol use. There is concern about combined tobacco and alcohol exposure increasing her risk for head and neck cancer. The diagnostic plan includes mouth/throat exams, laryngoscopy, and possible biopsy; imaging (CT/MRI) may be ordered if abnormalities are found. Family involvement is encouraged, and she asks how to access financial assistance and what resources are available. The clinician emphasizes that combined tobacco and alcohol use increases cancer risk and stresses the need for prompt testing and follow-up. No specific diagnoses were made yet; the focus is on initiating an investigation and establishing a structured follow-up pathway. The plan involves completing tests, discussing results, and developing a treatment plan contingent on the outcome. A step-by-step timeline is outlined, including the sequence of procedures, timelines, and potential costs, with the clinician providing supportive counseling throughout. The team also discusses HPV-related considerations and dental hygiene practices during the visit. Finally, the patient expresses willingness to proceed with the proposed investigations and to involve her family in future discussions. The dialogue ends with the clinician confirming the next steps and scheduling follow-up appointments.",
-  "safety_issues_red_flags": "The red flag discussion highlights that certain symptoms raise concern:\n\n1) Persistent throat discomfort lasting more than two months warrants urgent attention.\n2) Hoarseness and difficulty speaking suggest possible voice changes or throat pathology.\n3) Possible tumor-like findings noted by the patient.\n4) The team emphasizes that these symptoms require prompt evaluation and diagnostic testing to determine whether there is an underlying condition requiring further investigation.\n\nThe clinician’s approach centers on recognizing these signs promptly and initiating appropriate investigations to address them. The emphasis remains on timely evaluation, informed decision-making, and supportive measures such as cessation counseling and dietary guidance to reduce risk factors like tobacco and alcohol. The patient expresses willingness to proceed with recommended tests and follow-up, and the team commits to providing clear explanations and ongoing communication throughout the process. No specific red-flag criteria were specified beyond the above list, but the overall message is that red-flag symptoms should prompt immediate action.",
-  "coding_terms": "No specific codes were assigned in this dialogue. The focus was on diagnostic and management steps rather than generating ICD or SNOMED codes. The clinician would typically assign codes after finalizing staging and treatment plans using established guidelines like TNM. For now, we'll leave the fields blank until those stages are determined. If you'd like, I can explain how these codes might look in practice once staging is finalized. Please let me know if you need further clarification on code assignment later."
+# -----------------------
+# PROMPTS
+# -----------------------
+SYSTEM_SUMMARY = (
+    "You are a professional clinical summarization assistant.\n"
+    "Write a fluent English summary ONLY (no other language, no bullets), focusing on diagnosis, key symptoms, investigations and management.\n"
+    "Write 6–10 sentences. End your summary with the exact token <<END>>."
+)
+
+SYSTEM_JSON = (
+    "You are a clinical information extraction assistant.\n"
+    "Answer in English only. Be concise. If the information is not present, answer exactly 'N/A'.\n"
+    "Do not add explanations. Follow the length limit requested."
+)
+
+SYSTEM_QNA = (
+    "You are a multilingual clinical assistant. Answer in the SAME LANGUAGE as the user's question.\n"
+    "Be concise, factual, and helpful."
+)
+
+# Each entry: (question, type, max_words, is_list)
+JSON_FIELDS: Dict[str, tuple] = {
+    "patient_identifiers": ("Identify the patient by name or ID if mentioned.", "str", 12, False),
+    "demographics.age": ("What is the patient's age?", "str", 6, False),
+    "demographics.sex": ("What is the patient's sex?", "str", 3, False),
+    "visit.date_time": ("When did the visit occur? (date/time if mentioned)", "str", 10, False),
+    "visit.type": ("What type of visit was it? (in-person/telemedicine etc.)", "str", 8, False),
+    "chief_complaint": ("What is the chief complaint?", "str", 14, False),
+    "onset_duration": ("How long have symptoms been present?", "str", 10, False),
+    "symptom_description": ("Describe main symptoms in short.", "str", 20, False),
+    "aggravating_factors": ("What aggravates symptoms?", "str", 14, False),
+    "relieving_factors": ("What relieves symptoms?", "str", 14, False),
+    "associated_symptoms": ("List associated symptoms; use a semicolon between items (≤5).", "list", 30, True),
+    "past_medical_history": ("Summarize relevant past medical history.", "str", 16, False),
+    "past_surgical_history": ("Summarize relevant past surgical history.", "str", 16, False),
+    "family_history": ("Summarize family medical history.", "str", 16, False),
+    "current_medications": ("List current medications; use a semicolon between items (≤5).", "list", 24, True),
+    "allergies": ("List allergies (or N/A).", "str", 10, False),
+    "social_history": ("Social history (tobacco/alcohol/other) short.", "str", 18, False),
+    "functional_status": ("Summarize functional status briefly.", "str", 16, False),
+    "vital_signs": ("List any vitals or key physical signs briefly.", "str", 18, False),
+    "examination_findings": ("Summarize examination findings briefly.", "str", 18, False),
+    "investigations": ("List investigations performed/planned; semicolon-separated (≤6).", "list", 30, True),
+    "assessment_primary_diagnosis": ("What is the main working diagnosis?", "str", 14, False),
+    "differential_diagnoses": ("List 2–4 differentials; semicolon-separated.", "list", 16, True),
+    "management_plan": ("Summarize management plan in one sentence.", "str", 22, False),
+    "tests_referrals_planned": ("List tests/referrals planned; semicolon-separated (≤6).", "list", 30, True),
+    "follow_up_plan": ("Summarize follow-up plan briefly.", "str", 16, False),
+    "chronology_response_to_treatment": ("Describe response/progress if mentioned.", "str", 18, False),
+    "patient_concerns_preferences_consent": ("Summarize patient concerns or consent briefly.", "str", 18, False),
+    "safety_issues_red_flags": ("List any red flags briefly.", "str", 18, False),
+    "coding_terms": ("Give 1–3 likely codes/terms if possible; else N/A.", "str", 16, False),
 }
+
+# -----------------------
+# UTILS
+# -----------------------
+def tprint(msg): print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def safe_read_jsonl(path: Path):
+    rows=[]
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            s=line.strip()
+            if s:
+                try: rows.append(json.loads(s))
+                except: continue
+    return rows
+
+def write_json(path: Path, obj: Any):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+
+def write_text(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
+
+def detect_lang(text: str) -> str:
+    try:
+        return detect(text)
+    except Exception:
+        return "unknown"
+
+def clip_tokens(tokenizer, text, max_tokens):
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    ids = ids[-max_tokens:]
+    return tokenizer.decode(ids, skip_special_tokens=True)
+
+def shorten(text: str, max_words: int, max_chars: int = 180) -> str:
+    text = re.sub(r"\s+", " ", text.strip())
+    words = text.split()
+    if len(words) > max_words:
+        text = " ".join(words[:max_words])
+    if len(text) > max_chars:
+        text = text[:max_chars].rstrip(" .,;:-")
+    return text
+
+def parse_semicolon_list(s: str, max_items: int = 6):
+    if s.strip().upper() == "N/A": return []
+    parts = [p.strip(" ,;.-") for p in s.split(";")]
+    parts = [p for p in parts if p]
+    return parts[:max_items]
+
+# -----------------------
+# CHAT
+# -----------------------
+def build_messages(system_prompt, user_prompt):
+    return [
+        {"role":"system","content":system_prompt},
+        {"role":"user","content":user_prompt}
+    ]
+
+def chat_generate(model, tokenizer, messages, max_new_tokens):
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer([text], return_tensors="pt").to(model.device)
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=TEMPERATURE,
+            top_p=0.9,
+            pad_token_id=tokenizer.eos_token_id
+        )
+    gen = outputs[0][len(inputs.input_ids[0]):]
+    return tokenizer.decode(gen, skip_special_tokens=True).strip()
+
+# -----------------------
+# MODEL LOADING
+# -----------------------
+def find_latest_adapter(path):
+    p = Path(path)
+    cands = [d for d in p.iterdir() if d.is_dir() and d.name.startswith("adapter_step_")]
+    if not cands:
+        return path
+    return sorted(cands, key=lambda x: int(x.name.split("_")[-1]))[-1]
+
+def load_model():
+    tprint("🔻 Loading tokenizer...")
+    tok = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+
+    bnb = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
+    )
+
+    tprint("🔻 Loading base model...")
+    base = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        device_map="auto",
+        quantization_config=bnb,
+        torch_dtype=torch.float16
+    )
+
+    adapter = find_latest_adapter(ADAPTER_DIR)
+    tprint(f"🧭 Using adapter: {adapter}")
+    model = PeftModel.from_pretrained(base, adapter)
+    model.eval()
+    return model, tok
+
+# -----------------------
+# MAIN
+# -----------------------
+def main():
+    model, tokenizer = load_model()
+    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir()]
+    tprint(f"🌍 Found {len(langs)} languages: {[p.name for p in langs]}")
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        lang_hint = LANG_HINTS.get(lang, "the same language")
+        out_lang = Path(OUTPUT_DIR) / lang
+        dlg_dir = lang_dir / "Dialogues"
+        qna_dir = lang_dir / "QnA"
+
+        tprint(f"🗂 Language: {lang}")
+
+        # ---- SUMMARIES + JSON (concise) ----
+        if dlg_dir.exists():
+            files = sorted(dlg_dir.glob("*.jsonl"))
+            tprint(f"  • Dialogues: {len(files)}")
+
+            for f in tqdm(files, desc=f"{lang} dialogues"):
+                out_sum_txt  = out_lang / "Summary_Text"  / f"{f.stem}_summary.txt"
+                out_sum_json = out_lang / "Summary_Json"  / f"{f.stem}_summary.json"
+                if out_sum_txt.exists() and out_sum_json.exists():
+                    continue
+
+                rows = safe_read_jsonl(f)
+                dialogue = " ".join(
+                    str(r.get("dialogue","")) if isinstance(r,dict) else str(r)
+                    for r in rows
+                )
+                dialogue_clip = clip_tokens(tokenizer, dialogue, MAX_INPUT_TOKENS)
+
+                # Summary with sentinel end
+                messages = build_messages(
+                    SYSTEM_SUMMARY,
+                    f"Dialogue:\n{dialogue_clip}\n\nWrite the summary and end with <<END>>."
+                )
+                summary_raw = chat_generate(model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY)
+                # cut at sentinel
+                end_pos = summary_raw.find("<<END>>")
+                summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+                # cleanup language leakage
+                if detect_lang(summary) != "en":
+                    # one retry enforcing English
+                    messages = build_messages(
+                        SYSTEM_SUMMARY,
+                        f"Dialogue:\n{dialogue_clip}\n\nWrite the summary ONLY in English. End with <<END>>."
+                    )
+                    summary_raw = chat_generate(model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY)
+                    end_pos = summary_raw.find("<<END>>")
+                    summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+
+                write_text(out_sum_txt, summary)
+
+                # Fill JSON field-by-field (concise)
+                flat: Dict[str, Any] = {}
+                for field, (q, typ, max_words, is_list) in JSON_FIELDS.items():
+                    user_q = (
+                        f"Summary (English):\n{summary}\n\n"
+                        f"Dialogue (for reference):\n{dialogue_clip}\n\n"
+                        f"Question:\n{q}\n\n"
+                        f"Answer in English, ≤{max_words} words. "
+                        f"{'Return a semicolon-separated list.' if is_list else 'Return a short phrase.'} "
+                        f"If unknown, answer exactly N/A."
+                    )
+                    msg = build_messages(SYSTEM_JSON, user_q)
+                    ans = chat_generate(model, tokenizer, msg, MAX_NEW_TOKENS_JSON)
+                    # enforce English & brevity
+                    if detect_lang(ans) != "en":
+                        msg = build_messages(SYSTEM_JSON, user_q + "\n\nAnswer strictly in English.")
+                        ans = chat_generate(model, tokenizer, msg, MAX_NEW_TOKENS_JSON)
+                    ans = shorten(ans, max_words=max_words, max_chars=180)
+
+                    if is_list:
+                        flat[field] = parse_semicolon_list(ans, max_items=6)
+                    else:
+                        flat[field] = ans if ans else "N/A"
+
+                # expand dotted keys to nested dict
+                nested = {}
+                for k, v in flat.items():
+                    parts = k.split(".")
+                    cur = nested
+                    for p in parts[:-1]:
+                        if p not in cur or not isinstance(cur[p], dict):
+                            cur[p] = {}
+                        cur = cur[p]
+                    cur[parts[-1]] = v
+
+                write_json(out_sum_json, nested)
+
+        # ---- QnA (keep language) ----
+        if qna_dir.exists():
+            qfiles = sorted(qna_dir.glob("*.json"))
+            tprint(f"  • QnA files: {len(qfiles)}")
+            for qf in tqdm(qfiles, desc=f"{lang} QnA"):
+                try:
+                    data = json.load(open(qf, encoding="utf-8"))
+                except Exception:
+                    tprint(f"    - Skipped malformed {qf.name}")
+                    continue
+
+                qs = [q.get("question","").strip() for q in data.get("questions",[]) if q.get("question","").strip()]
+                if not qs:
+                    continue
+
+                answers = []
+                for q in qs:
+                    msg = build_messages(SYSTEM_QNA, f"Question ({lang_hint}): {q}")
+                    ans = chat_generate(model, tokenizer, msg, MAX_NEW_TOKENS_QNA)
+                    det = detect_lang(ans)
+                    # if wrong language, reprompt strictly
+                    if lang_hint.lower() not in ("english", det.lower()):
+                        msg = build_messages(SYSTEM_QNA, f"Answer strictly in {lang_hint}:\nQuestion: {q}")
+                        ans = chat_generate(model, tokenizer, msg, MAX_NEW_TOKENS_QNA)
+                    answers.append(ans.strip())
+
+                out_payload = {"questions":[{"question":q,"answer":a} for q,a in zip(qs,answers)]}
+                write_json((Path(OUTPUT_DIR)/lang/"QnA"/f"{qf.stem}_answers.json"), out_payload)
+
+        torch.cuda.empty_cache()
+
+    tprint(f"✅ Inference complete! Results saved to {OUTPUT_DIR}")
+
+if __name__ == "__main__":
+    main()
