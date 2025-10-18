@@ -10,10 +10,10 @@ from langdetect import detect, DetectorFactory
 DetectorFactory.seed = 42
 torch.set_grad_enabled(False)
 
-# ============================================================
-# PATH CONFIG
-# ============================================================
-BASE_MODEL   = "/workspace/data/KZ_2117574/Qwen2.5-1.5B-Instruct"
+# -----------------------
+# PATHS
+# -----------------------
+BASE_MODEL   = "/workspace/data/KZ_2117574/Qwen2_1.5B"  # or your local path
 ADAPTER_DIR  = "/workspace/data/KZ_2117574/qwen15b_lora_multilingual"
 TEST_DIR     = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
 OUTPUT_DIR   = "/workspace/data/KZ_2117574/SharedTask_Inference_Output_qwen"
@@ -54,18 +54,18 @@ SYSTEM_QNA = (
 )
 
 JSON_FIELDS: Dict[str, tuple] = {
-    "patient_identifiers": ("Identify the patient by name or ID if mentioned.", "str", 12, False),
-    "demographics.age": ("What is the patient's age?", "str", 6, False),
-    "demographics.sex": ("What is the patient's sex?", "str", 3, False),
-    "visit.date_time": ("When did the visit occur? (date/time if mentioned)", "str", 10, False),
-    "visit.type": ("What type of visit was it? (in-person/telemedicine etc.)", "str", 8, False),
-    "chief_complaint": ("What is the chief complaint?", "str", 14, False),
-    "onset_duration": ("How long have symptoms been present?", "str", 10, False),
+    "patient_identifiers": ("Identify the patient by name or ID if mentioned.", "str", 20, False),
+    "demographics.age": ("What is the patient's age?", "str", 15, False),
+    "demographics.sex": ("What is the patient's sex?", "str", 10, False),
+    "visit.date_time": ("When did the visit occur? (date/time if mentioned)", "str", 20, False),
+    "visit.type": ("What type of visit was it? (in-person/telemedicine etc.)", "str", 16, False),
+    "chief_complaint": ("What is the chief complaint?", "str", 20, False),
+    "onset_duration": ("How long have symptoms been present?", "str", 20, False),
     "symptom_description": ("Describe main symptoms briefly.", "str", 20, False),
-    "aggravating_factors": ("What aggravates symptoms?", "str", 14, False),
-    "relieving_factors": ("What relieves symptoms?", "str", 14, False),
-    "associated_symptoms": ("List associated symptoms; semicolon-separated.", "list", 30, True),
-    "past_medical_history": ("Summarize past medical history.", "str", 16, False),
+    "aggravating_factors": ("What aggravates symptoms?", "str", 20, False),
+    "relieving_factors": ("What relieves symptoms?", "str", 20, False),
+    "associated_symptoms": ("List associated symptoms; semicolon-separated.", "list", 40, True),
+    "past_medical_history": ("Summarize past medical history.", "str", 20, False),
     "past_surgical_history": ("Summarize surgical history.", "str", 16, False),
     "family_history": ("Summarize family history.", "str", 16, False),
     "current_medications": ("List current medications; semicolon-separated.", "list", 24, True),
