@@ -10,6 +10,12 @@ from langdetect import detect, DetectorFactory
 DetectorFactory.seed = 42
 torch.set_grad_enabled(False)
 
+# ============================================================
+# SKIP CONFIGURATION
+# ============================================================
+# 👇 Add languages that you want to skip here
+SKIP_LANGS = ["Gujarati", "Dogri"]  # example; edit as needed
+
 # -----------------------
 # PATHS
 # -----------------------
@@ -136,7 +142,7 @@ def parse_semicolon_list(s: str, max_items: int = 6):
     return [p for p in parts if p][:max_items]
 
 # ============================================================
-# CHAT + GENERATION (patched)
+# CHAT + GENERATION
 # ============================================================
 def build_messages(system_prompt, user_prompt):
     return [
@@ -145,7 +151,6 @@ def build_messages(system_prompt, user_prompt):
     ]
 
 def chat_generate(model, tokenizer, messages, max_new_tokens):
-    """Safe deterministic generation (no temperature crash)"""
     text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
@@ -154,7 +159,7 @@ def chat_generate(model, tokenizer, messages, max_new_tokens):
         outputs = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
-            do_sample=False,             # Greedy decoding
+            do_sample=False,
             temperature=None,
             top_p=None,
             num_beams=1,
@@ -196,6 +201,10 @@ def main():
 
     for lang_dir in langs:
         lang = lang_dir.name
+        if lang in SKIP_LANGS:
+            tprint(f"⏩ Skipping {lang} (already completed or running elsewhere)")
+            continue
+
         lang_hint = LANG_HINTS.get(lang, "the same language")
         out_lang = Path(OUTPUT_DIR) / lang
         dlg_dir = lang_dir / "Dialogues"
@@ -211,33 +220,24 @@ def main():
                 out_sum_txt  = out_lang / "Summary_Text" / f"{f.stem}_summary.txt"
                 out_sum_json = out_lang / "Summary_Json" / f"{f.stem}_summary.json"
                 if out_sum_txt.exists() and out_sum_json.exists(): continue
-
                 rows = safe_read_jsonl(f)
                 dialogue = " ".join(str(r.get("dialogue", "")) if isinstance(r, dict) else str(r) for r in rows)
                 dialogue_clip = clip_tokens(tokenizer, dialogue, MAX_INPUT_TOKENS)
-
-                # Summary
                 messages = build_messages(SYSTEM_SUMMARY, f"Dialogue:\n{dialogue_clip}\n\nWrite the summary and end with <<END>>.")
                 summary_raw = chat_generate(model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY)
                 end_pos = summary_raw.find("<<END>>")
                 summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
-
                 if detect_lang(summary) != "en":
-                    # retry forcing English
                     messages = build_messages(SYSTEM_SUMMARY, f"Dialogue:\n{dialogue_clip}\n\nWrite ONLY in English. End with <<END>>.")
                     summary_raw = chat_generate(model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY)
                     end_pos = summary_raw.find("<<END>>")
                     summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
-
                 write_text(out_sum_txt, summary)
 
-                # JSON extraction field-by-field
                 flat = {}
                 for field, (q, typ, max_words, is_list) in JSON_FIELDS.items():
                     user_q = (
-                        f"Summary:\n{summary}\n\n"
-                        f"Dialogue:\n{dialogue_clip}\n\n"
-                        f"Question:\n{q}\n\n"
+                        f"Summary:\n{summary}\n\nDialogue:\n{dialogue_clip}\n\nQuestion:\n{q}\n\n"
                         f"Answer in English, ≤{max_words} words. "
                         f"{'Return a semicolon-separated list.' if is_list else 'Return short phrase.'} "
                         f"If unknown, answer exactly N/A."
@@ -250,7 +250,6 @@ def main():
                     ans = shorten(ans, max_words=max_words, max_chars=180)
                     flat[field] = parse_semicolon_list(ans) if is_list else ans or "N/A"
 
-                # Expand dotted keys into nested JSON
                 nested = {}
                 for k, v in flat.items():
                     parts = k.split(".")
@@ -258,7 +257,6 @@ def main():
                     for p in parts[:-1]:
                         cur = cur.setdefault(p, {})
                     cur[parts[-1]] = v
-
                 write_json(out_sum_json, nested)
 
         # ---- QnA ----
@@ -270,10 +268,8 @@ def main():
                 except Exception:
                     tprint(f"    - Skipped malformed {qf.name}")
                     continue
-
                 qs = [q.get("question","").strip() for q in data.get("questions",[]) if q.get("question","").strip()]
                 if not qs: continue
-
                 answers = []
                 for q in qs:
                     msg = build_messages(SYSTEM_QNA, f"Question ({lang_hint}): {q}")
@@ -283,7 +279,6 @@ def main():
                         msg = build_messages(SYSTEM_QNA, f"Answer strictly in {lang_hint}:\nQuestion: {q}")
                         ans = chat_generate(model, tokenizer, msg, MAX_NEW_TOKENS_QNA)
                     answers.append(ans.strip())
-
                 out_payload = {"questions":[{"question":q,"answer":a} for q,a in zip(qs,answers)]}
                 write_json(out_lang / "QnA" / f"{qf.stem}_answers.json", out_payload)
 
