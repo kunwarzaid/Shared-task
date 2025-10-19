@@ -1,0 +1,140 @@
+# ===============================================
+# 🧪 Diagnostic Accuracy Benchmark (LLM Baselines)
+# ChatDoctor-7B | Clinical-Camel-7B
+# Using AgentClinic-MedQA (10 Scenarios)
+# ===============================================
+
+!pip install -q transformers accelerate bitsandbytes tqdm huggingface_hub
+
+import json, re, os, time, torch, pandas as pd
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from huggingface_hub import login
+from google.colab import files
+
+# ------------------------------------------------
+# 🔑 Authenticate to Hugging Face
+# ------------------------------------------------
+print("🔑 Please paste your Hugging Face token (starts with hf_):")
+token = input().strip()
+login(token=token)
+os.environ["HUGGINGFACE_HUB_TOKEN"] = token
+
+# ------------------------------------------------
+# ⚙️ Configuration
+# ------------------------------------------------
+AGENTCLINIC_FILE = "agentclinic_medqa.jsonl"   # Upload if not present
+NUM_SCENARIOS = 10
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+SAVE_DIR = "/content/diagnostic_comparison"
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+MODELS = {
+    "ChatDoctor-7B": "lxe/ChatDoctor-7B",
+    "Clinical-Camel-7B": "ehsanaghaei/Clinical-Camel-7B"
+}
+
+# ------------------------------------------------
+# 🧩 Load AgentClinic scenarios
+# ------------------------------------------------
+if not os.path.exists(AGENTCLINIC_FILE):
+    print("⬆️ Please upload your agentclinic_medqa.jsonl file now.")
+    uploaded = files.upload()
+
+scenarios = []
+with open(AGENTCLINIC_FILE, "r", encoding="utf-8") as f:
+    for i, line in enumerate(f):
+        if i >= NUM_SCENARIOS:
+            break
+        d = json.loads(line)
+        exam = d.get("OSCE_Examination", {})
+        diag = exam.get("Correct_Diagnosis", "Unknown")
+        actor = exam.get("Patient_Actor", {})
+        hist = actor.get("History", "")
+        phys = actor.get("Physical_Examination_Findings", "")
+        labs = exam.get("Test_Results", {})
+        summary = f"History: {hist}\nExam: {phys}\nLabs: {json.dumps(labs)}"
+        scenarios.append({"id": i, "summary": summary, "gt": diag})
+
+print(f"✅ Loaded {len(scenarios)} AgentClinic scenarios.")
+
+# ------------------------------------------------
+# 🧠 Model inference utility
+# ------------------------------------------------
+def ask_model(model_name, model_id, summary):
+    """Run inference on one scenario and return predicted diagnosis."""
+    try:
+        print(f"Loading {model_name}...")
+        tok = AutoTokenizer.from_pretrained(model_id, use_auth_token=True)
+        mdl = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            device_map="auto",
+            torch_dtype=torch.float16,
+            load_in_8bit=True
+        )
+        pipe = pipeline(
+            "text-generation",
+            model=mdl,
+            tokenizer=tok,
+            device=0 if DEVICE == "cuda" else -1,
+            max_new_tokens=100,
+            temperature=0.1,
+            repetition_penalty=1.1
+        )
+        prompt = (
+            "You are a clinical reasoning expert.\n"
+            "Given the following patient case, state the SINGLE most likely diagnosis.\n"
+            "Provide only the diagnosis name, no explanation.\n"
+            f"Case:\n{summary}\n\nDiagnosis:"
+        )
+        out = pipe(prompt, num_return_sequences=1)[0]["generated_text"]
+        m = re.search(r"Diagnosis[:\- ]*(.*)", out, re.I)
+        result = m.group(1).split("\n")[0] if m else out.strip()
+        torch.cuda.empty_cache()
+        return result
+    except Exception as e:
+        torch.cuda.empty_cache()
+        return f"Error: {e}"
+
+# ------------------------------------------------
+# ⚖️ Compare results (simple fuzzy match)
+# ------------------------------------------------
+def compare_diag(pred, gold):
+    """Fuzzy string match for correctness."""
+    pred, gold = pred.lower().strip(), gold.lower().strip()
+    if gold in pred or pred in gold:
+        return True
+    pred_tokens, gold_tokens = set(pred.split()), set(gold.split())
+    overlap = len(pred_tokens & gold_tokens) / max(1, len(gold_tokens))
+    return overlap > 0.5
+
+# ------------------------------------------------
+# 🚀 Run benchmark
+# ------------------------------------------------
+records = []
+for model_name, model_id in MODELS.items():
+    print(f"\n=== Evaluating {model_name} ===")
+    for sc in tqdm(scenarios):
+        pred = ask_model(model_name, model_id, sc["summary"])
+        ok = compare_diag(pred, sc["gt"])
+        records.append({
+            "scenario": sc["id"],
+            "model": model_name,
+            "pred_diag": pred,
+            "gold_diag": sc["gt"],
+            "correct": ok
+        })
+        print(f"→ Scenario {sc['id']} | GT: {sc['gt']} | Pred: {pred[:80]}")
+
+# ------------------------------------------------
+# 💾 Save results
+# ------------------------------------------------
+df = pd.DataFrame(records)
+df.to_csv(f"{SAVE_DIR}/diagnostic_comparison.csv", index=False)
+summary = df.groupby("model")["correct"].mean().mul(100).round(2)
+
+print("\n=== Diagnostic Accuracy Summary ===")
+print(summary)
+summary.to_csv(f"{SAVE_DIR}/diagnostic_summary.csv")
+
+print(f"\n✅ All results saved in: {SAVE_DIR}")
