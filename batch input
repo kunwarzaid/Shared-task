@@ -1,43 +1,30 @@
-\begin{figure}[ht]
-\centering
-\begin{tikzpicture}[node distance=2cm, auto, thick, >=stealth, font=\small]
-\tikzstyle{agent}=[rectangle, rounded corners, draw=black!70, fill=blue!5, text width=3.6cm, text centered, minimum height=1.2cm]
-\tikzstyle{process}=[rectangle, rounded corners, draw=black!70, fill=green!5, text width=3.4cm, text centered, minimum height=1.0cm]
-\tikzstyle{log}=[rectangle, rounded corners, draw=black!70, fill=yellow!10, text width=4.5cm, text centered, minimum height=1.0cm]
+\section{Introduction}
 
-% Agents
-\node[agent] (doctor) {Doctor Agent \\ (Reasoning, Requests Tests)};
-\node[agent, below of=doctor, yshift=-0.2cm] (patient) {Patient Agent \\ (Responds to Queries)};
-\node[agent, right of=doctor, xshift=4.5cm] (measure) {Measurement Agent \\ (Provides Test Results)};
-\node[agent, below of=measure, yshift=-0.2cm] (safety) {Safety Agent \\ (Evaluates Prescriptions \& Tests)};
+Large Language Models (LLMs) such as GPT-4 \cite{achiam2023gpt}, Gemini \cite{team2023gemini}, and Med-PaLM 2 \cite{singhal2025toward} have demonstrated unprecedented progress in natural language understanding, reasoning, and generalization across a wide range of tasks, including medicine. They have achieved performance comparable to clinicians in medical question-answering benchmarks \cite{kung2023performance,nori2023capabilities}, suggesting potential use in clinical support, documentation, and patient triage \cite{lee2023benefits}. However, the same properties that make LLMs powerful—scale, open-endedness, and fluency—also render them unreliable in domains requiring factual precision and ethical accountability \cite{ji2023survey,begoli2019need}.
 
-% Logging Layer
-\node[log, below of=patient, yshift=-1.2cm, xshift=2.25cm] (logger) {Explainability \& Logging Layer \\ \textit{(Timestamps, Actor, Event Type, Reasoning Trace)}};
+The integration of LLMs into healthcare poses unique challenges that extend beyond predictive accuracy. Medicine is not only a domain of information retrieval but one of explanation, justification, and trust. Clinicians make decisions based on causal reasoning, evidence weighting, and context sensitivity—abilities that current LLMs only partially emulate. When an AI system proposes a diagnosis or prescription, its credibility depends as much on why it reached a conclusion as on what it predicts \cite{tonekaboni2019clinicians,amann2020explainability}. Without a transparent reasoning process, even correct answers are unsafe for clinical use.
 
-% Arrows between agents
-\draw[->, thick] (doctor) -- node[midway, left]{Question / Request} (patient);
-\draw[->, thick] (patient) -- node[midway, right]{Answer / Symptom Info} (doctor);
-\draw[->, thick] (doctor) -- node[midway, above]{REQUEST TEST} (measure);
-\draw[->, thick] (measure) -- node[midway, below]{Test Result} (doctor);
-\draw[->, thick] (doctor) -- node[midway, above]{Prescription} (safety);
-\draw[->, thick] (safety) -- node[midway, below]{Safety Verdict} (doctor);
+Despite progress in alignment and red-teaming \cite{mei2023assert}, existing clinical LLMs remain limited in their trustworthiness—a multidimensional property encompassing accuracy, consistency, safety, and explainability \cite{a2019,huang2025survey}. Models often produce internally inconsistent reasoning, express unjustified confidence \cite{kadavath2022language}, or fail to recognize uncertainty in ambiguous cases. This phenomenon—known as epistemic overconfidence—is particularly problematic in medicine, where acknowledging “I don’t know” is a marker of safety, not failure.
 
-% Logging arrows
-\draw[->, dashed, gray!80] (doctor) -- (logger);
-\draw[->, dashed, gray!80] (patient) -- (logger);
-\draw[->, dashed, gray!80] (measure) -- (logger);
-\draw[->, dashed, gray!80] (safety) -- (logger);
+Efforts to align models for healthcare have emphasized safety and ethical compliance. For instance, the World Health Organization \cite{guidance2021ethics} and the European Commission \cite{bomhard2021regulation} have outlined governance frameworks emphasizing transparency, fairness, and accountability as essential prerequisites for AI in health. Yet these frameworks rarely provide operational metrics for trustworthiness. Similarly, commercial and academic systems such as Med-PaLM \cite{singhal2025toward}, \cite{luo2022biogpt}, and \cite{li2023chatdoctor} showcase impressive factual accuracy but offer limited visibility into why they reach conclusions or how stable their reasoning is under slight prompt variations.
 
-% Caption text
-\node[process, below of=logger, yshift=-1cm, xshift=0cm, text width=9cm] (explain) {
-Logs are aggregated chronologically to reconstruct the full reasoning graph, enabling
-post-hoc explainability, safety auditing, and trust analysis.
-};
+Our prior system, MedGuard, introduced a safety-first approach to clinical LLM simulation. It employed a multi-agent architecture—comprising a Doctor, Patient, Measurement, and Safety Agent—to replicate clinical reasoning while monitoring unsafe test or prescription behaviors. MedGuard significantly reduced unsafe recommendations by introducing safety checkpoints, including drug–drug interaction (DDI) detection and risk-aware test assessment. However, MedGuard focused primarily on output validation rather than process transparency. It answered the question: “Is the result safe?” but not “Can we trust how the model got there?”
 
-\end{tikzpicture}
-\caption{Architecture of the MedGuard-X explainability and logging system. 
-All agent interactions (Doctor, Patient, Measurement, Safety) are recorded 
-as timestamped log events containing actor type, reasoning trace, and context.
-These logs form a transparent audit trail for reconstructing and interpreting the model’s diagnostic reasoning.}
-\label{fig:logging-architecture}
-\end{figure}
+In this paper, we present MedGuard-X, an evolution of the MedGuard framework toward trustworthy and explainable clinical reasoning. MedGuard-X introduces three new layers of interpretability and reliability:
+\begin{itemize}
+    \item Consensus Reasoning: Multiple independent Doctor Agents collaborate and vote on diagnostic decisions, enabling quantification of epistemic uncertainty via inter-model disagreement.
+    \item Reasoning Trace Explainability: Each diagnostic step includes an explicit reasoning trace $(“<thinking$\_$process>”)$ that links model actions to medical evidence and tests.
+    \item Trustworthiness Metrics: Quantitative measures such as Consensus Disagreement Rate (CDR) and Justification Alignment (JA) are introduced to correlate reasoning transparency with diagnostic accuracy.
+\end{itemize}
+This work thus shifts the focus from safety verification to epistemic accountability. MedGuard-X not only asks whether the model is right but investigates how it reasons, when it hesitates, and whether its explanations are grounded in evidence. By analyzing reasoning traces, differential evolution, and consensus patterns, we demonstrate that even highly aligned LLMs remain susceptible to confident hallucinations—offering rational-sounding but clinically incoherent explanations.
+
+We argue that explainability and trustworthiness should be viewed as orthogonal properties. A model can be accurate yet opaque, or transparent yet wrong. Our findings suggest that LLMs, while explainable on the surface, often lack causal fidelity—the degree to which their explanations reflect true underlying reasoning (Doshi-Velez \& Kim, 2017; Holzinger et al., 2022). Therefore, the path toward trustworthy medical AI requires both transparency in reasoning and mechanisms for self-auditing, uncertainty quantification, and cross-model consensus validation.
+
+This paper contributes to that vision through MedGuard-X — a pipeline that operationalizes trust as a measurable, explainable, and testable property of large-scale clinical reasoning systems.
+
+\section{Related Work}
+Explainable AI (XAI) aims to make black-box models interpretable and accountable (Doshi-Velez & Kim, 2017; Gilpin et al., 2018). In healthcare, explainability is especially critical because opaque models can erode clinician confidence and increase malpractice risk (Tonekaboni et al., 2019; Amann et al., 2020). Early approaches relied on feature importance and surrogate models—such as SHAP (Lundberg & Lee, 2017) and LIME (Ribeiro et al., 2016)—to provide local explanations for risk prediction models. While effective for structured data, these methods are ill-suited for reasoning-driven tasks like diagnosis or triage, where causal relationships unfold over dialogue.
+
+Recent reviews (Ahmad et al., 2018; Holzinger et al., 2022) highlight that medical explainability requires causability—a human-understandable mapping between data and decision. Clinicians demand not just “why” but “under what evidence and constraints.” However, LLM explanations, even when prompted to “show reasoning,” often produce post-hoc rationalizations that differ from the true generative process (Turpin et al., 2023). This discrepancy underscores a key tension: explainability can be simulated without genuine understanding.
+
+Emerging medical dialogue models, such as DoctorGPT (Yang et al., 2024) and MedDialog (Chen et al., 2024), attempt to address this by including structured reasoning tags (e.g., <thinking\_process>) or intermediate reflection steps. However, these systems remain single-model frameworks, lacking external validation or consensus checks. Consequently, they remain vulnerable to “explanation bias,” where the LLM fabricates coherent but false justifications (Ji et al., 2023).
