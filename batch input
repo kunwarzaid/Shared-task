@@ -1,84 +1,72 @@
-% ---------------------
-% PASTE THIS IN YOUR PREAMBLE
-% ---------------------
+% Preamble additions (put these in your document preamble)
 \usepackage{tikz}
-\usetikzlibrary{
-  positioning,   % allows "right=of", "below=of"
-  calc,          % basic coordinate arithmetic
-  arrows.meta,   % nicer arrow tips
-  shapes,        % rounded rectangles etc
-  fit,           % grouping nodes
-  backgrounds    % optional if you want bg boxes
-}
-% optionally adjust fonts inside tikz:
-\tikzset{font=\small}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,shapes.geometric,backgrounds}
+\usepackage{graphicx}  % for \resizebox if not already included
 
-% ---------------------
-% PASTE THIS WHERE YOU WANT THE FIGURE (in the document body)
-% Use figure* for full-width in a two-column layout.
-% Use figure (single-col) if you prefer that.
-% ---------------------
-\begin{figure*}[t]
-  \centering
-  % resize to text width to avoid cropping/overflow in two-column mode
-  \resizebox{\textwidth}{!}{%
-  \begin{tikzpicture}[
-    >=Stealth,
-    agent/.style={rectangle, rounded corners, draw=black!70, fill=blue!6, inner sep=6pt, align=center, minimum width=3.6cm},
-    process/.style={rectangle, rounded corners, draw=black!70, fill=green!6, inner sep=5pt, align=center, minimum width=3.4cm},
-    log/.style={rectangle, rounded corners, draw=black!70, fill=yellow!10, inner sep=6pt, align=center, minimum width=4.2cm},
-    trace/.style={rectangle, rounded corners, draw=black!70, fill=orange!8, inner sep=5pt, align=center, minimum width=3.6cm},
-    small/.style={font=\footnotesize, inner sep=1pt}
-    ]
+% Full-width (two-column) figure: use figure* in two-column papers
+\begin{figure*}[t!]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[font=\small,
+    agent/.style={rectangle, rounded corners, draw=black!70, fill=blue!6, minimum width=3.6cm, text centered, inner sep=6pt},
+    process/.style={rectangle, rounded corners, draw=black!70, fill=green!6, minimum width=3.4cm, text centered, inner sep=6pt},
+    logger/.style={rectangle, rounded corners, draw=black!70, fill=orange!6, minimum width=5.2cm, text centered, inner sep=6pt},
+    storage/.style={rectangle, rounded corners, draw=black!70, fill=gray!6, minimum width=3.8cm, text centered, inner sep=6pt},
+    metrics/.style={rectangle, rounded corners, draw=black!70, fill=green!6, minimum width=4.4cm, text centered, inner sep=6pt},
+    arrow/.style={-{Stealth[length=3mm, width=2mm]}, line width=0.8pt},
+    tracearrow/.style={dashed, -{Stealth[length=2.5mm,width=1.8mm]}, line width=0.6pt, gray},
+    smalllbl/.style={font=\footnotesize}
+]
 
-    % Top row: Doctor (left) and Measurement (right)
-    \node[agent] (doctor) {Doctor Agent\\(Reasoning, DDx, Requests)};
-    \node[process, right=4.8cm of doctor] (measure) {Measurement Agent\\(Tests, Results, GT)};
+% Node placement (explicit coords so we avoid math tricks)
+\node[agent] (doctor) at (0,2.2) {Doctor Agent\\(Reasoning, DDx, Requests)};
+\node[process] (measure) at (7.0,2.2) {Measurement Agent\\(Tests, Results, Ground Truth)};
+\node[agent] (patient) at (0,0) {Patient Agent\\(Responds from Case Profile)};
+\node[process] (safety) at (7.0,0) {Safety Agents\\(Test/Prescription Risk, DDI Checks)};
 
-    % Under Doctor: Patient
-    \node[agent, below=1.4cm of doctor] (patient) {Patient Agent\\(Responds from Case Profile)};
+% Central logging/explainability box
+\node[logger, text width=5.6cm] (loggerbox) at (3.5,1.1) {Explainability \& Logging Layer\\\textit{(timestamps, actor, event type, <thinking\_process>, context hashes)}};
 
-    % Under Measurement: Safety Agents
-    \node[process, below=1.4cm of measure] (safety) {Safety Agents\\(Test/Prescription Risk, DDI Checks)};
+% Bottom objects
+\node[storage] (trace) at (0,-1.8) {Trace Store \& Replay API\\(Chronological ledger, audit trail)};
+\node[metrics] (trust) at (7.0,-1.8) {Trust Metrics\\(CDR, Justification Alignment, Timeout Rate)};
 
-    % Central logging / explainability box between them
-    \node[log, below=0.2cm of $(doctor)!0.5!(measure)$] (logger) {Explainability \& Logging Layer\\\small(Timestamp, Actor, Event, \texttt{<thinking\_process>}, Context-hash)};
+% Draw solid interaction arrows
+\draw[arrow] (doctor) -- node[smalllbl, above, pos=0.5] {REQUEST TEST} (measure);
+\draw[arrow] (measure) -- node[smalllbl, below, pos=0.5] {Test Result} (doctor);
 
-    % Trace store and trust metrics at bottom-left and bottom-right
-    \node[trace, below=1.6cm of logger, xshift=-4.0cm] (trace_store) {Trace Store \& Replay API\\(Chronological Ledger, Audit Trail)};
-    \node[trace, below=1.6cm of logger, xshift=+4.0cm] (trust) {Trust Metrics\\(CDR, Justification Alignment, Timeout Rate)};
+\draw[arrow] (doctor) -- node[smalllbl, left, pos=0.5] {Question / Request} (patient);
+\draw[arrow] (patient) -- node[smalllbl, right, pos=0.5] {Answer / Symptom Info} (doctor);
 
-    % Arrows: doctor <-> patient
-    \draw[->] (doctor.south) -- node[midway, left, small]{Question / Request} (patient.north);
-    \draw[->] (patient.north) -- node[midway, right, small]{Answer / Symptom Info} (doctor.south);
+\draw[arrow] (doctor.south east) to[bend left=20] node[smalllbl, right, pos=0.45] {Prescription} (safety.north west);
+\draw[arrow] (safety.north west) to[bend left=20] node[smalllbl, left, pos=0.45] {Safety Verdict / Flags} (doctor.south east);
 
-    % Doctor -> Measurement (request)
-    \draw[->] (doctor.east) .. controls +(+1.1,0.6) and +(-0.9,0.6) .. node[midway, above, small]{REQUEST TEST} (measure.west);
-    % Measurement -> Doctor (result)
-    \draw[->] (measure.south) .. controls +(-0.8,-0.6) and +(0.8,-0.6) .. node[midway, below, small]{Test Result} (logger.east);
+% Logging dashed arrows from each agent to logger
+\draw[tracearrow] (doctor) to[bend right=10] node[smalllbl, above, pos=0.6] {Log: action + reasoning} (loggerbox);
+\draw[tracearrow] (patient) to[bend left=10] node[smalllbl, left, pos=0.45] {Log: reported symptoms} (loggerbox);
+\draw[tracearrow] (measure) to[bend left=8] node[smalllbl, right, pos=0.45] {Log: test metadata} (loggerbox);
+\draw[tracearrow] (safety) to[bend right=8] node[smalllbl, right, pos=0.45] {Log: safety rationale} (loggerbox);
 
-    % Doctor -> Safety (prescription)
-    \draw[->] (doctor.east) .. controls +(0.9,0.0) and +(-0.9,0.0) .. node[midway, above, small]{Prescription / Plan} (safety.west);
-    % Safety -> Doctor (verdict)
-    \draw[->] (safety.west) .. controls +(-0.6,0.6) and +(0.4,0.4) .. node[midway, above, small]{Safety Verdict} (doctor.east);
+% Arrows from logger to storage and metrics
+\draw[arrow] (loggerbox.south west) to[bend left=18] node[smalllbl, left, pos=0.4] {Persist / Index} (trace.north);
+\draw[arrow] (loggerbox.south east) to[bend right=18] node[smalllbl, right, pos=0.4] {Compute} (trust.north);
 
-    % Logger collects from all agents (dashed lines)
-    \draw[->, dashed, gray] (doctor) -- (logger);
-    \draw[->, dashed, gray] (patient) -- (logger);
-    \draw[->, dashed, gray] (measure) -- (logger);
-    \draw[->, dashed, gray] (safety) -- (logger);
+% Additional small connectors for completeness
+\draw[arrow] (trace.east) to[bend left=15] node[smalllbl, below, pos=0.5] {Replay API} (doctor.west);
+\draw[arrow] (trust.west) to[bend left=15] node[smalllbl, below, pos=0.5] {Alert / Dashboard} (doctor.east);
 
-    % Logger -> Trace store and metrics
-    \draw[->] (logger.south) -- node[midway, left, small]{Persist / Index} (trace_store.north);
-    \draw[->] (logger.south) -- node[midway, right, small]{Compute Metrics} (trust.north);
+% Legend (compact)
+\node[rectangle, draw=black!60, fill=white, rounded corners, inner sep=5pt, anchor=north east] (legend) at (10.0,2.6) {
+  \begin{tabular}{@{}l@{}}
+    \small \textbf{Legend:}\\
+    \small \rule{8mm}{0.7pt} solid — interaction\\[-2pt]
+    \small \rule{0pt}{6pt}\raisebox{2pt}{\tikz{\draw[dashed,gray] (0,0)--(0.6,0);}} dashed — logging/trace\\
+    \small \rule{0pt}{6pt}\raisebox{2pt}{\tikz{\node[draw,rounded corners,fill=blue!6,minimum width=7mm,minimum height=3mm]{};}} agents/processes
+  \end{tabular}
+};
 
-    % Optional fit box around the central flow (a light background)
-    \begin{scope}[on background layer]
-      \node[fit=(doctor)(patient)(measure)(safety)(logger)(trace_store)(trust), inner sep=8pt, draw=black!10, line width=0.2pt, rounded corners, fill=gray!2] {};
-    \end{scope}
-
-  \end{tikzpicture}%
-  }% end resizebox
-  \caption{MedGuard-X architecture. The Doctor Agent interacts with the Patient and Measurement Agents to collect evidence, maintains an evolving differential diagnosis (DDx), and consults Safety Agents to evaluate test and prescription risks (including potential drug–drug interactions). All agent actions stream structured logs (timestamps, actor, event type, and reasoning traces like \texttt{<thinking\_process>}) into the Explainability Layer for replay, auditing, and trust-metric computation (e.g., Consensus Disagreement Rate (CDR) and Justification Alignment (JA)).}
-  \label{fig:logging-architecture}
+\end{tikzpicture}%
+} % end resizebox
+\caption{MedGuard-X architecture. The Doctor Agent interacts with Patient and Measurement Agents to collect evidence, maintains an evolving differential diagnosis (DDx), and consults Safety Agents to evaluate test and prescription risks (including potential drug–drug interactions, DDIs). All agent actions stream structured logs (timestamps, actor, event type, and reasoning traces like \texttt{<thinking\_process>}) into the Explainability \& Logging Layer for replay, auditing, and trust-metric computation (e.g., Consensus Disagreement Rate (CDR) and Justification Alignment (JA)).}
+\label{fig:logging-architecture}
 \end{figure*}
