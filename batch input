@@ -1,9 +1,47 @@
-\begin{abstract}
-Large Language Models (LLMs) have recently demonstrated strong diagnostic and reasoning performance on medical benchmarks such as \textit{MedQA}, yet their deployment in clinical decision support remains constrained by concerns of reliability, transparency, and trustworthiness. Prior efforts have primarily focused on improving safety—for example, the MedGuard framework introduced multi-agent validation to reduce unsafe or contraindicated recommendations. However, safety alone does not ensure trust: little is known about \emph{why} medical LLMs reach specific conclusions, how consistently they reason across agents, or whether explainability correlates with diagnostic correctness.
+\section{Methodology: The MedGuard-X Framework}
 
-In this work, we present \textbf{MedGuard-X}, an extension of the MedGuard system that embeds trust and interpretability into the diagnostic reasoning process itself. MedGuard-X integrates (i) multi-LLM consensus reasoning to estimate epistemic uncertainty, (ii) structured reasoning traces for each clinical action, and (iii) trustworthiness scoring through disagreement tracking and justification alignment—all within a simulated multi-agent clinical environment.
+Building upon the safety-centered design of MedGuard, \textbf{MedGuard-X} reimagines clinical reasoning as a transparent, auditable, and multi-agent process. The system’s architecture (Figure~\ref{fig:logging-architecture}) embeds explainability and trustworthiness at every stage of diagnostic reasoning—transforming what was previously a black-box interaction into a traceable chain of justifications.
 
-Experiments on the \textit{MedQA} benchmark demonstrate that while MedGuard-X improves transparency and reduces unsafe test and prescription recommendations, diagnostic accuracy remains inconsistent. In many cases, LLMs exhibit confident yet unjustified reasoning—revealing that explainability does not imply reliability. These findings highlight the need for structured accountability mechanisms and hybrid neuro-symbolic architectures to ensure that future medical LLMs are not only safe but genuinely trustworthy in real-world clinical settings.
-\end{abstract}
+At its core, MedGuard-X simulates a clinical consultation between autonomous agents representing key medical roles: a \textit{Doctor Agent} that performs reasoning and decision-making, a \textit{Patient Agent} that responds based on structured case data, a \textit{Measurement Agent} that manages diagnostic tests, and a \textit{Safety Agent} that evaluates both test and prescription safety. Surrounding these agents is an \textit{Explainability and Logging Layer} that continuously records, annotates, and contextualizes every interaction. Each event—question, answer, test request, or prescription—is captured as a structured log entry with timestamp, agent identity, and reasoning trace. These logs form the basis for reconstructing the model’s cognitive trajectory and evaluating causal consistency.
 
-\textbf{Keywords:} Large Language Models, Explainable AI, Trustworthy AI, Medical Diagnosis, Multi-Agent Systems, Clinical Reasoning, Consensus Learning, MedQA, Neuro-Symbolic AI
+\subsection*{1. Multi-Agent Diagnostic Simulation}
+MedGuard-X models the clinical reasoning process as a sequence of inter-agent exchanges that parallel a real consultation. The \textbf{Doctor Agent} initiates with broad, open-ended questions, progressively refines its hypotheses, and requests tests as needed. The \textbf{Patient Agent} retrieves answers from the underlying case profile, ensuring factual consistency and preventing information leakage beyond what a real patient could reveal. The \textbf{Measurement Agent} acts as the interface to diagnostic data, returning relevant test results when requested or signaling unavailability when tests are not part of the scenario. Each response updates the Doctor Agent’s working memory and refines its differential diagnosis list (DDx).
+
+This interaction continues until the Doctor Agent issues a final statement of the form \texttt{DIAGNOSIS READY: <diagnosis>}, at which point the \textbf{Prescription Safety Subsystem} is activated. This tightly controlled loop ensures that reasoning unfolds in a medically faithful order: history → examination → investigations → diagnosis → treatment. 
+
+\subsection*{2. Consensus Reasoning and Epistemic Uncertainty}
+A central innovation of MedGuard-X is its use of \textbf{consensus reasoning} to estimate epistemic uncertainty. Instead of relying on a single deterministic agent, multiple Doctor Agents—each instantiated from independent LLM instances or temperature-seeded replicas—conduct parallel consultations on the same case. Their conclusions are aggregated through a majority vote or similarity-weighted consensus function. The \emph{Consensus Disagreement Rate (CDR)} quantifies inter-agent variability, serving as a direct signal of epistemic uncertainty: low CDR implies stable reasoning, while high CDR reveals fragile or inconsistent diagnostic logic. This mechanism operationalizes the clinical notion of a “second opinion,” embedding self-validation into the reasoning loop.
+
+\subsection*{3. Reasoning Trace and Differential Diagnosis Lifecycle}
+Each Doctor Agent is instrumented to output explicit reasoning traces within a structured tag: \texttt{<thinking\_process>...<\/thinking\_process>}. These traces record intermediate hypotheses, discarded possibilities, and justifications for each test or question. Over time, they form a chronological “reasoning ledger” that mirrors how clinicians maintain and update their differential diagnosis. 
+
+Every hypothesis update—addition, promotion, or elimination—is logged alongside the evidence prompting the change. For instance, if the Doctor Agent initially suspects both myasthenia gravis and Lambert–Eaton syndrome but later dismisses the latter following electromyography results, this causal shift is explicitly recorded. The resulting \textbf{Differential Diagnosis Lifecycle (DDxL)} offers a transparent window into how the model converges on its final answer, providing measurable alignment between reasoning trace and ground-truth pathology.
+
+\subsection*{4. Safety and Prescription Evaluation}
+MedGuard-X extends the original MedGuard’s safety layer into two coordinated modules:
+\begin{itemize}
+    \item \textbf{Test Safety Agent:} Evaluates the risk–benefit profile of each requested investigation based on the patient’s condition and comorbidities. It warns against high-risk or redundant tests, promoting a reasoning style aligned with clinical prudence.
+    \item \textbf{Prescription Safety Agent:} Audits every proposed medication for contraindications, dosage errors, and drug–drug interactions (DDIs). The agent cross-references structured drug-interaction databases and uses a lightweight LLM reviewer to assign a qualitative verdict: \textit{SAFE}, \textit{SAFE WITH CAUTION}, or \textit{UNSAFE}.
+\end{itemize}
+These modules ensure that safety is not a post-hoc check but an integral part of the reasoning process, influencing decisions as they are formed rather than after they are made.
+
+\subsection*{5. Explainability and Logging Layer}
+Every message exchanged in MedGuard-X—whether between agents or within reasoning traces—is captured by a centralized logging layer that encodes:
+\begin{enumerate}
+    \item The acting agent and its role,
+    \item The timestamp and session context,
+    \item The natural language reasoning trace, and
+    \item Any associated quantitative metrics (e.g., confidence, disagreement score).
+\end{enumerate}
+Unlike traditional post-hoc explanation frameworks, this logging operates \emph{in situ}, during inference. It produces a machine-readable transcript that can be replayed, queried, or visualized as a reasoning graph. These logs enable traceability for auditing, fairness checks, and epistemic introspection—transforming diagnostic reasoning into an interpretable data artifact.
+
+\subsection*{6. Trustworthiness Metrics}
+To translate transparency into measurable reliability, MedGuard-X introduces two new quantitative metrics:
+\begin{itemize}
+    \item \textbf{Consensus Disagreement Rate (CDR):} The proportion of cases in which Doctor Agents disagree on final diagnosis, capturing epistemic variance.
+    \item \textbf{Justification Alignment (JA):} The semantic similarity between reasoning traces and correct clinical evidence, quantifying how well explanations align with ground-truth reasoning.
+\end{itemize}
+Together, these metrics allow evaluation of not just whether the model is correct, but whether its reasoning is \emph{coherent, justifiable, and reproducible}.
+
+\subsection*{7. Summary}
+In essence, MedGuard-X transforms the opaque reasoning of medical LLMs into a fully auditable process. It combines consensus-based epistemic estimation, structured reasoning traces, and real-time logging into a unified framework for transparent clinical decision-making. While traditional systems emphasize outcome correctness, MedGuard-X redefines trust as a function of both accuracy and interpretability—embedding explainability directly into the causal fabric of medical reasoning.
