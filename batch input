@@ -1,62 +1,105 @@
+\usepackage{tikz}
+\usetikzlibrary{positioning,calc,arrows.meta,fit}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+
 \begin{figure*}[t]
 \centering
 \resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[node distance=12mm, >=latex, thick, font=\small]
+\begin{tikzpicture}[
+  >=Latex,
+  semithick,
+  font=\footnotesize,
+  node distance=10mm,
+  every node/.style={align=center}
+]
 
-% Styles
-\tikzstyle{agent}=[rectangle, rounded corners, draw=black!70, fill=blue!5,
-                   minimum width=4.5cm, minimum height=1.2cm, align=center]
-\tikzstyle{layer}=[rectangle, rounded corners, draw=black!70, fill=yellow!10,
-                   minimum width=10.5cm, minimum height=1.2cm, align=center]
-\tikzstyle{store}=[rectangle, rounded corners, draw=black!70, fill=green!5,
-                   minimum width=5.3cm, minimum height=1.0cm, align=center]
+% ==============================
+% Node styles
+% ==============================
+\tikzset{
+  doctorbox/.style={rectangle, rounded corners, draw=blue!50!black, fill=blue!5, minimum width=4.3cm, minimum height=1.1cm},
+  patientbox/.style={rectangle, rounded corners, draw=blue!50!black, fill=blue!5, minimum width=4.3cm, minimum height=1.1cm},
+  measurebox/.style={rectangle, rounded corners, draw=green!50!black, fill=green!5, minimum width=4.3cm, minimum height=1.1cm},
+  safetybox/.style={rectangle, rounded corners, draw=orange!70!black, fill=orange!5, minimum width=4.3cm, minimum height=1.1cm},
+  loggerbox/.style={rectangle, rounded corners, draw=gray!70!black, fill=yellow!8, minimum width=9.5cm, minimum height=1.2cm},
+  storebox/.style={rectangle, rounded corners, draw=gray!70!black, fill=gray!10, minimum width=4.8cm, minimum height=1.0cm}
+}
 
-% Top row (Doctor, Measurement)
-\node[agent] (doctor) {Doctor Agent\\\scriptsize Reasoning, Differential Diagnosis, Orders};
-\node[agent, right=30mm of doctor] (measure) {Measurement Agent\\\scriptsize Tests, Results, Ground Truth Access};
+% ==============================
+% Top cognitive layer
+% ==============================
+\node[doctorbox] (doctor) {Doctor Agent\\Reasoning \& DDx Lifecycle};
+\node[measurebox, right=35mm of doctor] (measure) {Measurement Agent\\Tests \& Results};
 
-% Second row (Patient, Safety)
-\node[agent, below=16mm of doctor] (patient) {Patient Agent\\\scriptsize Case-Grounded Responses};
-\node[agent, below=16mm of measure] (safety) {Safety Agents\\\scriptsize Test Risk \& Prescription Safety (DDI Check)};
+% ==============================
+% Patient & Safety layer
+% ==============================
+\node[patientbox, below=14mm of doctor] (patient) {Patient Agent\\Case Responses};
+\node[safetybox, below=14mm of measure] (safety) {Safety Agent\\Test \& Rx Risk (DDI Check)};
 
-% Logging layer
-\node[layer, below=18mm of $(patient)!0.5!(safety)$] (logger)
-{Explainability \& Logging Layer:\\
-Timestamps, Actor, Event Type, \texttt{<thinking\_process>}, Context Hashes};
+% ==============================
+% Logging & Trace layer
+% ==============================
+\node[loggerbox, below=20mm of $(patient)!0.5!(safety)$] (logger) {Explainability \& Logging Layer\\\small Timestamps, Actor, Event, \texttt{<thinking\_process>}, Context};
 
-% Storage + Metrics
-\node[store, below left=10mm and 6mm of logger] (trace)
-{Trace Store \& Replay API\\\scriptsize Chronological Reasoning Ledger, Audit Trails};
-\node[store, below right=10mm and 6mm of logger] (metrics)
-{Trust Metrics\\\scriptsize CDR, Justification Alignment, Timeout Rate, Unsafe-Rx Rate};
+\node[storebox, below left=12mm and 12mm of logger] (trace) {Trace Store \& Replay API\\Chronological Reasoning Logs};
+\node[storebox, below right=12mm and 12mm of logger] (metrics) {Trust Metrics\\CDR, JA, Timeout \& Unsafe-Rx Rate};
 
-% Arrows: Doctor ↔ Patient
-\draw[->] (doctor.south) -- node[left,pos=0.5]{\scriptsize Question} (patient.north);
-\draw[->] (patient.north) -- node[right,pos=0.52]{\scriptsize Answer} (doctor.south);
+% ==============================
+% Connections (color-coded)
+% ==============================
 
-% Arrows: Doctor ↔ Measurement
-\draw[->] (doctor.east) -- node[above,pos=0.55]{\scriptsize REQUEST TEST} (measure.west);
-\draw[->] (measure.west) -- node[below,pos=0.45]{\scriptsize Test Result} (doctor.east);
+% Reasoning - Blue
+\draw[->, thick, blue!70] (doctor.south) -- node[left,pos=0.45]{\scriptsize Ask} (patient.north);
+\draw[->, thick, blue!70] (patient.north) -- node[right,pos=0.45]{\scriptsize Respond} (doctor.south);
 
-% Arrows: Doctor ↔ Safety
-\draw[->] (doctor.south east) to[bend left=8] node[right,pos=0.5]{\scriptsize Prescription} (safety.north);
-\draw[->] (safety.north) to[bend left=8] node[left,pos=0.5]{\scriptsize Safety Verdict} (doctor.south east);
+% Testing - Green
+\draw[->, thick, green!60!black] (doctor.east) -- ++(7mm,0) node[above,pos=0.6]{\scriptsize Request Test} -- (measure.west);
+\draw[->, thick, green!60!black] (measure.west) -- ++(-7mm,0) node[below,pos=0.4]{\scriptsize Test Result} -- (doctor.east);
 
-% Logging taps (gray arrows)
-\draw[->,gray!70] (doctor.south) ++(0,-2mm) -- (logger.north -| doctor);
-\draw[->,gray!70] (patient.south) -- (logger.north -| patient);
-\draw[->,gray!70] (measure.south) -- (logger.north -| measure);
-\draw[->,gray!70] (safety.south) -- (logger.north -| safety);
+% Safety - Orange (dotted for visibility)
+\draw[->, thick, orange!80!black, densely dotted, bend left=14]
+  (doctor.south east) to node[right,pos=0.55]{\scriptsize Prescription} (safety.north);
+\draw[->, thick, orange!80!black, densely dotted, bend left=14]
+  (safety.north) to node[left,pos=0.55]{\scriptsize Verdict} (doctor.south east);
 
-% From logging to storage/metrics
-\draw[->,black!70] (logger.south) -- node[left]{\scriptsize persist} (trace.north);
-\draw[->,black!70] (logger.south) -- node[right]{\scriptsize compute} (metrics.north);
+% Logging - Gray dashed
+\foreach \n in {doctor,patient,measure,safety}{
+  \draw[->, dashed, gray!70] (\n.south) -- ($(logger.north)+({-36mm+24mm*(index(\n)-1)},6mm)$);
+}
+
+% Logger → trace & metrics
+\draw[->, gray!60!black] (logger.south) -- node[left,pos=0.45]{\scriptsize persist} (trace.north);
+\draw[->, gray!60!black] (logger.south) -- node[right,pos=0.45]{\scriptsize compute} (metrics.north);
 
 \end{tikzpicture}
 }
-\caption{MedGuard-X architecture. The Doctor Agent interacts with the Patient and Measurement Agents to collect evidence, maintains an evolving differential diagnosis (DDx), and consults Safety Agents to evaluate test and prescription risks, including potential drug--drug interactions (DDIs). All agent actions stream structured logs containing timestamps, actor roles, and reasoning traces (\texttt{<thinking\_process>}) to the Explainability Layer, enabling replay, auditing, and computation of trust metrics such as Consensus Disagreement Rate (CDR) and Justification Alignment (JA).}
+
+\vspace{1em}
+% ==============================
+% LEGEND (embedded box)
+% ==============================
+\begin{tikzpicture}[x=0.8cm,y=0.5cm]
+\node[draw, rounded corners, fill=gray!5, inner sep=4pt, line width=0.3pt, minimum width=0.95\textwidth, anchor=center] (legend) {
+  \begin{tabular}{cccc}
+  \raisebox{0.4ex}{\tikz\draw[blue!70, thick] (0,0)--(0.4,0);}~Reasoning / Dialogue &
+  \raisebox{0.4ex}{\tikz\draw[green!60!black, thick] (0,0)--(0.4,0);}~Tests / Results &
+  \raisebox{0.4ex}{\tikz\draw[orange!80!black, densely dotted, thick] (0,0)--(0.4,0);}~Prescription / Safety &
+  \raisebox{0.4ex}{\tikz\draw[gray!70, dashed, thick] (0,0)--(0.4,0);}~Logging / Explainability
+  \end{tabular}
+};
+\end{tikzpicture}
+
+\caption{\textbf{MedGuard-X architecture (final color-coded version).}
+The Doctor Agent gathers evidence from the Patient and Measurement Agents,
+forms evolving differential diagnoses (DDx), and consults Safety Agents for
+test and prescription validation. The Explainability Layer captures each
+interaction with timestamps and reasoning traces, producing auditable logs for
+replay and trust metrics such as Consensus Disagreement Rate (CDR) and
+Justification Alignment (JA).}
 \label{fig:logging-architecture}
 \end{figure*}
 
-\usepackage{tikz}
-\usetikzlibrary{positioning, arrows.meta}
