@@ -1,86 +1,10 @@
-pip install --upgrade pip
-pip install --upgrade transformers torch torchvision numpy
-!pip install "numpy<1.26" --force-reinstall
-!pip install --upgrade scipy scikit-learn
+Dear Organizers,
 
+We would like to request consideration for our updated submission for the shared task. While we were able to submit an earlier version based on Gemma-1B model before the first deadline, that version did not achieve satisfactory performance.
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-import os, json
+We fine-tuned Qwen2.5-1.5B-Instruct  and changed approach towards json outputs, this was completed after the deadline because of the infrastructure constraints on our compute environment, which is only accessible for limited time windows.
 
-# Paths
-dialogue_path = "/workspace/SharedTask_NLPAI4Health_Train&dev_set//train/English/Dialogues/scenario_47_9ddd7f080a4f46a59cd173747b031943_IDX_05_1.jsonl"
-output_dir = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test_outputs_english"
-os.makedirs(output_dir, exist_ok=True)
+We are therefore attaching our final Qwen-based submission with this email for your kind consideration. We sincerely apologize for the delay and respectfully request that you consider this submission as our final entry.
 
-# ---------- Load model ----------
-print("🔹 Loading multilingual Gemma model...")
-model_id = "/workspace/data/KZ_2117574/gemma_3_1b"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto", torch_dtype="auto")
-generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
-
-# ---------- Read dialogue ----------
-def read_dialogue(file_path):
-    lines = []
-    with open(file_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                item = json.loads(line)
-                lines.append(f"{item['speaker']}: {item['dialogue']}")
-            except Exception:
-                continue
-    return "\n".join(lines)
-
-dialogue_text = read_dialogue(dialogue_path)
-print(f"✅ Loaded dialogue ({len(dialogue_text)} chars)")
-
-# ---------- Prompts ----------
-p_summary = f"""Summarize the following doctor–patient dialogue in English.
-Organize into sections like Context, Presentation, Assessment, Plan, and Follow-up.
-
-Dialogue:
-{dialogue_text}
-### English Summary:
-"""
-
-p_json = f"""Extract structured clinical information from the dialogue.
-Return valid JSON with keys:
-chief_complaint, symptom_description, social_history, assessment_primary_diagnosis,
-management_plan, follow_up_plan, patient_concerns_preferences_consent.
-
-Dialogue:
-{dialogue_text}
-### JSON:
-"""
-
-p_qna = f"""Generate about 8–12 patient questions and answers based on the dialogue.
-Return JSON as:
-{{"questions": [{{"question": "...", "answer": "..."}}]}}.
-
-Dialogue:
-{dialogue_text}
-### JSON:
-"""
-
-# ---------- Generate ----------
-print("\n🩺 Generating summary text...")
-summary_txt = generator(p_summary, max_new_tokens=400, temperature=0.7)[0]["generated_text"]
-
-print("\n📋 Generating JSON summary...")
-summary_json = generator(p_json, max_new_tokens=600, temperature=0.2)[0]["generated_text"]
-
-print("\n💬 Generating QnA...")
-qna_json = generator(p_qna, max_new_tokens=800, temperature=0.3)[0]["generated_text"]
-
-# ---------- Save outputs ----------
-with open(f"{output_dir}/summary.txt", "w", encoding="utf-8") as f:
-    f.write(summary_txt)
-with open(f"{output_dir}/summary.json", "w", encoding="utf-8") as f:
-    f.write(summary_json)
-with open(f"{output_dir}/questions.json", "w", encoding="utf-8") as f:
-    f.write(qna_json)
-
-print("\n✅ Done! Check:", output_dir)
+Thanks, and Regards
+Kunwar Zaid
