@@ -1,97 +1,79 @@
+\documentclass[twocolumn]{article} % use your AAAI / conference class in practice
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,shapes}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{adjustbox}
+\usepackage{lipsum} % for dummy text (remove in real paper)
+
+\begin{document}
+
+\title{MedGuard-X: Example (Figure compile test)}
+\author{You}
+\maketitle
+
+% ============================
+% Figure: MedGuard-X architecture
+% ============================
+% This is safe, compact, and intended to be inserted in a two-column paper.
+% If your class supports figure* it will span both columns.
+% If figure* is not desired, replace figure* with figure (single-column).
 \begin{figure*}[t]
 \centering
+% Resize to text width so long labels never overflow the page
 \resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[
-  >=Latex,
-  semithick,
-  font=\footnotesize,
-  node distance=10mm,
-  every node/.style={align=center}
+\begin{tikzpicture}[font=\small,
+  node distance=10mm and 20mm,
+  box/.style={rectangle,rounded corners,draw=black!70,minimum width=50mm,minimum height=12mm,align=center,inner sep=6pt},
+  agent/.style={box,fill=blue!6},
+  proc/.style={box,fill=green!6},
+  log/.style={box,fill=orange!10,minimum width=70mm},
+  store/.style={box,fill=gray!10},
+  metr/.style={box,fill=green!10},
+  flow/.style={-{Stealth[length=3mm,width=2mm]},line width=.8pt},
+  trace/.style={dashed,gray,-{Stealth[length=2.5mm,width=1.8mm]},line width=.6pt}
 ]
 
-% ==============================
-% Node styles
-% ==============================
-\tikzset{
-  doctorbox/.style={rectangle, rounded corners, draw=blue!50!black, fill=blue!5, minimum width=4.3cm, minimum height=1.1cm},
-  patientbox/.style={rectangle, rounded corners, draw=blue!50!black, fill=blue!5, minimum width=4.3cm, minimum height=1.1cm},
-  measurebox/.style={rectangle, rounded corners, draw=green!50!black, fill=green!5, minimum width=4.3cm, minimum height=1.1cm},
-  safetybox/.style={rectangle, rounded corners, draw=orange!70!black, fill=orange!5, minimum width=4.3cm, minimum height=1.1cm},
-  loggerbox/.style={rectangle, rounded corners, draw=gray!70!black, fill=yellow!8, minimum width=9.5cm, minimum height=1.2cm},
-  storebox/.style={rectangle, rounded corners, draw=gray!70!black, fill=gray!10, minimum width=4.8cm, minimum height=1.0cm}
-}
+% Explicit coordinates avoid using calc/index arithmetic
+\node[agent] (doctor) at (-5,2) {Doctor Agent\\(Reasoning, DDx, Requests)};
+\node[proc]  (measure) at (5,2) {Measurement Agent\\(Tests, Results, Ground Truth)};
 
-% ==============================
-% Top cognitive layer
-% ==============================
-\node[doctorbox] (doctor) {Doctor Agent\\Reasoning \& DDx Lifecycle};
-\node[measurebox, right=35mm of doctor] (measure) {Measurement Agent\\Tests \& Results};
+\node[agent] (patient) at (-5,-1.2) {Patient Agent\\(Responds from Case Profile)};
+\node[proc]  (safety)  at (5,-1.2) {Safety Agents\\(Test/Prescription Risk, DDI Checks)};
 
-% ==============================
-% Patient & Safety layer
-% ==============================
-\node[patientbox, below=14mm of doctor] (patient) {Patient Agent\\Case Responses};
-\node[safetybox, below=14mm of measure] (safety) {Safety Agent\\Test \& Rx Risk (DDI Check)};
+\node[log] (logger) at (0,0.6) {Explainability \& Logging Layer\\(timestamps, actor, event type, \texttt{<thinking\_process>}, context hashes)};
 
-% ==============================
-% Logging & Trace layer
-% ==============================
-\node[loggerbox, below=20mm of $(patient)!0.5!(safety)$] (logger) {Explainability \& Logging Layer\\\small Timestamps, Actor, Event, \texttt{<thinking\_process>}, Context};
+\node[store] (trace) at (-5,-3.4) {Trace Store \& Replay API\\(Chronological ledger, audit trail)};
+\node[metr]  (trust) at (5,-3.4) {Trust Metrics\\(CDR, Justification Alignment, Timeout Rate)};
 
-\node[storebox, below left=12mm and 12mm of logger] (trace) {Trace Store \& Replay API\\Chronological Reasoning Logs};
-\node[storebox, below right=12mm and 12mm of logger] (metrics) {Trust Metrics\\CDR, JA, Timeout \& Unsafe-Rx Rate};
+% --- Flows ---
+\draw[flow] (doctor) -- node[midway, above]{REQUEST TEST} (measure);
+\draw[flow] (measure) -- node[midway, below]{Test Result} (doctor);
 
-% ==============================
-% Connections (color-coded)
-% ==============================
+\draw[flow] (doctor) -- node[midway, left]{Question / Request} (patient);
+\draw[flow] (patient) -- node[midway, right]{Answer / Symptom Info} (doctor);
 
-% Reasoning - Blue
-\draw[->, thick, blue!70] (doctor.south) -- node[left,pos=0.45]{\scriptsize Ask} (patient.north);
-\draw[->, thick, blue!70] (patient.north) -- node[right,pos=0.45]{\scriptsize Respond} (doctor.south);
+\draw[flow] (doctor.south east) to[bend left=18] node[right,pos=.45]{Prescription} (safety.north west);
+\draw[flow] (safety.north west) to[bend left=18] node[left,pos=.45]{Safety Verdict / Flags} (doctor.south east);
 
-% Testing - Green
-\draw[->, thick, green!60!black] (doctor.east) -- ++(7mm,0) node[above,pos=0.6]{\scriptsize Request Test} -- (measure.west);
-\draw[->, thick, green!60!black] (measure.west) -- ++(-7mm,0) node[below,pos=0.4]{\scriptsize Test Result} -- (doctor.east);
+% --- Logging/traces (dashed) ---
+\draw[trace] (doctor) -- (logger);
+\draw[trace] (patient) -- (logger);
+\draw[trace] (measure) -- (logger);
+\draw[trace] (safety) -- (logger);
 
-% Safety - Orange (dotted for visibility)
-\draw[->, thick, orange!80!black, densely dotted, bend left=14]
-  (doctor.south east) to node[right,pos=0.55]{\scriptsize Prescription} (safety.north);
-\draw[->, thick, orange!80!black, densely dotted, bend left=14]
-  (safety.north) to node[left,pos=0.55]{\scriptsize Verdict} (doctor.south east);
+% --- Logging to storage & metrics ---
+\draw[flow] (logger.south west) to[bend left=18] node[left,pos=.45]{Persist / Index} (trace.north);
+\draw[flow] (logger.south east) to[bend right=18] node[right,pos=.45]{Compute} (trust.north);
 
-% Logging - Gray dashed
-\foreach \n in {doctor,patient,measure,safety}{
-  \draw[->, dashed, gray!70] (\n.south) -- ($(logger.north)+({-36mm+24mm*(index(\n)-1)},6mm)$);
-}
-
-% Logger → trace & metrics
-\draw[->, gray!60!black] (logger.south) -- node[left,pos=0.45]{\scriptsize persist} (trace.north);
-\draw[->, gray!60!black] (logger.south) -- node[right,pos=0.45]{\scriptsize compute} (metrics.north);
-
-\end{tikzpicture}
-}
-
-\vspace{1em}
-% ==============================
-% LEGEND (embedded box)
-% ==============================
-\begin{tikzpicture}[x=0.8cm,y=0.5cm]
-\node[draw, rounded corners, fill=gray!5, inner sep=4pt, line width=0.3pt, minimum width=0.95\textwidth, anchor=center] (legend) {
-  \begin{tabular}{cccc}
-  \raisebox{0.4ex}{\tikz\draw[blue!70, thick] (0,0)--(0.4,0);}~Reasoning / Dialogue &
-  \raisebox{0.4ex}{\tikz\draw[green!60!black, thick] (0,0)--(0.4,0);}~Tests / Results &
-  \raisebox{0.4ex}{\tikz\draw[orange!80!black, densely dotted, thick] (0,0)--(0.4,0);}~Prescription / Safety &
-  \raisebox{0.4ex}{\tikz\draw[gray!70, dashed, thick] (0,0)--(0.4,0);}~Logging / Explainability
-  \end{tabular}
-};
-\end{tikzpicture}
-
-\caption{\textbf{MedGuard-X architecture (final color-coded version).}
-The Doctor Agent gathers evidence from the Patient and Measurement Agents,
-forms evolving differential diagnoses (DDx), and consults Safety Agents for
-test and prescription validation. The Explainability Layer captures each
-interaction with timestamps and reasoning traces, producing auditable logs for
-replay and trust metrics such as Consensus Disagreement Rate (CDR) and
-Justification Alignment (JA).}
+\end{tikzpicture}%
+}% end resizebox
+\caption{MedGuard\textendash X architecture (clean, compile-safe). The Doctor Agent interacts with Patient and Measurement Agents to collect evidence, maintains an evolving differential diagnosis (DDx), and consults Safety Agents to evaluate test and prescription risks (including potential drug--drug interactions, DDIs). All actions stream structured logs (timestamps, actor, event type, and reasoning traces like \texttt{<thinking\_process>}) to the Explainability \& Logging Layer for replay, auditing, and trust metrics (e.g., Consensus Disagreement Rate and Justification Alignment).}
 \label{fig:logging-architecture}
 \end{figure*}
+
+% Some filler text so we can see two-column layout effect.
+\lipsum[1-2]
+
+\end{document}
