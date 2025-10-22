@@ -1,10 +1,1 @@
-Here’s a concise, submission-ready TL;DR that captures your paper’s full contribution in one impactful line 👇
-
-⸻
-
-TL;DR:
-MedGuard-X extends the MedGuard framework into a trust-centered, multi-agent system that embeds explainability, consensus reasoning, and audit logging into medical LLM workflows—showing that accuracy alone does not guarantee trustworthy clinical reasoning.
-
-⸻
-
-Would you like me to make one more press-friendly version (for Twitter/X or conference listings) — around 25 words, catchy but still academic?
+MedGuard-X introduces explainability, consensus reasoning, and audit logging to make medical LLMs more transparent and trustworthy—revealing that accuracy alone doesn’t ensure reliable clinical reasoning.
