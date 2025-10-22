@@ -1,31 +1,10 @@
-Abstract
-Large Language Models (LLMs) have recently demonstrated
-strong diagnostic and reasoning performance on medical
-benchmarks such as MedQA, yet their deployment in clini-
-cal decision support remains constrained by concerns of reli-
-ability, transparency, and trustworthiness. Prior efforts have
-primarily emphasized safety—for example, the MedGuard
-framework introduced multi-agent validation to reduce un-
-safe or contraindicated recommendations. However, safety
-alone does not ensure trust: little is known about why medical
-LLMs reach specific conclusions, how consistently they rea-
-son across agents, or whether explainability correlates with
-diagnostic correctness.
-In this work, we present MedGuard-X, an extension of the
-MedGuard system that embeds trust and interpretability di-
-rectly into the diagnostic reasoning process. MedGuard-X in-
-tegrates (i) multi-LLM consensus reasoning to estimate epis-
-temic uncertainty, (ii) structured reasoning traces for each
-clinical action, and (iii) trustworthiness scoring through dis-
-agreement tracking and justification alignment—all within a
-simulated multi-agent clinical environment.
-Experiments on the MedQA benchmark demonstrate that
-while MedGuard-X improves transparency and reduces un-
-safe test and prescription recommendations, its diagnostic
-accuracy remains variable across cases. In many instances,
-LLMs exhibit confident yet unjustified reasoning—revealing
-that explainability does not necessarily entail reliability.
-These findings highlight the need for structured accountabil-
-ity mechanisms and hybrid neuro-symbolic architectures to
-ensure that future medical LLMs are not only safe but gen-
-uinely trustworthy in real-world clinical settings.
+Here’s a concise, submission-ready TL;DR that captures your paper’s full contribution in one impactful line 👇
+
+⸻
+
+TL;DR:
+MedGuard-X extends the MedGuard framework into a trust-centered, multi-agent system that embeds explainability, consensus reasoning, and audit logging into medical LLM workflows—showing that accuracy alone does not guarantee trustworthy clinical reasoning.
+
+⸻
+
+Would you like me to make one more press-friendly version (for Twitter/X or conference listings) — around 25 words, catchy but still academic?
