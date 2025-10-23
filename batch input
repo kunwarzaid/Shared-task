@@ -2,11 +2,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Load results CSV
-df = pd.read_csv("Shared_task_results(Zaid).csv")
-df.columns = df.columns.str.strip()
+# -----------------------------
+# Load and clean CSV
+# -----------------------------
+csv_path = "Shared_task_results(Zaid).csv"  # adjust path if needed
+df = pd.read_csv(csv_path)
+df.columns = df.columns.str.strip()  # remove leading/trailing spaces
 
-# Define metric groups
+# -----------------------------
+# Define metrics and task groups
+# -----------------------------
 tasks = {
     "QnA": [c for c in df.columns if c.startswith("qna")],
     "Summary (Text)": [c for c in df.columns if c.startswith("summary_text")],
@@ -15,15 +20,22 @@ tasks = {
 
 metrics = ["f1", "bertscore_f1", "cometscore"]
 
-# Compute averages across tasks
+# -----------------------------
+# Compute averages per task
+# -----------------------------
 task_avgs = {}
 for task_name, _ in tasks.items():
     task_avgs[task_name] = {}
     for m in metrics:
         cols = [c for c in df.columns if c.startswith(task_name.lower().replace(" ", "_")) and m in c]
-        task_avgs[task_name][m] = df[cols].mean(axis=1).mean()
+        if cols:
+            task_avgs[task_name][m] = df[cols].mean(axis=1).mean()
+        else:
+            task_avgs[task_name][m] = np.nan  # handle missing columns gracefully
 
-# Plot task-level figure
+# -----------------------------
+# Plot Task-wise Performance
+# -----------------------------
 task_names = list(task_avgs.keys())
 f1_scores = [task_avgs[t]["f1"] for t in task_names]
 bertscores = [task_avgs[t]["bertscore_f1"] for t in task_names]
@@ -36,36 +48,47 @@ plt.figure(figsize=(8, 5))
 plt.bar(x - width, f1_scores, width, label="F1", color="skyblue")
 plt.bar(x, bertscores, width, label="BERTScore", color="lightgreen")
 plt.bar(x + width, comets, width, label="COMET", color="salmon")
-plt.ylabel("Score")
+plt.ylabel("Score", fontsize=12)
+plt.xticks(x, task_names, fontsize=10)
 plt.ylim(0, 1)
-plt.xticks(x, task_names)
-plt.title("Average Performance Across Tasks")
-plt.legend()
+plt.title("Average Performance Across Tasks", fontsize=13, weight="bold")
+plt.legend(frameon=False, loc="lower right")
 plt.tight_layout()
 plt.savefig("qwen_taskwise_performance_auto.png", dpi=300)
 plt.show()
 
-# ---- LANGUAGE-WISE FIGURE ----
-language_scores = df[["Language"]].copy()
+# -----------------------------
+# LANGUAGE-WISE FIGURE
+# -----------------------------
+# Auto-detect 'Language' column (handles leading/trailing spaces)
+lang_col = [c for c in df.columns if "Language" in c][0]
+language_scores = df[[lang_col]].copy()
+language_scores.rename(columns={lang_col: "Language"}, inplace=True)
+
+# Compute per-language average scores
 for m in metrics:
     cols = [c for c in df.columns if m in c]
     language_scores[m] = df[cols].mean(axis=1)
 
-languages = language_scores["Language"]
-f1_vals = language_scores["f1"]
-bert_vals = language_scores["bertscore_f1"]
-comet_vals = language_scores["cometscore"]
+languages = language_scores["Language"].tolist()
+f1_vals = language_scores["f1"].tolist()
+bert_vals = language_scores["bertscore_f1"].tolist()
+comet_vals = language_scores["cometscore"].tolist()
 
 x = np.arange(len(languages))
 plt.figure(figsize=(10, 6))
 plt.bar(x - width, f1_vals, width, label="F1", color="skyblue")
 plt.bar(x, bert_vals, width, label="BERTScore", color="lightgreen")
 plt.bar(x + width, comet_vals, width, label="COMET", color="salmon")
-plt.ylabel("Score")
+plt.ylabel("Score", fontsize=12)
+plt.xticks(x, languages, rotation=45, ha="right", fontsize=10)
 plt.ylim(0, 1)
-plt.xticks(x, languages, rotation=45, ha="right")
-plt.title("Language-wise Performance Across Metrics")
-plt.legend()
+plt.title("Language-wise Performance Across Metrics", fontsize=13, weight="bold")
+plt.legend(frameon=False, loc="upper right")
 plt.tight_layout()
 plt.savefig("qwen_languagewise_performance_auto.png", dpi=300)
 plt.show()
+
+print("✅ Plots saved as:")
+print(" - qwen_taskwise_performance_auto.png")
+print(" - qwen_languagewise_performance_auto.png")
