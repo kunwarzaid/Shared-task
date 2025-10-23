@@ -7,27 +7,30 @@ import numpy as np
 # ============================================================
 csv_path = "Shared_task_results(Zaid).csv"
 
-# Step 1: read first few rows to detect header structure
+# Step 1: read first few rows to detect where "Language" appears
 raw_preview = pd.read_csv(csv_path, nrows=5, header=None)
 print("🔍 Header preview (first 5 rows):")
 print(raw_preview.head())
 
-# Step 2: find row index containing "Language"
-lang_row_idx = raw_preview.apply(lambda row: row.astype(str).str.contains("Language", case=False, na=False)).any(axis=1)
+lang_row_idx = raw_preview.apply(
+    lambda row: row.astype(str).str.contains("Language", case=False, na=False)
+).any(axis=1)
 lang_row = list(np.where(lang_row_idx)[0])
 if not lang_row:
     raise ValueError("❌ Could not find 'Language' in the first 5 rows.")
 lang_header_row = lang_row[0]
 print(f"✅ Detected header row containing 'Language': Row {lang_header_row}")
 
-# Step 3: read full CSV using all header rows up to Language row
+# Step 2: use all header rows up to the Language row
 header_rows = list(range(lang_header_row + 1))
 df = pd.read_csv(csv_path, header=header_rows)
 
-# Step 4: flatten multi-level headers properly
+# Step 3: flatten multi-index columns
 if isinstance(df.columns, pd.MultiIndex):
     df.columns = [
-        "_".join([str(x).strip() for x in col if str(x).lower() != "nan" and x.strip() != ""])
+        "_".join(
+            [str(x).strip() for x in col if str(x).lower() != "nan" and x.strip() != ""]
+        )
         for col in df.columns
     ]
 else:
@@ -35,7 +38,7 @@ else:
 
 df.columns = [c.replace(" ", "_").replace("__", "_") for c in df.columns]
 
-# Step 5: detect or assume Language column
+# Step 4: detect or assume Language column
 lang_candidates = [c for c in df.columns if "language" in c.lower()]
 if not lang_candidates:
     lang_col = df.columns[0]
@@ -51,7 +54,7 @@ print(f"✅ Using '{lang_col}' as Language column.\n")
 print("🔹 Data preview:\n", df.head(3))
 
 # ============================================================
-# 2️⃣ DEFINE METRICS AND TASKS
+# 2️⃣ DEFINE METRICS & TASK GROUPS
 # ============================================================
 metrics = ["f1", "bertscore_f1", "cometscore"]
 
@@ -62,75 +65,94 @@ tasks = {
 }
 
 # ============================================================
-# 3️⃣ COMPUTE TASK-WISE AVERAGES
+# 3️⃣ COMPUTE TASK-WISE AVERAGES (robust)
 # ============================================================
 task_avgs = {}
+available_metrics = set()
+
 for task_name, cols in tasks.items():
     task_avgs[task_name] = {}
     for m in metrics:
-        m_cols = [c for c in cols if m in c]
+        m_cols = [c for c in cols if m in c.lower()]
         if m_cols:
-            task_avgs[task_name][m] = df[m_cols].mean(axis=1).mean()
+            avg_val = df[m_cols].mean(axis=1).mean()
+            task_avgs[task_name][m] = avg_val
+            available_metrics.add(m)
         else:
             task_avgs[task_name][m] = np.nan
 
+print("\n✅ Available metrics found:", available_metrics)
+print("✅ Task-wise averages computed:")
+for t, vals in task_avgs.items():
+    print(f"  {t}: " + ", ".join([f"{m}={vals[m]:.3f}" if not np.isnan(vals[m]) else f"{m}=N/A" for m in metrics]))
+
 # ============================================================
-# 4️⃣ PLOT TASK-WISE PERFORMANCE
+# 4️⃣ PLOT TASK-WISE PERFORMANCE (auto-adjusted)
 # ============================================================
 task_names = list(task_avgs.keys())
-f1_scores = [task_avgs[t]["f1"] for t in task_names]
-bert_scores = [task_avgs[t]["bertscore_f1"] for t in task_names]
-comet_scores = [task_avgs[t]["cometscore"] for t in task_names]
-
+metric_colors = {
+    "f1": "#4e79a7",
+    "bertscore_f1": "#59a14f",
+    "cometscore": "#e15759",
+}
 x = np.arange(len(task_names))
 width = 0.25
 
 plt.figure(figsize=(8, 5))
-plt.bar(x - width, f1_scores, width, label="F1", color="#4e79a7")
-plt.bar(x, bert_scores, width, label="BERTScore", color="#59a14f")
-plt.bar(x + width, comet_scores, width, label="COMET", color="#e15759")
+for i, m in enumerate(metrics):
+    if m in available_metrics:
+        vals = [task_avgs[t][m] for t in task_names]
+        plt.bar(x + (i - 1) * width, vals, width, label=m.replace("_f1", "").upper(), color=metric_colors[m])
+
 plt.ylabel("Score", fontsize=12)
 plt.xticks(x, task_names, fontsize=11)
 plt.ylim(0, 1)
 plt.title("Average Performance Across Tasks", fontsize=14, weight="bold")
 plt.legend(frameon=False, loc="lower right")
 plt.tight_layout()
-plt.savefig("qwen_taskwise_performance_auto.png", dpi=300)
+plt.savefig("qwen_taskwise_performance_fixed.png", dpi=300)
 plt.show()
 
 # ============================================================
-# 5️⃣ COMPUTE LANGUAGE-WISE AVERAGES
+# 5️⃣ LANGUAGE-WISE PERFORMANCE
 # ============================================================
 language_scores = df[["Language"]].copy()
+lang_metrics_available = set()
+
 for m in metrics:
-    cols = [c for c in df.columns if m in c]
-    language_scores[m] = df[cols].mean(axis=1)
+    cols = [c for c in df.columns if m in c.lower()]
+    if cols:
+        language_scores[m] = df[cols].mean(axis=1)
+        lang_metrics_available.add(m)
+    else:
+        language_scores[m] = np.nan
 
 languages = language_scores["Language"].tolist()
-f1_vals = language_scores["f1"].tolist()
-bert_vals = language_scores["bertscore_f1"].tolist()
-comet_vals = language_scores["cometscore"].tolist()
-
-# ============================================================
-# 6️⃣ PLOT LANGUAGE-WISE PERFORMANCE
-# ============================================================
 x = np.arange(len(languages))
+width = 0.25
+
 plt.figure(figsize=(10, 6))
-plt.bar(x - width, f1_vals, width, label="F1", color="#4e79a7")
-plt.bar(x, bert_vals, width, label="BERTScore", color="#59a14f")
-plt.bar(x + width, comet_vals, width, label="COMET", color="#e15759")
+for i, m in enumerate(metrics):
+    if m in lang_metrics_available:
+        vals = language_scores[m].tolist()
+        plt.bar(x + (i - 1) * width, vals, width, label=m.replace("_f1", "").upper(), color=metric_colors[m])
+
 plt.ylabel("Score", fontsize=12)
 plt.xticks(x, languages, rotation=45, ha="right", fontsize=10)
 plt.ylim(0, 1)
 plt.title("Language-wise Performance Across Metrics", fontsize=14, weight="bold")
 plt.legend(frameon=False, loc="upper right")
 plt.tight_layout()
-plt.savefig("qwen_languagewise_performance_auto.png", dpi=300)
+plt.savefig("qwen_languagewise_performance_fixed.png", dpi=300)
 plt.show()
 
 # ============================================================
-# 7️⃣ OVERALL AVERAGES + LATEX TABLE (with bold best)
+# 6️⃣ LATEX TABLE + AVERAGES
 # ============================================================
+f1_vals = language_scores["f1"].tolist()
+bert_vals = language_scores["bertscore_f1"].tolist()
+comet_vals = language_scores["cometscore"].tolist()
+
 avg_f1 = np.nanmean(f1_vals)
 avg_bert = np.nanmean(bert_vals)
 avg_comet = np.nanmean(comet_vals)
@@ -138,12 +160,10 @@ avg_comet = np.nanmean(comet_vals)
 print("\n✅ Overall Averages:")
 print(f"  F1: {avg_f1:.3f} | BERTScore: {avg_bert:.3f} | COMET: {avg_comet:.3f}")
 
-# Identify best-performing languages
 best_f1_lang = languages[np.nanargmax(f1_vals)]
 best_bert_lang = languages[np.nanargmax(bert_vals)]
 best_comet_lang = languages[np.nanargmax(comet_vals)]
 
-# Build LaTeX table
 latex_table = "\\begin{table}[h]\n\\centering\n\\small\n"
 latex_table += "\\begin{tabular}{lccc}\n\\toprule\n"
 latex_table += "Language & F1 & BERTScore & COMET \\\\\n\\midrule\n"
@@ -157,7 +177,7 @@ for lang, f, b, c in zip(languages, f1_vals, bert_vals, comet_vals):
 latex_table += "\\midrule\n"
 latex_table += f"\\textbf{{Average}} & {avg_f1:.3f} & {avg_bert:.3f} & {avg_comet:.3f} \\\\\n"
 latex_table += "\\bottomrule\n\\end{tabular}\n"
-latex_table += "\\caption{{Language-wise performance of Qwen-based system across key metrics. Best values bolded.}}\n"
+latex_table += "\\caption{{Language-wise performance of the Qwen-based system across key metrics. Best values are bolded.}}\n"
 latex_table += "\\label{{tab:language_results}}\n\\end{table}\n"
 
 with open("language_results_table.tex", "w", encoding="utf-8") as f:
@@ -165,5 +185,5 @@ with open("language_results_table.tex", "w", encoding="utf-8") as f:
 
 print("\n📄 LaTeX table saved as language_results_table.tex")
 print("✅ Plots saved:")
-print(" - qwen_taskwise_performance_auto.png")
-print(" - qwen_languagewise_performance_auto.png")
+print(" - qwen_taskwise_performance_fixed.png")
+print(" - qwen_languagewise_performance_fixed.png")
