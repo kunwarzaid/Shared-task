@@ -1,53 +1,165 @@
-0       NaN  qna          NaN                     NaN                  NaN   
-1       NaN   f1  exact_match  rouge_rouge1_precision  rouge_rouge1_recall   
-2  Language  NaN          NaN                     NaN                  NaN   
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
-                5                       6                    7   \
-0              NaN                     NaN                  NaN   
-1  rouge_rouge1_f1  rouge_rouge2_precision  rouge_rouge2_recall   
-2              NaN                     NaN                  NaN   
+# ============================================================
+# 1️⃣ LOAD & CLEAN CSV
+# ============================================================
+csv_path = "Shared_task_results(Zaid).csv"
 
-                8                       9   ...                      36  \
-0              NaN                     NaN  ...                     NaN   
-1  rouge_rouge2_f1  rouge_rougeL_precision  ...  rouge_rouge2_precision   
-2              NaN                     NaN  ...                     NaN   
+# Step 1: Read first 5 rows to inspect header structure
+raw_preview = pd.read_csv(csv_path, nrows=5, header=None)
+print("🔍 Header preview (first 5 rows):")
+print(raw_preview.head())
 
-                    37               38                      39  \
-0                  NaN              NaN                     NaN   
-1  rouge_rouge2_recall  rouge_rouge2_f1  rouge_rougeL_precision   
-2                  NaN              NaN                     NaN   
+# Step 2: Detect where 'Language' appears
+lang_row_idx = raw_preview.apply(lambda row: row.astype(str).str.contains("Language", case=False, na=False)).any(axis=1)
+lang_row = list(np.where(lang_row_idx)[0])
+if not lang_row:
+    raise ValueError("❌ Could not find 'Language' in the first 5 rows.")
+lang_header_row = lang_row[0]
+print(f"✅ Detected header row containing 'Language': Row {lang_header_row}")
 
-                    40               41                   42  \
-0                  NaN              NaN                  NaN   
-1  rouge_rougeL_recall  rouge_rougeL_f1  bertscore_precision   
-2                  NaN              NaN                  NaN   
+# Step 3: Read CSV starting from that row (handles 2 or 3 header levels)
+df = pd.read_csv(csv_path, header=list(range(lang_header_row)))
 
-                 43            44          45  
-0               NaN           NaN         NaN  
-1  bertscore_recall  bertscore_f1  cometscore  
-2               NaN           NaN         NaN  
+# Step 4: Flatten multi-index headers if needed
+if isinstance(df.columns, pd.MultiIndex):
+    df.columns = [
+        "_".join([str(x).strip() for x in col if str(x).lower() != "nan" and x.strip() != ""])
+        for col in df.columns
+    ]
+else:
+    df.columns = df.columns.astype(str)
 
-[3 rows x 46 columns]
-✅ Flattened columns detected:
-Index(['Unnamed:_0_level_0_Unnamed:_0_level_1', 'qna_f1',
-       'Unnamed:_2_level_0_exact_match',
-       'Unnamed:_3_level_0_rouge_rouge1_precision',
-       'Unnamed:_4_level_0_rouge_rouge1_recall',
-       'Unnamed:_5_level_0_rouge_rouge1_f1',
-       'Unnamed:_6_level_0_rouge_rouge2_precision',
-       'Unnamed:_7_level_0_rouge_rouge2_recall',
-       'Unnamed:_8_level_0_rouge_rouge2_f1',
-       'Unnamed:_9_level_0_rouge_rougeL_precision',
-       'Unnamed:_10_level_0_rouge_rougeL_recall',
-       'Unnamed:_11_level_0_rouge_rougeL_f1'],
-      dtype='object')
----------------------------------------------------------------------------
-IndexError                                Traceback (most recent call last)
-/tmp/ipython-input-828434534.py in <cell line: 0>()
-     27 
-     28 # Detect language column
----> 29 lang_col = [c for c in df.columns if "language" in c.lower()][0]
-     30 df.rename(columns={lang_col: "Language"}, inplace=True)
-     31 
+df.columns = [c.replace(" ", "_") for c in df.columns]
 
-IndexError: list index out of range
+# Step 5: Detect 'Language' column
+lang_candidates = [c for c in df.columns if "language" in c.lower()]
+if not lang_candidates:
+    raise ValueError("❌ 'Language' column not found even after flattening.")
+lang_col = lang_candidates[0]
+df.rename(columns={lang_col: "Language"}, inplace=True)
+
+print("✅ Flattened columns detected:")
+print(df.columns[:15])
+print(f"✅ Using '{lang_col}' as Language column.\n")
+print("🔹 Data preview:\n", df.head(3))
+
+# ============================================================
+# 2️⃣ DEFINE METRICS AND TASKS
+# ============================================================
+metrics = ["f1", "bertscore_f1", "cometscore"]
+
+tasks = {
+    "QnA": [c for c in df.columns if c.startswith("qna_")],
+    "Summary (Text)": [c for c in df.columns if c.startswith("summary_text_")],
+    "Summary (JSON)": [c for c in df.columns if c.startswith("summary_knv_")],
+}
+
+# ============================================================
+# 3️⃣ COMPUTE TASK-WISE AVERAGES
+# ============================================================
+task_avgs = {}
+for task_name, cols in tasks.items():
+    task_avgs[task_name] = {}
+    for m in metrics:
+        m_cols = [c for c in cols if m in c]
+        if m_cols:
+            task_avgs[task_name][m] = df[m_cols].mean(axis=1).mean()
+        else:
+            task_avgs[task_name][m] = np.nan
+
+# ============================================================
+# 4️⃣ PLOT TASK-WISE PERFORMANCE
+# ============================================================
+task_names = list(task_avgs.keys())
+f1_scores = [task_avgs[t]["f1"] for t in task_names]
+bert_scores = [task_avgs[t]["bertscore_f1"] for t in task_names]
+comet_scores = [task_avgs[t]["cometscore"] for t in task_names]
+
+x = np.arange(len(task_names))
+width = 0.25
+
+plt.figure(figsize=(8, 5))
+plt.bar(x - width, f1_scores, width, label="F1", color="#4e79a7")
+plt.bar(x, bert_scores, width, label="BERTScore", color="#59a14f")
+plt.bar(x + width, comet_scores, width, label="COMET", color="#e15759")
+plt.ylabel("Score", fontsize=12)
+plt.xticks(x, task_names, fontsize=11)
+plt.ylim(0, 1)
+plt.title("Average Performance Across Tasks", fontsize=14, weight="bold")
+plt.legend(frameon=False, loc="lower right")
+plt.tight_layout()
+plt.savefig("qwen_taskwise_performance_auto.png", dpi=300)
+plt.show()
+
+# ============================================================
+# 5️⃣ COMPUTE LANGUAGE-WISE AVERAGES
+# ============================================================
+language_scores = df[["Language"]].copy()
+for m in metrics:
+    cols = [c for c in df.columns if m in c]
+    language_scores[m] = df[cols].mean(axis=1)
+
+languages = language_scores["Language"].tolist()
+f1_vals = language_scores["f1"].tolist()
+bert_vals = language_scores["bertscore_f1"].tolist()
+comet_vals = language_scores["cometscore"].tolist()
+
+# ============================================================
+# 6️⃣ PLOT LANGUAGE-WISE PERFORMANCE
+# ============================================================
+x = np.arange(len(languages))
+plt.figure(figsize=(10, 6))
+plt.bar(x - width, f1_vals, width, label="F1", color="#4e79a7")
+plt.bar(x, bert_vals, width, label="BERTScore", color="#59a14f")
+plt.bar(x + width, comet_vals, width, label="COMET", color="#e15759")
+plt.ylabel("Score", fontsize=12)
+plt.xticks(x, languages, rotation=45, ha="right", fontsize=10)
+plt.ylim(0, 1)
+plt.title("Language-wise Performance Across Metrics", fontsize=14, weight="bold")
+plt.legend(frameon=False, loc="upper right")
+plt.tight_layout()
+plt.savefig("qwen_languagewise_performance_auto.png", dpi=300)
+plt.show()
+
+# ============================================================
+# 7️⃣ COMPUTE OVERALL AVERAGES + LATEX TABLE (with bold best)
+# ============================================================
+avg_f1 = np.nanmean(f1_vals)
+avg_bert = np.nanmean(bert_vals)
+avg_comet = np.nanmean(comet_vals)
+
+print("\n✅ Overall Averages:")
+print(f"  F1: {avg_f1:.3f} | BERTScore: {avg_bert:.3f} | COMET: {avg_comet:.3f}")
+
+# Bold highlighting of best-performing language per metric
+best_f1_lang = languages[np.nanargmax(f1_vals)]
+best_bert_lang = languages[np.nanargmax(bert_vals)]
+best_comet_lang = languages[np.nanargmax(comet_vals)]
+
+# LaTeX table
+latex_table = "\\begin{table}[h]\n\\centering\n\\small\n"
+latex_table += "\\begin{tabular}{lccc}\n\\toprule\n"
+latex_table += "Language & F1 & BERTScore & COMET \\\\\n\\midrule\n"
+
+for lang, f, b, c in zip(languages, f1_vals, bert_vals, comet_vals):
+    f_str = f"\\textbf{{{f:.3f}}}" if lang == best_f1_lang else f"{f:.3f}"
+    b_str = f"\\textbf{{{b:.3f}}}" if lang == best_bert_lang else f"{b:.3f}"
+    c_str = f"\\textbf{{{c:.3f}}}" if lang == best_comet_lang else f"{c:.3f}"
+    latex_table += f"{lang} & {f_str} & {b_str} & {c_str} \\\\\n"
+
+latex_table += "\\midrule\n"
+latex_table += f"\\textbf{{Average}} & {avg_f1:.3f} & {avg_bert:.3f} & {avg_comet:.3f} \\\\\n"
+latex_table += "\\bottomrule\n\\end{tabular}\n"
+latex_table += "\\caption{{Language-wise performance of Qwen-based system across key metrics. Best values bolded.}}\n"
+latex_table += "\\label{{tab:language_results}}\n\\end{table}\n"
+
+with open("language_results_table.tex", "w", encoding="utf-8") as f:
+    f.write(latex_table)
+
+print("\n📄 LaTeX table saved as language_results_table.tex")
+print("✅ Plots saved:")
+print(" - qwen_taskwise_performance_auto.png")
+print(" - qwen_languagewise_performance_auto.png")
