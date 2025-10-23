@@ -1,27 +1,71 @@
+import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Data
-tasks = ["QnA", "Summary (Text)", "Summary (JSON)"]
-f1_scores = [0.44, 0.17, 0.29]
-bertscore = [0.73, 0.83, 0.83]
-comet = [0.43, 0.43, 0.46]
+# Load results CSV
+df = pd.read_csv("Shared_task_results(Zaid).csv")
+df.columns = df.columns.str.strip()
 
-x = np.arange(len(tasks))
+# Define metric groups
+tasks = {
+    "QnA": [c for c in df.columns if c.startswith("qna")],
+    "Summary (Text)": [c for c in df.columns if c.startswith("summary_text")],
+    "Summary (JSON)": [c for c in df.columns if c.startswith("summary_knv")],
+}
+
+metrics = ["f1", "bertscore_f1", "cometscore"]
+
+# Compute averages across tasks
+task_avgs = {}
+for task_name, _ in tasks.items():
+    task_avgs[task_name] = {}
+    for m in metrics:
+        cols = [c for c in df.columns if c.startswith(task_name.lower().replace(" ", "_")) and m in c]
+        task_avgs[task_name][m] = df[cols].mean(axis=1).mean()
+
+# Plot task-level figure
+task_names = list(task_avgs.keys())
+f1_scores = [task_avgs[t]["f1"] for t in task_names]
+bertscores = [task_avgs[t]["bertscore_f1"] for t in task_names]
+comets = [task_avgs[t]["cometscore"] for t in task_names]
+
+x = np.arange(len(task_names))
 width = 0.25
 
 plt.figure(figsize=(8, 5))
 plt.bar(x - width, f1_scores, width, label="F1", color="skyblue")
-plt.bar(x, bertscore, width, label="BERTScore", color="lightgreen")
-plt.bar(x + width, comet, width, label="COMET", color="salmon")
-
-plt.ylabel("Score", fontsize=12)
+plt.bar(x, bertscores, width, label="BERTScore", color="lightgreen")
+plt.bar(x + width, comets, width, label="COMET", color="salmon")
+plt.ylabel("Score")
 plt.ylim(0, 1)
-plt.xticks(x, tasks, fontsize=11)
-plt.yticks(np.arange(0, 1.1, 0.1))
-plt.title("Average Performance Across Tasks", fontsize=13, weight="bold")
-plt.legend(frameon=False, loc="lower right")
+plt.xticks(x, task_names)
+plt.title("Average Performance Across Tasks")
+plt.legend()
 plt.tight_layout()
+plt.savefig("qwen_taskwise_performance_auto.png", dpi=300)
+plt.show()
 
-plt.savefig("qwen_taskwise_performance.png", dpi=300)
+# ---- LANGUAGE-WISE FIGURE ----
+language_scores = df[["Language"]].copy()
+for m in metrics:
+    cols = [c for c in df.columns if m in c]
+    language_scores[m] = df[cols].mean(axis=1)
+
+languages = language_scores["Language"]
+f1_vals = language_scores["f1"]
+bert_vals = language_scores["bertscore_f1"]
+comet_vals = language_scores["cometscore"]
+
+x = np.arange(len(languages))
+plt.figure(figsize=(10, 6))
+plt.bar(x - width, f1_vals, width, label="F1", color="skyblue")
+plt.bar(x, bert_vals, width, label="BERTScore", color="lightgreen")
+plt.bar(x + width, comet_vals, width, label="COMET", color="salmon")
+plt.ylabel("Score")
+plt.ylim(0, 1)
+plt.xticks(x, languages, rotation=45, ha="right")
+plt.title("Language-wise Performance Across Metrics")
+plt.legend()
+plt.tight_layout()
+plt.savefig("qwen_languagewise_performance_auto.png", dpi=300)
 plt.show()
