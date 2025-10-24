@@ -10,9 +10,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
-\usepackage{placeins}
 \usepackage{caption}
-\captionsetup[table]{skip=6pt}
 \usepackage{tikz}
 \usepackage{float}
 \renewcommand{\UrlFont}{\ttfamily\small}
@@ -45,14 +43,12 @@ We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization
 
 \section{System Architecture and Approach}
 
-\begin{figure*}[ht]
+\begin{figure*}[t]
 \centering
-\includegraphics[scale=0.5]{latex/Multilingual Doctor-Patient Dialogue.png}
-\vspace{0em}
-\caption{Overview of the multilingual summarization and extraction pipeline.}
+\includegraphics[width=\textwidth]{latex/Multilingual Doctor-Patient Dialogue.png}
+\caption{Overview of the multilingual summarization and extraction pipeline. The diagram illustrates the three-stage inference flow: summary generation, field-wise JSON extraction, and multilingual Q\&A.}
 \label{fig:struct}
 \end{figure*}
-
 
 \subsection{Model Configuration}
 We used Qwen-1.5B Instruct quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}.
@@ -70,24 +66,33 @@ The inference proceeds through:
 \end{enumerate}
 Greedy decoding (\texttt{do\_sample=False}) ensures stable, deterministic outputs across runs.
 
+\subsection{Prompt Design for Inference}
+The system employs role-based prompts for consistent and interpretable outputs across all subtasks.
+
+\paragraph{Summary Prompt:}
+\textit{System:} “You are a clinical summarization assistant. Write a fluent English summary focusing on diagnosis, symptoms, investigations, and management plan. End your summary with the token \texttt{<<END>>}.'' \\
+\textit{User:} “Dialogue:\textbackslash n[doctor–patient conversation]\textbackslash nWrite the summary and end with \texttt{<<END>>}.''
+
+\paragraph{JSON Extraction Prompt:}
+\textit{System:} “You are a concise clinical information extraction assistant. Answer in English only. If information is not present, answer exactly ‘N/A’.'' \\
+\textit{User:} “Summary:\textbackslash n[summary]\textbackslash nDialogue:\textbackslash n[conversation]\textbackslash nQuestion: [specific field]\textbackslash nAnswer concisely.''
+
+\paragraph{Q\&A Prompt:}
+\textit{System:} “You are a multilingual clinical assistant. Answer in the same language as the user’s question.'' \\
+\textit{User:} “Question ([language]): [user query text].''
+
+These structured templates enforce output control, prevent hallucinations, and preserve determinism.
+
 \subsection{Field-by-Field JSON Extraction}
 Instead of prompting the model to generate the entire schema, each JSON field is treated as a \textit{question–answer} task.
-For example:
-\begin{quote}
-\small
-Q: What is the patient's chief complaint? \\
-A: Persistent throat discomfort and hoarseness for two months.
-\end{quote}
+This modular approach improved JSON field coverage $\sim$3× compared to single-shot generation and allowed selective regeneration of missing fields.
 
-Each question is asked separately with the dialogue and its summary as context.
-This modular design improved JSON field coverage $\sim$3× compared to single-shot JSON prompting and allowed missing fields to be regenerated individually.
-
-\begin{table}[t]
+\begin{table}[h]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.1}
-\begin{tabular}{lp{0.3\textwidth}}
+\begin{tabular}{lp{0.35\textwidth}}
 \toprule
 \textbf{Field} & \textbf{Example Q-A Pair (≤12 words)} \\
 \midrule
@@ -99,10 +104,9 @@ Management Plan & Q: Summarize management plan. \newline
 A: Schedule biopsy and CT scan; smoking cessation counselling. \\
 \bottomrule
 \end{tabular}
-\caption{Examples of field-level question–answer pairs for JSON extraction.}
+\caption{Examples of field-level question–answer pairs for JSON extraction. Each schema field is handled independently for better coverage and consistency.}
 \label{tab:jsonqa}
 \end{table}
-
 
 \section{Dataset and Preprocessing}
 We used the multilingual clinical dialogue dataset provided by the organizers, covering 10 languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.
@@ -111,46 +115,39 @@ Native Indic scripts were retained, avoiding romanization to preserve token inte
 
 \section{Experimental Results and Analysis}
 
-\begin{figure}[ht]
+\begin{figure}[t]
 \centering
-\includegraphics[scale=0.5]{latex/avg_per_task.png}
-\vspace{0em}
-\caption{Average task-wise scores (F1, BERT-F1, COMET).}
+\includegraphics[width=0.48\textwidth]{latex/avg_per_task.png}
+\caption{Average task-wise scores (F1, BERT-F1, COMET) showing relative task difficulty and balance between semantic and structural fidelity.}
 \label{fig:taskwise}
 \end{figure}
-\subsection{Evaluation Results}
 
-\begin{table}[ht]
+\subsection{Evaluation Results}
+\begin{table*}[t]
 \centering
 \small
-\setlength{\tabcolsep}{6pt}
+\setlength{\tabcolsep}{7pt}
 \renewcommand{\arraystretch}{1.1}
-\begin{tabular}{lcccc}
+\begin{tabular}{lcccccccc}
 \toprule
+\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} &
 \textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} \\
 \midrule
-Marathi  & 0.228 & 0.169 & 0.811 & 0.302 \\
-Kannada  & 0.471 & 0.169 & 0.825 & 0.272 \\
-Gujarati & 0.496 & 0.170 & 0.839 & 0.269 \\
-English  & \textbf{0.674} & \textbf{0.191} & 0.835 & \textbf{0.335} \\
-Telugu   & 0.345 & 0.179 & 0.834 & 0.263 \\
-Tamil    & 0.442 & 0.182 & \textbf{0.838} & 0.297 \\
-Bangla   & 0.334 & 0.185 & 0.822 & 0.290 \\
-Hindi    & 0.618 & 0.176 & 0.836 & 0.344 \\
-Assamese & 0.533 & 0.181 & 0.834 & 0.288 \\
+Marathi  & 0.228 & 0.169 & 0.811 & 0.302 & Telugu & 0.345 & 0.179 & 0.834 & 0.263 \\
+Kannada  & 0.471 & 0.169 & 0.825 & 0.272 & Tamil  & 0.442 & 0.182 & \textbf{0.838} & 0.297 \\
+Gujarati & 0.496 & 0.170 & 0.839 & 0.269 & Bangla & 0.334 & 0.185 & 0.822 & 0.290 \\
+English  & \textbf{0.674} & \textbf{0.191} & 0.835 & \textbf{0.335} & Hindi  & 0.618 & 0.176 & 0.836 & 0.344 \\
+Assamese & 0.533 & 0.181 & 0.834 & 0.288 &  & & & & \\
 \midrule
-\textbf{Macro Avg.} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} \\
+\textbf{Macro Avg.} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} & & & & & \\
 \bottomrule
 \end{tabular}
-\caption{Official evaluation results. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: key–value F1.}
+\caption{Official evaluation results across subtasks. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: field-level F1.}
 \label{tab:main-results}
-\end{table}
-
-
+\end{table*}
 
 \paragraph{Findings.}
-(\emph{i}) \textbf{QnA:} Average F1 = 0.46, with English (0.67), Hindi (0.62), and Assamese (0.53) strongest.
-Low exact-match but high semantic alignment indicates paraphrastic correctness.  
+(\emph{i}) \textbf{QnA:} Average F1 = 0.46, with English (0.67), Hindi (0.62), and Assamese (0.53) strongest.  
 (\emph{ii}) \textbf{Summaries:} ROUGE-L averages 0.178, while BERT-F1 remains high (0.83 macro), showing strong semantic fidelity despite limited lexical overlap.  
 (\emph{iii}) \textbf{JSON Extraction:} Field-by-field design achieves macro F1 = 0.296, outperforming single-pass baselines in completeness and structural validity.
 
