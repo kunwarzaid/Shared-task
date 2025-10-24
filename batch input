@@ -45,14 +45,14 @@ We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization
 
 \section{System Architecture and Approach}
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=1.15\linewidth]{system_pipeline.png}
-    \vspace{-2mm}
-    \caption{Overview of the multilingual summarization and extraction pipeline.}
-    \label{fig:pipeline}
-\end{figure}
-\FloatBarrier
+\begin{figure*}[ht]
+\centering
+\includegraphics[scale=0.5]{latex/Multilingual Doctor-Patient Dialogue.png}
+\vspace{0em}
+\caption{Overview of the multilingual summarization and extraction pipeline.}
+\label{fig:struct}
+\end{figure*}
+
 
 \subsection{Model Configuration}
 We used Qwen-1.5B Instruct quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}.
@@ -87,9 +87,9 @@ This modular design improved JSON field coverage $\sim$3× compared to single-sh
 \small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.1}
-\begin{tabular}{lp{5.8cm}}
+\begin{tabular}{lp{0.3\textwidth}}
 \toprule
-\textbf{Field} & \textbf{Example Q--A Pair (≤12 words)} \\
+\textbf{Field} & \textbf{Example Q-A Pair (≤12 words)} \\
 \midrule
 Chief Complaint & Q: What is the patient’s chief complaint? \newline
 A: Persistent throat discomfort and hoarseness for two months. \\
@@ -102,7 +102,7 @@ A: Schedule biopsy and CT scan; smoking cessation counselling. \\
 \caption{Examples of field-level question–answer pairs for JSON extraction.}
 \label{tab:jsonqa}
 \end{table}
-\FloatBarrier
+
 
 \section{Dataset and Preprocessing}
 We used the multilingual clinical dialogue dataset provided by the organizers, covering 10 languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.
@@ -110,9 +110,17 @@ Dialogues were concatenated turn-wise and normalized for whitespace and encoding
 Native Indic scripts were retained, avoiding romanization to preserve token integrity for Qwen’s multilingual tokenizer.
 
 \section{Experimental Results and Analysis}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[scale=0.5]{latex/avg_per_task.png}
+\vspace{0em}
+\caption{Average task-wise scores (F1, BERT-F1, COMET).}
+\label{fig:taskwise}
+\end{figure}
 \subsection{Evaluation Results}
 
-\begin{table}[t]
+\begin{table}[ht]
 \centering
 \small
 \setlength{\tabcolsep}{6pt}
@@ -137,17 +145,8 @@ Assamese & 0.533 & 0.181 & 0.834 & 0.288 \\
 \caption{Official evaluation results. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: key–value F1.}
 \label{tab:main-results}
 \end{table}
-\FloatBarrier
 
-\begin{figure}[t]
-    \centering
-    \vspace{-3mm}
-    \includegraphics[width=1.1\linewidth]{taskwise_scores.png}
-    \vspace{-2mm}
-    \caption{Average task-wise scores (F1, BERT-F1, COMET).}
-    \label{fig:taskwise}
-\end{figure}
-\FloatBarrier
+
 
 \paragraph{Findings.}
 (\emph{i}) \textbf{QnA:} Average F1 = 0.46, with English (0.67), Hindi (0.62), and Assamese (0.53) strongest.
