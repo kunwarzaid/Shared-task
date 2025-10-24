@@ -1,14 +1,51 @@
-\subsection{Multilingual Q\&A Generation}
-For the Q\&A subtask, each question was answered based on the original dialogue context rather than using summaries alone.
-The full doctor–patient conversation was provided to the model as input, ensuring access to both explicit and implicit medical details that might not appear in the summary.
-The prompt template was structured as follows:
-\begin{quote}\small
-System: You are a helpful multilingual clinical assistant. Answer in the same language as the dialogue. \\
-User: Dialogue: [Doctor–Patient conversation] \\
-Question: [User question] \\
-Answer in the same language as the question.
+\subsection*{Prompt Design for Inference}
+The system employs role-based prompts for consistent and interpretable outputs across all subtasks.  
+Each task—summary generation, structured JSON extraction, and multilingual Q\&A—uses a dedicated system prompt and user template.
+
+\paragraph{Summary Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a clinical summarization assistant.  
+Write a fluent English summary focusing on diagnosis, symptoms, investigations, and management plan.  
+Write 6--10 sentences. End your summary with the token \texttt{<<END>>}.
 \end{quote}
 
-By conditioning the model on the entire dialogue, we ensured contextually grounded answers reflecting both patient symptoms and doctor explanations.
-Greedy decoding (\texttt{do\_sample=False}) was used to maintain factual and linguistic consistency.
-This design enabled accurate cross-lingual Q\&A generation even for low-resource languages.
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Dialogue: \\*
+\texttt{[doctor--patient conversation]} \\*
+Write the summary and end with \texttt{<<END>>}.
+\end{quote}
+
+\paragraph{JSON Extraction Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a concise clinical information extraction assistant.  
+Answer in English only. If the information is not present, answer exactly ``N/A''.  
+Do not add explanations. Keep answers at the requested length.
+\end{quote}
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Summary: \\*
+\texttt{[summary]} \\*
+Dialogue: \\*
+\texttt{[conversation]} \\*
+Question: \texttt{[specific field]} \\*
+Answer concisely.
+\end{quote}
+
+\paragraph{Q\&A Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a multilingual clinical assistant.  
+Answer in the same language as the user's question.  
+Be concise, factual, and helpful.
+\end{quote}
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Dialogue: \\*
+\texttt{[doctor--patient conversation]} \\*
+Question (\texttt{[language]}): \texttt{[user query text]}
+\end{quote}
