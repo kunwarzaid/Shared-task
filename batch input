@@ -1,19 +1,14 @@
-\subsection{Field-by-Field JSON Extraction}
-Early experiments with single-shot JSON generation—where the model was prompted to fill the entire schema in one response—consistently failed to produce usable outputs.
-Most fields were returned as \texttt{null} or empty strings, and the overall structure often violated JSON syntax.
-This occurred because large language models tend to lose schema consistency across multiple nested fields when generating long structured outputs.
-
-To address this issue, we adopted a field-by-field extraction strategy.
-Each JSON field was reformulated as an independent \textit{question–answer} task, allowing the model to focus on one piece of information at a time.
-For example:
+\subsection{Multilingual Q\&A Generation}
+For the Q\&A subtask, each question was answered based on the original dialogue context rather than using summaries alone.
+The full doctor–patient conversation was provided to the model as input, ensuring access to both explicit and implicit medical details that might not appear in the summary.
+The prompt template was structured as follows:
 \begin{quote}\small
-Q: What is the patient’s chief complaint? \\
-A: Persistent throat discomfort and hoarseness for two months.
+System: You are a helpful multilingual clinical assistant. Answer in the same language as the dialogue. \\
+User: Dialogue: [Doctor–Patient conversation] \\
+Question: [User question] \\
+Answer in the same language as the question.
 \end{quote}
 
-Once the model generated an answer for each field, a lightweight Python post-processing script automatically reconstructed the full JSON object.
-Each field’s text response was inserted into its corresponding key, ensuring schema validity and non-null entries.
-If the answer contained phrases such as “N/A,” “not mentioned,” or was empty, the script defaulted that field to \texttt{null}.
-
-This modular approach improved the completeness and consistency of structured outputs, enabling selective regeneration of missing or low-confidence fields without re-running the entire inference pipeline.
-By decoupling schema adherence from natural language reasoning, the system produced well-formed, information-rich JSON records across all ten languages.
+By conditioning the model on the entire dialogue, we ensured contextually grounded answers reflecting both patient symptoms and doctor explanations.
+Greedy decoding (\texttt{do\_sample=False}) was used to maintain factual and linguistic consistency.
+This design enabled accurate cross-lingual Q\&A generation even for low-resource languages.
