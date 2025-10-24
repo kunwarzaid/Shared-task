@@ -1,10 +1,2 @@
-\author{
-\begin{tabular}{c}
-\textbf{Kunwar Zaid}$^{*}$ \quad
-\textbf{Amit Sangroya}$^{*}$ \quad
-\textbf{Jyotsana Khatri} \\
-TCS Research, New Delhi, India \\
-\texttt{\{kunwar.zaid, amit.sangroya, jyotsana.khatri\}@tcs.com} \\
-\small{$^{*}$Equal contribution}
-\end{tabular}
-}
+Each JSON field is treated as an independent question–answer task, allowing flexible regeneration of missing fields.  
+This modular design improved structured coverage $\sim$3× compared to single-shot JSON generation.
