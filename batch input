@@ -1,29 +1,36 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
 # ======================================================
 # 1️⃣ Load and clean the CSV
 # ======================================================
 CSV_PATH = "Shared_task_results(Zaid).csv"
 
-# Read with multi-row header (first two rows)
+# Read with two-row header
 df = pd.read_csv(CSV_PATH, header=[0, 1])
 
-# Flatten header pairs like ('qna', 'f1') -> 'qna_f1'
-df.columns = [
-    f"{a}_{b}".strip("_").lower() for a, b in df.columns
-]
+# Flatten the multi-index header
+df.columns = [f"{a}_{b}".strip("_").lower() for a, b in df.columns]
 
-# The first row likely contains "Language"
-if "language" not in df.columns[0].lower():
-    raise ValueError("Couldn't detect 'Language' column. Check your CSV structure.")
-df.rename(columns={df.columns[0]: "Language"}, inplace=True)
+# --- 🔍 Detect Language column robustly ---
+lang_col = None
+for c in df.columns:
+    if re.search(r"language", c, re.IGNORECASE):
+        lang_col = c
+        break
+
+if not lang_col:
+    raise ValueError("❌ Couldn't detect 'Language' column. Please check CSV header names.")
+
+df.rename(columns={lang_col: "Language"}, inplace=True)
+print(f"✅ Detected Language column: '{lang_col}' renamed to 'Language'")
 
 print("✅ Columns loaded:")
 print(df.columns.tolist())
 
-# Convert all numeric columns safely
+# Convert numeric columns
 for c in df.columns:
     if c != "Language":
         df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -38,7 +45,7 @@ print("\n✅ Tasks detected:", tasks)
 print("✅ Metrics detected:", metrics)
 
 # ======================================================
-# 3️⃣ Compute task-wise averages (macro-average across languages)
+# 3️⃣ Compute task-wise averages
 # ======================================================
 task_avgs = {}
 for task in tasks:
@@ -52,18 +59,20 @@ for task in tasks:
 
 print("\n✅ Task-wise averages:")
 for t, vals in task_avgs.items():
-    print(f"  {t}: " + ", ".join([f"{m}={vals[m]:.3f}" for m in vals]))
+    print(f"  {t}: " + ", ".join([f"{m}={vals[m]:.3f}" if not np.isnan(vals[m]) else f"{m}=N/A" for m in vals]))
 
 # ======================================================
 # 4️⃣ Compute language-wise averages across all tasks
 # ======================================================
 language_scores = df[["Language"]].copy()
-
 for metric in metrics:
     metric_cols = [f"{t}_{metric}" for t in tasks if f"{t}_{metric}" in df.columns]
-    language_scores[metric] = df[metric_cols].mean(axis=1, skipna=True)
+    if metric_cols:
+        language_scores[metric] = df[metric_cols].mean(axis=1, skipna=True)
+    else:
+        language_scores[metric] = np.nan
 
-print("\n✅ Language-wise average metrics computed successfully.")
+print("\n✅ Language-wise metrics calculated successfully.")
 print(language_scores.head())
 
 # ======================================================
@@ -78,13 +87,14 @@ for i, metric in enumerate(metrics):
     vals = [task_avgs[t][metric] for t in tasks]
     plt.bar(x + (i - 1) * width, vals, width, label=metric.replace("_f1", "").upper(), color=colors[metric])
     for j, v in enumerate(vals):
-        plt.text(x[j] + (i - 1) * width, v + 0.005, f"{v:.3f}", ha="center", fontsize=8)
+        if not np.isnan(v):
+            plt.text(x[j] + (i - 1) * width, v + 0.005, f"{v:.3f}", ha="center", fontsize=8)
 
 plt.xticks(x, [t.replace("_", " ").title() for t in tasks])
 plt.ylabel("Average Score", fontsize=12)
 plt.ylim(0, 1)
 plt.title("Average Performance Across Tasks", fontsize=14, weight="bold")
-plt.legend(frameon=False, loc="upper right")
+plt.legend(frameon=False)
 plt.tight_layout()
 plt.savefig("taskwise_performance_final.png", dpi=300)
 plt.show()
@@ -101,13 +111,14 @@ for i, metric in enumerate(metrics):
     vals = language_scores[metric].tolist()
     plt.bar(x + (i - 1) * width, vals, width, label=metric.replace("_f1", "").upper(), color=colors[metric])
     for j, v in enumerate(vals):
-        plt.text(x[j] + (i - 1) * width, v + 0.005, f"{v:.2f}", ha="center", fontsize=7)
+        if not np.isnan(v):
+            plt.text(x[j] + (i - 1) * width, v + 0.006, f"{v:.2f}", ha="center", fontsize=7)
 
 plt.xticks(x, langs, rotation=45, ha="right")
 plt.ylabel("Score", fontsize=12)
 plt.ylim(0, 1)
 plt.title("Language-wise Performance Across Metrics", fontsize=14, weight="bold")
-plt.legend(frameon=False, loc="upper right")
+plt.legend(frameon=False)
 plt.tight_layout()
 plt.savefig("languagewise_performance_final.png", dpi=300)
 plt.show()
@@ -137,7 +148,7 @@ for _, row in language_scores.iterrows():
 latex += "\\midrule\n"
 latex += f"\\textbf{{Average}} & {avg_f1:.3f} & {avg_bert:.3f} & {avg_comet:.3f} \\\\\n"
 latex += "\\bottomrule\n\\end{tabular}\n"
-latex += "\\caption{Language-wise performance across metrics for QnA, Summary (Text), and Summary (JSON).}\n"
+latex += "\\caption{Language-wise performance across F1, BERTScore, and COMET.}\n"
 latex += "\\label{tab:language_perf}\n\\end{table}\n"
 
 with open("language_results_table_final.tex", "w", encoding="utf-8") as f:
