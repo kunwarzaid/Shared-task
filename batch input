@@ -1,22 +1,42 @@
-\begin{table*}[t]
-\centering
-\small
-\setlength{\tabcolsep}{7pt}
-\renewcommand{\arraystretch}{1.1}
-\begin{tabular}{lcccc lcccc}
-\toprule
-\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} &
-\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} \\
-\midrule
-Marathi  & 0.228 & 0.169 & 0.811 & 0.302 & Telugu   & 0.345 & 0.179 & 0.834 & 0.263 \\
-Kannada  & 0.471 & 0.169 & 0.825 & 0.272 & Tamil    & 0.442 & 0.182 & 0.838 & 0.297 \\
-Gujarati & 0.496 & 0.170 & 0.839 & 0.269 & Bangla   & 0.334 & 0.185 & 0.822 & 0.290 \\
-English  & 0.674 & 0.191 & 0.835 & 0.335 & Hindi    & 0.618 & 0.176 & 0.836 & 0.344 \\
-Assamese & 0.533 & 0.181 & 0.834 & 0.288 &          &       &       &       &      \\
-\midrule
-\textbf{Macro Avg.} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} & & & & & \\
-\bottomrule
-\end{tabular}
-\caption{Official evaluation results across subtasks. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: field-level F1.}
-\label{tab:main-results}
-\end{table*}
+\subsection{Prompt Design for Inference}
+The system employs role-based prompts for consistent and interpretable outputs across all subtasks.
+
+\paragraph{Summary Prompt}
+\textbf{System}
+\begin{quote}\small\ttfamily
+You are a clinical summarization assistant. Write a fluent English summary focusing on diagnosis, symptoms, investigations, and management plan. End your summary with the token <<END>>.
+\end{quote}
+
+\textbf{User}
+\begin{quote}\small\ttfamily
+Dialogue:\par
+[doctor--patient conversation]\par
+Write the summary and end with <<END>>.
+\end{quote}
+
+\paragraph{JSON Extraction Prompt}
+\textbf{System}
+\begin{quote}\small\ttfamily
+You are a concise clinical information extraction assistant. Answer in English only. If the information is not present, answer exactly \textquotedblleft N/A\textquotedblright.
+\end{quote}
+
+\textbf{User}
+\begin{quote}\small\ttfamily
+Summary:\par
+[summary]\par
+Dialogue:\par
+[conversation]\par
+Question: [specific field]\par
+Answer concisely.
+\end{quote}
+
+\paragraph{Q\&A Prompt}
+\textbf{System}
+\begin{quote}\small\ttfamily
+You are a multilingual clinical assistant. Answer in the same language as the user's question.
+\end{quote}
+
+\textbf{User}
+\begin{quote}\small\ttfamily
+Question ([language]): [user query text]
+\end{quote}
