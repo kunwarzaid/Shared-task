@@ -1,8 +1,10 @@
 \author{
-\IEEEauthorblockN{Kunwar Zaid ~~~ Amit Sangroya ~~~ Jyotsana Khatri}
- 
-\IEEEauthorblockA{
-%\textit{} \\
-\textit{TCS Research, New Delhi, India } \\
-$^*$\textit{equal contributions},~~~\{kunwar.zaid, amit.sangroya, jyotsana.khatri\}@tcs.com}
-\and
+\begin{tabular}{c}
+\textbf{Kunwar Zaid}$^{*}$ \quad
+\textbf{Amit Sangroya}$^{*}$ \quad
+\textbf{Jyotsana Khatri} \\
+TCS Research, New Delhi, India \\
+\texttt{\{kunwar.zaid, amit.sangroya, jyotsana.khatri\}@tcs.com} \\
+\small{$^{*}$Equal contribution}
+\end{tabular}
+}
