@@ -11,11 +11,11 @@
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{caption}
-\captionsetup[table]{skip=6pt}
 \usepackage{tikz}
 \usepackage{float}
 \renewcommand{\UrlFont}{\ttfamily\small}
 
+% spacing tweaks
 \setlength{\parskip}{4pt}
 \setlength{\abovecaptionskip}{3pt}
 \setlength{\belowcaptionskip}{3pt}
@@ -43,15 +43,15 @@ We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization
 
 \section{System Architecture and Approach}
 
-\begin{figure*}[ht]
+\begin{figure*}[htbp!]
 \centering
 \includegraphics[width=\textwidth]{latex/Multilingual Doctor-Patient Dialogue.png}
 \vspace{0em}
-\caption{Overview of the multilingual summarization and extraction pipeline.}
+\caption{Overview of the multilingual summarization and extraction pipeline. The pipeline includes English summarization, structured information extraction, and multilingual Q\&A generation.}
 \label{fig:struct}
 \end{figure*}
 
-Figure~\ref{fig:struct} illustrates the modular inference design of the pipeline, where each dialogue passes through sequential stages: English summarization, structured field extraction, and multilingual Q\&A generation.
+Figure~\ref{fig:struct} shows the modular inference design of the pipeline. Each dialogue passes through sequential stages: English summarization, structured field extraction, and multilingual Q\&A generation.
 
 \subsection{Model Configuration}
 We used Qwen-1.5B Instruct quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}.
@@ -60,8 +60,8 @@ Training used the AdamW optimizer ($2\times10^{-4}$ learning rate, cosine decay)
 Gradient checkpointing and mixed precision allowed training within 60GB RAM and 32×V100 GPUs.
 
 \paragraph{Training Details.}
-Training was performed for a single epoch due to the limited competition timeline and the high computational cost of full multilingual fine-tuning.
-Preliminary validation showed that even within one epoch, the model rapidly adapted to the domain style and formatting, while additional epochs offered diminishing returns relative to GPU time consumed.
+Training was performed for a single epoch due to limited compute and strict task deadlines.
+Despite only one pass, validation indicated rapid domain adaptation and stable convergence, while further epochs offered diminishing improvements relative to time cost.
 
 \subsection{Inference Pipeline}
 Each language’s dialogues were processed independently with checkpoint resumption support.
@@ -74,42 +74,51 @@ The inference proceeds through:
 Greedy decoding (\texttt{do\_sample=False}) ensures stable, deterministic outputs across runs.
 
 \subsection{Prompt Design for Inference}
-The system employs role-based prompts for consistent and interpretable outputs across all subtasks.
+The system employs role-based prompts for consistent and interpretable outputs across all subtasks.  
+Distinct prompt templates were used for the three subtasks: summary generation, structured JSON extraction, and multilingual Q\&A.  
+Each follows an explicit \textit{System–User} role format to improve controllability and output consistency.
 
-\paragraph{Summary Prompt}
-\textbf{System}
-\begin{quote}\small\ttfamily
-You are a clinical summarization assistant. Write a fluent English summary focusing on diagnosis, symptoms, investigations, and management plan. End your summary with the token <<END>>.
+\subsubsection*{Summary Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a clinical summarization assistant. Write a fluent English summary focusing on diagnosis, symptoms, investigations, and management plan.  
+End your summary with the token <<END>>.
 \end{quote}
-\textbf{User}
-\begin{quote}\small\ttfamily
-Dialogue:\par
-[doctor--patient conversation]\par
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Dialogue:\\
+[doctor--patient conversation]\\
 Write the summary and end with <<END>>.
 \end{quote}
 
-\paragraph{JSON Extraction Prompt}
-\textbf{System}
-\begin{quote}\small\ttfamily
-You are a concise clinical information extraction assistant. Answer in English only. If the information is not present, answer exactly ``N/A''.
+\subsubsection*{JSON Extraction Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a concise clinical information extraction assistant.  
+Answer in English only.  
+If the information is not present, answer exactly ``N/A''.
 \end{quote}
-\textbf{User}
-\begin{quote}\small\ttfamily
-Summary:\par
-[summary]\par
-Dialogue:\par
-[conversation]\par
-Question: [specific field]\par
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Summary:\\
+[summary]\\
+Dialogue:\\
+[conversation]\\
+Question: [specific field]\\
 Answer concisely.
 \end{quote}
 
-\paragraph{Q\&A Prompt}
-\textbf{System}
-\begin{quote}\small\ttfamily
-You are a multilingual clinical assistant. Answer in the same language as the user's question.
+\subsubsection*{Q\&A Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a multilingual clinical assistant.  
+Answer in the same language as the user's question.
 \end{quote}
-\textbf{User}
-\begin{quote}\small\ttfamily
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
 Question ([language]): [user query text]
 \end{quote}
 
@@ -122,7 +131,7 @@ A: Persistent throat discomfort and hoarseness for two months.
 \end{quote}
 This modular design improved JSON field coverage $\sim$3× compared to single-shot JSON prompting and allowed missing fields to be regenerated individually.
 
-\begin{table}[t]
+\begin{table}[htbp!]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
@@ -139,9 +148,11 @@ Management Plan & Q: Summarize management plan. \newline
 A: Schedule biopsy and CT scan; smoking cessation counselling. \\
 \bottomrule
 \end{tabular}
-\caption{Examples of field-level question–answer pairs for JSON extraction.}
+\caption{Examples of field-level question–answer pairs used in structured extraction.}
 \label{tab:jsonqa}
 \end{table}
+
+Table~\ref{tab:jsonqa} shows example Q–A pairs used to extract structured fields during inference.
 
 \section{Dataset and Preprocessing}
 We used the multilingual clinical dialogue dataset provided by the organizers, covering 10 languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.
@@ -150,20 +161,18 @@ Native Indic scripts were retained, avoiding romanization to preserve token inte
 
 \section{Experimental Setup and Results}
 
-\begin{figure}[ht]
+\begin{figure}[htbp!]
 \centering
 \includegraphics[width=\columnwidth]{latex/avg_per_task.png}
 \vspace{0em}
-\caption{Average task-wise scores (F1, BERT-F1, COMET).}
+\caption{Average task-wise scores (F1, BERT-F1, COMET) across the three subtasks.}
 \label{fig:taskwise}
 \end{figure}
 
-Figure~\ref{fig:taskwise} visualizes average scores across the three subtasks.
-Summary generation achieved the highest semantic accuracy (BERT-F1 $\approx$ 0.83),
-QnA responses demonstrated moderate factual alignment (F1 $\approx$ 0.46),
-and structured extraction (KNV) scored lower due to stricter field-level constraints.
+Figure~\ref{fig:taskwise} summarizes average scores across subtasks.  
+Summary generation achieved the highest semantic accuracy (BERT-F1 $\approx$ 0.83), QnA responses showed moderate factual alignment (F1 $\approx$ 0.46), and structured extraction (KNV) scored lower due to stricter field-level constraints.
 
-\begin{table*}[t]
+\begin{table*}[htbp!]
 \centering
 \small
 \setlength{\tabcolsep}{7pt}
@@ -182,12 +191,12 @@ Assamese & 0.533 & 0.181 & 0.834 & 0.288 &          &       &       &       &   
 \textbf{Macro Avg.} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} & & & & & \\
 \bottomrule
 \end{tabular}
-\caption{Official evaluation results across subtasks. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: field-level F1.}
+\caption{Official evaluation results across subtasks. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: key–value F1.}
 \label{tab:main-results}
 \end{table*}
 
-Table~\ref{tab:main-results} summarizes the official multilingual results in a two-column format.
-Performance is consistent across most languages, with English and Hindi performing best due to higher training coverage, while Marathi and Assamese exhibit lower F1 scores due to data sparsity.
+Table~\ref{tab:main-results} presents detailed performance across languages.  
+English and Hindi performed best due to stronger data coverage, while Marathi and Assamese showed lower scores reflecting smaller training samples.
 
 \section{Discussion}
 Key challenges included limited GPU access, frequent checkpoint interruptions, and language imbalance for low-resource pairs (Dogri, Assamese).
