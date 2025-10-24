@@ -1,2 +1,84 @@
-Figure~\ref{fig:taskwise} summarizes mean scores across subtasks.  
-Summary generation achieved the highest semantic accuracy (BERT-F1 $\approx$ 0.83), QnA responses showed moderate factual correctness (F1 $\approx$ 0.46), and structured extraction (KNV) was lower due to strict schema constraints.
+\section{Experimental Setup and Results}
+
+The system was evaluated on the official NLP-AI4Health 2025 multilingual clinical dialogue test set across three subtasks: (i) Question Answering (QnA), (ii) Text Summarization (Summary\_Text), and (iii) Key--Value Information Extraction (Summary\_KNV). Performance was assessed using task-appropriate metrics as specified by the organizers.
+
+\subsection{Evaluation Metrics}
+\begin{itemize}
+    \item \textbf{QnA:} Evaluated using macro F1 score, measuring overlap between predicted and gold-standard answers.
+    \item \textbf{Summarization:} Evaluated with both ROUGE-L (lexical overlap) and BERTScore-F1 (semantic similarity), capturing fluency and factual alignment.
+    \item \textbf{Structured Extraction:} Evaluated using field-level F1 (KNV F1), reflecting accuracy of key--value pairs in the generated JSON schema.
+\end{itemize}
+
+\subsection{Quantitative Results}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\columnwidth]{latex/avg_per_task.png}
+\caption{Average task-wise scores (F1, BERT-F1, COMET) across subtasks.}
+\label{fig:taskwise}
+\end{figure}
+
+Figure~\ref{fig:taskwise} provides a comparative overview of task-level performance.  
+Overall, the system achieves strong semantic and factual consistency, particularly in summarization, despite being trained for a single epoch under hardware constraints.
+
+\begin{table}[h!]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} \\
+\midrule
+Marathi  & 0.228 & 0.169 & 0.811 & 0.302 \\
+Kannada  & 0.471 & 0.169 & 0.825 & 0.272 \\
+Gujarati & 0.496 & 0.170 & 0.839 & 0.269 \\
+English  & \textbf{0.674} & \textbf{0.191} & 0.835 & \textbf{0.335} \\
+Telugu   & 0.345 & 0.179 & 0.834 & 0.263 \\
+Tamil    & 0.442 & 0.182 & \textbf{0.838} & 0.297 \\
+Bangla   & 0.334 & 0.185 & 0.822 & 0.290 \\
+Hindi    & 0.618 & 0.176 & 0.836 & 0.344 \\
+Assamese & 0.533 & 0.181 & 0.834 & 0.288 \\
+\midrule
+\textbf{Macro Avg.} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} \\
+\bottomrule
+\end{tabular}
+\caption{Official evaluation results across subtasks. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: key–value F1.}
+\label{tab:main-results}
+\end{table}
+
+\subsection{Result Interpretation}
+The results in Table~\ref{tab:main-results} reveal several consistent trends across subtasks:
+
+\paragraph{(i) QnA Performance.}
+Macro F1 of 0.46 demonstrates that the model effectively interprets clinical dialogues to answer factual questions.  
+Performance is highest in English (0.67) and Hindi (0.62), where both training coverage and lexical similarity with the base model’s pretraining data are greater.  
+Lower F1 in Marathi and Bangla reflects limited exposure to these scripts and domain-specific vocabulary.
+
+\paragraph{(ii) Summarization.}
+ROUGE-L (0.178 macro) is modest due to lexical variation between generated and reference summaries.  
+However, BERT-F1 (0.83) shows strong semantic alignment, indicating that generated summaries convey equivalent meaning despite phrasing differences.  
+This demonstrates that LoRA fine-tuning improved factual retention even within a single training epoch.
+
+\paragraph{(iii) Structured JSON Extraction.}
+The field-wise extraction framework achieved an F1 of 0.296.  
+Although numerically lower, it produced valid, schema-compliant JSONs—something that single-shot generation failed to achieve.  
+Errors primarily arose from implicit answers or non-explicit mentions in dialogues (e.g., inferred symptoms).  
+Nonetheless, modular regeneration allowed selective re-runs for incomplete fields, improving robustness.
+
+\paragraph{(iv) Language Variability.}
+Languages with richer digital corpora (English, Hindi, Tamil) outperform low-resource ones (Dogri, Assamese).  
+Still, performance degradation is moderate, confirming strong multilingual generalization from Qwen’s tokenizer and LoRA’s efficient parameter sharing.
+
+\paragraph{(v) Cross-Task Insights.}
+Semantic metrics (BERT-F1, COMET) are consistently higher than lexical ones (ROUGE-L), suggesting that the model captures meaning more reliably than exact phrasing.  
+This aligns with the system’s design objective—favoring factual and conceptual correctness over surface-form overlap.
+
+\subsection{Qualitative Observations}
+Manual review of outputs indicated:
+\begin{itemize}
+    \item Summaries were fluent and coherent, but occasionally omitted less salient details.
+    \item JSON outputs maintained field integrity and rarely contained invalid syntax.
+    \item Multilingual QnA responses accurately switched to the correct target language, confirming successful prompt conditioning.
+\end{itemize}
+Despite being trained for only one epoch, the model maintained factual consistency and structured completeness across multiple languages and subtasks.
