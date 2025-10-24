@@ -1,147 +1,89 @@
-\documentclass[11pt]{article}
-\usepackage[final]{acl}
-\usepackage{times}
-\usepackage{latexsym}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{microtype}
-\usepackage{inconsolata}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{placeins}
-\usepackage{caption}
-\captionsetup[table]{skip=6pt}
-\renewcommand{\UrlFont}{\ttfamily\small}
+Canva Layout Plan (Left-to-Right Flow)
 
-\title{Multilingual Clinical Dialogue Summarization and Structured Extraction with Qwen-LoRA}
+⸻
 
-\author{Anonymous Submission \\ NLP-AI4Health Shared Task 2025}
+1️⃣ Box 1 — Input
 
-\begin{document}
-\maketitle
+Title: 🟦 Multilingual Doctor–Patient Dialogue
+Subtitle: “Conversations in English, Hindi, Gujarati, Tamil, Telugu, etc.”
+Color: Light blue (#A7C7E7)
+Icon suggestion: 💬 Speech bubble or stethoscope
+Arrow → to Box 2
 
-\begin{abstract}
-We describe our submission to the NLP-AI4Health 2025 Shared Task on multilingual clinical dialogue summarization and structured information extraction. 
-Our system uses the Qwen-1.5B Instruct model with LoRA adapters for parameter-efficient multilingual fine-tuning. 
-The modular pipeline produces (i) concise English summaries, (ii) structured JSON outputs, and (iii) multilingual Q\&A responses. 
-The design improves summary fluency, factual completeness, and JSON field coverage by approximately threefold compared to single-shot generation, while remaining efficient under constrained GPU resources.
-\end{abstract}
+⸻
 
-\section{Introduction}
-The 2025 Shared Task on multilingual clinical dialogue summarization requires systems to process doctor–patient conversations in ten languages and output three modalities: summaries, structured records, and Q\&A responses.  
-We propose a parameter-efficient multilingual pipeline based on Qwen-1.5B with Low-Rank Adaptation (LoRA), optimized for factual summarization and schema-based information extraction under compute constraints.
+2️⃣ Box 2 — Tokenization / Preprocessing
 
-\section{System Overview}
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{system_pipeline.png}
-\caption{Overview of the multilingual summarization and extraction pipeline.}
-\label{fig:pipeline}
-\end{figure}
+Title: 🟧 Tokenizer + Preprocessing
+Subtitle: “Unicode normalization, truncation (≤32k tokens), language tagging”
+Color: Light orange (#F7C880)
+Icon: ⚙️ small gear
+Arrow → to Box 3
 
-\subsection{Model Configuration}
-We fine-tuned Qwen-1.5B Instruct using LoRA (\(r{=}8\), \(\alpha{=}32\), dropout 0.05) targeting \texttt{q\_proj} and \texttt{v\_proj} layers. 
-The model was quantized to 4-bit NF4 precision using \texttt{BitsAndBytes}. 
-Training employed AdamW (learning rate \(2\times10^{-4}\)) with cosine decay and gradient checkpointing, enabling training within 60GB GPU RAM across 32×V100 GPUs.
+⸻
 
-\subsection{Inference Pipeline}
-Each language was processed independently with checkpoint resumption. The steps are:
-\begin{enumerate}
-    \item \textbf{Summary Generation:} Produce an English summary ending with sentinel \texttt{<<END>>}.
-    \item \textbf{JSON Extraction:} Query the model field-by-field to populate schema-defined fields.
-    \item \textbf{Multilingual Q\&A:} Generate concise answers in the dialogue’s original language.
-\end{enumerate}
-Greedy decoding (\texttt{do\_sample=False}) ensures deterministic and reproducible outputs.
+3️⃣ Box 3 — Stage 1: Summary Generation
 
-\subsection{Field-by-Field Extraction}
-Instead of generating the complete JSON schema in a single pass, each field is handled as a question–answer task.  
-For example, from a Gujarati dialogue:
+Title: 🟩 Stage 1: English Summary Generation
+Subtitle: “LoRA-tuned Qwen generates concise English summary”
+Example (small text below box):
+‘Doctor advised CT scan for throat discomfort.’
+Color: Light green (#A8E6A1)
+Icon: 📄 document symbol
+Arrow → to Box 4
 
-\begin{quote}
-\small
-Q: What is the patient’s chief complaint? \\
-A: Persistent throat discomfort and hoarseness for two months.
-\end{quote}
+⸻
 
-This modular querying strategy improved JSON completeness and robustness to missing information.
+4️⃣ Box 4 — Stage 2: JSON Extraction
 
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lp{5.8cm}}
-\toprule
-\textbf{Field} & \textbf{Example Q--A Pair} \\
-\midrule
-Chief Complaint & Q: What is the patient’s chief complaint? \newline
-A: Throat soreness and discomfort for two months. \\
-Past Medical History & Q: Summarize past medical history. \newline
-A: No chronic conditions reported. \\
-Management Plan & Q: Summarize management plan. \newline
-A: Schedule biopsy and CT scan; smoking cessation counselling. \\
-\bottomrule
-\end{tabular}
-\caption{Examples of field-level question–answer pairs for JSON extraction.}
-\label{tab:jsonqa}
-\end{table}
+Title: 🟨 Stage 2: Field-by-Field JSON Extraction
+Subtitle: “Each schema field predicted as a Q–A pair”
+Example (tiny text below box):
+Q: What is the diagnosis? → A: Laryngitis.
+Color: Light yellow (#FFF3B0)
+Icon: {} or 🗂️ database symbol
+Arrow → to Box 5
 
-\section{Dataset and Preprocessing}
-The dataset covers 10 languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.  
-Dialogues were concatenated turn-wise and normalized for whitespace and encoding. 
-Native Indic scripts were retained, avoiding romanization to maintain token integrity under Qwen’s multilingual tokenizer.
+⸻
 
-\section{Experiments and Results}
-\subsection{Metrics}
-We evaluated QnA using F1, summaries using ROUGE-L and BERTScore-F1, and structured extraction using field-level F1.
+5️⃣ Box 5 — Stage 3: Multilingual Q&A
 
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Lang} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} \\
-\midrule
-Marathi  & 0.228 & 0.169 & 0.811 & 0.302 \\
-Kannada  & 0.471 & 0.169 & 0.825 & 0.272 \\
-Gujarati & 0.496 & 0.170 & 0.839 & 0.269 \\
-English  & \textbf{0.674} & \textbf{0.191} & 0.835 & \textbf{0.335} \\
-Telugu   & 0.345 & 0.179 & 0.834 & 0.263 \\
-Tamil    & 0.442 & 0.182 & \textbf{0.838} & 0.297 \\
-Bangla   & 0.334 & 0.185 & 0.822 & 0.290 \\
-Hindi    & 0.618 & 0.176 & 0.836 & 0.344 \\
-Assamese & 0.533 & 0.181 & 0.834 & 0.288 \\
-\midrule
-\textbf{Average} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} \\
-\bottomrule
-\end{tabular}
-\caption{Official evaluation results across subtasks.}
-\label{tab:results}
-\end{table}
+Title: 🟥 Stage 3: Multilingual Q&A Response
+Subtitle: “Answers generated in input’s original language”
+Example:
+Q: रोगी की मुख्य शिकायत क्या है? A: गले में खराश।
+Color: Light red (#F6A6A6)
+Icon: 💬 Chat bubble
+Arrow → to Box 6
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{avg_per_task.png}
-\caption{Average task-wise scores (F1, BERTScore-F1, COMET).}
-\label{fig:avgscore}
-\end{figure}
+⸻
 
-\paragraph{Findings.}
-(\emph{i}) English and Hindi achieved the highest QnA F1 scores (0.67 and 0.62).  
-(\emph{ii}) BERTScore-F1 remained high (0.83 average), reflecting semantic fidelity despite modest lexical overlap.  
-(\emph{iii}) Field-by-field extraction improved key–value accuracy and reduced null-field rates by over 40\%.
+6️⃣ Box 6 — Final Outputs
 
-\section{Discussion}
-Challenges included GPU time limits, checkpoint interruptions, and data imbalance across low-resource languages.  
-Selective language skipping and checkpoint resumption ensured full multilingual coverage.  
-The modular approach provided interpretability, reproducibility, and high schema fidelity.
+Title: 🟪 Final Outputs
+Subtitle:
+	1.	English Summary
+	2.	Structured JSON
+	3.	Multilingual Q&A
+Color: Lavender (#CBB2FE)
+Icon: 📊 or grouped file symbols
+Arrow → None (final output)
 
-\section{Conclusion}
-We presented a multilingual clinical dialogue summarization and structured extraction pipeline using Qwen-1.5B with LoRA adapters.  
-The system achieved balanced performance across tasks, demonstrating that small, efficiently fine-tuned models can yield strong multilingual factual accuracy.  
-Future work will explore larger Qwen variants and factual grounding via retrieval augmentation.
+⸻
 
-\bibliographystyle{acl_natbib}
-\bibliography{custom}
+🧩 Suggested Layout Settings (in Canva)
+	•	Flow Direction: Left to right (horizontal)
+	•	Box shape: Rounded rectangles (consistent corner radius)
+	•	Arrow type: Solid arrows (medium thickness)
+	•	Spacing: Equal distance between boxes
+	•	Text alignment: Center (Title bold, Subtitle regular, Example italic)
+	•	Font pairing:
+	•	Title: Montserrat Bold (11–12 pt)
+	•	Subtitle: Open Sans Regular (9–10 pt)
+	•	Example (italic): Roboto Italic (8 pt)
 
-\end{document}
+⸻
+
+✨ Optional Footer Text (below the diagram)
+
+Pipeline executed independently for each language with checkpoint resumption and LoRA-tuned inference for factual accuracy.
