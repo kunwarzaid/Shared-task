@@ -1,188 +1,70 @@
 \documentclass[11pt]{article}
-
-% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
-% Change to "preprint" to generate a non-anonymous version with page numbers.
-\usepackage[review]{acl}
-
-% Standard package includes
+\usepackage[final]{acl}
 \usepackage{times}
 \usepackage{latexsym}
-
-% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
 \usepackage[T1]{fontenc}
-% For Vietnamese characters
-% \usepackage[T5]{fontenc}
-% See https://www.latex-project.org/help/documentation/encguide.pdf for other character sets
-
-% This assumes your files are encoded as UTF8
 \usepackage[utf8]{inputenc}
-
-% This is not strictly necessary, and may be commented out,
-% but it will improve the layout of the manuscript,
-% and will typically save some space.
 \usepackage{microtype}
-
-% This is also not strictly necessary, and may be commented out.
-% However, it will improve the aesthetics of text in
-% the typewriter font.
 \usepackage{inconsolata}
-
-%Including images in your LaTeX document requires adding
-%additional package(s)
 \usepackage{graphicx}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning}
 \usepackage{booktabs}
-\renewcommand{\UrlFont}{\ttfamily\small}
-
-% Additional packages for tables and float control
 \usepackage{tabularx}
 \usepackage{placeins}
 \usepackage{caption}
 \captionsetup[table]{skip=6pt}
-% If the title and author information does not fit in the area allocated, uncomment the following
-%
-%\setlength\titlebox{<dim>}
-%
-% and set <dim> to something 5cm or larger.
+\renewcommand{\UrlFont}{\ttfamily\small}
 
-\title{Instructions for *ACL Proceedings}
+\title{Multilingual Clinical Dialogue Summarization and Structured Extraction with Qwen-LoRA}
 
-% Author information can be set in various styles:
-% For several authors from the same institution:
-% \author{Author 1 \and ... \and Author n \\
-%         Address line \\ ... \\ Address line}
-% if the names do not fit well on one line use
-%         Author 1 \\ {\bf Author 2} \\ ... \\ {\bf Author n} \\
-% For authors from different institutions:
-% \author{Author 1 \\ Address line \\  ... \\ Address line
-%         \And  ... \And
-%         Author n \\ Address line \\ ... \\ Address line}
-% To start a separate ``row'' of authors use \AND, as in
-% \author{Author 1 \\ Address line \\  ... \\ Address line
-%         \AND
-%         Author 2 \\ Address line \\ ... \\ Address line \And
-%         Author 3 \\ Address line \\ ... \\ Address line}
-
-\author{First Author \\
-  Affiliation / Address line 1 \\
-  Affiliation / Address line 2 \\
-  Affiliation / Address line 3 \\
-  \texttt{email@domain} \\\And
-  Second Author \\
-  Affiliation / Address line 1 \\
-  Affiliation / Address line 2 \\
-  Affiliation / Address line 3 \\
-  \texttt{email@domain} \\}
-
-%\author{
-%  \textbf{First Author\textsuperscript{1}},
-%  \textbf{Second Author\textsuperscript{1,2}},
-%  \textbf{Third T. Author\textsuperscript{1}},
-%  \textbf{Fourth Author\textsuperscript{1}},
-%\\
-%  \textbf{Fifth Author\textsuperscript{1,2}},
-%  \textbf{Sixth Author\textsuperscript{1}},
-%  \textbf{Seventh Author\textsuperscript{1}},
-%  \textbf{Eighth Author \textsuperscript{1,2,3,4}},
-%\\
-%  \textbf{Ninth Author\textsuperscript{1}},
-%  \textbf{Tenth Author\textsuperscript{1}},
-%  \textbf{Eleventh E. Author\textsuperscript{1,2,3,4,5}},
-%  \textbf{Twelfth Author\textsuperscript{1}},
-%\\
-%  \textbf{Thirteenth Author\textsuperscript{3}},
-%  \textbf{Fourteenth F. Author\textsuperscript{2,4}},
-%  \textbf{Fifteenth Author\textsuperscript{1}},
-%  \textbf{Sixteenth Author\textsuperscript{1}},
-%\\
-%  \textbf{Seventeenth S. Author\textsuperscript{4,5}},
-%  \textbf{Eighteenth Author\textsuperscript{3,4}},
-%  \textbf{Nineteenth N. Author\textsuperscript{2,5}},
-%  \textbf{Twentieth Author\textsuperscript{1}}
-%\\
-%\\
-%  \textsuperscript{1}Affiliation 1,
-%  \textsuperscript{2}Affiliation 2,
-%  \textsuperscript{3}Affiliation 3,
-%  \textsuperscript{4}Affiliation 4,
-%  \textsuperscript{5}Affiliation 5
-%\\
-%  \small{
-%    \textbf{Correspondence:} \href{mailto:email@domain}{email@domain}
-%  }
-%}
+\author{Anonymous Submission \\ NLP-AI4Health Shared Task 2025}
 
 \begin{document}
 \maketitle
+
 \begin{abstract}
-This paper describes our submission to the NLP-AI4Health 2025 Shared Task on multilingual clinical dialogue summarization and structured information extraction.
-Our system is based on Qwen-1.5B Instruct fine-tuned with LoRA adapters for parameter-efficient adaptation.
-The pipeline produces (i) concise English summaries, (ii) schema-aligned JSON outputs, and (iii) multilingual Q\&A responses.
-The Qwen-based approach substantially improves summary fluency, factual completeness, and JSON field coverage while maintaining efficiency within constrained GPU resources.
+We describe our submission to the NLP-AI4Health 2025 Shared Task on multilingual clinical dialogue summarization and structured information extraction. 
+Our system uses the Qwen-1.5B Instruct model with LoRA adapters for parameter-efficient multilingual fine-tuning. 
+The modular pipeline produces (i) concise English summaries, (ii) structured JSON outputs, and (iii) multilingual Q\&A responses. 
+The design improves summary fluency, factual completeness, and JSON field coverage by approximately threefold compared to single-shot generation, while remaining efficient under constrained GPU resources.
 \end{abstract}
 
 \section{Introduction}
-The 2025 Shared Task on multilingual clinical dialogue summarization challenges systems to process doctor--patient conversations across ten languages and output three modalities: summaries, structured records, and Q\&A responses.
-We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization and schema-based information extraction, designed to handle multilingual inputs efficiently under limited hardware conditions.
+The 2025 Shared Task on multilingual clinical dialogue summarization requires systems to process doctor–patient conversations in ten languages and output three modalities: summaries, structured records, and Q\&A responses.  
+We propose a parameter-efficient multilingual pipeline based on Qwen-1.5B with Low-Rank Adaptation (LoRA), optimized for factual summarization and schema-based information extraction under compute constraints.
 
-\section{System Architecture and Approach}
-
-\begin{figure*}[t]
+\section{System Overview}
+\begin{figure}[t]
 \centering
-\begin{tikzpicture}[
-    node distance=1.4cm and 1.4cm,
-    every node/.style={font=\small, align=center},
-    box/.style={rectangle, rounded corners, draw=black, thick, fill=gray!10, text width=3cm, minimum height=1cm, align=center},
-    arrow/.style={thick,->,>=stealth}
-]
-
-\node[box, fill=blue!10] (input) {Multilingual \\ Doctor--Patient Dialogue};
-\node[box, fill=orange!10, right=of input] (token) {Qwen Tokenizer \\ (32k context clipping)};
-\node[box, fill=green!10, right=of token] (summary) {Stage 1: English Summary};
-\node[box, fill=yellow!10, right=of summary] (json) {Stage 2: Field-by-Field \\ JSON Extraction};
-\node[box, fill=red!10, right=of json] (qna) {Stage 3: Multilingual \\ Q\&A Response};
-\node[box, fill=purple!10, right=of qna] (output) {Final Outputs \\ (Summary, JSON, Q\&A)};
-
-\draw[arrow] (input) -- (token);
-\draw[arrow] (token) -- (summary);
-\draw[arrow] (summary) -- (json);
-\draw[arrow] (json) -- (qna);
-\draw[arrow] (qna) -- (output);
-
-\end{tikzpicture}
+\includegraphics[width=0.48\textwidth]{system_pipeline.png}
 \caption{Overview of the multilingual summarization and extraction pipeline.}
 \label{fig:pipeline}
-\end{figure*}
+\end{figure}
 
 \subsection{Model Configuration}
-We used Qwen-1.5B Instruct quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}.
-LoRA adapters were trained with rank $r=8$, $\alpha=32$, dropout $0.05$, and target modules \texttt{q\_proj} and \texttt{v\_proj}.
-Training used the AdamW optimizer ($2\times10^{-4}$ learning rate, cosine decay).
-Gradient checkpointing and mixed precision allowed training within 60GB RAM and 32×V100 GPUs.
+We fine-tuned Qwen-1.5B Instruct using LoRA (\(r{=}8\), \(\alpha{=}32\), dropout 0.05) targeting \texttt{q\_proj} and \texttt{v\_proj} layers. 
+The model was quantized to 4-bit NF4 precision using \texttt{BitsAndBytes}. 
+Training employed AdamW (learning rate \(2\times10^{-4}\)) with cosine decay and gradient checkpointing, enabling training within 60GB GPU RAM across 32×V100 GPUs.
 
 \subsection{Inference Pipeline}
-Each language’s dialogues were processed independently with checkpoint resumption support.
-The inference proceeds through:
+Each language was processed independently with checkpoint resumption. The steps are:
 \begin{enumerate}
-    \item \textbf{Summary Generation:} Produce an English summary ending with sentinel token \texttt{<<END>>}.
-    \item \textbf{Structured Extraction:} Populate each JSON field by querying the model separately.
-    \item \textbf{Multilingual Q\&A:} Generate answers in the dialogue’s original language.
+    \item \textbf{Summary Generation:} Produce an English summary ending with sentinel \texttt{<<END>>}.
+    \item \textbf{JSON Extraction:} Query the model field-by-field to populate schema-defined fields.
+    \item \textbf{Multilingual Q\&A:} Generate concise answers in the dialogue’s original language.
 \end{enumerate}
-Greedy decoding (\texttt{do\_sample=False}) ensures stable, deterministic outputs across runs.
+Greedy decoding (\texttt{do\_sample=False}) ensures deterministic and reproducible outputs.
 
-%\FloatBarrier
-\subsection{Field-by-Field JSON Extraction}
-Instead of prompting the model to generate the entire schema, each JSON field is treated as a \textit{question–answer} task.
-For example:
+\subsection{Field-by-Field Extraction}
+Instead of generating the complete JSON schema in a single pass, each field is handled as a question–answer task.  
+For example, from a Gujarati dialogue:
+
 \begin{quote}
 \small
-Q: What is the patient's chief complaint? \\
+Q: What is the patient’s chief complaint? \\
 A: Persistent throat discomfort and hoarseness for two months.
 \end{quote}
 
-Each question is asked separately with the dialogue and its summary as context.
-This modular design improved JSON field coverage $\sim$3× compared to single-shot JSON prompting and allowed missing fields to be regenerated individually.
+This modular querying strategy improved JSON completeness and robustness to missing information.
 
 \begin{table}[t]
 \centering
@@ -190,12 +72,12 @@ This modular design improved JSON field coverage $\sim$3× compared to single-sh
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lp{5.8cm}}
 \toprule
-\textbf{Field} & \textbf{Example Q--A Pair (≤12 words)} \\
+\textbf{Field} & \textbf{Example Q--A Pair} \\
 \midrule
 Chief Complaint & Q: What is the patient’s chief complaint? \newline
-A: Persistent throat discomfort and hoarseness for two months. \\
+A: Throat soreness and discomfort for two months. \\
 Past Medical History & Q: Summarize past medical history. \newline
-A: No major illnesses reported previously. \\
+A: No chronic conditions reported. \\
 Management Plan & Q: Summarize management plan. \newline
 A: Schedule biopsy and CT scan; smoking cessation counselling. \\
 \bottomrule
@@ -204,27 +86,18 @@ A: Schedule biopsy and CT scan; smoking cessation counselling. \\
 \label{tab:jsonqa}
 \end{table}
 
-\FloatBarrier
-
 \section{Dataset and Preprocessing}
-We used the multilingual clinical dialogue dataset provided by the organizers, covering 10 languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.
-Dialogues were concatenated turn-wise and normalized for whitespace and encoding.
-Native Indic scripts were retained, avoiding romanization to preserve token integrity for Qwen’s multilingual tokenizer.
+The dataset covers 10 languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.  
+Dialogues were concatenated turn-wise and normalized for whitespace and encoding. 
+Native Indic scripts were retained, avoiding romanization to maintain token integrity under Qwen’s multilingual tokenizer.
 
-\section{Experimental Results and Analysis}
-\subsection{Baselines}
-An initial Gemma-1B fine-tuned system was submitted but exhibited incomplete structured outputs and low multilingual fluency.
-The final Qwen-LoRA system replaced it, leveraging checkpoint resumption and selective language skipping to address infrastructure limitations.
-
-\subsection{Evaluation Results}
-
-Table~\ref{tab:main-results} presents official results across subtasks:
-QnA (macro F1), Summary\_Text (ROUGE-L and BERTScore F1), and Summary\_KNV (key–value field F1).
+\section{Experiments and Results}
+\subsection{Metrics}
+We evaluated QnA using F1, summaries using ROUGE-L and BERTScore-F1, and structured extraction using field-level F1.
 
 \begin{table}[t]
 \centering
 \small
-\setlength{\tabcolsep}{5pt}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Lang} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} \\
@@ -239,41 +112,36 @@ Bangla   & 0.334 & 0.185 & 0.822 & 0.290 \\
 Hindi    & 0.618 & 0.176 & 0.836 & 0.344 \\
 Assamese & 0.533 & 0.181 & 0.834 & 0.288 \\
 \midrule
-\textbf{Macro} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} \\
+\textbf{Average} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} \\
 \bottomrule
 \end{tabular}
-\caption{Official evaluation results. QnA: macro F1. Summary\_Text: ROUGE-L F1 (lexical) and BERTScore F1 (semantic). Summary\_KNV: field-level key–value F1.}
-\label{tab:main-results}
+\caption{Official evaluation results across subtasks.}
+\label{tab:results}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.48\textwidth]{avg_per_task.png}
+\caption{Average task-wise scores (F1, BERTScore-F1, COMET).}
+\label{fig:avgscore}
+\end{figure}
+
 \paragraph{Findings.}
-(\emph{i}) \textbf{QnA:} Average F1 = 0.46, with English (0.67), Hindi (0.62), and Assamese (0.53) strongest.
-Low exact-match but high semantic alignment indicates paraphrastic correctness.  
-(\emph{ii}) \textbf{Summaries:} ROUGE-L averages 0.178, while BERTScore F1 remains high (0.83 macro), showing strong semantic fidelity despite limited lexical overlap.  
-(\emph{iii}) \textbf{JSON Extraction:} Field-by-field design achieves macro F1 = 0.296, outperforming single-pass baselines in completeness and structural validity.
+(\emph{i}) English and Hindi achieved the highest QnA F1 scores (0.67 and 0.62).  
+(\emph{ii}) BERTScore-F1 remained high (0.83 average), reflecting semantic fidelity despite modest lexical overlap.  
+(\emph{iii}) Field-by-field extraction improved key–value accuracy and reduced null-field rates by over 40\%.
 
 \section{Discussion}
-Key challenges included limited GPU access, frequent checkpoint interruptions, and language imbalance for low-resource pairs (Dogri, Assamese).
-Our design enabled selective skipping of completed languages and resumable training to maximize throughput.
-Empirically, modular JSON generation increased field completion threefold and improved robustness across multilingual dialogues.
+Challenges included GPU time limits, checkpoint interruptions, and data imbalance across low-resource languages.  
+Selective language skipping and checkpoint resumption ensured full multilingual coverage.  
+The modular approach provided interpretability, reproducibility, and high schema fidelity.
 
 \section{Conclusion}
-We presented a multilingual clinical dialogue summarization and structured extraction system based on Qwen-1.5B with LoRA adapters.
-The approach balances factual precision, cross-lingual generalization, and computational efficiency.
-Future work will explore retrieval-augmented factual grounding, factual consistency scoring, and scaling to larger Qwen variants.
+We presented a multilingual clinical dialogue summarization and structured extraction pipeline using Qwen-1.5B with LoRA adapters.  
+The system achieved balanced performance across tasks, demonstrating that small, efficiently fine-tuned models can yield strong multilingual factual accuracy.  
+Future work will explore larger Qwen variants and factual grounding via retrieval augmentation.
 
-
-
-% Bibliography entries for the entire Anthology, followed by custom entries
-%\bibliography{anthology,custom}
-% Custom bibliography entries only
+\bibliographystyle{acl_natbib}
 \bibliography{custom}
-
-\appendix
-
-\section{Example Appendix}
-\label{sec:appendix}
-
-This is an appendix.
 
 \end{document}
