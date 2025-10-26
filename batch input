@@ -1,21 +1,16 @@
-def compute_rdc_scores(df: pd.DataFrame, embed_model="all-MiniLM-L6-v2") -> pd.DataFrame:
-    """
-    Computes Reasoning–Diagnosis Coherence (RDC):
-    cosine similarity between each model’s reasoning trace
-    and its own predicted diagnosis (not ground truth).
-    """
-    if df.empty:
-        return df.assign(rdc_score=[])
-
-    model = SentenceTransformer(embed_model)
-    traces = df.get("reasoning_trace", [""] * len(df))
-    preds  = df.get("diagnosis", [""] * len(df))
-
-    e_trace = model.encode(traces, normalize_embeddings=True, convert_to_numpy=True)
-    e_pred  = model.encode(preds,  normalize_embeddings=True, convert_to_numpy=True)
-    sims = (e_trace * e_pred).sum(axis=1)
-
-    df = df.copy()
-    # scale from [-1, 1] → [0, 100]
-    df["rdc_score"] = (sims + 1) * 50
-    return df
+def compute_metrics(df: pd.DataFrame):
+    if df.empty: return {}
+    total = len(df)
+    acc = df["correct"].mean() * 100.0
+    cdr = df["consensus_disagree"].mean() * 100.0
+    ja  = df["rdc_score"].mean() * 100.0 if "rdc_score" in df else 0.0
+    unsafe = df["rx_safety"].fillna("").str.lower().str.contains("unsafe").mean() * 100.0
+    trust = 0.4*acc + 0.3*(100.0 - cdr) + 0.3*ja
+    return {
+        "n": total,
+        "accuracy_%": round(acc,2),
+        "cdr_%": round(cdr,2),
+        "ja_mean_%": round(ja,2),
+        "unsafe_rx_%": round(unsafe,2),
+        "trust_index": round(trust,2),
+    }
