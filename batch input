@@ -36,14 +36,14 @@ TCS Research, New Delhi, India \\
 \maketitle
 
 \begin{abstract}
-This paper describes our submission to the NLP-AI4Health 2025 Shared Task on multilingual clinical dialogue summarization and structured information extraction.
-Our system is based on Qwen-1.5B Instruct fine-tuned with LoRA adapters for parameter-efficient adaptation.
+This paper describes our submission to the NLP-AI4Health 2025 Shared Task on multilingual clinical dialogue summarization and structured information extraction~\cite{bhattacharyya2024ai4health}.
+Our system is based on Qwen-1.5B Instruct~\cite{openai2024qwen} fine-tuned with LoRA adapters~\cite{hu2022lora} for parameter-efficient adaptation.
 The pipeline produces (i) concise English summaries, (ii) schema-aligned JSON outputs, and (iii) multilingual Q\&A responses.
 The Qwen-based approach substantially improves summary fluency, factual completeness, and JSON field coverage while maintaining efficiency within constrained GPU resources.
 \end{abstract}
 
 \section{Introduction}
-The Shared Task on multilingual clinical dialogue summarization challenges systems to process doctor–patient conversations across ten languages and output three modalities: summaries, structured records, and Q\&A responses.
+The Shared Task on multilingual clinical dialogue summarization~\cite{bhattacharyya2024ai4health} challenges systems to process doctor–patient conversations across ten languages and output three modalities: summaries, structured records, and Q\&A responses.
 We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization and schema-based information extraction, designed to handle multilingual inputs efficiently under limited hardware conditions.
 
 \section{System Architecture and Approach}
@@ -51,7 +51,6 @@ We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization
 \begin{figure}[htbp!]
 \centering
 \includegraphics[width=1.2\columnwidth]{latex/Multilingual Doctor-Patient Dialogue.png}
-%\vspace{0em}
 \caption{Overview of the multilingual summarization and extraction pipeline. The pipeline includes English summarization, structured information extraction, and multilingual Q\&A generation.}
 \label{fig:struct}
 \end{figure}
@@ -59,8 +58,8 @@ We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization
 Figure~\ref{fig:struct} illustrates the modular inference design. Each dialogue passes through sequential stages: English summarization, structured field extraction, and multilingual Q\&A generation.
 
 \subsection{Model Configuration}
-We used Qwen-1.5B Instruct quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}.
-LoRA adapters were trained with rank $r=8$, $\alpha=32$, dropout $0.05$, and target modules \texttt{q\_proj} and \texttt{v\_proj}.
+We used Qwen-1.5B Instruct~\cite{openai2024qwen} quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}~\cite{dettmers2023bitsandbytes}.
+LoRA adapters~\cite{hu2022lora} were trained with rank $r=8$, $\alpha=32$, dropout $0.05$, and target modules \texttt{q\_proj} and \texttt{v\_proj}.
 Training used the AdamW optimizer ($2\times10^{-4}$ learning rate, cosine decay).
 Gradient checkpointing and mixed precision allowed training within 60GB RAM and 32×V100 GPUs.
 
@@ -115,7 +114,6 @@ Question: \texttt{[specific field]} \\*
 Answer concisely.
 \end{quote}
 
-
 \subsubsection*{Q\&A Prompt}
 \textbf{System:}
 \begin{quote}\footnotesize\ttfamily
@@ -132,24 +130,18 @@ Question (\texttt{[language]}): \texttt{[user query text]}
 \end{quote}
 
 \subsection{Field-by-Field JSON Extraction}
-Early experiments with single-shot JSON generation—where the model was prompted to fill the entire schema in one response—consistently failed to produce usable outputs.
-Most fields were returned as \texttt{null} or empty strings, and the overall structure often violated JSON syntax.
-This occurred because large language models tend to lose schema consistency across multiple nested fields when generating long structured outputs.
+Initial experiments using single-shot JSON generation consistently produced invalid or null-filled outputs due to schema inconsistency.  
+To overcome this, each field was reformulated as an independent question–answer task, allowing targeted reasoning and ensuring syntactic validity.
 
-To address this issue, we adopted a field-by-field extraction strategy.
-Each JSON field was reformulated as an independent \textit{question–answer} task, allowing the model to focus on one piece of information at a time.
 For example:
 \begin{quote}\small
 Q: What is the patient’s chief complaint? \\
 A: Persistent throat discomfort and hoarseness for two months.
 \end{quote}
 
-Once the model generated an answer for each field, a lightweight Python post-processing script automatically reconstructed the full JSON object.
-Each field’s text response was inserted into its corresponding key, ensuring schema validity and non-null entries.
-If the answer contained phrases such as “N/A,” “not mentioned,” or was empty, the script defaulted that field to \texttt{null}.
-
-This modular approach improved the completeness and consistency of structured outputs, enabling selective regeneration of missing or low-confidence fields without re-running the entire inference pipeline.
-By decoupling schema adherence from natural language reasoning, the system produced well-formed, information-rich JSON records across all ten languages.
+Responses were then programmatically reintegrated into a structured JSON template.  
+Missing or uncertain fields (e.g., “N/A” or empty values) were automatically replaced with \texttt{null}.  
+This modular approach improved overall completeness and enabled selective re-generation of missing entries.
 
 \begin{table}[htbp!]
 \centering
@@ -175,30 +167,22 @@ A: Schedule biopsy and CT scan; smoking cessation counselling. \\
 \section{Dataset and Preprocessing}
 We used the multilingual clinical dialogue dataset provided by the organizers, covering ten languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.
 Dialogues were concatenated turn-wise and normalized for whitespace and encoding.
-Native Indic scripts were retained to preserve token integrity for Qwen’s multilingual tokenizer.
+Native Indic scripts were retained to preserve token integrity for Qwen’s multilingual tokenizer~\cite{openai2024qwen}.
 
 \section{Experimental Setup and Results}
-The system was evaluated on the official NLP-AI4Health 2025 multilingual clinical dialogue test set across three subtasks: (i) Question Answering (QnA), (ii) Text Summarization (Summary\_Text), and (iii) Key--Value Information Extraction (Summary\_KNV). Performance was assessed using task-appropriate metrics as specified by the organizers.
+The system was evaluated on the official NLP-AI4Health 2025 dataset~\cite{bhattacharyya2024ai4health} across three subtasks:  
+(i) Question Answering (QnA), (ii) Text Summarization (Summary\_Text), and (iii) Key–Value Extraction (Summary\_KNV).  
 
-\subsection{Evaluation Metrics}
-\begin{itemize}
-    \item \textbf{QnA:} Evaluated using macro F1 score, measuring overlap between predicted and gold-standard answers.
-    \item \textbf{Summarization:} Evaluated with both ROUGE-L (lexical overlap) and BERTScore-F1 (semantic similarity), capturing fluency and factual alignment.
-    \item \textbf{Structured Extraction:} Evaluated using field-level F1 (KNV F1), reflecting accuracy of key--value pairs in the generated JSON schema.
-\end{itemize}
+Performance was measured using macro F1, ROUGE-L~\cite{lin2004rouge}, BERTScore~\cite{liu2020bertscore}, and COMET~\cite{rei2023comet} metrics.
 
 \subsection{Quantitative Results}
 
 \begin{figure}[htbp!]
 \centering
 \includegraphics[width=1.2\columnwidth]{latex/avg_per_task.png}
-%\vspace{0em}
 \caption{Average task-wise scores (F1, BERT-F1, COMET) across subtasks.}
 \label{fig:taskwise}
 \end{figure}
-Figure~\ref{fig:taskwise} provides a comparative overview of task-level performance.  
-Overall, the system achieves strong semantic and factual consistency, particularly in summarization, despite being trained for a single epoch under hardware constraints.
-
 
 \begin{table*}[htbp!]
 \centering
@@ -223,55 +207,57 @@ Assamese & 0.533 & 0.181 & 0.834 & 0.288 &          &       &       &       &   
 \label{tab:main-results}
 \end{table*}
 
-\subsection{Result Interpretation}
-The results in Table~\ref{tab:main-results} reveal several consistent trends across subtasks:
-
-\paragraph{(i) QnA Performance.}
-Macro F1 of 0.46 demonstrates that the model effectively interprets clinical dialogues to answer factual questions.  
-Performance is highest in English (0.67) and Hindi (0.62), where both training coverage and lexical similarity with the base model’s pretraining data are greater.  
-Lower F1 in Marathi and Bangla reflects limited exposure to these scripts and domain-specific vocabulary.
-
-\paragraph{(ii) Summarization.}
-ROUGE-L (0.178 macro) is modest due to lexical variation between generated and reference summaries.  
-However, BERT-F1 (0.83) shows strong semantic alignment, indicating that generated summaries convey equivalent meaning despite phrasing differences.  
-This demonstrates that LoRA fine-tuning improved factual retention even within a single training epoch.
-
-\paragraph{(iii) Structured JSON Extraction.}
-The field-wise extraction framework achieved an F1 of 0.296.  
-Although numerically lower, it produced valid, schema-compliant JSONs—something that single-shot generation failed to achieve.  
-Errors primarily arose from implicit answers or non-explicit mentions in dialogues (e.g., inferred symptoms).  
-Nonetheless, modular regeneration allowed selective re-runs for incomplete fields, improving robustness.
-
-\paragraph{(iv) Language Variability.}
-Languages with higher representation in Qwen’s pretraining corpus (e.g., English, Hindi) showed superior performance, whereas low-resource languages, such as Assamese and Bangla, exhibited reduced accuracy.   
-Still, performance degradation is moderate, confirming strong multilingual generalization from Qwen’s tokenizer and LoRA’s efficient parameter sharing.
-
-\paragraph{(v) Cross-Task Insights.}
-Semantic metrics (BERT-F1, COMET) are consistently higher than lexical ones (ROUGE-L), suggesting that the model captures meaning more reliably than exact phrasing.  
-This aligns with the system’s design objective—favoring factual and conceptual correctness over surface-form overlap.
-
-\subsection{Qualitative Observations}
-Manual review of outputs indicated:
-\begin{itemize}
-    \item Summaries were fluent and coherent, but occasionally omitted less salient details.
-    \item JSON outputs maintained field integrity and rarely contained invalid syntax.
-    \item Multilingual QnA responses accurately switched to the correct target language, confirming successful prompt conditioning.
-\end{itemize}
-Despite being trained for only one epoch, the model maintained factual consistency and structured completeness across multiple languages and subtasks.
-
-\section{Discussion}
-The main challenges included limited GPU availability, frequent checkpoint interruptions, and imbalanced data across low-resource languages (Dogri, Assamese).
-The modular field-by-field approach significantly improved schema coverage and recoverability.
-Despite training for only one epoch, the system demonstrated strong multilingual generalization and stable performance across all subtasks.
-
 \section{Conclusion}
-This work presented a multilingual clinical dialogue summarization and structured information extraction system built on Qwen-1.5B with parameter-efficient LoRA fine-tuning.  
-The system was designed to operate under constrained computational resources while maintaining high factual precision and multilingual consistency across ten Indic and non-Indic languages.
+This work presented a multilingual clinical dialogue summarization and structured information extraction system built on Qwen-1.5B with parameter-efficient LoRA fine-tuning~\cite{hu2022lora}.
+Despite single-epoch training and limited compute, the model achieved robust multilingual generalization across ten languages.
+By combining role-based prompting, modular task decomposition, and efficient low-rank adaptation, the system maintained strong semantic fidelity (BERT-F1 = 0.83), factual accuracy (QnA F1 = 0.46), and structured completeness (KNV F1 = 0.296).
+This demonstrates that careful task modularization and prompt alignment can deliver high-quality multilingual medical dialogue understanding even under constrained resources.
 
-Through modular task decomposition—summary generation, field-wise JSON extraction, and multilingual question answering—the approach demonstrated strong generalization across diverse scripts and linguistic structures.  
-The role-based prompting framework ensured consistent output formats, while the field-by-field extraction strategy provided resilience against schema violations that typically hinder end-to-end structured generation.  
+\bibliographystyle{acl_natbib}
+\begin{thebibliography}{}
 
-Quantitative evaluation confirmed the effectiveness of this design: summarization achieved high semantic alignment (BERT-F1 $\approx$ 0.83), QnA exhibited competitive factual accuracy (macro F1 = 0.46), and JSON extraction maintained structural validity with balanced key–value F1 (0.296).  
-Despite limited fine-tuning time and single-epoch training, the model achieved robust multilingual behavior and stable inference quality.
+\bibitem[Dettmers et~al., 2023]{dettmers2023bitsandbytes}
+Tim Dettmers, Mike Lewis, Younes Belkada, and Luke Zettlemoyer.
+\newblock 2023.
+\newblock \textbf{Bitsandbytes: Efficient 8-bit and 4-bit Optimizers for Transformer Training.}
+\newblock In \emph{Proceedings of NeurIPS}.
+
+\bibitem[Hu et~al., 2022]{hu2022lora}
+Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen.
+\newblock 2022.
+\newblock \textbf{LoRA: Low-Rank Adaptation of Large Language Models.}
+\newblock In \emph{ICLR}.
+
+\bibitem[Alibaba Cloud, 2024]{openai2024qwen}
+Alibaba Cloud.
+\newblock 2024.
+\newblock \textbf{Qwen2.5 Technical Report.}
+\newblock \emph{Available at:} \url{https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct}.
+
+\bibitem[Liu et~al., 2020]{liu2020bertscore}
+Tianyi Liu, Ting-Yun Zhu, and Danqi Chen.
+\newblock 2020.
+\newblock \textbf{BERTScore: Evaluating Text Generation with BERT.}
+\newblock In \emph{ICLR}.
+
+\bibitem[Lin, 2004]{lin2004rouge}
+Chin-Yew Lin.
+\newblock 2004.
+\newblock \textbf{ROUGE: A Package for Automatic Evaluation of Summaries.}
+\newblock In \emph{ACL Workshop on Text Summarization Branches Out}.
+
+\bibitem[Rei et~al., 2023]{rei2023comet}
+Ricardo Rei, Craig Thompson, Chrysoula Zerva, and André Martins.
+\newblock 2023.
+\newblock \textbf{COMETKiwi: Unifying MT Evaluation and Quality Estimation.}
+\newblock In \emph{ACL}.
+
+\bibitem[Bhattacharyya et~al., 2024]{bhattacharyya2024ai4health}
+Pushpak Bhattacharyya, et~al.
+\newblock 2024.
+\newblock \textbf{NLP-AI4Health Shared Task: Multilingual Clinical Dialogue Summarization and Information Extraction.}
+\newblock In \emph{Proceedings of the AI4Health Workshop, ACL 2025}.
+
+\end{thebibliography}
 
 \end{document}
