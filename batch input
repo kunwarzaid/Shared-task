@@ -1,13 +1,1 @@
-This paper describes our submission to the
-NLP-AI4Health 2025 Shared Task on multi-
-lingual clinical dialogue summarization and
-structured information extraction. Our system
-is based on Qwen-1.5B Instruct fine-tuned with
-LoRA adapters for parameter-efficient adapta-
-tion. The pipeline produces (i) concise English
-summaries, (ii) schema-aligned JSON outputs,
-and (iii) multilingual Q&A responses. The
-Qwen-based approach substantially improves
-summary fluency, factual completeness, and
-JSON field coverage while maintaining effi-
-ciency within constrained GPU resources.
+Languages with higher representation in Qwen’s pretraining corpus (e.g., English, Hindi) showed superior performance, while low-resource languages such as Assamese and Dogri exhibited reduced accuracy. This aligns with known disparities in multilingual pretraining coverage
