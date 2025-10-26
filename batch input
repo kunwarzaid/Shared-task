@@ -1,69 +1,289 @@
-@article{bai2023qwen,
-  title={Qwen Technical Report},
-  author={Bai, Yutong and Bai, Zhilin and others},
-  journal={arXiv preprint arXiv:2309.16609},
-  year={2023}
+===========================
+▶ Running CONSENSUS...
+[15:37:39][HEADER] --- Scenario 0: Myasthenia gravis ---
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+
+--- CONSENSUS DEBUG ---
+Agent 1 diagnosis: THE PATTERN OF YOUR WEAKNESS, WORSENING WITH ACTIVITY AND IMPROVING WITH REST, IS A KEY DETAIL. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS OR CHANGES IN YOUR SPEECH, SUCH AS SLURRING, ESPECIALLY TOWARDS THE END OF THE DAY?
+
+<THINKING_PROCESS>THE PATIENT'S HISTORY IS HIGHLY SUGGESTIVE OF A NEUROMUSCULAR JUNCTION DISORDER, SPECIFICALLY MYASTHENIA GRAVIS (MG), DUE TO THE CHARACTERISTIC FATIGABLE WEAKNESS (DIPLOPIA, PROXIMAL LIMB WEAKNESS) THAT IMPROVES WITH REST. MY FIRST QUESTION AIMS TO CONFIRM OTHER COMMON FEATURES OF MG, NAMELY PTOSIS (EYELID DROOPING) AND BULBAR MUSCLE WEAKNESS (SPEECH CHANGES), WHICH WOULD FURTHER STRENGTHEN THIS SUSPICION OVER OTHER POSSIBILITIES LIKE LEMS OR A MYOPATHY.</THINKING_PROCESS>
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MYOSITIS
+Raw response: The pattern of your weakness, worsening with activity and improving with rest, is a key detail. Have you noticed any drooping of your eyelids or changes in your speech, such as slurring, especially to...
+Agent 2 diagnosis: THE PATTERN OF WEAKNESS YOU DESCRIBE, WORSENING WITH ACTIVITY AND IMPROVING WITH REST, IS A KEY FEATURE. TO BETTER UNDERSTAND THIS, I HAVE A FEW QUESTIONS. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, PARTICULARLY AS THE DAY GOES ON? ALSO, HAVE YOU EXPERIENCED ANY DIFFICULTY WITH CHEWING OR SWALLOWING, OR HAS YOUR SPEECH BECOME SLURRED AFTER TALKING FOR A WHILE?
+
+<THINKING_PROCESS>THE PATIENT'S HISTORY IS HIGHLY SUGGESTIVE OF MYASTHENIA GRAVIS (MG) DUE TO THE CLASSIC TRIAD OF OCULAR SYMPTOMS (DIPLOPIA), PROXIMAL MUSCLE WEAKNESS (STAIRS, HAIR BRUSHING), AND FATIGABILITY (WORSENS WITH ACTIVITY, IMPROVES WITH REST). MY FIRST QUESTION AIMS TO CONFIRM OTHER COMMON FEATURES OF MG, SPECIFICALLY PTOSIS (EYELID DROOPING) AND BULBAR MUSCLE WEAKNESS (CHEWING, SWALLOWING, SPEECH), WHICH WOULD FURTHER STRENGTHEN THIS DIAGNOSIS. THE ANSWER TO THIS QUESTION WILL HELP DIFFERENTIATE MG FROM OTHER POSSIBILITIES LIKE MULTIPLE SCLEROSIS (WHICH IS LESS LIKELY TO HAVE THIS SPECIFIC PATTERN OF BULBAR FATIGUE) OR LAMBERT-EATON MYASTHENIC SYNDROME (WHERE OCULAR/BULBAR INVOLVEMENT IS LESS COMMON AT ONSET).</THINKING_PROCESS>
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+Raw response: The pattern of weakness you describe, worsening with activity and improving with rest, is a key feature. To better understand this, I have a few questions. Have you noticed any drooping of your eyelid...
+Agent 3 diagnosis: THE PATTERN OF YOUR WEAKNESS, PARTICULARLY HOW IT WORSENS WITH ACTIVITY AND IMPROVES WITH REST, IS QUITE SPECIFIC. TO BETTER UNDERSTAND THIS, I NEED TO ASK ABOUT OTHER MUSCLES. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, OR ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR CHANGES IN YOUR SPEECH?
+
+<THINKING_PROCESS>THE PATIENT'S HISTORY OF FLUCTUATING, FATIGABLE WEAKNESS AFFECTING OCULAR (DIPLOPIA) AND PROXIMAL LIMB MUSCLES IS HIGHLY SUGGESTIVE OF A NEUROMUSCULAR JUNCTION DISORDER. MYASTHENIA GRAVIS (MG) IS THE PRIME SUSPECT. MY QUESTION PROBES FOR TWO OTHER CLASSIC FEATURES OF MG: PTOSIS (EYELID DROOPING) AND BULBAR MUSCLE WEAKNESS (DIFFICULTY CHEWING, SWALLOWING, OR SPEAKING). THE PRESENCE OF THESE SYMPTOMS WOULD SIGNIFICANTLY STRENGTHEN THE CASE FOR MG. THE ABSENCE WOULD MAKE ME CONSIDER OTHER DIAGNOSES MORE STRONGLY, BUT OCULAR AND LIMB WEAKNESS CAN OCCUR IN ISOLATION. THIS QUESTION IS FOCUSED AND GATHERS CRITICAL INFORMATION TO NARROW THE DIFFERENTIAL DIAGNOSIS.</THINKING_PROCESS>
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+CONSENSUSMODE#3: REFLECT CLINICALLY BEFORE DECIDING.
+Raw response: The pattern of your weakness, particularly how it worsens with activity and improves with rest, is quite specific. To better understand this, I need to ask about other muscles. Have you noticed any dr...
+→ avg_sim = 0.888, disagreement = 0
+------------------------
+
+[15:38:29][THINKING] Doctor thinking: The patient's history is highly suggestive of Myasthenia Gravis (MG) due to the classic triad of ocular symptoms (diplopia), proximal muscle weakness (stairs, hair brushing), and f...
+[15:38:29][DOCTOR] Doctor: DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+[15:38:31][PATIENT] Patient: I don't know.
+
+--- CONSENSUS DEBUG ---
+Agent 1 diagnosis: THE WORSENING OF YOUR SYMPTOMS WITH ACTIVITY AND IMPROVEMENT WITH REST IS A KEY FEATURE. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS OR CHANGES IN YOUR SPEECH, SUCH AS SLURRING, ESPECIALLY AS THE DAY GOES ON?
+
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+Raw response: The worsening of your symptoms with activity and improvement with rest is a key feature. Have you noticed any drooping of your eyelids or changes in your speech, such as slurring, especially as the da...
+Agent 2 diagnosis: MY PRIMARY SUSPICION IS A CONDITION AFFECTING THE CONNECTION BETWEEN NERVES AND MUSCLES, GIVEN THE SPECIFIC NATURE OF YOUR WEAKNESS. THE WORSENING WITH ACTIVITY AND IMPROVEMENT WITH REST IS A KEY CLUE. TO EXPLORE THIS FURTHER, I NEED TO ASK ABOUT OTHER MUSCLES THAT ARE COMMONLY AFFECTED.
+
+HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, OR ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR SPEAKING THAT ALSO GETS WORSE WITH USE, FOR INSTANCE, TOWARDS THE END OF A MEAL?
+
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+Raw response: My primary suspicion is a condition affecting the connection between nerves and muscles, given the specific nature of your weakness. The worsening with activity and improvement with rest is a key clue...
+Agent 3 diagnosis: THE PATIENT'S SYMPTOMS, PARTICULARLY THE PATTERN OF WEAKNESS THAT WORSENS WITH EXERTION AND IMPROVES WITH REST (FATIGABILITY), ARE HIGHLY SUGGESTIVE OF A PROBLEM AT THE NEUROMUSCULAR JUNCTION. THE INVOLVEMENT OF BOTH EYE MUSCLES (DIPLOPIA) AND LIMB MUSCLES (DIFFICULTY WITH STAIRS AND HAIR BRUSHING) IS CLASSIC FOR THIS TYPE OF DISORDER.
+
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+
+TO FURTHER EXPLORE THIS, I NEED TO ASK ABOUT OTHER MUSCLES THAT ARE COMMONLY AFFECTED.
+
+HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, ESPECIALLY AS THE DAY GOES ON?
+Raw response: The patient's symptoms, particularly the pattern of weakness that worsens with exertion and improves with rest (fatigability), are highly suggestive of a problem at the neuromuscular junction. The inv...
+→ avg_sim = 0.799, disagreement = 0
+------------------------
+
+[15:39:18][DOCTOR] Doctor: My primary suspicion is a condition affecting the connection between nerves and muscles, given the specific nature of your weakness. The worsening with activity and improvement with rest is a key clue. To explore this further, I need to ask about other muscles that are commonly affected.
+
+Have you noticed any drooping of your eyelids, or any difficulty with chewing, swallowing, or speaking that also gets worse with use, for instance, towards the end of a meal?
+
+DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+[15:39:21][PATIENT] Patient: Yes, I have noticed drooping of my right upper eyelid, and it seems to get worse if I look up for a while. I don't know about difficulty chewing, swallowing, or speaking.
+
+--- CONSENSUS DEBUG ---
+Agent 1 diagnosis: THANK YOU FOR CLARIFYING. THE PATTERN OF WEAKNESS WORSENING WITH USE IS A KEY PIECE OF INFORMATION.
+
+HAVE YOU NOTICED YOUR VOICE BECOMING HOARSE OR NASAL, OR HAVE YOU FOUND YOURSELF GETTING TIRED WHILE CHEWING, FOR INSTANCE WITH TOUGHER FOODS?
+
+<THINKING_PROCESS>THE PATIENT'S SYMPTOMS OF FLUCTUATING, FATIGABLE OCULAR (DIPLOPIA, PTOSIS) AND PROXIMAL LIMB WEAKNESS ARE CLASSIC FOR MYASTHENIA GRAVIS. THE PTOSIS WORSENING WITH SUSTAINED UPWARD GAZE IS A SPECIFIC SIGN OF THIS FATIGABILITY. I'VE ASKED FOR MORE DETAIL ON BULBAR SYMPTOMS (SPEECH, CHEWING) TO ASSESS THE EXTENT OF THE DISEASE. HER ANSWER WILL HELP CHARACTERIZE THE MYASTHENIA AS OCULAR-ONLY OR GENERALIZED, BUT THE PRIMARY DIAGNOSIS IS ALREADY STRONGLY SUSPECTED. THE NEXT LOGICAL STEP IS TO ORDER TESTS TO CONFIRM THE DIAGNOSIS. SEROLOGICAL TESTS FOR ACETYLCHOLINE RECEPTOR ANTIBODIES AND ELECTROPHYSIOLOGICAL STUDIES ARE THE STANDARD OF CARE.</THINKING_PROCESS>
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MITOCHONDRIAL MYOPATHY
+CONSENSUSMODE#1: BE CONCISE AND EVIDENCE-BASED.
+Raw response: Thank you for clarifying. The pattern of weakness worsening with use is a key piece of information.
+
+Have you noticed your voice becoming hoarse or nasal, or have you found yourself getting tired whil...
+Agent 2 diagnosis: THE FLUCTUATING PTOSIS AND WEAKNESS ARE HIGHLY SUGGESTIVE OF A PROBLEM AT THE NEUROMUSCULAR JUNCTION, WHERE NERVES COMMUNICATE WITH MUSCLES.
+
+HAVE YOU EXPERIENCED ANY CHANGES IN YOUR VOICE, SUCH AS IT BECOMING QUIETER OR MORE NASAL AFTER SPEAKING FOR A WHILE?
+
+EXACT: REQUEST TEST: BLOOD_TESTS
+
+<THINKING_PROCESS>THE PATIENT'S SYMPTOMS—DIPLOPIA, PTOSIS, AND PROXIMAL LIMB WEAKNESS, ALL OF WHICH ARE FATIGUABLE (WORSEN WITH ACTIVITY, IMPROVE WITH REST)—ARE CLASSIC FOR MYASTHENIA GRAVIS (MG). THE NEW INFORMATION ABOUT PTOSIS WORSENING WITH SUSTAINED UPWARD GAZE FURTHER STRENGTHENS THIS SUSPICION. THE NEXT LOGICAL STEP IS TO CONFIRM THIS DIAGNOSIS. THE MOST SPECIFIC AND EFFICIENT INITIAL TEST FOR MG IS SEROLOGY FOR ACETYLCHOLINE RECEPTOR (ACHR) ANTIBODIES. I AM ALSO ASKING ABOUT BULBAR SYMPTOMS (VOICE CHANGES) TO ASSESS THE EXTENT OF THE DISEASE, WHICH IS IMPORTANT FOR MANAGEMENT AND PROGNOSIS. ORDERING THE BLOOD TEST NOW IS THE MOST DIRECT PATH TO A DIAGNOSIS.</THINKING_PROCESS>
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MYOSITIS
+Raw response: The fluctuating ptosis and weakness are highly suggestive of a problem at the neuromuscular junction, where nerves communicate with muscles.
+
+Have you experienced any changes in your voice, such as it...
+Agent 3 diagnosis: THANK YOU FOR THAT INFORMATION. THE DROOPING EYELID THAT WORSENS WHEN YOU LOOK UP IS A VERY SPECIFIC CLUE.
+
+HAVE YOU NOTICED YOUR VOICE CHANGING, PERHAPS BECOMING MORE NASAL OR SLURRED, AFTER YOU'VE BEEN SPEAKING FOR A WHILE? SIMILARLY, HAVE YOU EXPERIENCED ANY COUGHING OR CHOKING WHEN YOU EAT OR DRINK?
+
+<THINKING_PROCESS>THE PATIENT'S CONFIRMATION OF FATIGABLE PTOSIS, COMBINED WITH THE INITIAL HISTORY OF FLUCTUATING PROXIMAL LIMB WEAKNESS AND DIPLOPIA, MAKES MYASTHENIA GRAVIS THE LEADING DIAGNOSIS. THE NEW QUESTIONS ARE DESIGNED TO SPECIFICALLY ASSESS FOR BULBAR MUSCLE INVOLVEMENT (SPEECH AND SWALLOWING), WHICH IS COMMON IN MG AND IMPORTANT FOR RISK STRATIFICATION (RISK OF ASPIRATION OR MYASTHENIC CRISIS). THIS IS A FOCUSED, NON-REDUNDANT LINE OF QUESTIONING TO COMPLETE THE CLINICAL PICTURE BEFORE ORDERING TESTS.</THINKING_PROCESS>
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+CONSENSUSMODE#3: THE PATIENT'S HISTORY IS CLASSIC FOR MYASTHENIA GRAVIS, WITH FLUCTUATING, FATIGABLE WEAKNESS AFFECTING OCULAR (DIPLOPIA, PTOSIS) AND PROXIMAL LIMB MUSCLES. THE NEW INFORMATION ABOUT PTOSIS WORSENING WITH SUSTAINED GAZE IS A HALLMARK SIGN. THE NEXT LOGICAL STEP IS TO PROBE FOR BULBAR SYMPTOMS (SPEECH, SWALLOWING), AS THEIR PRESENCE WOULD FURTHER STRENGTHEN THE DIAGNOSIS AND INDICATE MORE WIDESPREAD, SEVERE DISEASE. THIS IS A CRUCIAL SAFETY AND DIAGNOSTIC QUESTION. PROCEEDING WITH THIS QUESTION IS THE CORRECT CLINICAL ACTION.
+Raw response: Thank you for that information. The drooping eyelid that worsens when you look up is a very specific clue.
+
+Have you noticed your voice changing, perhaps becoming more nasal or slurred, after you've b...
+→ avg_sim = 0.801, disagreement = 0
+------------------------
+
+[15:40:19][THINKING] Doctor thinking: The patient's symptoms of fluctuating, fatigable ocular (diplopia, ptosis) and proximal limb weakness are classic for Myasthenia Gravis. The ptosis worsening with sustained upward ...
+[15:40:19][DOCTOR] Doctor: DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Mitochondrial Myopathy
+ConsensusMode#1: Be concise and evidence-based.
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+[15:40:25][PATIENT] Patient: I have double vision, difficulty climbing stairs, and upper limb weakness that worsen with activity and improve with rest. My right eyelid droops, especially with sustained upward gaze. My blood tests show elevated Acetylcholine Receptor Antibodies, and EMG showed decreased muscle response with repetitive stimulation. My reflexes are normal.
+
+--- CONSENSUS DEBUG ---
+Agent 1 diagnosis: MYASTHENIA GRAVIS
+Raw response: The combination of your symptoms—fatigable weakness affecting your eyes and limbs—along with the positive Acetylcholine Receptor Antibodies and the specific findings on your EMG, is conclusive.
+
+<thin...
+Agent 2 diagnosis: MYASTHENIA GRAVIS
+Raw response: The clinical picture of fluctuating weakness, particularly affecting the eyes and proximal muscles, combined with positive Acetylcholine Receptor Antibodies and a decremental response on EMG, is defin...
+Agent 3 diagnosis: MYASTHENIA GRAVIS
+Raw response: The combination of fluctuating, fatigable weakness affecting ocular and proximal limb muscles, positive Acetylcholine Receptor Antibodies, and a decremental response on repetitive nerve stimulation is...
+→ avg_sim = 1.000, disagreement = 0
+------------------------
+
+[15:41:04][DOCTOR] Doctor: The combination of fluctuating, fatigable weakness affecting ocular and proximal limb muscles, positive Acetylcholine Receptor Antibodies, and a decremental response on repetitive nerve stimulation is pathognomonic.
+
+DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
+ConsensusMode#3: The clinical presentation is classic for a neuromuscular junction disorder. The positive Acetylcholine Receptor Antibodies are highly specific for Myasthenia Gravis, and the EMG findings confirm the diagnosis. No further tests are needed.
+
+EXACT: DIAGNOSIS READY: Myasthenia Gravis
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+[15:41:12][PATIENT] Prescription: Rx: Pyridostigmine 60 mg PO TID
+[15:41:27][FINAL_STATS] Saved: experiments_consensus/experiment_results.csv
+consensus metrics: {
+  "n_cases": 1,
+  "accuracy_%": 100.0,
+  "cdr_%": 0.0,
+  "rdc_mean_%": 77.12999725341797,
+  "unsafe_rx_%": 0.0,
+  "trust_index": 93.14,
+  "avg_turns": 4.0,
+  "timeout_rate_%": 0.0,
+  "trace_len_mean": 588.0,
+  "trace_len_std": NaN,
+  "redundancy_ratio_%": 22.11,
+  "evidence_coverage_%": 100.0,
+  "ddi_count": 0,
+  "test_safety_alerts": 0,
+  "trust_var": 0.0
 }
 
-@article{hu2021lora,
-  title={LoRA: Low-Rank Adaptation of Large Language Models},
-  author={Hu, Edward J. and Shen, Yelong and Wallis, Phillip and Allen-Zhu, Zeyuan and Li, Yuanzhi and Wang, Lu and Chen, Weizhu},
-  journal={arXiv preprint arXiv:2106.09685},
-  year={2021}
+===========================
+▶ Running TRUST...
+[15:41:31][HEADER] --- Scenario 0: Myasthenia gravis ---
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+
+--- CONSENSUS DEBUG ---
+Agent 1 diagnosis: FATIGABLE WEAKNESS WITH OCULAR SYMPTOMS IN A YOUNG FEMALE IS HIGHLY SUGGESTIVE OF A NEUROMUSCULAR JUNCTION DISORDER. I NEED TO EXPLORE OTHER COMMON SYMPTOMS ASSOCIATED WITH THIS CONDITION.
+
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+CONSENSUSMODE#1: BE CONCISE AND EVIDENCE-BASED.
+
+HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, OR ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR SPEAKING?
+Raw response: Fatigable weakness with ocular symptoms in a young female is highly suggestive of a neuromuscular junction disorder. I need to explore other common symptoms associated with this condition.
+
+DDX: Myast...
+Agent 2 diagnosis: HELLO. I UNDERSTAND YOU'VE BEEN EXPERIENCING SOME CONCERNING WEAKNESS AND VISION CHANGES. TO GET A CLEARER PICTURE, I NEED TO ASK A FEW MORE QUESTIONS.
+
+HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS? ADDITIONALLY, HAVE YOU EXPERIENCED ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR CHANGES IN YOUR SPEECH, ESPECIALLY TOWARDS THE END OF THE DAY?
+Raw response: Hello. I understand you've been experiencing some concerning weakness and vision changes. To get a clearer picture, I need to ask a few more questions.
+
+Have you noticed any drooping of your eyelids? ...
+Agent 3 diagnosis: THE PATTERN OF YOUR SYMPTOMS, PARTICULARLY THE WORSENING WITH ACTIVITY AND IMPROVEMENT WITH REST, IS A KEY FEATURE. LET'S DELVE INTO THE SPECIFICS OF YOUR VISION CHANGES. DOES THE DOUBLE VISION RESOLVE IF YOU COVER ONE EYE, AND HAVE YOU ALSO NOTICED ANY DROOPING OF YOUR EYELIDS?
+
+<THINKING_PROCESS>THE PATIENT'S HISTORY IS CLASSIC FOR FATIGABLE WEAKNESS, MAKING MYASTHENIA GRAVIS (MG) THE LEADING DIAGNOSIS. THE SYMPTOMS DESCRIBED—DIPLOPIA, PROXIMAL LIMB WEAKNESS (DIFFICULTY WITH STAIRS, BRUSHING HAIR)—THAT WORSEN WITH EXERTION AND IMPROVE WITH REST ARE HALLMARK FEATURES. MY FIRST QUESTION AIMS TO CONFIRM TWO CRITICAL POINTS HIGHLY ASSOCIATED WITH MG: 1) IS THE DIPLOPIA BINOCULAR? (RESOLVING WHEN ONE EYE IS COVERED CONFIRMS A MUSCLE ALIGNMENT ISSUE, NOT AN INTRINSIC EYE PROBLEM). 2) IS THERE PTOSIS? (PTOSIS AND DIPLOPIA ARE THE MOST COMMON INITIAL SYMPTOMS OF MG). THIS WILL HELP SOLIDIFY MG'S POSITION AT THE TOP OF THE DIFFERENTIAL. LEMS IS LESS LIKELY DUE TO IMPROVEMENT WITH REST, AND MS WOULD TYPICALLY HAVE A DIFFERENT PATTERN, THOUGH UHTHOFF'S PHENOMENON CAN MIMIC THIS.</THINKING_PROCESS>
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+CONSENSUSMODE#3: REFLECT CLINICALLY BEFORE DECIDING.
+Raw response: The pattern of your symptoms, particularly the worsening with activity and improvement with rest, is a key feature. Let's delve into the specifics of your vision changes. Does the double vision resolv...
+→ avg_sim = 0.635, disagreement = 0
+------------------------
+
+[15:42:15][DOCTOR] Doctor: Fatigable weakness with ocular symptoms in a young female is highly suggestive of a neuromuscular junction disorder. I need to explore other common symptoms associated with this condition.
+
+DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
+ConsensusMode#1: Be concise and evidence-based.
+
+Have you noticed any drooping of your eyelids, or any difficulty with chewing, swallowing, or speaking?
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+[15:42:17][PATIENT] Patient: Yes, I have noticed drooping of my right upper eyelid. I haven't had any difficulty with chewing, swallowing, or speaking.
+
+--- CONSENSUS DEBUG ---
+Agent 1 diagnosis: THE COMBINATION OF FLUCTUATING MUSCLE WEAKNESS, INCLUDING DOUBLE VISION AND PTOSIS, THAT WORSENS WITH ACTIVITY AND IMPROVES WITH REST IS HIGHLY CHARACTERISTIC OF A DISORDER AT THE NEUROMUSCULAR JUNCTION. MYASTHENIA GRAVIS IS THE MOST LIKELY CAUSE. I WILL ORDER BLOOD TESTS TO LOOK FOR THE SPECIFIC ANTIBODIES ASSOCIATED WITH THIS CONDITION.
+
+EXACT: REQUEST TEST: BLOOD_TESTS
+
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
+CONSENSUSMODE#1: BE CONCISE AND EVIDENCE-BASED.
+Raw response: The combination of fluctuating muscle weakness, including double vision and ptosis, that worsens with activity and improves with rest is highly characteristic of a disorder at the neuromuscular juncti...
+Agent 2 diagnosis: THE FLUCTUATING NATURE OF YOUR WEAKNESS AND THE SPECIFIC MUSCLES INVOLVED (EYELIDS, EYE MOVEMENT, AND PROXIMAL LIMBS) ARE HIGHLY SUGGESTIVE OF A PROBLEM AT THE JUNCTION BETWEEN THE NERVE AND THE MUSCLE.
+
+HAVE YOU EXPERIENCED ANY NUMBNESS, TINGLING, OR CHANGES IN SENSATION IN YOUR ARMS, LEGS, OR FACE?
+
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MITOCHONDRIAL MYOPATHY
+Raw response: The fluctuating nature of your weakness and the specific muscles involved (eyelids, eye movement, and proximal limbs) are highly suggestive of a problem at the junction between the nerve and the muscl...
+Agent 3 diagnosis: THE COMBINATION OF FLUCTUATING MUSCLE WEAKNESS THAT WORSENS WITH ACTIVITY AND IMPROVES WITH REST, ALONG WITH SPECIFIC INVOLVEMENT OF THE EYE MUSCLES (EYELID DROOPING, DOUBLE VISION) AND PROXIMAL LIMB MUSCLES, IS HIGHLY CHARACTERISTIC OF A DISORDER OF THE NEUROMUSCULAR JUNCTION. MYASTHENIA GRAVIS IS THE MOST LIKELY DIAGNOSIS.
+
+HAVE YOU EXPERIENCED ANY NUMBNESS, TINGLING, OR LOSS OF SENSATION IN YOUR FACE, ARMS, OR LEGS?
+
+EXACT: REQUEST TEST: BLOOD_TESTS
+DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MITOCHONDRIAL MYOPATHY
+CONSENSUSMODE#3: THE PATIENT'S CONSTELLATION OF SYMPTOMS—FATIGABLE WEAKNESS, PTOSIS, DIPLOPIA, AND PROXIMAL MUSCLE INVOLVEMENT—IS PATHOGNOMONIC FOR MYASTHENIA GRAVIS. THE INITIAL DIAGNOSTIC WORKUP SHOULD FOCUS ON CONFIRMING THIS. AN ACHR ANTIBODY TEST IS THE MOST SPECIFIC AND COMMON INITIAL TEST. WHILE ELECTRODIAGNOSTIC STUDIES ARE ALSO VALUABLE, THE BLOOD TEST IS A LESS INVASIVE FIRST STEP. RULING OUT SENSORY SYMPTOMS HELPS DIFFERENTIATE THIS FROM DEMYELINATING DISEASES LIKE MS.
+Raw response: The combination of fluctuating muscle weakness that worsens with activity and improves with rest, along with specific involvement of the eye muscles (eyelid drooping, double vision) and proximal limb ...
+→ avg_sim = 0.781, disagreement = 0
+------------------------
+
+[15:43:05][DOCTOR] Doctor: The combination of fluctuating muscle weakness that worsens with activity and improves with rest, along with specific involvement of the eye muscles (eyelid drooping, double vision) and proximal limb muscles, is highly characteristic of a disorder of the neuromuscular junction. Myasthenia gravis is the most likely diagnosis.
+
+Have you experienced any numbness, tingling, or loss of sensation in your face, arms, or legs?
+
+EXACT: REQUEST TEST: Blood_Tests
+DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Mitochondrial Myopathy
+ConsensusMode#3: The patient's constellation of symptoms—fatigable weakness, ptosis, diplopia, and proximal muscle involvement—is pathognomonic for Myasthenia Gravis. The initial diagnostic workup should focus on confirming this. An AChR antibody test is the most specific and common initial test. While electrodiagnostic studies are also valuable, the blood test is a less invasive first step. Ruling out sensory symptoms helps differentiate this from demyelinating diseases like MS.
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+[15:43:09][MEASUREMENT] Test safety: Risk: Low | Reason: Blood tests are a standard, minimally invasive diagnostic procedure with no specific contraindications related to the patient's symptoms.
+[15:43:09][MEASUREMENT] Test result: RESULTS FOR Blood_Tests: {'Acetylcholine_Receptor_Antibodies': 'Present (elevated)'}
+
+--- CONSENSUS DEBUG ---
+Agent 1 diagnosis: MYASTHENIA GRAVIS
+Raw response: The positive Acetylcholine Receptor Antibody test, in conjunction with the patient's classic symptoms of fluctuating, fatigable weakness affecting ocular and proximal muscles, confirms the diagnosis.
+...
+Agent 2 diagnosis: MYASTHENIA GRAVIS
+Raw response: The presence of elevated Acetylcholine Receptor Antibodies, combined with your clinical presentation of fluctuating muscle weakness, diplopia, and fatigability, is conclusive.
+
+DDX: Myasthenia Gravis,...
+Agent 3 diagnosis: MYASTHENIA GRAVIS
+Raw response: The presence of elevated Acetylcholine Receptor Antibodies in a patient with a classic history of fluctuating, fatigable weakness (diplopia, proximal muscle weakness) is diagnostic for Myasthenia Grav...
+→ avg_sim = 1.000, disagreement = 0
+------------------------
+
+[15:43:36][DOCTOR] Doctor: The presence of elevated Acetylcholine Receptor Antibodies in a patient with a classic history of fluctuating, fatigable weakness (diplopia, proximal muscle weakness) is diagnostic for Myasthenia Gravis. The antibodies confirm an autoimmune attack on the neuromuscular junction, which explains the patient's symptoms. No further investigation is required to make the diagnosis.
+
+DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
+EXACT: DIAGNOSIS READY: Myasthenia Gravis
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
+[15:43:47][PATIENT] Prescription: Rx: Pyridostigmine 60 mg PO TID
+[15:44:04][FINAL_STATS] Saved: experiments_trust/experiment_results.csv
+trust metrics: {
+  "n_cases": 1,
+  "accuracy_%": 100.0,
+  "cdr_%": 0.0,
+  "rdc_mean_%": 55.779998779296875,
+  "unsafe_rx_%": 0.0,
+  "trust_index": 86.73,
+  "avg_turns": 3.0,
+  "timeout_rate_%": 0.0,
+  "trace_len_mean": 0.0,
+  "trace_len_std": NaN,
+  "redundancy_ratio_%": 0.0,
+  "evidence_coverage_%": 0.0,
+  "ddi_count": 0,
+  "test_safety_alerts": 0,
+  "trust_var": 0.0
 }
 
-@article{dettmers2023bitsandbytes,
-  title={Bitsandbytes: Optimizing Memory Efficiency in Large Language Model Training},
-  author={Dettmers, Tim and Lewis, Mike and Belkada, Younes and Zettlemoyer, Luke},
-  journal={arXiv preprint arXiv:2303.05449},
-  year={2023}
-}
+✅ All experiments complete!
 
-@article{devlin2019bert,
-  title={BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding},
-  author={Devlin, Jacob and Chang, Ming-Wei and Lee, Kenton and Toutanova, Kristina},
-  journal={NAACL-HLT},
-  year={2019}
-}
+         run  n_cases  accuracy_%  cdr_%  rdc_mean_%  unsafe_rx_%  \
+0  consensus        1       100.0    0.0   77.129997          0.0   
+1      trust        1       100.0    0.0   55.779999          0.0   
 
-@article{lin2004rouge,
-  title={ROUGE: A Package for Automatic Evaluation of Summaries},
-  author={Lin, Chin-Yew},
-  journal={Text Summarization Branches Out},
-  year={2004}
-}
+   trust_index  avg_turns  timeout_rate_%  trace_len_mean  trace_len_std  \
+0        93.14        4.0             0.0           588.0            NaN   
+1        86.73        3.0             0.0             0.0            NaN   
 
-@article{zhang2020bertscore,
-  title={BERTScore: Evaluating Text Generation with BERT},
-  author={Zhang, Tianyi and Kishore, Varsha and Wu, Felix and Weinberger, Kilian Q. and Artzi, Yoav},
-  journal={International Conference on Learning Representations (ICLR)},
-  year={2020}
-}
+   redundancy_ratio_%  evidence_coverage_%  ddi_count  test_safety_alerts  \
+0               22.11                100.0          0                   0   
+1                0.00                  0.0          0                   0   
 
-@article{rei2020comet,
-  title={COMET: A Neural Framework for MT Evaluation},
-  author={Rei, Ricardo and Farinha, Ana C. and Lavie, Alon and Martins, Andr{\'e} F. T.},
-  journal={EMNLP},
-  year={2020}
-}
+   trust_var  
+0        0.0  
+1        0.0
 
-@article{xu2023multilingual,
-  title={Multilingual Large Language Models are Better at Cross-Lingual Understanding than Translation-Based Approaches},
-  author={Xu, Zihan and Li, Xiang and others},
-  journal={arXiv preprint arXiv:2305.14787},
-  year={2023}
-}
-
-@article{touvron2023llama,
-  title={LLaMA: Open and Efficient Foundation Language Models},
-  author={Touvron, Hugo and Lavril, Thibaut and others},
-  journal={arXiv preprint arXiv:2302.13971},
-  year={2023}
-}
-
-@inproceedings{gururangan2020don,
-  title={Don’t Stop Pretraining: Adapt Language Models to Domains and Tasks},
-  author={Gururangan, Suchin and Marasovi{\'c}, Ana and Swayamdipta, Swabha and Lo, Kyle and Beltagy, Iz and Downey, Doug and Smith, Noah A.},
-  booktitle={ACL},
-  year={2020}
-}
+Top metric correlations:
+  n_cases ↔ accuracy_%: nan
+  n_cases ↔ cdr_%: nan
+  n_cases ↔ rdc_mean_%: nan
+  n_cases ↔ unsafe_rx_%: nan
+  n_cases ↔ trust_index: nan
+  n_cases ↔ avg_turns: nan
+  n_cases ↔ timeout_rate_%: nan
+  n_cases ↔ trace_len_mean: nan
