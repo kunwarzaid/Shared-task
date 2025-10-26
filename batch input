@@ -1,174 +1,84 @@
-# ======================================================
-#  MedGuard-X Experiment Harness (Enhanced Metrics)
-# ======================================================
+▶ Running BASELINE...
+[07:24:48][HEADER] --- Scenario 0: Myasthenia gravis ---
+---------------------------------------------------------------------------
+AttributeError                            Traceback (most recent call last)
+/tmp/ipython-input-4121208707.py in <cell line: 0>()
+     88 results = []
+     89 for name, cfg, folder in experiments:
+---> 90     nm, m = run_and_eval(name, cfg, folder)
+     91     results.append({"run": nm, **m})
+     92 
 
-import json, pandas as pd, numpy as np, matplotlib.pyplot as plt
+2 frames
+/tmp/ipython-input-32193778.py in run_one_case(scenario, config, max_turns)
+    317     for t in range(max_turns):
+    318         turns = t + 1
+--> 319         dr_full = doctor._ask_consensus(sys_p, user_p)
+    320         think, dr_text = parse_thinking_and_body(dr_full)
+    321         reasoning_trace += ("\n" + think) if think else reasoning_trace
 
-# ---------------------------------------------------------------------
-# Safe JSON helper for serialization
-# ---------------------------------------------------------------------
-def safe_json(obj):
-    if isinstance(obj, (np.float32, np.float64)):
-        return float(obj)
-    if isinstance(obj, (np.int32, np.int64)):
-        return int(obj)
-    raise TypeError(f"Type {type(obj)} not serializable")
+AttributeError: 'DoctorAgent' object has no attribute '_ask_consensus'
 
-# ---------------------------------------------------------------------
-# Run + evaluate wrapper
-# ---------------------------------------------------------------------
-def run_and_eval(name, cfg, outdir):
-    print(f"\n===========================")
-    print(f"▶ Running {name.upper()}...")
+class DoctorAgent:
+    def __init__(self, cfg: Dict[str, Any], use_consensus: bool = True, consensus_n: int = 3):
+        self.cfg = cfg
+        self.use_consensus = use_consensus
+        self.consensus_n = max(1, int(consensus_n))
+        self.last_consensus_disagreement = 0
 
-    df = run_experiment(cfg, out_dir=outdir)
-    df = compute_rdc_scores(df)  # ensures RDC is computed
-    df.to_csv(f"{outdir}/results_with_rdc.csv", index=False)
+    def _system_prompt(self, summary: str, available_tests: List[str]):
+        tests_list = "\n- ".join(available_tests or [])
+        return (
+            "You are Dr. Agent in a clinical consultation.\n"
+            "Rules:\n"
+            "• Ask focused, non-redundant questions.\n"
+            "• To order a test, use EXACT: REQUEST TEST: <key>\n"
+            "• If ready to conclude, output EXACT: DIAGNOSIS READY: <Diagnosis>\n"
+            f"Tests available:\n- {tests_list}\n\n"
+            f"PATIENT SUMMARY:\n{summary}\n\n"
+            "<thinking_process>Brief next-step reasoning tied to evidence.</thinking_process>\n"
+            "DDX: <comma-separated top 3>"
+        )
 
-    # Compute metrics (your updated compute_metrics function)
-    m = compute_metrics(df)
+    def _ask_once(self, sys_prompt: str, user_prompt: str, temperature: float = 0.6):
+        return query_model(**self.cfg, prompt=user_prompt, system_prompt=sys_prompt, temperature=temperature)
 
-    # Save metrics summary JSON for reproducibility
-    with open(f"{outdir}/metrics_summary.json", "w") as f:
-        json.dump(m, f, indent=2, default=safe_json)
+    def doctor_ask_consensus(self, sys_prompt, user_prompt):
+        """Improved consensus with semantic clustering to reduce false disagreement."""
+        if not self.use_consensus or self.consensus_n <= 1:
+          return query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
 
-    print(f"{name} metrics:", json.dumps(m, indent=2, default=safe_json))
-    return name, m
+    # Diverse prompts
+        modifiers = [
+        "Be concise and evidence-based.",
+        "Prioritize diagnostic efficiency.",
+        "Reflect clinically before deciding.",
+        "Avoid redundant questioning.",
+        "Move toward a defensible differential."
+        ]
+        responses = []
+        for i in range(self.consensus_n):
+          t = 0.5 + 0.1 * (i % 3)
+          addon = f"\nConsensusMode#{i+1}: {modifiers[i % len(modifiers)]}"
+          r = query_model(**self.llm_config,
+                        prompt=user_prompt,
+                        system_prompt=sys_prompt + addon,
+                        temperature=t)
+          responses.append(r or "")
 
+    # --- Semantic clustering ---
+        if len(responses) > 1:
+          embeddings = embed_model.encode(responses, normalize_embeddings=True)
+          sim = cosine_similarity(embeddings)
+          # Compute mean similarity across responses
+          avg_sim = np.mean(sim[np.triu_indices(len(sim), 1)])
+          self.last_consensus_disagreement = 1 if avg_sim < 0.8 else 0
+        else:
+          self.last_consensus_disagreement = 0
 
-# ---------------------------------------------------------------------
-# Experiment Configurations
-# ---------------------------------------------------------------------
-baseline_cfg = {
-    **config,
-    "use_consensus": False,
-    "consensus_n": 1,
-    "use_test_safety": False,
-    "use_rx_safety": False,
-    "use_ddi_check": False,
-}
+    # Choose most "central" response
+        mean_sim = cosine_similarity(embeddings, embeddings.mean(axis=0, keepdims=True)).flatten()
+        best_idx = int(np.argmax(mean_sim))
+        best_response = responses[best_idx]
 
-safety_cfg = {
-    **config,
-    "use_consensus": False,
-    "consensus_n": 1,
-    "use_test_safety": True,
-    "use_rx_safety": True,
-    "use_ddi_check": True,
-}
-
-consensus_cfg = {
-    **config,
-    "use_consensus": True,
-    "consensus_n": 3,
-    "use_test_safety": False,
-    "use_rx_safety": False,
-    "use_ddi_check": False,
-}
-
-trust_cfg = {
-    **config,
-    "use_consensus": True,
-    "consensus_n": 3,
-    "use_test_safety": True,
-    "use_rx_safety": True,
-    "use_ddi_check": True,
-}
-
-# ---------------------------------------------------------------------
-# Run all experiments sequentially
-# ---------------------------------------------------------------------
-experiments = [
-    ("baseline", baseline_cfg, "experiments_baseline"),
-    ("safety", safety_cfg, "experiments_safety"),
-    ("consensus", consensus_cfg, "experiments_consensus"),
-    ("trust", trust_cfg, "experiments_trust"),
-]
-
-results = []
-for name, cfg, folder in experiments:
-    nm, m = run_and_eval(name, cfg, folder)
-    results.append({"run": nm, **m})
-
-# ---------------------------------------------------------------------
-# Aggregate results
-# ---------------------------------------------------------------------
-df_summary = pd.DataFrame(results)
-df_summary.to_csv("experiment_summary_all.csv", index=False)
-
-print("\n✅ All experiments complete!\n")
-print(df_summary)
-
-# ---------------------------------------------------------------------
-# Export LaTeX Table
-# ---------------------------------------------------------------------
-latex_table = df_summary.to_latex(
-    index=False,
-    float_format="%.2f",
-    caption="Performance comparison across MedGuard-X variants with expanded trustworthiness metrics.",
-    label="tab:medguardx_results"
-)
-with open("experiment_summary_all.tex", "w") as f:
-    f.write(latex_table)
-print("\n📄 LaTeX table saved as 'experiment_summary_all.tex'.")
-
-# ---------------------------------------------------------------------
-# Visualization: Multi-Metric Summary Plot
-# ---------------------------------------------------------------------
-plt.figure(figsize=(8, 4))
-
-plt.plot(df_summary["run"], df_summary["accuracy_%"], marker="o", label="Accuracy")
-plt.plot(df_summary["run"], df_summary["trust_index"], marker="s", label="Trust Index")
-if "rdc_mean_%" in df_summary:
-    plt.plot(df_summary["run"], df_summary["rdc_mean_%"], marker="^", label="RDC (Reasoning Coherence)")
-if "unsafe_rx_%" in df_summary:
-    plt.plot(df_summary["run"], df_summary["unsafe_rx_%"], marker="x", linestyle="--", label="Unsafe Rx %")
-
-plt.title("Performance and Trustworthiness across MedGuard-X Variants")
-plt.xlabel("Configuration")
-plt.ylabel("%")
-plt.legend()
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.savefig("experiment_summary_plot_extended.png", dpi=300)
-plt.show()
-
-print("📊 Saved plot: experiment_summary_plot_extended.png")
-# ---------------------------------------------------------------------
-# 📊 Correlation Analysis — trust–performance relationships
-# ---------------------------------------------------------------------
-from itertools import combinations
-
-# Select numeric columns only
-num_cols = [c for c in df_summary.columns if df_summary[c].dtype != 'object']
-df_corr = df_summary[num_cols].corr()
-
-# --- Save correlation matrix
-df_corr.to_csv("experiment_metric_correlation.csv", index=True)
-print("\n📈 Metric correlation matrix saved as 'experiment_metric_correlation.csv'\n")
-
-# --- Print top positive correlations
-pairs = []
-for a, b in combinations(num_cols, 2):
-    if a != b:
-        corr = df_corr.loc[a, b]
-        pairs.append((a, b, corr))
-top_corr = sorted(pairs, key=lambda x: abs(x[2]), reverse=True)[:8]
-
-print("🔍 Top metric correlations:")
-for a, b, c in top_corr:
-    print(f"  {a} ↔ {b}: {c:.3f}")
-
-# --- Plot heatmap (if seaborn available)
-try:
-    import seaborn as sns
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(df_corr, annot=True, fmt=".2f", cmap="coolwarm", square=True,
-                cbar_kws={'label': 'Correlation'})
-    plt.title("Inter-metric Correlation (Accuracy, Trust, RDC, CDR, Safety)")
-    plt.tight_layout()
-    plt.savefig("experiment_metric_correlation.png", dpi=300)
-    plt.show()
-    print("📊 Saved correlation heatmap: experiment_metric_correlation.png")
-except Exception as e:
-    print(f"[WARN] Could not plot correlation heatmap: {e}")
+        return best_response
