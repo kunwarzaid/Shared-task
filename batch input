@@ -1,50 +1,34 @@
-for t in range(max_turns):
-    turns = t + 1
-    dr_full = doctor._ask_consensus(sys_p, user_p, debug=True)
-    think, dr_text = parse_thinking_and_body(dr_full)
+    # Prescription + safety
+    rx_text = ""
+    rx_eval = {}
+    if diagnosis != "TIMEOUT":
+        rx_text = rx_writer.write(diagnosis, summary)
+        log_trace(f"Prescription: {rx_text}", "PATIENT")
+        rx_eval = rx_safety.check(rx_text, summary) if rx_safety else {"llm_eval": "", "ddi_issues": []}
 
-    # ✅ Always capture reasoning at every turn (including test orders)
-    if think:
-        reasoning_trace += ("\n" + think)
+    # ✅ Collect test safety notes from the conversation
+    test_safety_notes = [
+        c["content"] for c in convo
+        if c["role"] == "system" and isinstance(c.get("content"), str) and "Risk:" in c["content"]
+    ]
+    test_safety_str = "\n".join(test_safety_notes) if test_safety_notes else ""
 
-    convo.append({"role": "doctor", "content": dr_text})
-    log_trace(f"Doctor: {dr_text}", "DOCTOR")
+    # Determine correctness
+    correct = False
+    if diagnosis != "TIMEOUT":
+        correct = adjudicate_equivalence(diagnosis, scenario.gt_dx, config["moderator_llm_config"])
 
-    # Capture DDx
-    ddx = parse_ddx_line(dr_text)
-    if ddx:
-        ddx_history.append(ddx)
-
-    # Final diagnosis?
-    m = re.search(r"DIAGNOSIS READY:\s*(.*)", dr_text, re.I)
-    if m:
-        diagnosis = m.group(1).strip()
-        break
-
-    # Test request branch (must not skip reasoning)
-    m2 = re.search(r"REQUEST TEST:\s*(.*)", dr_text, re.I)
-    if m2:
-        tname = m2.group(1).strip()
-        if test_safety:
-            ts = test_safety.assess(tname, summary)
-            log_trace(f"Test safety: {ts}", "MEASUREMENT")
-            convo.append({"role": "system", "content": ts})
-        tres = measure.get_result(tname)
-        log_trace(f"Test result: {tres}", "MEASUREMENT")
-        convo.append({"role": "system", "content": tres})
-        user_p = tres
-        continue
-
-    # Otherwise, patient responds
-    ans = patient.respond(dr_text)
-    log_trace(f"Patient: {ans}", "PATIENT")
-    convo.append({"role": "patient", "content": ans})
-    user_p = ans
-
-
-
-
-    test_safety_notes = [c["content"] for c in convo if c["role"] == "system" and "Risk:" in c["content"]]
-    test_safety_str = "\n".join(test_safety_notes)
-
-"test_safety": test_safety_str,
+    # ✅ Return all relevant fields
+    return {
+        "gt": scenario.gt_dx,
+        "diagnosis": diagnosis,
+        "correct": bool(correct),
+        "turns": turns,
+        "consensus_disagree": doctor.last_consensus_disagreement,
+        "reasoning_trace": reasoning_trace.strip(),
+        "ddx_history": json.dumps(ddx_history),
+        "rx": rx_text,
+        "rx_safety": (rx_eval.get("llm_eval") or ""),
+        "ddi_issues": json.dumps(rx_eval.get("ddi_issues", [])),
+        "test_safety": test_safety_str,   # ✅ new line added
+    }
