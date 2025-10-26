@@ -1,263 +1,48 @@
-\documentclass[11pt]{article}
-\usepackage[final]{acl} % camera-ready version
-
-\usepackage{times}
-\usepackage{latexsym}
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage{microtype}
-\usepackage{inconsolata}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{caption}
-\usepackage{tikz}
-\usepackage{float}
-\renewcommand{\UrlFont}{\ttfamily\small}
-
-% spacing tweaks
-\setlength{\parskip}{4pt}
-\setlength{\abovecaptionskip}{3pt}
-\setlength{\belowcaptionskip}{3pt}
-
-\title{Multilingual Clinical Dialogue Summarization and Information Extraction with Qwen-1.5B LoRA}
-
-\author{
-\begin{tabular}{c}
-\textbf{Kunwar Zaid} \quad
-\textbf{Amit Sangroya} \quad
-\textbf{Jyotsana Khatri} \\
-TCS Research, New Delhi, India \\
-\texttt{\{kunwar.zaid, amit.sangroya, jyotsana.khatri\}@tcs.com} \\
-\end{tabular}
+@inproceedings{dettmers2023bitsandbytes,
+  title={Bitsandbytes: Efficient 8-bit and 4-bit Optimizers for Transformer Training},
+  author={Dettmers, Tim and Lewis, Mike and Belkada, Younes and Zettlemoyer, Luke},
+  booktitle={Proceedings of NeurIPS},
+  year={2023}
 }
 
-\begin{document}
-\maketitle
+@inproceedings{hu2022lora,
+  title={LoRA: Low-Rank Adaptation of Large Language Models},
+  author={Hu, Edward J. and Shen, Yelong and Wallis, Phillip and Allen-Zhu, Zeyuan and Li, Yuanzhi and Wang, Shean and Wang, Lu and Chen, Weizhu},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2022}
+}
 
-\begin{abstract}
-This paper describes our submission to the NLP-AI4Health 2025 Shared Task on multilingual clinical dialogue summarization and structured information extraction~\cite{bhattacharyya2024ai4health}.
-Our system is based on Qwen-1.5B Instruct~\cite{openai2024qwen} fine-tuned with LoRA adapters~\cite{hu2022lora} for parameter-efficient adaptation.
-The pipeline produces (i) concise English summaries, (ii) schema-aligned JSON outputs, and (iii) multilingual Q\&A responses.
-The Qwen-based approach substantially improves summary fluency, factual completeness, and JSON field coverage while maintaining efficiency within constrained GPU resources.
-\end{abstract}
+@misc{openai2024qwen,
+  title={Qwen2.5 Technical Report},
+  author={{Alibaba Cloud}},
+  year={2024},
+  howpublished={\url{https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct}}
+}
 
-\section{Introduction}
-The Shared Task on multilingual clinical dialogue summarization~\cite{bhattacharyya2024ai4health} challenges systems to process doctor–patient conversations across ten languages and output three modalities: summaries, structured records, and Q\&A responses.
-We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization and schema-based information extraction, designed to handle multilingual inputs efficiently under limited hardware conditions.
+@inproceedings{liu2020bertscore,
+  title={BERTScore: Evaluating Text Generation with BERT},
+  author={Zhang, Tianyi and Kishore, Varsha and Wu, Felix and Weinberger, Kilian Q. and Artzi, Yoav},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2020}
+}
 
-\section{System Architecture and Approach}
+@inproceedings{lin2004rouge,
+  title={ROUGE: A Package for Automatic Evaluation of Summaries},
+  author={Lin, Chin-Yew},
+  booktitle={Proceedings of the ACL Workshop on Text Summarization Branches Out},
+  year={2004}
+}
 
-\begin{figure}[htbp!]
-\centering
-\includegraphics[width=1.2\columnwidth]{latex/Multilingual Doctor-Patient Dialogue.png}
-\caption{Overview of the multilingual summarization and extraction pipeline. The pipeline includes English summarization, structured information extraction, and multilingual Q\&A generation.}
-\label{fig:struct}
-\end{figure}
+@inproceedings{rei2023comet,
+  title={COMETKiwi: Unifying MT Evaluation and Quality Estimation},
+  author={Rei, Ricardo and Thompson, Craig and Zerva, Chrysoula and Martins, Andr{\'e} FT},
+  booktitle={Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (ACL)},
+  year={2023}
+}
 
-Figure~\ref{fig:struct} illustrates the modular inference design. Each dialogue passes through sequential stages: English summarization, structured field extraction, and multilingual Q\&A generation.
-
-\subsection{Model Configuration}
-We used Qwen-1.5B Instruct~\cite{openai2024qwen} quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}~\cite{dettmers2023bitsandbytes}.
-LoRA adapters~\cite{hu2022lora} were trained with rank $r=8$, $\alpha=32$, dropout $0.05$, and target modules \texttt{q\_proj} and \texttt{v\_proj}.
-Training used the AdamW optimizer ($2\times10^{-4}$ learning rate, cosine decay).
-Gradient checkpointing and mixed precision allowed training within 60GB RAM and 32×V100 GPUs.
-
-\paragraph{Training Details.}
-Fine-tuning was conducted for \textbf{one epoch} due to strict time and hardware constraints. Despite this, validation showed rapid convergence, indicating effective domain adaptation. 
-
-\subsection{Inference Pipeline}
-Each language’s dialogues were processed independently with checkpoint resumption support.
-The inference proceeds through:
-\begin{enumerate}
-    \item \textbf{Summary Generation:} Produce an English summary ending with sentinel token \texttt{<<END>>}.
-    \item \textbf{Structured Extraction:} Populate each JSON field by querying the model separately.
-    \item \textbf{Multilingual Q\&A:} Generate answers in the dialogue’s original language.
-\end{enumerate}
-Greedy decoding (\texttt{do\_sample=False}) ensures stable, deterministic outputs across runs.
-
-\subsection{Prompt Design for Inference}
-The system employs role-based prompts for consistent and interpretable outputs across all subtasks.  
-Distinct templates were used for summary generation, structured JSON extraction, and multilingual Q\&A.  
-Each follows a clear \textit{System–User} structure to improve controllability and ensure coherent task behavior.
-
-\subsubsection*{Summary Prompt}
-\textbf{System:}
-\begin{quote}\footnotesize\ttfamily
-You are a clinical summarization assistant.  
-Write a fluent English summary focusing on diagnosis, symptoms, investigations, and management plan.  
-Write 6--10 sentences. End your summary with the token \texttt{<<END>>}.
-\end{quote}
-
-\textbf{User:}
-\begin{quote}\footnotesize\ttfamily
-Dialogue: \\*
-\texttt{[doctor--patient conversation]} \\*
-Write the summary and end with \texttt{<<END>>}.
-\end{quote}
-
-\subsubsection*{JSON Extraction Prompt}
-\textbf{System:}
-\begin{quote}\footnotesize\ttfamily
-You are a concise clinical information extraction assistant.  
-Answer in English only. If the information is not present, answer exactly ``N/A''.  
-Do not add explanations. Keep answers at the requested length.
-\end{quote}
-
-\textbf{User:}
-\begin{quote}\footnotesize\ttfamily
-Summary: \\*
-\texttt{[summary]} \\*
-Dialogue: \\*
-\texttt{[conversation]} \\*
-Question: \texttt{[specific field]} \\*
-Answer concisely.
-\end{quote}
-
-\subsubsection*{Q\&A Prompt}
-\textbf{System:}
-\begin{quote}\footnotesize\ttfamily
-You are a multilingual clinical assistant.  
-Answer in the same language as the user's question.  
-Be concise, factual, and helpful.
-\end{quote}
-
-\textbf{User:}
-\begin{quote}\footnotesize\ttfamily
-Dialogue: \\*
-\texttt{[doctor--patient conversation]} \\*
-Question (\texttt{[language]}): \texttt{[user query text]}
-\end{quote}
-
-\subsection{Field-by-Field JSON Extraction}
-Initial experiments using single-shot JSON generation consistently produced invalid or null-filled outputs due to schema inconsistency.  
-To overcome this, each field was reformulated as an independent question–answer task, allowing targeted reasoning and ensuring syntactic validity.
-
-For example:
-\begin{quote}\small
-Q: What is the patient’s chief complaint? \\
-A: Persistent throat discomfort and hoarseness for two months.
-\end{quote}
-
-Responses were then programmatically reintegrated into a structured JSON template.  
-Missing or uncertain fields (e.g., “N/A” or empty values) were automatically replaced with \texttt{null}.  
-This modular approach improved overall completeness and enabled selective re-generation of missing entries.
-
-\begin{table}[htbp!]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.1}
-\begin{tabular}{lp{0.3\textwidth}}
-\toprule
-\textbf{Field} & \textbf{Example Q-A Pair ($\leq$12 words)} \\
-\midrule
-Chief Complaint & Q: What is the patient’s chief complaint? \newline
-A: Persistent throat discomfort and hoarseness for two months. \\
-Past Medical History & Q: Summarize past medical history. \newline
-A: No major illnesses reported previously. \\
-Management Plan & Q: Summarize management plan. \newline
-A: Schedule biopsy and CT scan; smoking cessation counselling. \\
-\bottomrule
-\end{tabular}
-\caption{Example question–answer pairs used for field-level JSON extraction.}
-\label{tab:jsonqa}
-\end{table}
-
-\section{Dataset and Preprocessing}
-We used the multilingual clinical dialogue dataset provided by the organizers, covering ten languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.
-Dialogues were concatenated turn-wise and normalized for whitespace and encoding.
-Native Indic scripts were retained to preserve token integrity for Qwen’s multilingual tokenizer~\cite{openai2024qwen}.
-
-\section{Experimental Setup and Results}
-The system was evaluated on the official NLP-AI4Health 2025 dataset~\cite{bhattacharyya2024ai4health} across three subtasks:  
-(i) Question Answering (QnA), (ii) Text Summarization (Summary\_Text), and (iii) Key–Value Extraction (Summary\_KNV).  
-
-Performance was measured using macro F1, ROUGE-L~\cite{lin2004rouge}, BERTScore~\cite{liu2020bertscore}, and COMET~\cite{rei2023comet} metrics.
-
-\subsection{Quantitative Results}
-
-\begin{figure}[htbp!]
-\centering
-\includegraphics[width=1.2\columnwidth]{latex/avg_per_task.png}
-\caption{Average task-wise scores (F1, BERT-F1, COMET) across subtasks.}
-\label{fig:taskwise}
-\end{figure}
-
-\begin{table*}[htbp!]
-\centering
-\small
-\setlength{\tabcolsep}{7pt}
-\renewcommand{\arraystretch}{1.1}
-\begin{tabular}{lcccc lcccc}
-\toprule
-\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} &
-\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} \\
-\midrule
-Marathi  & 0.228 & 0.169 & 0.811 & 0.302 & Telugu   & 0.345 & 0.179 & 0.834 & 0.263 \\
-Kannada  & 0.471 & 0.169 & 0.825 & 0.272 & Tamil    & 0.442 & 0.182 & 0.838 & 0.297 \\
-Gujarati & 0.496 & 0.170 & 0.839 & 0.269 & Bangla   & 0.334 & 0.185 & 0.822 & 0.290 \\
-English  & 0.674 & 0.191 & 0.835 & 0.335 & Hindi    & 0.618 & 0.176 & 0.836 & 0.344 \\
-Assamese & 0.533 & 0.181 & 0.834 & 0.288 &          &       &       &       &      \\
-\midrule
-\textbf{Macro Avg.} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} & & & & & \\
-\bottomrule
-\end{tabular}
-\caption{Official evaluation results across subtasks. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: key–value F1.}
-\label{tab:main-results}
-\end{table*}
-
-\section{Conclusion}
-This work presented a multilingual clinical dialogue summarization and structured information extraction system built on Qwen-1.5B with parameter-efficient LoRA fine-tuning~\cite{hu2022lora}.
-Despite single-epoch training and limited compute, the model achieved robust multilingual generalization across ten languages.
-By combining role-based prompting, modular task decomposition, and efficient low-rank adaptation, the system maintained strong semantic fidelity (BERT-F1 = 0.83), factual accuracy (QnA F1 = 0.46), and structured completeness (KNV F1 = 0.296).
-This demonstrates that careful task modularization and prompt alignment can deliver high-quality multilingual medical dialogue understanding even under constrained resources.
-
-\bibliographystyle{acl_natbib}
-\begin{thebibliography}{}
-
-\bibitem[Dettmers et~al., 2023]{dettmers2023bitsandbytes}
-Tim Dettmers, Mike Lewis, Younes Belkada, and Luke Zettlemoyer.
-\newblock 2023.
-\newblock \textbf{Bitsandbytes: Efficient 8-bit and 4-bit Optimizers for Transformer Training.}
-\newblock In \emph{Proceedings of NeurIPS}.
-
-\bibitem[Hu et~al., 2022]{hu2022lora}
-Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen.
-\newblock 2022.
-\newblock \textbf{LoRA: Low-Rank Adaptation of Large Language Models.}
-\newblock In \emph{ICLR}.
-
-\bibitem[Alibaba Cloud, 2024]{openai2024qwen}
-Alibaba Cloud.
-\newblock 2024.
-\newblock \textbf{Qwen2.5 Technical Report.}
-\newblock \emph{Available at:} \url{https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct}.
-
-\bibitem[Liu et~al., 2020]{liu2020bertscore}
-Tianyi Liu, Ting-Yun Zhu, and Danqi Chen.
-\newblock 2020.
-\newblock \textbf{BERTScore: Evaluating Text Generation with BERT.}
-\newblock In \emph{ICLR}.
-
-\bibitem[Lin, 2004]{lin2004rouge}
-Chin-Yew Lin.
-\newblock 2004.
-\newblock \textbf{ROUGE: A Package for Automatic Evaluation of Summaries.}
-\newblock In \emph{ACL Workshop on Text Summarization Branches Out}.
-
-\bibitem[Rei et~al., 2023]{rei2023comet}
-Ricardo Rei, Craig Thompson, Chrysoula Zerva, and André Martins.
-\newblock 2023.
-\newblock \textbf{COMETKiwi: Unifying MT Evaluation and Quality Estimation.}
-\newblock In \emph{ACL}.
-
-\bibitem[Bhattacharyya et~al., 2024]{bhattacharyya2024ai4health}
-Pushpak Bhattacharyya, et~al.
-\newblock 2024.
-\newblock \textbf{NLP-AI4Health Shared Task: Multilingual Clinical Dialogue Summarization and Information Extraction.}
-\newblock In \emph{Proceedings of the AI4Health Workshop, ACL 2025}.
-
-\end{thebibliography}
-
-\end{document}
+@inproceedings{bhattacharyya2024ai4health,
+  title={NLP-AI4Health Shared Task: Multilingual Clinical Dialogue Summarization and Information Extraction},
+  author={Bhattacharyya, Pushpak and others},
+  booktitle={Proceedings of the AI4Health Workshop, ACL 2025},
+  year={2024}
+}
