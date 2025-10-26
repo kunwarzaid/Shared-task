@@ -1,289 +1,865 @@
-===========================
-▶ Running CONSENSUS...
-[15:37:39][HEADER] --- Scenario 0: Myasthenia gravis ---
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
+# ======================================================
+#  MedGuard-X: Complete Trustworthy Multi-Agent Pipeline
+#  (Vertex AI • Gemini 2.5 Pro/Flash • Safety • Consensus • Explainability)
+#  Colab-ready: paste and run
+# ======================================================
 
---- CONSENSUS DEBUG ---
-Agent 1 diagnosis: THE PATTERN OF YOUR WEAKNESS, WORSENING WITH ACTIVITY AND IMPROVING WITH REST, IS A KEY DETAIL. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS OR CHANGES IN YOUR SPEECH, SUCH AS SLURRING, ESPECIALLY TOWARDS THE END OF THE DAY?
 
-<THINKING_PROCESS>THE PATIENT'S HISTORY IS HIGHLY SUGGESTIVE OF A NEUROMUSCULAR JUNCTION DISORDER, SPECIFICALLY MYASTHENIA GRAVIS (MG), DUE TO THE CHARACTERISTIC FATIGABLE WEAKNESS (DIPLOPIA, PROXIMAL LIMB WEAKNESS) THAT IMPROVES WITH REST. MY FIRST QUESTION AIMS TO CONFIRM OTHER COMMON FEATURES OF MG, NAMELY PTOSIS (EYELID DROOPING) AND BULBAR MUSCLE WEAKNESS (SPEECH CHANGES), WHICH WOULD FURTHER STRENGTHEN THIS SUSPICION OVER OTHER POSSIBILITIES LIKE LEMS OR A MYOPATHY.</THINKING_PROCESS>
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MYOSITIS
-Raw response: The pattern of your weakness, worsening with activity and improving with rest, is a key detail. Have you noticed any drooping of your eyelids or changes in your speech, such as slurring, especially to...
-Agent 2 diagnosis: THE PATTERN OF WEAKNESS YOU DESCRIBE, WORSENING WITH ACTIVITY AND IMPROVING WITH REST, IS A KEY FEATURE. TO BETTER UNDERSTAND THIS, I HAVE A FEW QUESTIONS. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, PARTICULARLY AS THE DAY GOES ON? ALSO, HAVE YOU EXPERIENCED ANY DIFFICULTY WITH CHEWING OR SWALLOWING, OR HAS YOUR SPEECH BECOME SLURRED AFTER TALKING FOR A WHILE?
 
-<THINKING_PROCESS>THE PATIENT'S HISTORY IS HIGHLY SUGGESTIVE OF MYASTHENIA GRAVIS (MG) DUE TO THE CLASSIC TRIAD OF OCULAR SYMPTOMS (DIPLOPIA), PROXIMAL MUSCLE WEAKNESS (STAIRS, HAIR BRUSHING), AND FATIGABILITY (WORSENS WITH ACTIVITY, IMPROVES WITH REST). MY FIRST QUESTION AIMS TO CONFIRM OTHER COMMON FEATURES OF MG, SPECIFICALLY PTOSIS (EYELID DROOPING) AND BULBAR MUSCLE WEAKNESS (CHEWING, SWALLOWING, SPEECH), WHICH WOULD FURTHER STRENGTHEN THIS DIAGNOSIS. THE ANSWER TO THIS QUESTION WILL HELP DIFFERENTIATE MG FROM OTHER POSSIBILITIES LIKE MULTIPLE SCLEROSIS (WHICH IS LESS LIKELY TO HAVE THIS SPECIFIC PATTERN OF BULBAR FATIGUE) OR LAMBERT-EATON MYASTHENIC SYNDROME (WHERE OCULAR/BULBAR INVOLVEMENT IS LESS COMMON AT ONSET).</THINKING_PROCESS>
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-Raw response: The pattern of weakness you describe, worsening with activity and improving with rest, is a key feature. To better understand this, I have a few questions. Have you noticed any drooping of your eyelid...
-Agent 3 diagnosis: THE PATTERN OF YOUR WEAKNESS, PARTICULARLY HOW IT WORSENS WITH ACTIVITY AND IMPROVES WITH REST, IS QUITE SPECIFIC. TO BETTER UNDERSTAND THIS, I NEED TO ASK ABOUT OTHER MUSCLES. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, OR ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR CHANGES IN YOUR SPEECH?
+import os, re, json, time, random, csv
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import Dict, Any, List
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
-<THINKING_PROCESS>THE PATIENT'S HISTORY OF FLUCTUATING, FATIGABLE WEAKNESS AFFECTING OCULAR (DIPLOPIA) AND PROXIMAL LIMB MUSCLES IS HIGHLY SUGGESTIVE OF A NEUROMUSCULAR JUNCTION DISORDER. MYASTHENIA GRAVIS (MG) IS THE PRIME SUSPECT. MY QUESTION PROBES FOR TWO OTHER CLASSIC FEATURES OF MG: PTOSIS (EYELID DROOPING) AND BULBAR MUSCLE WEAKNESS (DIFFICULTY CHEWING, SWALLOWING, OR SPEAKING). THE PRESENCE OF THESE SYMPTOMS WOULD SIGNIFICANTLY STRENGTHEN THE CASE FOR MG. THE ABSENCE WOULD MAKE ME CONSIDER OTHER DIAGNOSES MORE STRONGLY, BUT OCULAR AND LIMB WEAKNESS CAN OCCUR IN ISOLATION. THIS QUESTION IS FOCUSED AND GATHERS CRITICAL INFORMATION TO NARROW THE DIFFERENTIAL DIAGNOSIS.</THINKING_PROCESS>
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-CONSENSUSMODE#3: REFLECT CLINICALLY BEFORE DECIDING.
-Raw response: The pattern of your weakness, particularly how it worsens with activity and improves with rest, is quite specific. To better understand this, I need to ask about other muscles. Have you noticed any dr...
-→ avg_sim = 0.888, disagreement = 0
-------------------------
+# ==== Vertex AI ====
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
-[15:38:29][THINKING] Doctor thinking: The patient's history is highly suggestive of Myasthenia Gravis (MG) due to the classic triad of ocular symptoms (diplopia), proximal muscle weakness (stairs, hair brushing), and f...
-[15:38:29][DOCTOR] Doctor: DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
-[15:38:31][PATIENT] Patient: I don't know.
+# -------------------------------
+# Project/Location (EDIT THESE)
+# -------------------------------
+YOUR_PROJECT_ID   = "med-guard-473206"   # <-- set as needed
+YOUR_GCP_LOCATION = "us-central1"
 
---- CONSENSUS DEBUG ---
-Agent 1 diagnosis: THE WORSENING OF YOUR SYMPTOMS WITH ACTIVITY AND IMPROVEMENT WITH REST IS A KEY FEATURE. HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS OR CHANGES IN YOUR SPEECH, SUCH AS SLURRING, ESPECIALLY AS THE DAY GOES ON?
-
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-Raw response: The worsening of your symptoms with activity and improvement with rest is a key feature. Have you noticed any drooping of your eyelids or changes in your speech, such as slurring, especially as the da...
-Agent 2 diagnosis: MY PRIMARY SUSPICION IS A CONDITION AFFECTING THE CONNECTION BETWEEN NERVES AND MUSCLES, GIVEN THE SPECIFIC NATURE OF YOUR WEAKNESS. THE WORSENING WITH ACTIVITY AND IMPROVEMENT WITH REST IS A KEY CLUE. TO EXPLORE THIS FURTHER, I NEED TO ASK ABOUT OTHER MUSCLES THAT ARE COMMONLY AFFECTED.
-
-HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, OR ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR SPEAKING THAT ALSO GETS WORSE WITH USE, FOR INSTANCE, TOWARDS THE END OF A MEAL?
-
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-Raw response: My primary suspicion is a condition affecting the connection between nerves and muscles, given the specific nature of your weakness. The worsening with activity and improvement with rest is a key clue...
-Agent 3 diagnosis: THE PATIENT'S SYMPTOMS, PARTICULARLY THE PATTERN OF WEAKNESS THAT WORSENS WITH EXERTION AND IMPROVES WITH REST (FATIGABILITY), ARE HIGHLY SUGGESTIVE OF A PROBLEM AT THE NEUROMUSCULAR JUNCTION. THE INVOLVEMENT OF BOTH EYE MUSCLES (DIPLOPIA) AND LIMB MUSCLES (DIFFICULTY WITH STAIRS AND HAIR BRUSHING) IS CLASSIC FOR THIS TYPE OF DISORDER.
-
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-
-TO FURTHER EXPLORE THIS, I NEED TO ASK ABOUT OTHER MUSCLES THAT ARE COMMONLY AFFECTED.
-
-HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, ESPECIALLY AS THE DAY GOES ON?
-Raw response: The patient's symptoms, particularly the pattern of weakness that worsens with exertion and improves with rest (fatigability), are highly suggestive of a problem at the neuromuscular junction. The inv...
-→ avg_sim = 0.799, disagreement = 0
-------------------------
-
-[15:39:18][DOCTOR] Doctor: My primary suspicion is a condition affecting the connection between nerves and muscles, given the specific nature of your weakness. The worsening with activity and improvement with rest is a key clue. To explore this further, I need to ask about other muscles that are commonly affected.
-
-Have you noticed any drooping of your eyelids, or any difficulty with chewing, swallowing, or speaking that also gets worse with use, for instance, towards the end of a meal?
-
-DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
-[15:39:21][PATIENT] Patient: Yes, I have noticed drooping of my right upper eyelid, and it seems to get worse if I look up for a while. I don't know about difficulty chewing, swallowing, or speaking.
-
---- CONSENSUS DEBUG ---
-Agent 1 diagnosis: THANK YOU FOR CLARIFYING. THE PATTERN OF WEAKNESS WORSENING WITH USE IS A KEY PIECE OF INFORMATION.
-
-HAVE YOU NOTICED YOUR VOICE BECOMING HOARSE OR NASAL, OR HAVE YOU FOUND YOURSELF GETTING TIRED WHILE CHEWING, FOR INSTANCE WITH TOUGHER FOODS?
-
-<THINKING_PROCESS>THE PATIENT'S SYMPTOMS OF FLUCTUATING, FATIGABLE OCULAR (DIPLOPIA, PTOSIS) AND PROXIMAL LIMB WEAKNESS ARE CLASSIC FOR MYASTHENIA GRAVIS. THE PTOSIS WORSENING WITH SUSTAINED UPWARD GAZE IS A SPECIFIC SIGN OF THIS FATIGABILITY. I'VE ASKED FOR MORE DETAIL ON BULBAR SYMPTOMS (SPEECH, CHEWING) TO ASSESS THE EXTENT OF THE DISEASE. HER ANSWER WILL HELP CHARACTERIZE THE MYASTHENIA AS OCULAR-ONLY OR GENERALIZED, BUT THE PRIMARY DIAGNOSIS IS ALREADY STRONGLY SUSPECTED. THE NEXT LOGICAL STEP IS TO ORDER TESTS TO CONFIRM THE DIAGNOSIS. SEROLOGICAL TESTS FOR ACETYLCHOLINE RECEPTOR ANTIBODIES AND ELECTROPHYSIOLOGICAL STUDIES ARE THE STANDARD OF CARE.</THINKING_PROCESS>
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MITOCHONDRIAL MYOPATHY
-CONSENSUSMODE#1: BE CONCISE AND EVIDENCE-BASED.
-Raw response: Thank you for clarifying. The pattern of weakness worsening with use is a key piece of information.
-
-Have you noticed your voice becoming hoarse or nasal, or have you found yourself getting tired whil...
-Agent 2 diagnosis: THE FLUCTUATING PTOSIS AND WEAKNESS ARE HIGHLY SUGGESTIVE OF A PROBLEM AT THE NEUROMUSCULAR JUNCTION, WHERE NERVES COMMUNICATE WITH MUSCLES.
-
-HAVE YOU EXPERIENCED ANY CHANGES IN YOUR VOICE, SUCH AS IT BECOMING QUIETER OR MORE NASAL AFTER SPEAKING FOR A WHILE?
-
-EXACT: REQUEST TEST: BLOOD_TESTS
-
-<THINKING_PROCESS>THE PATIENT'S SYMPTOMS—DIPLOPIA, PTOSIS, AND PROXIMAL LIMB WEAKNESS, ALL OF WHICH ARE FATIGUABLE (WORSEN WITH ACTIVITY, IMPROVE WITH REST)—ARE CLASSIC FOR MYASTHENIA GRAVIS (MG). THE NEW INFORMATION ABOUT PTOSIS WORSENING WITH SUSTAINED UPWARD GAZE FURTHER STRENGTHENS THIS SUSPICION. THE NEXT LOGICAL STEP IS TO CONFIRM THIS DIAGNOSIS. THE MOST SPECIFIC AND EFFICIENT INITIAL TEST FOR MG IS SEROLOGY FOR ACETYLCHOLINE RECEPTOR (ACHR) ANTIBODIES. I AM ALSO ASKING ABOUT BULBAR SYMPTOMS (VOICE CHANGES) TO ASSESS THE EXTENT OF THE DISEASE, WHICH IS IMPORTANT FOR MANAGEMENT AND PROGNOSIS. ORDERING THE BLOOD TEST NOW IS THE MOST DIRECT PATH TO A DIAGNOSIS.</THINKING_PROCESS>
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MYOSITIS
-Raw response: The fluctuating ptosis and weakness are highly suggestive of a problem at the neuromuscular junction, where nerves communicate with muscles.
-
-Have you experienced any changes in your voice, such as it...
-Agent 3 diagnosis: THANK YOU FOR THAT INFORMATION. THE DROOPING EYELID THAT WORSENS WHEN YOU LOOK UP IS A VERY SPECIFIC CLUE.
-
-HAVE YOU NOTICED YOUR VOICE CHANGING, PERHAPS BECOMING MORE NASAL OR SLURRED, AFTER YOU'VE BEEN SPEAKING FOR A WHILE? SIMILARLY, HAVE YOU EXPERIENCED ANY COUGHING OR CHOKING WHEN YOU EAT OR DRINK?
-
-<THINKING_PROCESS>THE PATIENT'S CONFIRMATION OF FATIGABLE PTOSIS, COMBINED WITH THE INITIAL HISTORY OF FLUCTUATING PROXIMAL LIMB WEAKNESS AND DIPLOPIA, MAKES MYASTHENIA GRAVIS THE LEADING DIAGNOSIS. THE NEW QUESTIONS ARE DESIGNED TO SPECIFICALLY ASSESS FOR BULBAR MUSCLE INVOLVEMENT (SPEECH AND SWALLOWING), WHICH IS COMMON IN MG AND IMPORTANT FOR RISK STRATIFICATION (RISK OF ASPIRATION OR MYASTHENIC CRISIS). THIS IS A FOCUSED, NON-REDUNDANT LINE OF QUESTIONING TO COMPLETE THE CLINICAL PICTURE BEFORE ORDERING TESTS.</THINKING_PROCESS>
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-CONSENSUSMODE#3: THE PATIENT'S HISTORY IS CLASSIC FOR MYASTHENIA GRAVIS, WITH FLUCTUATING, FATIGABLE WEAKNESS AFFECTING OCULAR (DIPLOPIA, PTOSIS) AND PROXIMAL LIMB MUSCLES. THE NEW INFORMATION ABOUT PTOSIS WORSENING WITH SUSTAINED GAZE IS A HALLMARK SIGN. THE NEXT LOGICAL STEP IS TO PROBE FOR BULBAR SYMPTOMS (SPEECH, SWALLOWING), AS THEIR PRESENCE WOULD FURTHER STRENGTHEN THE DIAGNOSIS AND INDICATE MORE WIDESPREAD, SEVERE DISEASE. THIS IS A CRUCIAL SAFETY AND DIAGNOSTIC QUESTION. PROCEEDING WITH THIS QUESTION IS THE CORRECT CLINICAL ACTION.
-Raw response: Thank you for that information. The drooping eyelid that worsens when you look up is a very specific clue.
-
-Have you noticed your voice changing, perhaps becoming more nasal or slurred, after you've b...
-→ avg_sim = 0.801, disagreement = 0
-------------------------
-
-[15:40:19][THINKING] Doctor thinking: The patient's symptoms of fluctuating, fatigable ocular (diplopia, ptosis) and proximal limb weakness are classic for Myasthenia Gravis. The ptosis worsening with sustained upward ...
-[15:40:19][DOCTOR] Doctor: DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Mitochondrial Myopathy
-ConsensusMode#1: Be concise and evidence-based.
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
-[15:40:25][PATIENT] Patient: I have double vision, difficulty climbing stairs, and upper limb weakness that worsen with activity and improve with rest. My right eyelid droops, especially with sustained upward gaze. My blood tests show elevated Acetylcholine Receptor Antibodies, and EMG showed decreased muscle response with repetitive stimulation. My reflexes are normal.
-
---- CONSENSUS DEBUG ---
-Agent 1 diagnosis: MYASTHENIA GRAVIS
-Raw response: The combination of your symptoms—fatigable weakness affecting your eyes and limbs—along with the positive Acetylcholine Receptor Antibodies and the specific findings on your EMG, is conclusive.
-
-<thin...
-Agent 2 diagnosis: MYASTHENIA GRAVIS
-Raw response: The clinical picture of fluctuating weakness, particularly affecting the eyes and proximal muscles, combined with positive Acetylcholine Receptor Antibodies and a decremental response on EMG, is defin...
-Agent 3 diagnosis: MYASTHENIA GRAVIS
-Raw response: The combination of fluctuating, fatigable weakness affecting ocular and proximal limb muscles, positive Acetylcholine Receptor Antibodies, and a decremental response on repetitive nerve stimulation is...
-→ avg_sim = 1.000, disagreement = 0
-------------------------
-
-[15:41:04][DOCTOR] Doctor: The combination of fluctuating, fatigable weakness affecting ocular and proximal limb muscles, positive Acetylcholine Receptor Antibodies, and a decremental response on repetitive nerve stimulation is pathognomonic.
-
-DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
-ConsensusMode#3: The clinical presentation is classic for a neuromuscular junction disorder. The positive Acetylcholine Receptor Antibodies are highly specific for Myasthenia Gravis, and the EMG findings confirm the diagnosis. No further tests are needed.
-
-EXACT: DIAGNOSIS READY: Myasthenia Gravis
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
-[15:41:12][PATIENT] Prescription: Rx: Pyridostigmine 60 mg PO TID
-[15:41:27][FINAL_STATS] Saved: experiments_consensus/experiment_results.csv
-consensus metrics: {
-  "n_cases": 1,
-  "accuracy_%": 100.0,
-  "cdr_%": 0.0,
-  "rdc_mean_%": 77.12999725341797,
-  "unsafe_rx_%": 0.0,
-  "trust_index": 93.14,
-  "avg_turns": 4.0,
-  "timeout_rate_%": 0.0,
-  "trace_len_mean": 588.0,
-  "trace_len_std": NaN,
-  "redundancy_ratio_%": 22.11,
-  "evidence_coverage_%": 100.0,
-  "ddi_count": 0,
-  "test_safety_alerts": 0,
-  "trust_var": 0.0
+VERTEX_AI_MODEL_MAP = {
+    "gemini-2.5-pro": "gemini-2.5-pro",
+    "gemini-2.5-flash": "gemini-2.5-flash",
 }
 
-===========================
-▶ Running TRUST...
-[15:41:31][HEADER] --- Scenario 0: Myasthenia gravis ---
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
+# -------------------------------
+# Logging
+# -------------------------------
+LOG_LEVELS = {
+    "DEBUG": 1, "INFO": 2, "THINKING": 2, "WORKFLOW": 2, "PATIENT": 3,
+    "DOCTOR": 3, "MEASUREMENT": 3, "HEADER": 4, "STATS": 4, "FINAL_STATS": 4,
+    "STATE_CHANGE": 4, "WARN": 5, "ERROR": 6, "CRITICAL": 7
+}
+_colab_cfg = {"log_level": "INFO"}
 
---- CONSENSUS DEBUG ---
-Agent 1 diagnosis: FATIGABLE WEAKNESS WITH OCULAR SYMPTOMS IN A YOUNG FEMALE IS HIGHLY SUGGESTIVE OF A NEUROMUSCULAR JUNCTION DISORDER. I NEED TO EXPLORE OTHER COMMON SYMPTOMS ASSOCIATED WITH THIS CONDITION.
+def log_trace(msg, level="INFO"):
+    cfg = _colab_cfg.get("log_level", "INFO").upper()
+    if LOG_LEVELS.get(level.upper(), 2) >= LOG_LEVELS.get(cfg, 2):
+        print(f"[{time.strftime('%H:%M:%S')}][{level.upper()}] {msg}")
 
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-CONSENSUSMODE#1: BE CONCISE AND EVIDENCE-BASED.
+# -------------------------------
+# Vertex AI query helper
+# -------------------------------
+def query_model(model_id, project_id, location, prompt, system_prompt,
+                temperature=0.2, tries=4):
+    vertexai.init(project=project_id, location=location)
+    model = GenerativeModel(model_id, system_instruction=system_prompt)
+    for i in range(tries):
+        try:
+            resp = model.generate_content(
+                prompt,
+                generation_config={"temperature": float(temperature)}
+            )
+            return getattr(resp, "text", "") or ""
+        except Exception as e:
+            log_trace(f"Vertex call error (try {i+1}/{tries}): {e}", "WARN")
+            time.sleep(2.0 + i*1.5)
+    return "Error"
 
-HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS, OR ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR SPEAKING?
-Raw response: Fatigable weakness with ocular symptoms in a young female is highly suggestive of a neuromuscular junction disorder. I need to explore other common symptoms associated with this condition.
+# -------------------------------
+# Utilities
+# -------------------------------
+def parse_thinking_and_body(text: str):
+    think = ""
+    body = text or ""
+    m = re.search(r"<thinking_process>(.*?)</thinking_process>", body, re.DOTALL | re.IGNORECASE)
+    if m:
+        think = (m.group(1) or "").strip()
+        body = (body[m.end():] or "").strip()
+    if think:
+        log_trace(f"Doctor thinking: {think[:180]}...", "THINKING")
+    return think, body
 
-DDX: Myast...
-Agent 2 diagnosis: HELLO. I UNDERSTAND YOU'VE BEEN EXPERIENCING SOME CONCERNING WEAKNESS AND VISION CHANGES. TO GET A CLEARER PICTURE, I NEED TO ASK A FEW MORE QUESTIONS.
+def parse_ddx_line(text: str) -> List[str]:
+    m = re.search(r"DDX:\s*(.*)", text or "", re.IGNORECASE)
+    if not m: return []
+    items = [x.strip() for x in m.group(1).split(",") if x.strip()]
+    out, seen = [], set()
+    for it in items:
+        k = it.lower()
+        if k not in seen:
+            seen.add(k); out.append(it)
+        if len(out) >= 5: break
+    return out
 
-HAVE YOU NOTICED ANY DROOPING OF YOUR EYELIDS? ADDITIONALLY, HAVE YOU EXPERIENCED ANY DIFFICULTY WITH CHEWING, SWALLOWING, OR CHANGES IN YOUR SPEECH, ESPECIALLY TOWARDS THE END OF THE DAY?
-Raw response: Hello. I understand you've been experiencing some concerning weakness and vision changes. To get a clearer picture, I need to ask a few more questions.
+def get_patient_summary(history_dict: dict) -> str:
+    pa = history_dict.get("Patient_Actor", {})
+    demo = pa.get("Demographics", "")
+    hx   = pa.get("History", "")
+    meds = pa.get("Current_Medication", "") or pa.get("Medications", "")
+    parts = []
+    if demo: parts.append(f"Demographics: {demo}")
+    if hx:   parts.append(f"History: {hx}")
+    if meds: parts.append(f"Medications: {meds}")
+    return "\n".join(parts) if parts else "No summary available."
 
-Have you noticed any drooping of your eyelids? ...
-Agent 3 diagnosis: THE PATTERN OF YOUR SYMPTOMS, PARTICULARLY THE WORSENING WITH ACTIVITY AND IMPROVEMENT WITH REST, IS A KEY FEATURE. LET'S DELVE INTO THE SPECIFICS OF YOUR VISION CHANGES. DOES THE DOUBLE VISION RESOLVE IF YOU COVER ONE EYE, AND HAVE YOU ALSO NOTICED ANY DROOPING OF YOUR EYELIDS?
+# -------------------------------
+# Scenario loaders (AgentClinic-MedQA format)
+# -------------------------------
+class ScenarioMedQA:
+    def __init__(self, scenario_dict):
+        self.scenario_dict = scenario_dict
+        self.exam = scenario_dict.get("OSCE_Examination", {})
+        self.gt_dx = self.exam.get("Correct_Diagnosis", "Unknown")
+        self.tests = self.exam.get("Test_Results", {}) or {}
+        self.patient_profile = self.exam  # contains Patient_Actor / Physical_Examination_Findings / Test_Results
+    def diagnosis_information(self): return self.gt_dx
 
-<THINKING_PROCESS>THE PATIENT'S HISTORY IS CLASSIC FOR FATIGABLE WEAKNESS, MAKING MYASTHENIA GRAVIS (MG) THE LEADING DIAGNOSIS. THE SYMPTOMS DESCRIBED—DIPLOPIA, PROXIMAL LIMB WEAKNESS (DIFFICULTY WITH STAIRS, BRUSHING HAIR)—THAT WORSEN WITH EXERTION AND IMPROVE WITH REST ARE HALLMARK FEATURES. MY FIRST QUESTION AIMS TO CONFIRM TWO CRITICAL POINTS HIGHLY ASSOCIATED WITH MG: 1) IS THE DIPLOPIA BINOCULAR? (RESOLVING WHEN ONE EYE IS COVERED CONFIRMS A MUSCLE ALIGNMENT ISSUE, NOT AN INTRINSIC EYE PROBLEM). 2) IS THERE PTOSIS? (PTOSIS AND DIPLOPIA ARE THE MOST COMMON INITIAL SYMPTOMS OF MG). THIS WILL HELP SOLIDIFY MG'S POSITION AT THE TOP OF THE DIFFERENTIAL. LEMS IS LESS LIKELY DUE TO IMPROVEMENT WITH REST, AND MS WOULD TYPICALLY HAVE A DIFFERENT PATTERN, THOUGH UHTHOFF'S PHENOMENON CAN MIMIC THIS.</THINKING_PROCESS>
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-CONSENSUSMODE#3: REFLECT CLINICALLY BEFORE DECIDING.
-Raw response: The pattern of your symptoms, particularly the worsening with activity and improvement with rest, is a key feature. Let's delve into the specifics of your vision changes. Does the double vision resolv...
-→ avg_sim = 0.635, disagreement = 0
-------------------------
+class ScenarioLoaderMedQA:
+    def __init__(self, path="agentclinic_medqa.jsonl"):
+        self.scenarios = []
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line=line.strip()
+                    if line:
+                        self.scenarios.append(ScenarioMedQA(json.loads(line)))
+        else:
+            log_trace(f"Dataset '{path}' not found. Will use a mock case.", "WARN")
+        self.num_scenarios = len(self.scenarios)
 
-[15:42:15][DOCTOR] Doctor: Fatigable weakness with ocular symptoms in a young female is highly suggestive of a neuromuscular junction disorder. I need to explore other common symptoms associated with this condition.
+    def get(self, idx):
+        return self.scenarios[idx] if 0 <= idx < len(self.scenarios) else None
 
-DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
-ConsensusMode#1: Be concise and evidence-based.
+# -------------------------------
+# Agents
+# -------------------------------
+class PatientAgent:
+    def __init__(self, patient_profile: dict, cfg: Dict[str, Any]):
+        self.profile = patient_profile
+        self.cfg = cfg
 
-Have you noticed any drooping of your eyelids, or any difficulty with chewing, swallowing, or speaking?
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
-[15:42:17][PATIENT] Patient: Yes, I have noticed drooping of my right upper eyelid. I haven't had any difficulty with chewing, swallowing, or speaking.
+    def respond(self, doctor_q: str) -> str:
+        sys = (
+            "You are a simulated patient. Answer ONLY from this profile. "
+            "For history -> 'Patient_Actor'; for physical exam -> 'Physical_Examination_Findings'; "
+            "for tests -> 'Test_Results'. If unknown, say 'I don't know'.\n\n"
+            f"PROFILE JSON:\n{json.dumps(self.profile, indent=2)}"
+        )
+        user = f"Doctor asked: {doctor_q}\nPatient (concise) answer:"
+        ans = query_model(**self.cfg, prompt=user, system_prompt=sys, temperature=0.2)
+        return (ans or "").strip()
 
---- CONSENSUS DEBUG ---
-Agent 1 diagnosis: THE COMBINATION OF FLUCTUATING MUSCLE WEAKNESS, INCLUDING DOUBLE VISION AND PTOSIS, THAT WORSENS WITH ACTIVITY AND IMPROVES WITH REST IS HIGHLY CHARACTERISTIC OF A DISORDER AT THE NEUROMUSCULAR JUNCTION. MYASTHENIA GRAVIS IS THE MOST LIKELY CAUSE. I WILL ORDER BLOOD TESTS TO LOOK FOR THE SPECIFIC ANTIBODIES ASSOCIATED WITH THIS CONDITION.
+class MeasurementAgent:
+    def __init__(self, test_results: dict, cfg: Dict[str, Any]):
+        self.tests = test_results or {}
+        self.cfg = cfg
+        self.available_tests = list(self.tests.keys())
 
-EXACT: REQUEST TEST: BLOOD_TESTS
+    def get_result(self, request_name: str) -> str:
+        if not request_name:
+            return "RESULTS FOR <empty request>: Test not found."
+        # Simple robust matching (case-insensitive contains)
+        key = next((k for k in self.tests if request_name.lower() in k.lower()), None)
+        if key:
+            return f"RESULTS FOR {key}: {self.tests[key]}"
+        return f"RESULTS FOR {request_name}: Test not found."
 
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MULTIPLE SCLEROSIS
-CONSENSUSMODE#1: BE CONCISE AND EVIDENCE-BASED.
-Raw response: The combination of fluctuating muscle weakness, including double vision and ptosis, that worsens with activity and improves with rest is highly characteristic of a disorder at the neuromuscular juncti...
-Agent 2 diagnosis: THE FLUCTUATING NATURE OF YOUR WEAKNESS AND THE SPECIFIC MUSCLES INVOLVED (EYELIDS, EYE MOVEMENT, AND PROXIMAL LIMBS) ARE HIGHLY SUGGESTIVE OF A PROBLEM AT THE JUNCTION BETWEEN THE NERVE AND THE MUSCLE.
+class TestSafetyAgent:
+    def __init__(self, cfg: Dict[str, Any]):
+        self.cfg = cfg
+        self.sys = "You are a Test Safety Advisor. Output: Risk: [Low|Medium|High] | Reason (≤1 line)."
 
-HAVE YOU EXPERIENCED ANY NUMBNESS, TINGLING, OR CHANGES IN SENSATION IN YOUR ARMS, LEGS, OR FACE?
+    def assess(self, test_name: str, summary: str) -> str:
+        user = f"Assess safety for requested test: {test_name}\nPatient summary:\n{summary}"
+        return query_model(**self.cfg, prompt=user, system_prompt=self.sys, temperature=0.2)
 
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MITOCHONDRIAL MYOPATHY
-Raw response: The fluctuating nature of your weakness and the specific muscles involved (eyelids, eye movement, and proximal limbs) are highly suggestive of a problem at the junction between the nerve and the muscl...
-Agent 3 diagnosis: THE COMBINATION OF FLUCTUATING MUSCLE WEAKNESS THAT WORSENS WITH ACTIVITY AND IMPROVES WITH REST, ALONG WITH SPECIFIC INVOLVEMENT OF THE EYE MUSCLES (EYELID DROOPING, DOUBLE VISION) AND PROXIMAL LIMB MUSCLES, IS HIGHLY CHARACTERISTIC OF A DISORDER OF THE NEUROMUSCULAR JUNCTION. MYASTHENIA GRAVIS IS THE MOST LIKELY DIAGNOSIS.
+class PrescriptionWriterAgent:
+    def __init__(self, cfg: Dict[str, Any]):
+        self.cfg = cfg
+        self.sys = "You are a prescription writer. Provide concise Rx (drug, dose, route, frequency) or 'No medication appropriate'."
 
-HAVE YOU EXPERIENCED ANY NUMBNESS, TINGLING, OR LOSS OF SENSATION IN YOUR FACE, ARMS, OR LEGS?
+    def write(self, diagnosis: str, summary: str) -> str:
+        user = f"Diagnosis: {diagnosis}\nPatient summary:\n{summary}\nPrescription:"
+        return query_model(**self.cfg, prompt=user, system_prompt=self.sys, temperature=0.2)
 
-EXACT: REQUEST TEST: BLOOD_TESTS
-DDX: MYASTHENIA GRAVIS, LAMBERT-EATON MYASTHENIC SYNDROME, MITOCHONDRIAL MYOPATHY
-CONSENSUSMODE#3: THE PATIENT'S CONSTELLATION OF SYMPTOMS—FATIGABLE WEAKNESS, PTOSIS, DIPLOPIA, AND PROXIMAL MUSCLE INVOLVEMENT—IS PATHOGNOMONIC FOR MYASTHENIA GRAVIS. THE INITIAL DIAGNOSTIC WORKUP SHOULD FOCUS ON CONFIRMING THIS. AN ACHR ANTIBODY TEST IS THE MOST SPECIFIC AND COMMON INITIAL TEST. WHILE ELECTRODIAGNOSTIC STUDIES ARE ALSO VALUABLE, THE BLOOD TEST IS A LESS INVASIVE FIRST STEP. RULING OUT SENSORY SYMPTOMS HELPS DIFFERENTIATE THIS FROM DEMYELINATING DISEASES LIKE MS.
-Raw response: The combination of fluctuating muscle weakness that worsens with activity and improves with rest, along with specific involvement of the eye muscles (eyelid drooping, double vision) and proximal limb ...
-→ avg_sim = 0.781, disagreement = 0
-------------------------
+class SafetyAgent:
+    """Medication safety reviewer + optional DDI pair list csv."""
+    def __init__(self, cfg: Dict[str, Any], ddi_csv_file: str = None):
+        self.cfg = cfg
+        self.ddi_pairs = set()
+        if ddi_csv_file and os.path.exists(ddi_csv_file):
+            try:
+                with open(ddi_csv_file, newline='', encoding='utf-8') as f:
+                    rdr = csv.reader(f)
+                    for row in rdr:
+                        if len(row) >= 2:
+                            a, b = row[0].strip().lower(), row[1].strip().lower()
+                            if a and b:
+                                self.ddi_pairs.add((a,b))
+                                self.ddi_pairs.add((b,a))
+                log_trace(f"Loaded {len(self.ddi_pairs)//2} DDI pairs.", "DEBUG")
+            except Exception as e:
+                log_trace(f"DDI CSV read fail: {e}", "WARN")
+        self.sys = "You are a medication safety reviewer. Output: SAFE / SAFE WITH CAUTION / UNSAFE + one-line reason."
 
-[15:43:05][DOCTOR] Doctor: The combination of fluctuating muscle weakness that worsens with activity and improves with rest, along with specific involvement of the eye muscles (eyelid drooping, double vision) and proximal limb muscles, is highly characteristic of a disorder of the neuromuscular junction. Myasthenia gravis is the most likely diagnosis.
+    def _extract_meds(self, rx_text: str) -> List[str]:
+        meds = re.findall(r"\b[A-Za-z][A-Za-z0-9\-]{2,}\b", rx_text or "")
+        meds = [m.lower() for m in meds]
+        return list(dict.fromkeys(meds))  # dedupe preserve order
 
-Have you experienced any numbness, tingling, or loss of sensation in your face, arms, or legs?
+    def check(self, rx_text: str, summary: str):
+        user = f"Evaluate prescription safety:\n{rx_text}\n\nPatient summary:\n{summary}"
+        verdict = query_model(**self.cfg, prompt=user, system_prompt=self.sys, temperature=0.2)
+        ddi_issues = []
+        meds = self._extract_meds(rx_text)
+        for i in range(len(meds)):
+            for j in range(i+1, len(meds)):
+                if (meds[i], meds[j]) in self.ddi_pairs:
+                    ddi_issues.append(f"{meds[i]}-{meds[j]}")
+        return {"llm_eval": verdict, "ddi_issues": ddi_issues, "meds": meds}
 
-EXACT: REQUEST TEST: Blood_Tests
-DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Mitochondrial Myopathy
-ConsensusMode#3: The patient's constellation of symptoms—fatigable weakness, ptosis, diplopia, and proximal muscle involvement—is pathognomonic for Myasthenia Gravis. The initial diagnostic workup should focus on confirming this. An AChR antibody test is the most specific and common initial test. While electrodiagnostic studies are also valuable, the blood test is a less invasive first step. Ruling out sensory symptoms helps differentiate this from demyelinating diseases like MS.
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
-[15:43:09][MEASUREMENT] Test safety: Risk: Low | Reason: Blood tests are a standard, minimally invasive diagnostic procedure with no specific contraindications related to the patient's symptoms.
-[15:43:09][MEASUREMENT] Test result: RESULTS FOR Blood_Tests: {'Acetylcholine_Receptor_Antibodies': 'Present (elevated)'}
+# -------------------------------
+# Doctor with consensus + DDx + escape hatch
+# -------------------------------
+embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+class DoctorAgent:
+    def __init__(self, cfg: Dict[str, Any], use_consensus: bool = True, consensus_n: int = 3):
+        self.cfg = cfg
+        self.llm_config = cfg
+        self.use_consensus = use_consensus
+        self.consensus_n = max(1, int(consensus_n))
+        self.last_consensus_disagreement = 0
 
---- CONSENSUS DEBUG ---
-Agent 1 diagnosis: MYASTHENIA GRAVIS
-Raw response: The positive Acetylcholine Receptor Antibody test, in conjunction with the patient's classic symptoms of fluctuating, fatigable weakness affecting ocular and proximal muscles, confirms the diagnosis.
-...
-Agent 2 diagnosis: MYASTHENIA GRAVIS
-Raw response: The presence of elevated Acetylcholine Receptor Antibodies, combined with your clinical presentation of fluctuating muscle weakness, diplopia, and fatigability, is conclusive.
+    def _system_prompt(self, summary: str, available_tests: List[str]):
+        tests_list = "\n- ".join(available_tests or [])
+        return (
+            "You are Dr. Agent in a clinical consultation.\n"
+            "Rules:\n"
+            "• Ask focused, non-redundant questions.\n"
+            "• To order a test, use EXACT: REQUEST TEST: <key>\n"
+            "• If ready to conclude, output EXACT: DIAGNOSIS READY: <Diagnosis>\n"
+            f"Tests available:\n- {tests_list}\n\n"
+            f"PATIENT SUMMARY:\n{summary}\n\n"
+            "<thinking_process>Brief next-step reasoning tied to evidence.</thinking_process>\n"
+            "DDX: <comma-separated top 3>"
+        )
 
-DDX: Myasthenia Gravis,...
-Agent 3 diagnosis: MYASTHENIA GRAVIS
-Raw response: The presence of elevated Acetylcholine Receptor Antibodies in a patient with a classic history of fluctuating, fatigable weakness (diplopia, proximal muscle weakness) is diagnostic for Myasthenia Grav...
-→ avg_sim = 1.000, disagreement = 0
-------------------------
+    def _ask_once(self, sys_prompt: str, user_prompt: str, temperature: float = 0.6):
+        return query_model(**self.cfg, prompt=user_prompt, system_prompt=sys_prompt, temperature=temperature)
 
-[15:43:36][DOCTOR] Doctor: The presence of elevated Acetylcholine Receptor Antibodies in a patient with a classic history of fluctuating, fatigable weakness (diplopia, proximal muscle weakness) is diagnostic for Myasthenia Gravis. The antibodies confirm an autoimmune attack on the neuromuscular junction, which explains the patient's symptoms. No further investigation is required to make the diagnosis.
+    def _ask_consensus(self, sys_prompt, user_prompt):
+        """Improved consensus with semantic clustering to reduce false disagreement."""
+        if not self.use_consensus or self.consensus_n <= 1:
+          return query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
 
-DDX: Myasthenia Gravis, Lambert-Eaton Myasthenic Syndrome, Multiple Sclerosis
-EXACT: DIAGNOSIS READY: Myasthenia Gravis
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
-[15:43:47][PATIENT] Prescription: Rx: Pyridostigmine 60 mg PO TID
-[15:44:04][FINAL_STATS] Saved: experiments_trust/experiment_results.csv
-trust metrics: {
-  "n_cases": 1,
-  "accuracy_%": 100.0,
-  "cdr_%": 0.0,
-  "rdc_mean_%": 55.779998779296875,
-  "unsafe_rx_%": 0.0,
-  "trust_index": 86.73,
-  "avg_turns": 3.0,
-  "timeout_rate_%": 0.0,
-  "trace_len_mean": 0.0,
-  "trace_len_std": NaN,
-  "redundancy_ratio_%": 0.0,
-  "evidence_coverage_%": 0.0,
-  "ddi_count": 0,
-  "test_safety_alerts": 0,
-  "trust_var": 0.0
+
+    def _ask_consensus(self, sys_prompt, user_prompt, debug=False):
+        """
+        Improved consensus logic:
+          - Generates diverse responses from multiple Doctor agents.
+          - Compares *only final diagnoses* semantically, not full text.
+          - Computes Consensus Disagreement Rate (CDR) based on embedding similarity.
+        """
+        # --- Single-agent fallback ---
+        if not self.use_consensus or self.consensus_n <= 1:
+            return query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
+
+        # Diverse stylistic modifiers to induce epistemic spread
+        modifiers = [
+            "Be concise and evidence-based.",
+            "Prioritize diagnostic efficiency.",
+            "Reflect clinically before deciding.",
+            "Avoid redundant questioning.",
+            "Move toward a defensible differential."
+        ]
+
+        responses = []
+        for i in range(self.consensus_n):
+            t = 0.5 + 0.1 * (i % 3)  # temperature variation
+            addon = f"\nConsensusMode#{i+1}: {modifiers[i % len(modifiers)]}"
+            r = query_model(
+                **self.llm_config,
+                prompt=user_prompt,
+                system_prompt=sys_prompt + addon,
+                temperature=t
+            )
+            responses.append(r or "")
+
+        # --- Extract only the final diagnosis line for semantic comparison ---
+        def extract_diagnosis(text):
+            if not text:
+                return ""
+            m = re.search(r"DIAGNOSIS READY:\s*(.*)", text, re.IGNORECASE)
+            return m.group(1).strip().upper() if m else text.strip().upper()
+
+        diag_texts = [extract_diagnosis(r) for r in responses]
+
+        # --- Compute similarity between diagnoses only ---
+        try:
+            embeddings = embed_model.encode(diag_texts, normalize_embeddings=True)
+            sim = cosine_similarity(embeddings)
+            avg_sim = float(np.mean(sim[np.triu_indices(len(sim), 1)]))
+        except Exception as e:
+            if debug:
+                print("[WARN] Embedding failed, defaulting to disagreement:", e)
+            avg_sim = 0.0
+
+        # --- Relaxed threshold for semantic agreement ---
+        self.last_consensus_disagreement = 1 if avg_sim < 0.6 else 0
+
+        # --- Select the "central" (most semantically typical) response ---
+        try:
+            centroid = embeddings.mean(axis=0, keepdims=True)
+            mean_sim = cosine_similarity(embeddings, centroid).flatten()
+            best_idx = int(np.argmax(mean_sim))
+        except Exception:
+            best_idx = 0
+
+        best_response = responses[best_idx]
+
+        if debug:
+            print("\n--- CONSENSUS DEBUG ---")
+            for i, (d, r) in enumerate(zip(diag_texts, responses)):
+                print(f"Agent {i+1} diagnosis: {d}")
+                print(f"Raw response: {r[:200].replace('\\n',' ')}...")
+            print(f"→ avg_sim = {avg_sim:.3f}, disagreement = {self.last_consensus_disagreement}")
+            print("------------------------\n")
+
+        return best_response
+
+    # Diverse prompts
+        modifiers = [
+        "Be concise and evidence-based.",
+        "Prioritize diagnostic efficiency.",
+        "Reflect clinically before deciding.",
+        "Avoid redundant questioning.",
+        "Move toward a defensible differential."
+        ]
+        responses = []
+        for i in range(self.consensus_n):
+          t = 0.5 + 0.1 * (i % 3)
+          addon = f"\nConsensusMode#{i+1}: {modifiers[i % len(modifiers)]}"
+          r = query_model(**self.llm_config,
+                        prompt=user_prompt,
+                        system_prompt=sys_prompt + addon,
+                        temperature=t)
+          responses.append(r or "")
+
+    # --- Semantic clustering ---
+        if len(responses) > 1:
+          embeddings = embed_model.encode(responses, normalize_embeddings=True)
+          sim = cosine_similarity(embeddings)
+          # Compute mean similarity across responses
+          avg_sim = np.mean(sim[np.triu_indices(len(sim), 1)])
+          self.last_consensus_disagreement = 1 if avg_sim < 0.8 else 0
+        else:
+          self.last_consensus_disagreement = 0
+
+    # Choose most "central" response
+        mean_sim = cosine_similarity(embeddings, embeddings.mean(axis=0, keepdims=True)).flatten()
+        best_idx = int(np.argmax(mean_sim))
+        best_response = responses[best_idx]
+
+        return best_response
+
+# -------------------------------
+# Adjudicator (LLM “Yes/No”)
+# -------------------------------
+def adjudicate_equivalence(doc_dx: str, gt_dx: str, cfg: Dict[str, Any]) -> bool:
+    sys = "You are an expert adjudicator. Reply ONLY 'Yes' or 'No'."
+    user = f"Correct Diagnosis: '{gt_dx}'\nDoctor's Diagnosis: '{doc_dx}'\nAre these clinically equivalent? Yes or No."
+    ans = query_model(**cfg, prompt=user, system_prompt=sys, temperature=0.0)
+    return (ans or "").strip().lower().startswith("y")
+
+# -------------------------------
+# Run one scenario (multi-turn)
+# -------------------------------
+def run_one_case(scenario: ScenarioMedQA, config: Dict[str, Any], max_turns=12):
+    # Agents
+    doctor = DoctorAgent(config["doctor_llm_config"], use_consensus=config.get("use_consensus", True),
+                         consensus_n=config.get("consensus_n", 3))
+    patient = PatientAgent(scenario.patient_profile, config["patient_llm_config"])
+    measure = MeasurementAgent(scenario.tests, config["measurement_llm_config"])
+    test_safety = TestSafetyAgent(config["test_safety_llm_config"]) if config.get("use_test_safety", True) else None
+    rx_writer = PrescriptionWriterAgent(config["rx_writer_llm_config"])
+    rx_safety = SafetyAgent(config["rx_safety_llm_config"], ddi_csv_file=config.get("ddi_csv_file"))
+
+    # Conversation loop
+    convo = []
+    summary = get_patient_summary(scenario.patient_profile)
+    sys_p = doctor._system_prompt(summary, measure.available_tests)
+    user_p = "Start the consultation."
+    reasoning_trace = ""
+    ddx_history = []
+    diagnosis = None
+    turns = 0
+
+    for t in range(max_turns):
+        turns = t + 1
+        dr_full = doctor._ask_consensus(sys_p, user_p,debug=True)
+        think, dr_text = parse_thinking_and_body(dr_full)
+        reasoning_trace += ("\n" + think) if think else reasoning_trace
+        convo.append({"role": "doctor", "content": dr_text})
+        log_trace(f"Doctor: {dr_text}", "DOCTOR")
+
+        # capture DDx
+        ddx = parse_ddx_line(dr_text)
+        if ddx: ddx_history.append(ddx)
+
+        # final diagnosis?
+        m = re.search(r"DIAGNOSIS READY:\s*(.*)", dr_text, re.I)
+        if m:
+            diagnosis = m.group(1).strip()
+            break
+
+        # test request?
+        m2 = re.search(r"REQUEST TEST:\s*(.*)", dr_text, re.I)
+        if m2:
+            tname = m2.group(1).strip()
+            if test_safety:
+                ts = test_safety.assess(tname, summary)
+                log_trace(f"Test safety: {ts}", "MEASUREMENT")
+                convo.append({"role": "system", "content": ts})
+            tres = measure.get_result(tname)
+            log_trace(f"Test result: {tres}", "MEASUREMENT")
+            convo.append({"role": "system", "content": tres})
+            user_p = tres
+            continue
+
+        # otherwise patient responds
+        ans = patient.respond(dr_text)
+        log_trace(f"Patient: {ans}", "PATIENT")
+        convo.append({"role": "patient", "content": ans})
+        user_p = ans
+
+    if not diagnosis:
+        diagnosis = "TIMEOUT"
+
+    # prescription + safety
+    rx_text = ""
+    rx_eval = {}
+    if diagnosis != "TIMEOUT":
+        rx_text = rx_writer.write(diagnosis, summary)
+        log_trace(f"Prescription: {rx_text}", "PATIENT")
+        rx_eval = rx_safety.check(rx_text, summary) if rx_safety else {"llm_eval": "", "ddi_issues": []}
+
+    correct = adjudicate_equivalence(diagnosis, scenario.gt_dx, config["moderator_llm_config"]) if diagnosis != "TIMEOUT" else False
+
+    return {
+        "gt": scenario.gt_dx,
+        "diagnosis": diagnosis,
+        "correct": bool(correct),
+        "turns": turns,
+        "consensus_disagree": doctor.last_consensus_disagreement,
+        "reasoning_trace": reasoning_trace.strip(),
+        "ddx_history": json.dumps(ddx_history),
+        "rx": rx_text,
+        "rx_safety": (rx_eval.get("llm_eval") or ""),
+        "ddi_issues": json.dumps(rx_eval.get("ddi_issues", []))
+    }
+
+# -------------------------------
+# Top-level experiment
+# -------------------------------
+def run_experiment(config: Dict[str, Any], out_dir="medguardx_results"):
+    os.makedirs(out_dir, exist_ok=True)
+    loader = ScenarioLoaderMedQA(config["dataset_file"])
+    results = []
+
+    if loader.num_scenarios == 0:
+        # Mock single case so the cell always runs
+        mock = ScenarioMedQA({
+            "OSCE_Examination": {
+                "Correct_Diagnosis": "Myasthenia Gravis",
+                "Patient_Actor": {
+                    "Demographics": "F, 28",
+                    "History": "Fluctuating diplopia and proximal limb weakness; worse with exertion; improves with rest.",
+                    "Current_Medication": "None"
+                },
+                "Test_Results": {
+                    "Blood_Tests_Acetylcholine_Receptor_Antibodies": "Present (elevated)",
+                    "Electromyography_Findings": "Decremental response on repetitive stimulation"
+                }
+            }
+        })
+        log_trace("--- Running MOCK case (dataset not found) ---", "HEADER")
+        r = run_one_case(mock, config, max_turns=config.get("total_inferences", 12))
+        r["case_id"] = "MOCK"
+        results.append(r)
+    else:
+        idxs = config["scenario_indices"]
+        for i in idxs:
+            sc = loader.get(i)
+            if not sc:
+                log_trace(f"Skip invalid scenario {i}", "WARN")
+                continue
+            log_trace(f"--- Scenario {i}: {sc.diagnosis_information()} ---", "HEADER")
+            r = run_one_case(sc, config, max_turns=config.get("total_inferences", 12))
+            r["case_id"] = i
+            results.append(r)
+
+    df = pd.DataFrame(results)
+    df.to_csv(os.path.join(out_dir, "experiment_results.csv"), index=False)
+    log_trace(f"Saved: {os.path.join(out_dir,'experiment_results.csv')}", "FINAL_STATS")
+    return df
+
+# -------------------------------
+# Trust metrics
+# -------------------------------
+
+def compute_rdc_scores(df: pd.DataFrame, embed_model="all-MiniLM-L6-v2") -> pd.DataFrame:
+    """
+    Computes Reasoning–Diagnosis Coherence (RDC):
+    cosine similarity between each model’s reasoning trace
+    and its own predicted diagnosis (not ground truth).
+    """
+    if df.empty:
+        return df.assign(rdc_score=[])
+
+    model = SentenceTransformer(embed_model)
+    traces = df.get("reasoning_trace", [""] * len(df))
+    preds  = df.get("diagnosis", [""] * len(df))
+
+    e_trace = model.encode(traces, normalize_embeddings=True, convert_to_numpy=True)
+    e_pred  = model.encode(preds,  normalize_embeddings=True, convert_to_numpy=True)
+    sims = (e_trace * e_pred).sum(axis=1)
+
+    df = df.copy()
+    # scale from [-1, 1] → [0, 100]
+    df["rdc_score"] = (sims + 1) * 50
+    return df
+
+#def compute_metrics(df: pd.DataFrame):
+ #   if df.empty: return {}
+  #  total = len(df)
+   # acc = df["correct"].mean() * 100.0
+   # cdr = df["consensus_disagree"].mean() * 100.0
+    # ja  = df["rdc_score"].mean() * 100.0 if "rdc_score" in df else 0.0
+    # unsafe = df["rx_safety"].fillna("").str.lower().str.contains("unsafe").mean() * 100.0
+    # trust = 0.4*acc + 0.3*(100.0 - cdr) + 0.3*ja
+    # return {
+    #     "n": total,
+    #     "accuracy_%": round(acc,2),
+    #     "cdr_%": round(cdr,2),
+    #     "ja_mean_%": round(ja,2),
+    #     "unsafe_rx_%": round(unsafe,2),
+    #     "trust_index": round(trust,2),
+    # }
+
+def compute_metrics(df: pd.DataFrame):
+    """
+    Extended evaluation metrics for MedGuard-X.
+    Computes diagnostic, reasoning, safety, and trustworthiness metrics.
+    """
+
+    if df.empty:
+        return {}
+
+    total = len(df)
+
+    # --- Core Metrics ---
+    acc = df["correct"].mean() * 100.0 if "correct" in df else 0.0
+    cdr = df["consensus_disagree"].mean() * 100.0 if "consensus_disagree" in df else 0.0
+    rdc = df["rdc_score"].mean() if "rdc_score" in df else 0.0   # already in [0,100]
+    unsafe = (
+        df["rx_safety"].fillna("").str.lower().str.contains("unsafe").mean() * 100.0
+        if "rx_safety" in df else 0.0
+    )
+    trust_index = 0.4 * acc + 0.3 * (100.0 - cdr) + 0.3 * rdc
+
+    # --- Diagnostic Process Metrics ---
+    avg_turns = df["turns"].mean() if "turns" in df else np.nan
+    timeout_rate = (
+        df["diagnosis"].str.upper().eq("TIMEOUT").mean() * 100.0
+        if "diagnosis" in df else 0.0
+    )
+
+    # --- Reasoning Quality Metrics ---
+    if "reasoning_trace" in df:
+        trace_lens = df["reasoning_trace"].fillna("").apply(lambda x: len(x.split()))
+        trace_len_mean = trace_lens.mean()
+        trace_len_std = trace_lens.std()
+        redundancy_ratio = df["reasoning_trace"].fillna("").apply(
+            lambda t: len(set(t.split())) / (len(t.split()) + 1e-6)
+        ).mean() * 100.0
+        # Evidence coverage = % traces mentioning test or symptom keywords
+        keywords = ["test", "symptom", "pain", "exam", "blood", "result", "findings"]
+        evidence_coverage = df["reasoning_trace"].fillna("").apply(
+            lambda t: any(k in t.lower() for k in keywords)
+        ).mean() * 100.0
+    else:
+        trace_len_mean = trace_len_std = redundancy_ratio = evidence_coverage = 0.0
+
+    # --- Safety Metrics ---
+    ddi_count = 0
+    if "ddi_issues" in df:
+        ddi_count = df["ddi_issues"].apply(lambda x: len(json.loads(x or "[]"))).sum()
+    test_safety_alerts = 0
+    if "test_safety" in df:
+        test_safety_alerts = df["test_safety"].str.contains("High", case=False, na=False).sum()
+
+    # --- Trust Variability (if multi-run) ---
+    trust_var = df.get("trust_index", pd.Series([trust_index]*len(df))).std() if "trust_index" in df else 0.0
+
+    # --- Compose Results ---
+    return {
+        "n_cases": int(total),
+        "accuracy_%": round(acc, 2),
+        "cdr_%": round(cdr, 2),
+        "rdc_mean_%": round(rdc, 2),
+        "unsafe_rx_%": round(unsafe, 2),
+        "trust_index": round(trust_index, 2),
+        "avg_turns": round(avg_turns, 2),
+        "timeout_rate_%": round(timeout_rate, 2),
+        "trace_len_mean": round(trace_len_mean, 2),
+        "trace_len_std": round(trace_len_std, 2),
+        "redundancy_ratio_%": round(redundancy_ratio, 2),
+        "evidence_coverage_%": round(evidence_coverage, 2),
+        "ddi_count": int(ddi_count),
+        "test_safety_alerts": int(test_safety_alerts),
+        "trust_var": round(trust_var, 2),
+    }
+
+# -------------------------------
+# Example config & RUN
+# -------------------------------
+config = {
+    "log_level": "INFO",
+    "doctor_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "patient_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "measurement_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "test_safety_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-flash"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "rx_writer_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "rx_safety_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "moderator_llm_config": {
+        "model_id": VERTEX_AI_MODEL_MAP["gemini-2.5-pro"],
+        "project_id": YOUR_PROJECT_ID, "location": YOUR_GCP_LOCATION
+    },
+    "dataset_file": "agentclinic_medqa.jsonl",    # if missing, runs a mock case
+    "ddi_csv_file": "db_drug_interactions.csv",   # optional; if missing, DDI check still runs (empty set)
+    "scenario_indices": list(range(0, 1)),        # adjust as needed
+    "total_inferences": 15,
+    "use_consensus": True,
+    "consensus_n": 3,
+    "use_test_safety": True
 }
 
-✅ All experiments complete!
+_colab_cfg["log_level"] = config.get("log_level", "INFO")
 
-         run  n_cases  accuracy_%  cdr_%  rdc_mean_%  unsafe_rx_%  \
-0  consensus        1       100.0    0.0   77.129997          0.0   
-1      trust        1       100.0    0.0   55.779999          0.0   
+print("▶ Running MedGuard-X…")
+'''df_raw = run_experiment(config, out_dir="medguardx_results")
+print(df_raw.head())
 
-   trust_index  avg_turns  timeout_rate_%  trace_len_mean  trace_len_std  \
-0        93.14        4.0             0.0           588.0            NaN   
-1        86.73        3.0             0.0             0.0            NaN   
+print("▶ Computing JA and summary metrics…")
+df = compute_rdc_scores(df_raw)
+df.to_csv("medguardx_results/experiment_results_with_ja.csv", index=False)
+metrics = compute_metrics(df)
+print(json.dumps(metrics, indent=2))
 
-   redundancy_ratio_%  evidence_coverage_%  ddi_count  test_safety_alerts  \
-0               22.11                100.0          0                   0   
-1                0.00                  0.0          0                   0   
+# Quick plot (optional)
+try:
+    plt.figure(figsize=(6,4))
+    plt.scatter(df["rdc_score"]*100, df["correct"].astype(int)*100, c=df["consensus_disagree"], cmap="coolwarm", edgecolors="k")
+    plt.xlabel("Justification Alignment (JA %)"); plt.ylabel("Correct Diagnosis (1=Yes)")
+    plt.title("Explainability vs Accuracy"); plt.grid(alpha=0.3); plt.tight_layout()
+    plt.show()
+except Exception as e:
+    log_trace(f"Plot skipped: {e}", "WARN")
 
-   trust_var  
-0        0.0  
-1        0.0
+print("✅ Done. Files saved under: medguardx_results/")'''
 
-Top metric correlations:
-  n_cases ↔ accuracy_%: nan
-  n_cases ↔ cdr_%: nan
-  n_cases ↔ rdc_mean_%: nan
-  n_cases ↔ unsafe_rx_%: nan
-  n_cases ↔ trust_index: nan
-  n_cases ↔ avg_turns: nan
-  n_cases ↔ timeout_rate_%: nan
-  n_cases ↔ trace_len_mean: nan
+
+# ======================================================
+#  MedGuard-X Experiment Harness (Enhanced Metrics)
+# ======================================================
+
+import json, pandas as pd, numpy as np, matplotlib.pyplot as plt
+
+# ---------------------------------------------------------------------
+# Safe JSON helper for serialization
+# ---------------------------------------------------------------------
+def safe_json(obj):
+    if isinstance(obj, (np.float32, np.float64)):
+        return float(obj)
+    if isinstance(obj, (np.int32, np.int64)):
+        return int(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+# ---------------------------------------------------------------------
+# Run + evaluate wrapper
+# ---------------------------------------------------------------------
+def run_and_eval(name, cfg, outdir):
+    print(f"\n===========================")
+    print(f"▶ Running {name.upper()}...")
+
+    df = run_experiment(cfg, out_dir=outdir)
+    df = compute_rdc_scores(df)  # ensures RDC is computed
+    df.to_csv(f"{outdir}/results_with_rdc.csv", index=False)
+
+    # Compute metrics (your updated compute_metrics function)
+    m = compute_metrics(df)
+
+    # Save metrics summary JSON for reproducibility
+    with open(f"{outdir}/metrics_summary.json", "w") as f:
+        json.dump(m, f, indent=2, default=safe_json)
+
+    print(f"{name} metrics:", json.dumps(m, indent=2, default=safe_json))
+    return name, m
+
+
+# ---------------------------------------------------------------------
+# Experiment Configurations
+# ---------------------------------------------------------------------
+baseline_cfg = {
+    **config,
+    "use_consensus": False,
+    "consensus_n": 1,
+    "use_test_safety": False,
+    "use_rx_safety": False,
+    "use_ddi_check": False,
+}
+
+safety_cfg = {
+    **config,
+    "use_consensus": False,
+    "consensus_n": 1,
+    "use_test_safety": True,
+    "use_rx_safety": True,
+    "use_ddi_check": True,
+}
+
+consensus_cfg = {
+    **config,
+    "use_consensus": True,
+    "consensus_n": 3,
+    "use_test_safety": False,
+    "use_rx_safety": False,
+    "use_ddi_check": False,
+}
+
+trust_cfg = {
+    **config,
+    "use_consensus": True,
+    "consensus_n": 3,
+    "use_test_safety": True,
+    "use_rx_safety": True,
+    "use_ddi_check": True,
+}
+
+# ---------------------------------------------------------------------
+# Run all experiments sequentially
+# ---------------------------------------------------------------------
+# experiments = [
+#     ("baseline", baseline_cfg, "experiments_baseline"),
+#     ("safety", safety_cfg, "experiments_safety"),
+#     ("consensus", consensus_cfg, "experiments_consensus"),
+#     ("trust", trust_cfg, "experiments_trust"),
+# ]
+experiments = [
+    ("consensus", consensus_cfg, "experiments_consensus"),
+    ("trust", trust_cfg, "experiments_trust"),
+]
+
+results = []
+for name, cfg, folder in experiments:
+    nm, m = run_and_eval(name, cfg, folder)
+    results.append({"run": nm, **m})
+
+# ---------------------------------------------------------------------
+# Aggregate results
+# ---------------------------------------------------------------------
+df_summary = pd.DataFrame(results)
+df_summary.to_csv("experiment_summary_all.csv", index=False)
+
+print("\n✅ All experiments complete!\n")
+print(df_summary)
+
+# ---------------------------------------------------------------------
+# Export LaTeX Table
+# ---------------------------------------------------------------------
+latex_table = df_summary.to_latex(
+    index=False,
+    float_format="%.2f",
+    caption="Performance comparison across MedGuard-X variants with expanded trustworthiness metrics.",
+    label="tab:medguardx_results"
+)
+with open("experiment_summary_all.tex", "w") as f:
+    f.write(latex_table)
+print("\n📄 LaTeX table saved as 'experiment_summary_all.tex'.")
+
+# ---------------------------------------------------------------------
+# Visualization: Multi-Metric Summary Plot
+# ---------------------------------------------------------------------
+plt.figure(figsize=(8, 4))
+
+plt.plot(df_summary["run"], df_summary["accuracy_%"], marker="o", label="Accuracy")
+plt.plot(df_summary["run"], df_summary["trust_index"], marker="s", label="Trust Index")
+if "rdc_mean_%" in df_summary:
+    plt.plot(df_summary["run"], df_summary["rdc_mean_%"], marker="^", label="RDC (Reasoning Coherence)")
+if "unsafe_rx_%" in df_summary:
+    plt.plot(df_summary["run"], df_summary["unsafe_rx_%"], marker="x", linestyle="--", label="Unsafe Rx %")
+
+plt.title("Performance and Trustworthiness across MedGuard-X Variants")
+plt.xlabel("Configuration")
+plt.ylabel("%")
+plt.legend()
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.savefig("experiment_summary_plot_extended.png", dpi=300)
+plt.show()
+
+print("📊 Saved plot: experiment_summary_plot_extended.png")
+# ---------------------------------------------------------------------
+# 📊 Correlation Analysis — trust–performance relationships
+# ---------------------------------------------------------------------
+from itertools import combinations
+
+# Select numeric columns only
+num_cols = [c for c in df_summary.columns if df_summary[c].dtype != 'object']
+df_corr = df_summary[num_cols].corr()
+
+# --- Save correlation matrix
+df_corr.to_csv("experiment_metric_correlation.csv", index=True)
+print("\n📈 Metric correlation matrix saved as 'experiment_metric_correlation.csv'\n")
+
+# --- Print top positive correlations
+pairs = []
+for a, b in combinations(num_cols, 2):
+    if a != b:
+        corr = df_corr.loc[a, b]
+        pairs.append((a, b, corr))
+top_corr = sorted(pairs, key=lambda x: abs(x[2]), reverse=True)[:8]
+
+print("🔍 Top metric correlations:")
+for a, b, c in top_corr:
+    print(f"  {a} ↔ {b}: {c:.3f}")
+
+# --- Plot heatmap (if seaborn available)
+try:
+    import seaborn as sns
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(df_corr, annot=True, fmt=".2f", cmap="coolwarm", square=True,
+                cbar_kws={'label': 'Correlation'})
+    plt.title("Inter-metric Correlation (Accuracy, Trust, RDC, CDR, Safety)")
+    plt.tight_layout()
+    plt.savefig("experiment_metric_correlation.png", dpi=300)
+    plt.show()
+    print("📊 Saved correlation heatmap: experiment_metric_correlation.png")
+except Exception as e:
+    print(f"[WARN] Could not plot correlation heatmap: {e}")
