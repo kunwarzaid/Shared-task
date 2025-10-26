@@ -1,14 +1,21 @@
-Subject: Request for Correction of Submission — Patient-Centric Question Answering Shared Task
+def compute_rdc_scores(df: pd.DataFrame, embed_model="all-MiniLM-L6-v2") -> pd.DataFrame:
+    """
+    Computes Reasoning–Diagnosis Coherence (RDC):
+    cosine similarity between each model’s reasoning trace
+    and its own predicted diagnosis (not ground truth).
+    """
+    if df.empty:
+        return df.assign(rdc_score=[])
 
-Dear Organizing Committee,
+    model = SentenceTransformer(embed_model)
+    traces = df.get("reasoning_trace", [""] * len(df))
+    preds  = df.get("diagnosis", [""] * len(df))
 
-I hope this message finds you well. I am writing to bring to your attention that my paper was inadvertently submitted to the BHASHA workshop instead of the Patient-Centric Question Answering Shared Task.
+    e_trace = model.encode(traces, normalize_embeddings=True, convert_to_numpy=True)
+    e_pred  = model.encode(preds,  normalize_embeddings=True, convert_to_numpy=True)
+    sims = (e_trace * e_pred).sum(axis=1)
 
-Please find the correct submission attached with this email. I kindly request that you consider this paper under the appropriate shared task track — Patient-Centric QA. The submission was prepared specifically for that task, and the incorrect upload was an unintentional error during the submission process.
-
-I sincerely apologize for the confusion and appreciate your understanding and support in resolving this matter.
-
-Warm regards,
-Kunwar Zaid
-TCS Research, New Delhi, India
-📧 kunwar.zaid@tcs.com
+    df = df.copy()
+    # scale from [-1, 1] → [0, 100]
+    df["rdc_score"] = (sims + 1) * 50
+    return df
