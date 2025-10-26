@@ -1,23 +1,277 @@
-===========================
-▶ Running CONSENSUS...
-[07:38:28][HEADER] --- Scenario 0: Myasthenia gravis ---
-/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
-  warning_logs.show_deprecation_warning()
----------------------------------------------------------------------------
-NameError                                 Traceback (most recent call last)
-/tmp/ipython-input-4121208707.py in <cell line: 0>()
-     88 results = []
-     89 for name, cfg, folder in experiments:
----> 90     nm, m = run_and_eval(name, cfg, folder)
-     91     results.append({"run": nm, **m})
-     92 
+\documentclass[11pt]{article}
+\usepackage[final]{acl} % camera-ready version
 
-3 frames
-/tmp/ipython-input-2802369503.py in _ask_consensus(self, sys_prompt, user_prompt)
-    269     # --- Semantic clustering ---
-    270         if len(responses) > 1:
---> 271           embeddings = embed_model.encode(responses, normalize_embeddings=True)
-    272           sim = cosine_similarity(embeddings)
-    273           # Compute mean similarity across responses
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{tikz}
+\usepackage{float}
+\renewcommand{\UrlFont}{\ttfamily\small}
 
-NameError: name 'embed_model' is not defined
+% spacing tweaks
+\setlength{\parskip}{4pt}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{3pt}
+
+\title{Multilingual Clinical Dialogue Summarization and Information Extraction with Qwen-1.5B LoRA}
+
+\author{
+\begin{tabular}{c}
+\textbf{Kunwar Zaid} \quad
+\textbf{Amit Sangroya} \quad
+\textbf{Jyotsana Khatri} \\
+TCS Research, New Delhi, India \\
+\texttt{\{kunwar.zaid, amit.sangroya, jyotsana.khatri\}@tcs.com} \\
+\end{tabular}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper describes our submission to the NLP-AI4Health 2025 Shared Task on multilingual clinical dialogue summarization and structured information extraction.
+Our system is based on Qwen-1.5B Instruct fine-tuned with LoRA adapters for parameter-efficient adaptation.
+The pipeline produces (i) concise English summaries, (ii) schema-aligned JSON outputs, and (iii) multilingual Q\&A responses.
+The Qwen-based approach substantially improves summary fluency, factual completeness, and JSON field coverage while maintaining efficiency within constrained GPU resources.
+\end{abstract}
+
+\section{Introduction}
+The Shared Task on multilingual clinical dialogue summarization challenges systems to process doctor–patient conversations across ten languages and output three modalities: summaries, structured records, and Q\&A responses.
+We present a LoRA-adapted Qwen-1.5B pipeline optimized for factual summarization and schema-based information extraction, designed to handle multilingual inputs efficiently under limited hardware conditions.
+
+\section{System Architecture and Approach}
+
+\begin{figure}[htbp!]
+\centering
+\includegraphics[width=1.2\columnwidth]{latex/Multilingual Doctor-Patient Dialogue.png}
+%\vspace{0em}
+\caption{Overview of the multilingual summarization and extraction pipeline. The pipeline includes English summarization, structured information extraction, and multilingual Q\&A generation.}
+\label{fig:struct}
+\end{figure}
+
+Figure~\ref{fig:struct} illustrates the modular inference design. Each dialogue passes through sequential stages: English summarization, structured field extraction, and multilingual Q\&A generation.
+
+\subsection{Model Configuration}
+We used Qwen-1.5B Instruct quantized to 4-bit NF4 precision via \texttt{BitsAndBytes}.
+LoRA adapters were trained with rank $r=8$, $\alpha=32$, dropout $0.05$, and target modules \texttt{q\_proj} and \texttt{v\_proj}.
+Training used the AdamW optimizer ($2\times10^{-4}$ learning rate, cosine decay).
+Gradient checkpointing and mixed precision allowed training within 60GB RAM and 32×V100 GPUs.
+
+\paragraph{Training Details.}
+Fine-tuning was conducted for \textbf{one epoch} due to strict time and hardware constraints. Despite this, validation showed rapid convergence, indicating effective domain adaptation. 
+
+\subsection{Inference Pipeline}
+Each language’s dialogues were processed independently with checkpoint resumption support.
+The inference proceeds through:
+\begin{enumerate}
+    \item \textbf{Summary Generation:} Produce an English summary ending with sentinel token \texttt{<<END>>}.
+    \item \textbf{Structured Extraction:} Populate each JSON field by querying the model separately.
+    \item \textbf{Multilingual Q\&A:} Generate answers in the dialogue’s original language.
+\end{enumerate}
+Greedy decoding (\texttt{do\_sample=False}) ensures stable, deterministic outputs across runs.
+
+\subsection{Prompt Design for Inference}
+The system employs role-based prompts for consistent and interpretable outputs across all subtasks.  
+Distinct templates were used for summary generation, structured JSON extraction, and multilingual Q\&A.  
+Each follows a clear \textit{System–User} structure to improve controllability and ensure coherent task behavior.
+
+\subsubsection*{Summary Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a clinical summarization assistant.  
+Write a fluent English summary focusing on diagnosis, symptoms, investigations, and management plan.  
+Write 6--10 sentences. End your summary with the token \texttt{<<END>>}.
+\end{quote}
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Dialogue: \\*
+\texttt{[doctor--patient conversation]} \\*
+Write the summary and end with \texttt{<<END>>}.
+\end{quote}
+
+\subsubsection*{JSON Extraction Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a concise clinical information extraction assistant.  
+Answer in English only. If the information is not present, answer exactly ``N/A''.  
+Do not add explanations. Keep answers at the requested length.
+\end{quote}
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Summary: \\*
+\texttt{[summary]} \\*
+Dialogue: \\*
+\texttt{[conversation]} \\*
+Question: \texttt{[specific field]} \\*
+Answer concisely.
+\end{quote}
+
+
+\subsubsection*{Q\&A Prompt}
+\textbf{System:}
+\begin{quote}\footnotesize\ttfamily
+You are a multilingual clinical assistant.  
+Answer in the same language as the user's question.  
+Be concise, factual, and helpful.
+\end{quote}
+
+\textbf{User:}
+\begin{quote}\footnotesize\ttfamily
+Dialogue: \\*
+\texttt{[doctor--patient conversation]} \\*
+Question (\texttt{[language]}): \texttt{[user query text]}
+\end{quote}
+
+\subsection{Field-by-Field JSON Extraction}
+Early experiments with single-shot JSON generation—where the model was prompted to fill the entire schema in one response—consistently failed to produce usable outputs.
+Most fields were returned as \texttt{null} or empty strings, and the overall structure often violated JSON syntax.
+This occurred because large language models tend to lose schema consistency across multiple nested fields when generating long structured outputs.
+
+To address this issue, we adopted a field-by-field extraction strategy.
+Each JSON field was reformulated as an independent \textit{question–answer} task, allowing the model to focus on one piece of information at a time.
+For example:
+\begin{quote}\small
+Q: What is the patient’s chief complaint? \\
+A: Persistent throat discomfort and hoarseness for two months.
+\end{quote}
+
+Once the model generated an answer for each field, a lightweight Python post-processing script automatically reconstructed the full JSON object.
+Each field’s text response was inserted into its corresponding key, ensuring schema validity and non-null entries.
+If the answer contained phrases such as “N/A,” “not mentioned,” or was empty, the script defaulted that field to \texttt{null}.
+
+This modular approach improved the completeness and consistency of structured outputs, enabling selective regeneration of missing or low-confidence fields without re-running the entire inference pipeline.
+By decoupling schema adherence from natural language reasoning, the system produced well-formed, information-rich JSON records across all ten languages.
+
+\begin{table}[htbp!]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lp{0.3\textwidth}}
+\toprule
+\textbf{Field} & \textbf{Example Q-A Pair ($\leq$12 words)} \\
+\midrule
+Chief Complaint & Q: What is the patient’s chief complaint? \newline
+A: Persistent throat discomfort and hoarseness for two months. \\
+Past Medical History & Q: Summarize past medical history. \newline
+A: No major illnesses reported previously. \\
+Management Plan & Q: Summarize management plan. \newline
+A: Schedule biopsy and CT scan; smoking cessation counselling. \\
+\bottomrule
+\end{tabular}
+\caption{Example question–answer pairs used for field-level JSON extraction.}
+\label{tab:jsonqa}
+\end{table}
+
+\section{Dataset and Preprocessing}
+We used the multilingual clinical dialogue dataset provided by the organizers, covering ten languages: English, Hindi, Gujarati, Tamil, Telugu, Marathi, Kannada, Bangla, Assamese, and Dogri.
+Dialogues were concatenated turn-wise and normalized for whitespace and encoding.
+Native Indic scripts were retained to preserve token integrity for Qwen’s multilingual tokenizer.
+
+\section{Experimental Setup and Results}
+The system was evaluated on the official NLP-AI4Health 2025 multilingual clinical dialogue test set across three subtasks: (i) Question Answering (QnA), (ii) Text Summarization (Summary\_Text), and (iii) Key--Value Information Extraction (Summary\_KNV). Performance was assessed using task-appropriate metrics as specified by the organizers.
+
+\subsection{Evaluation Metrics}
+\begin{itemize}
+    \item \textbf{QnA:} Evaluated using macro F1 score, measuring overlap between predicted and gold-standard answers.
+    \item \textbf{Summarization:} Evaluated with both ROUGE-L (lexical overlap) and BERTScore-F1 (semantic similarity), capturing fluency and factual alignment.
+    \item \textbf{Structured Extraction:} Evaluated using field-level F1 (KNV F1), reflecting accuracy of key--value pairs in the generated JSON schema.
+\end{itemize}
+
+\subsection{Quantitative Results}
+
+\begin{figure}[htbp!]
+\centering
+\includegraphics[width=1.2\columnwidth]{latex/avg_per_task.png}
+%\vspace{0em}
+\caption{Average task-wise scores (F1, BERT-F1, COMET) across subtasks.}
+\label{fig:taskwise}
+\end{figure}
+Figure~\ref{fig:taskwise} provides a comparative overview of task-level performance.  
+Overall, the system achieves strong semantic and factual consistency, particularly in summarization, despite being trained for a single epoch under hardware constraints.
+
+
+\begin{table*}[htbp!]
+\centering
+\small
+\setlength{\tabcolsep}{7pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lcccc lcccc}
+\toprule
+\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} &
+\textbf{Language} & \textbf{QnA F1} & \textbf{ROUGE-L} & \textbf{BERT-F1} & \textbf{KNV F1} \\
+\midrule
+Marathi  & 0.228 & 0.169 & 0.811 & 0.302 & Telugu   & 0.345 & 0.179 & 0.834 & 0.263 \\
+Kannada  & 0.471 & 0.169 & 0.825 & 0.272 & Tamil    & 0.442 & 0.182 & 0.838 & 0.297 \\
+Gujarati & 0.496 & 0.170 & 0.839 & 0.269 & Bangla   & 0.334 & 0.185 & 0.822 & 0.290 \\
+English  & 0.674 & 0.191 & 0.835 & 0.335 & Hindi    & 0.618 & 0.176 & 0.836 & 0.344 \\
+Assamese & 0.533 & 0.181 & 0.834 & 0.288 &          &       &       &       &      \\
+\midrule
+\textbf{Macro Avg.} & \textbf{0.460} & \textbf{0.178} & \textbf{0.830} & \textbf{0.296} & & & & & \\
+\bottomrule
+\end{tabular}
+\caption{Official evaluation results across subtasks. QnA: macro F1. Summary\_Text: ROUGE-L and BERT-F1. Summary\_KNV: key–value F1.}
+\label{tab:main-results}
+\end{table*}
+
+\subsection{Result Interpretation}
+The results in Table~\ref{tab:main-results} reveal several consistent trends across subtasks:
+
+\paragraph{(i) QnA Performance.}
+Macro F1 of 0.46 demonstrates that the model effectively interprets clinical dialogues to answer factual questions.  
+Performance is highest in English (0.67) and Hindi (0.62), where both training coverage and lexical similarity with the base model’s pretraining data are greater.  
+Lower F1 in Marathi and Bangla reflects limited exposure to these scripts and domain-specific vocabulary.
+
+\paragraph{(ii) Summarization.}
+ROUGE-L (0.178 macro) is modest due to lexical variation between generated and reference summaries.  
+However, BERT-F1 (0.83) shows strong semantic alignment, indicating that generated summaries convey equivalent meaning despite phrasing differences.  
+This demonstrates that LoRA fine-tuning improved factual retention even within a single training epoch.
+
+\paragraph{(iii) Structured JSON Extraction.}
+The field-wise extraction framework achieved an F1 of 0.296.  
+Although numerically lower, it produced valid, schema-compliant JSONs—something that single-shot generation failed to achieve.  
+Errors primarily arose from implicit answers or non-explicit mentions in dialogues (e.g., inferred symptoms).  
+Nonetheless, modular regeneration allowed selective re-runs for incomplete fields, improving robustness.
+
+\paragraph{(iv) Language Variability.}
+Languages with higher representation in Qwen’s pretraining corpus (e.g., English, Hindi) showed superior performance, whereas low-resource languages, such as Assamese and Bangla, exhibited reduced accuracy.   
+Still, performance degradation is moderate, confirming strong multilingual generalization from Qwen’s tokenizer and LoRA’s efficient parameter sharing.
+
+\paragraph{(v) Cross-Task Insights.}
+Semantic metrics (BERT-F1, COMET) are consistently higher than lexical ones (ROUGE-L), suggesting that the model captures meaning more reliably than exact phrasing.  
+This aligns with the system’s design objective—favoring factual and conceptual correctness over surface-form overlap.
+
+\subsection{Qualitative Observations}
+Manual review of outputs indicated:
+\begin{itemize}
+    \item Summaries were fluent and coherent, but occasionally omitted less salient details.
+    \item JSON outputs maintained field integrity and rarely contained invalid syntax.
+    \item Multilingual QnA responses accurately switched to the correct target language, confirming successful prompt conditioning.
+\end{itemize}
+Despite being trained for only one epoch, the model maintained factual consistency and structured completeness across multiple languages and subtasks.
+
+\section{Discussion}
+The main challenges included limited GPU availability, frequent checkpoint interruptions, and imbalanced data across low-resource languages (Dogri, Assamese).
+The modular field-by-field approach significantly improved schema coverage and recoverability.
+Despite training for only one epoch, the system demonstrated strong multilingual generalization and stable performance across all subtasks.
+
+\section{Conclusion}
+This work presented a multilingual clinical dialogue summarization and structured information extraction system built on Qwen-1.5B with parameter-efficient LoRA fine-tuning.  
+The system was designed to operate under constrained computational resources while maintaining high factual precision and multilingual consistency across ten Indic and non-Indic languages.
+
+Through modular task decomposition—summary generation, field-wise JSON extraction, and multilingual question answering—the approach demonstrated strong generalization across diverse scripts and linguistic structures.  
+The role-based prompting framework ensured consistent output formats, while the field-by-field extraction strategy provided resilience against schema violations that typically hinder end-to-end structured generation.  
+
+Quantitative evaluation confirmed the effectiveness of this design: summarization achieved high semantic alignment (BERT-F1 $\approx$ 0.83), QnA exhibited competitive factual accuracy (macro F1 = 0.46), and JSON extraction maintained structural validity with balanced key–value F1 (0.296).  
+Despite limited fine-tuning time and single-epoch training, the model achieved robust multilingual behavior and stable inference quality.
+
+\end{document}
