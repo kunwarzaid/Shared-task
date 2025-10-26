@@ -1,7 +1,10 @@
-▶ Running BASELINE...
-[07:24:48][HEADER] --- Scenario 0: Myasthenia gravis ---
+===========================
+▶ Running CONSENSUS...
+[07:38:28][HEADER] --- Scenario 0: Myasthenia gravis ---
+/usr/local/lib/python3.12/dist-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
 ---------------------------------------------------------------------------
-AttributeError                            Traceback (most recent call last)
+NameError                                 Traceback (most recent call last)
 /tmp/ipython-input-4121208707.py in <cell line: 0>()
      88 results = []
      89 for name, cfg, folder in experiments:
@@ -9,76 +12,12 @@ AttributeError                            Traceback (most recent call last)
      91     results.append({"run": nm, **m})
      92 
 
-2 frames
-/tmp/ipython-input-32193778.py in run_one_case(scenario, config, max_turns)
-    317     for t in range(max_turns):
-    318         turns = t + 1
---> 319         dr_full = doctor._ask_consensus(sys_p, user_p)
-    320         think, dr_text = parse_thinking_and_body(dr_full)
-    321         reasoning_trace += ("\n" + think) if think else reasoning_trace
+3 frames
+/tmp/ipython-input-2802369503.py in _ask_consensus(self, sys_prompt, user_prompt)
+    269     # --- Semantic clustering ---
+    270         if len(responses) > 1:
+--> 271           embeddings = embed_model.encode(responses, normalize_embeddings=True)
+    272           sim = cosine_similarity(embeddings)
+    273           # Compute mean similarity across responses
 
-AttributeError: 'DoctorAgent' object has no attribute '_ask_consensus'
-
-class DoctorAgent:
-    def __init__(self, cfg: Dict[str, Any], use_consensus: bool = True, consensus_n: int = 3):
-        self.cfg = cfg
-        self.use_consensus = use_consensus
-        self.consensus_n = max(1, int(consensus_n))
-        self.last_consensus_disagreement = 0
-
-    def _system_prompt(self, summary: str, available_tests: List[str]):
-        tests_list = "\n- ".join(available_tests or [])
-        return (
-            "You are Dr. Agent in a clinical consultation.\n"
-            "Rules:\n"
-            "• Ask focused, non-redundant questions.\n"
-            "• To order a test, use EXACT: REQUEST TEST: <key>\n"
-            "• If ready to conclude, output EXACT: DIAGNOSIS READY: <Diagnosis>\n"
-            f"Tests available:\n- {tests_list}\n\n"
-            f"PATIENT SUMMARY:\n{summary}\n\n"
-            "<thinking_process>Brief next-step reasoning tied to evidence.</thinking_process>\n"
-            "DDX: <comma-separated top 3>"
-        )
-
-    def _ask_once(self, sys_prompt: str, user_prompt: str, temperature: float = 0.6):
-        return query_model(**self.cfg, prompt=user_prompt, system_prompt=sys_prompt, temperature=temperature)
-
-    def doctor_ask_consensus(self, sys_prompt, user_prompt):
-        """Improved consensus with semantic clustering to reduce false disagreement."""
-        if not self.use_consensus or self.consensus_n <= 1:
-          return query_model(**self.llm_config, prompt=user_prompt, system_prompt=sys_prompt)
-
-    # Diverse prompts
-        modifiers = [
-        "Be concise and evidence-based.",
-        "Prioritize diagnostic efficiency.",
-        "Reflect clinically before deciding.",
-        "Avoid redundant questioning.",
-        "Move toward a defensible differential."
-        ]
-        responses = []
-        for i in range(self.consensus_n):
-          t = 0.5 + 0.1 * (i % 3)
-          addon = f"\nConsensusMode#{i+1}: {modifiers[i % len(modifiers)]}"
-          r = query_model(**self.llm_config,
-                        prompt=user_prompt,
-                        system_prompt=sys_prompt + addon,
-                        temperature=t)
-          responses.append(r or "")
-
-    # --- Semantic clustering ---
-        if len(responses) > 1:
-          embeddings = embed_model.encode(responses, normalize_embeddings=True)
-          sim = cosine_similarity(embeddings)
-          # Compute mean similarity across responses
-          avg_sim = np.mean(sim[np.triu_indices(len(sim), 1)])
-          self.last_consensus_disagreement = 1 if avg_sim < 0.8 else 0
-        else:
-          self.last_consensus_disagreement = 0
-
-    # Choose most "central" response
-        mean_sim = cosine_similarity(embeddings, embeddings.mean(axis=0, keepdims=True)).flatten()
-        best_idx = int(np.argmax(mean_sim))
-        best_response = responses[best_idx]
-
-        return best_response
+NameError: name 'embed_model' is not defined
