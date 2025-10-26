@@ -1,22 +1,12 @@
 # ======================================================
-#  MedGuard-X Experiment Harness (Baselines → Full)
+#  MedGuard-X Experiment Harness (Enhanced Metrics)
 # ======================================================
 
-import json, pandas as pd, matplotlib.pyplot as plt
+import json, pandas as pd, numpy as np, matplotlib.pyplot as plt
 
-# Helper: run experiment + metrics
-def run_and_eval(name, cfg, outdir):
-    print(f"\n===========================")
-    print(f"▶ Running {name.upper()}...")
-    df = run_experiment(cfg, out_dir=outdir)
-    df = compute_rdc_scores(df)
-    df.to_csv(f"{outdir}/results_with_ja.csv", index=False)
-    m = compute_metrics(df)
-
-    print(f"{name} metrics:", json.dumps(m, indent=2, default=safe_json))
-    return name, m
-
-# Helper: safe float conversion
+# ---------------------------------------------------------------------
+# Safe JSON helper for serialization
+# ---------------------------------------------------------------------
 def safe_json(obj):
     if isinstance(obj, (np.float32, np.float64)):
         return float(obj)
@@ -24,10 +14,31 @@ def safe_json(obj):
         return int(obj)
     raise TypeError(f"Type {type(obj)} not serializable")
 
+# ---------------------------------------------------------------------
+# Run + evaluate wrapper
+# ---------------------------------------------------------------------
+def run_and_eval(name, cfg, outdir):
+    print(f"\n===========================")
+    print(f"▶ Running {name.upper()}...")
+
+    df = run_experiment(cfg, out_dir=outdir)
+    df = compute_rdc_scores(df)  # ensures RDC is computed
+    df.to_csv(f"{outdir}/results_with_rdc.csv", index=False)
+
+    # Compute metrics (your updated compute_metrics function)
+    m = compute_metrics(df)
+
+    # Save metrics summary JSON for reproducibility
+    with open(f"{outdir}/metrics_summary.json", "w") as f:
+        json.dump(m, f, indent=2, default=safe_json)
+
+    print(f"{name} metrics:", json.dumps(m, indent=2, default=safe_json))
+    return name, m
 
 
-
-# --- Config variants ---
+# ---------------------------------------------------------------------
+# Experiment Configurations
+# ---------------------------------------------------------------------
 baseline_cfg = {
     **config,
     "use_consensus": False,
@@ -64,7 +75,9 @@ trust_cfg = {
     "use_ddi_check": True,
 }
 
-# --- Run all experiments ---
+# ---------------------------------------------------------------------
+# Run all experiments sequentially
+# ---------------------------------------------------------------------
 experiments = [
     ("baseline", baseline_cfg, "experiments_baseline"),
     ("safety", safety_cfg, "experiments_safety"),
@@ -77,34 +90,85 @@ for name, cfg, folder in experiments:
     nm, m = run_and_eval(name, cfg, folder)
     results.append({"run": nm, **m})
 
+# ---------------------------------------------------------------------
+# Aggregate results
+# ---------------------------------------------------------------------
 df_summary = pd.DataFrame(results)
 df_summary.to_csv("experiment_summary_all.csv", index=False)
 
 print("\n✅ All experiments complete!\n")
 print(df_summary)
 
-# --- LaTeX Table ---
+# ---------------------------------------------------------------------
+# Export LaTeX Table
+# ---------------------------------------------------------------------
 latex_table = df_summary.to_latex(
     index=False,
     float_format="%.2f",
-    caption="Performance comparison across MedGuard-X variants.",
+    caption="Performance comparison across MedGuard-X variants with expanded trustworthiness metrics.",
     label="tab:medguardx_results"
 )
 with open("experiment_summary_all.tex", "w") as f:
     f.write(latex_table)
 print("\n📄 LaTeX table saved as 'experiment_summary_all.tex'.")
 
-# --- Plot summary ---
-plt.figure(figsize=(7,4))
+# ---------------------------------------------------------------------
+# Visualization: Multi-Metric Summary Plot
+# ---------------------------------------------------------------------
+plt.figure(figsize=(8, 4))
+
 plt.plot(df_summary["run"], df_summary["accuracy_%"], marker="o", label="Accuracy")
 plt.plot(df_summary["run"], df_summary["trust_index"], marker="s", label="Trust Index")
-plt.title("Performance across MedGuard-X variants")
+if "rdc_mean_%" in df_summary:
+    plt.plot(df_summary["run"], df_summary["rdc_mean_%"], marker="^", label="RDC (Reasoning Coherence)")
+if "unsafe_rx_%" in df_summary:
+    plt.plot(df_summary["run"], df_summary["unsafe_rx_%"], marker="x", linestyle="--", label="Unsafe Rx %")
+
+plt.title("Performance and Trustworthiness across MedGuard-X Variants")
 plt.xlabel("Configuration")
 plt.ylabel("%")
 plt.legend()
 plt.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig("experiment_summary_plot.png")
+plt.savefig("experiment_summary_plot_extended.png", dpi=300)
 plt.show()
 
-print("📊 Saved plot: experiment_summary_plot.png")
+print("📊 Saved plot: experiment_summary_plot_extended.png")
+# ---------------------------------------------------------------------
+# 📊 Correlation Analysis — trust–performance relationships
+# ---------------------------------------------------------------------
+from itertools import combinations
+
+# Select numeric columns only
+num_cols = [c for c in df_summary.columns if df_summary[c].dtype != 'object']
+df_corr = df_summary[num_cols].corr()
+
+# --- Save correlation matrix
+df_corr.to_csv("experiment_metric_correlation.csv", index=True)
+print("\n📈 Metric correlation matrix saved as 'experiment_metric_correlation.csv'\n")
+
+# --- Print top positive correlations
+pairs = []
+for a, b in combinations(num_cols, 2):
+    if a != b:
+        corr = df_corr.loc[a, b]
+        pairs.append((a, b, corr))
+top_corr = sorted(pairs, key=lambda x: abs(x[2]), reverse=True)[:8]
+
+print("🔍 Top metric correlations:")
+for a, b, c in top_corr:
+    print(f"  {a} ↔ {b}: {c:.3f}")
+
+# --- Plot heatmap (if seaborn available)
+try:
+    import seaborn as sns
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(df_corr, annot=True, fmt=".2f", cmap="coolwarm", square=True,
+                cbar_kws={'label': 'Correlation'})
+    plt.title("Inter-metric Correlation (Accuracy, Trust, RDC, CDR, Safety)")
+    plt.tight_layout()
+    plt.savefig("experiment_metric_correlation.png", dpi=300)
+    plt.show()
+    print("📊 Saved correlation heatmap: experiment_metric_correlation.png")
+except Exception as e:
+    print(f"[WARN] Could not plot correlation heatmap: {e}")
