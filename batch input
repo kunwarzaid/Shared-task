@@ -38,7 +38,36 @@ LOG_LEVELS = {
     "STATE_CHANGE": 4, "WARN": 5, "ERROR": 6, "CRITICAL": 7
 }
 _colab_cfg = {"log_level": "INFO"}
+def extract_diagnosis_flexible(text: str) -> str:
+    """Extract diagnosis line using multiple regex patterns."""
+    if not text:
+        return "TIMEOUT"
+    patterns = [
+        r"DIAGNOSIS READY:\s*(.*)",
+        r"final diagnosis is\s*[:\-]?\s*(.*)",
+        r"Diagnosis\s*[:\-]?\s*(.*)"
+    ]
+    for p in patterns:
+        m = re.search(p, text, re.IGNORECASE)
+        if m:
+            dx = m.group(1).strip().rstrip(".")
+            return re.sub(r"[*#]+", "", dx)
+    return "TIMEOUT"
 
+def semantic_equivalence(pred: str, gold: str, threshold: float = 0.85) -> bool:
+    """Semantic match using sentence embeddings."""
+    if not pred or pred == "TIMEOUT":
+        return False
+    if pred.strip().lower() == gold.strip().lower():
+        return True
+    try:
+        e1, e2 = _embed.encode([pred, gold], normalize_embeddings=True)
+        sim = float(cosine_similarity([e1], [e2])[0][0])
+        return sim >= threshold
+    except Exception:
+        return pred.strip().lower() in gold.strip().lower() or gold.strip().lower() in pred.strip().lower()
+
+        
 def log_trace(msg, level="INFO"):
     cfg = _colab_cfg.get("log_level", "INFO").upper()
     if LOG_LEVELS.get(level.upper(), 2) >= LOG_LEVELS.get(cfg, 2):
