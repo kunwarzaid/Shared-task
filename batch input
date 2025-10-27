@@ -1,94 +1,21 @@
-# ==== Vertex AI ====
-import vertexai
-# ✅ New import – replaces deprecated one
-from vertexai.preview.generative_models import GenerativeModel
+import numpy as np, matplotlib.pyplot as plt
 
-# ==============================================
-# ✅ PATCH: Robust extraction + adjudication fix
-# ==============================================
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+configs = [
+    ("Baseline (single LLM)", 70.2, 78.1),
+    ("Safety-aware (+Rx + Test Safety)", 72.4, 82.4),
+    ("Consensus (3× LLMs)", 76.8, 62.3),
+    ("Full Trust Pipeline (Consensus + Safety)", 78.6, 92.6),
+]
+x = np.array([c[1] for c in configs])
+y = np.array([c[2] for c in configs])
 
-_embed = SentenceTransformer("all-MiniLM-L6-v2")
-
-def extract_diagnosis_flexible(text: str) -> str:
-    """Extract diagnosis line using multiple regex patterns."""
-    if not text:
-        return "TIMEOUT"
-    patterns = [
-        r"DIAGNOSIS READY:\s*(.*)",
-        r"final diagnosis is\s*[:\-]?\s*(.*)",
-        r"Diagnosis\s*[:\-]?\s*(.*)"
-    ]
-    for p in patterns:
-        m = re.search(p, text, re.IGNORECASE)
-        if m:
-            dx = m.group(1).strip().rstrip(".")
-            return re.sub(r"[*#]+", "", dx)
-    return "TIMEOUT"
-
-def semantic_equivalence(pred: str, gold: str, threshold: float = 0.85) -> bool:
-    """Semantic match using sentence embeddings."""
-    if not pred or pred == "TIMEOUT":
-        return False
-    if pred.strip().lower() == gold.strip().lower():
-        return True
-    try:
-        e1, e2 = _embed.encode([pred, gold], normalize_embeddings=True)
-        sim = float(cosine_similarity([e1], [e2])[0][0])
-        return sim >= threshold
-    except Exception:
-        return pred.strip().lower() in gold.strip().lower() or gold.strip().lower() in pred.strip().lower()
-
-# -------------------------------
-# Logging
-# -------------------------------
-LOG_LEVELS = {
-    "DEBUG": 1, "INFO": 2, "THINKING": 2, "WORKFLOW": 2, "PATIENT": 3,
-    "DOCTOR": 3, "MEASUREMENT": 3, "HEADER": 4, "STATS": 4, "FINAL_STATS": 4,
-    "STATE_CHANGE": 4, "WARN": 5, "ERROR": 6, "CRITICAL": 7
-}
-_colab_cfg = {"log_level": "INFO"}
-
-def log_trace(msg, level="INFO"):
-    cfg = _colab_cfg.get("log_level", "INFO").upper()
-    if LOG_LEVELS.get(level.upper(), 2) >= LOG_LEVELS.get(cfg, 2):
-        print(f"[{time.strftime('%H:%M:%S')}][{level.upper()}] {msg}")
-
-# -------------------------------
-# ✅ Gemini API helper (fixed)
-# -------------------------------
-def query_model(model_id, project_id, location, prompt, system_prompt,
-                temperature=0.2, tries=4):
-    """Stable Gemini query with retries, truncation protection, and empty-response fallback."""
-    import google.api_core.exceptions as gexc
-
-    vertexai.init(project=project_id, location=location)
-    model = GenerativeModel(model_id, system_instruction=system_prompt)
-
-    # safety limit (avoid truncated responses)
-    prompt_len = len(system_prompt) + len(prompt)
-    if prompt_len > 80000:
-        log_trace(f"⚠️ Long prompt ({prompt_len} chars) — truncating.", "WARN")
-        prompt = prompt[-40000:]
-
-    for i in range(tries):
-        try:
-            resp = model.generate_content(
-                [prompt],
-                generation_config={"temperature": float(temperature)},
-                safety_settings=None,
-                stream=False
-            )
-            txt = getattr(resp, "text", None)
-            if not txt and hasattr(resp, "candidates"):
-                txt = resp.candidates[0].content.parts[0].text
-            if txt:
-                return txt.strip()
-        except (gexc.InternalServerError, gexc.DeadlineExceeded, gexc.ResourceExhausted) as e:
-            log_trace(f"Gemini retry {i+1}/{tries} ({type(e).__name__})", "WARN")
-            time.sleep(2.0 + i)
-        except Exception as e:
-            log_trace(f"Gemini call failed ({i+1}/{tries}): {e}", "WARN")
-            time.sleep(2.0 + i)
-    return "Error"
+plt.figure(figsize=(6,4))
+plt.scatter(x, y)
+coef = np.polyfit(x, y, 1); f = np.poly1d(coef)
+xline = np.linspace(x.min()-1, x.max()+1, 100)
+plt.plot(xline, f(xline))
+plt.xlabel("Accuracy (%)"); plt.ylabel("Trust Index")
+plt.title("Fig 1. Diagnostic Accuracy vs Trust Index")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
