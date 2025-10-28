@@ -1,10 +1,16 @@
-# Check missing values
-print(df.isna().sum())
+import pandas as pd
 
-# Summary statistics for numeric metrics
-print(df.describe())
+# Replace with your actual CSV file path
+csv_path = "experiment_summary_all.csv"
 
-# Check number of unique diagnoses (if loading per-case results)
-if "diagnosis" in df.columns:
-    print("\nUnique diagnoses found:")
-    print(df["diagnosis"].value_counts().head(10))
+# Load the CSV file into a DataFrame
+df = pd.read_csv(csv_path)
+
+# Display first few rows
+print("✅ Data loaded successfully!")
+display(df.head())
+
+# Optional: show shape and column info
+print(f"\nShape: {df.shape}")
+print("\nColumns:")
+print(df.columns.tolist())
