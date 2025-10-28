@@ -1,26 +1,10 @@
-# Track differential stabilization
-if len(ddx_history) >= 3:
-    last_3 = ddx_history[-3:]
-    top_dxs = [ddx[0] for ddx in last_3 if ddx]
-    if len(top_dxs) >= 3 and len(set(top_dxs)) == 1:
-        stable_dx = top_dxs[0]
-        log_trace(f"[AUTO-CONCLUDE] Stable top diagnosis for 3 turns → {stable_dx}", "INFO")
-        dr_text = f"DIAGNOSIS READY: {stable_dx}"
-        diagnosis = stable_dx
-        break
+# Check missing values
+print(df.isna().sum())
 
+# Summary statistics for numeric metrics
+print(df.describe())
 
-def _system_prompt(self, summary: str, available_tests: List[str]):
-    tests_list = "\n- ".join(available_tests or [])
-    return (
-        "You are Dr. Agent in a clinical consultation.\n"
-        "Rules:\n"
-        "• Ask focused, non-redundant questions.\n"
-        "• When the top differential diagnosis remains unchanged for multiple turns, conclude by outputting EXACT: DIAGNOSIS READY: <Diagnosis>.\n"
-        "• To order a test, use EXACT: REQUEST TEST: <key>\n"
-        "• If ready to conclude, output EXACT: DIAGNOSIS READY: <Diagnosis>\n"
-        f"Tests available:\n- {tests_list}\n\n"
-        f"PATIENT SUMMARY:\n{summary}\n\n"
-        "<thinking_process>Brief next-step reasoning tied to evidence.</thinking_process>\n"
-        "DDX: <comma-separated top 3>"
-    )
+# Check number of unique diagnoses (if loading per-case results)
+if "diagnosis" in df.columns:
+    print("\nUnique diagnoses found:")
+    print(df["diagnosis"].value_counts().head(10))
