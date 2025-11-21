@@ -1,242 +1,189 @@
-Loading model: Qwen/Qwen2.5-7B-Instruct
+{"speaker": "Patient", "date": "", "dialogue": "আমি কয়েক সপ্তাহ ধরে কণ্ঠ ক্ষীণ আর গানটা বাজাতে একটু কষ্ট পাচ্ছি, আজকে ল্যারিংস্কোপ করতে বলেছে, নিজে ভাবছি এটা ঠিক কি। এতে হয়তো কিছু থেতলে নরম প্রশ্ন আছে, শুনে রাখব।"}
+{"speaker": "Health Worker", "date": "", "dialogue": "আপনি দিনভর Gutka-PanMasala সেবন করেন? এটা কবে থেকে শুরু, আর রাতে বেশি নেন নাকি অবিরত খেয়ে থাকেন?"}
+{"speaker": "Patient", "date": "", "dialogue": "হ্যাঁ, Gutka আর Pan Masala প্রায়ই খাই; occasional hookah আছে, রাতে বেশি খাই না, মোটামুটি ১–২ গ্লাস অ্যালকোহল দিনেও নিতেই পারি। কোনোদিন ধূমপান করেননি ঠিক? HPV vaccination status আছে-না?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "HPV টিকা ঠিকঠাক নিয়েছেন কিনা সেটা আমরা জানতে চাই; আজকের ল্যারিংস্কোপ ও স্ক্যানের আগে আলাদা তথ্য দরকার।তা না থাকলে সিদ্ধান্ত নিতে সমস্যা হচ্ছে; আপনি এখনই বলবেন?"}
+{"speaker": "Patient", "date": "", "dialogue": "আমি HPV টিকার ব্যাপারে নিশ্চিত নই, তবে আপনি এখনই জানতে চান—চলবে তো? এদিকে ল্যারিংস্কোপ ও বায়োপসি সম্ভবত আজ হবে কিনা তা আজ নিশ্চিত করতে হবে?"}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "আমি বাবা-মা দুজনেই আছি; আমাদের একটু পরিষ্কার করতে হবে, কবে ও কতটা খরচ হবে, এবং কি ধরণের যেতে হবে। এদিকে দয়া করে বিস্তারিত দিন তো যাতে সঞ্চিত তথ্যটা আমি দ্রুত বুঝে ফেলি?"}
+{"speaker": "Patient", "date": "", "dialogue": "বুঝতে পারছি, তবে ল্যারিংস্কোপ-এ যদি abnormalities থাকে, তবে বায়োপসি করা হবে; না থাকলে কেবল কনফার্মে imaging—CT/MRI এই পরিকল্পনা ঠিক থাকবে?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "ঠিক আছে, যদি ল্যারিংস্কোপে abnormalities থাকে, তবে বায়োপসি করা হবে; না থাকলে কেবল imaging—CT/MRI। এই সময়ে pathology রিপোর্ট ৩–৫ দিনেই পাওয়ার সম্ভাবনা থাকে; তারপর MDT-র সিদ্ধান্ত নেব।"}
+{"speaker": "Patient", "date": "", "dialogue": "আচ্ছা, ৩–৫ দিন মানে আমি ঠিক কীভাবে ফলাফল পাব, কোথায় দেখতে পাব? CT/MRI-র সময়েও প্রস্তুতি থাকতে হবে, ואם প্রয়োজন হয় MRI?"}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "হাসপাতালে MDT-র সাথে সব কিছু দেখা হবে; আমরা সঙ্গে থাকব, ডায়েট, ট্যাক্স, transport—সবখানেই সাহায্য করব, ঠিক? আগে জানতে চাই কোন দিন চিকিৎসার মূল সিদ্ধান্ত নেবে?"}
+{"speaker": "Patient", "date": "", "dialogue": "চাই, MDT-র আগে আমি কোন পরীক্ষা আগে দিতে পারি, যেন ধরা যায় স্টেজ? আগে কোনো তথ্য না জেগে থাকলে ঠিকমতো সিদ্ধান্ত নিতেই পারব না?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "ধরুন আজই ল্যারিংস্কোপ হবে; যদি abnormalities আসে তাহলে বায়োপসি; CT আজই হবে; MRI লাগলে করা হবে; pathology ৩–৫ দিন; MDT ১–৩ সপ্তাহে স্টেজ ঠিক হবে।"}
+{"speaker": "Patient", "date": "", "dialogue": "ঠিক, আমরা সবাই প্রস্তুত আছি; শুধু জানতে চাই, খরচা আর সাপোর্ট কেমন পাব? হাসপাতাল কোথায়? subsidy-টা কেমন নেওয়া হয়?"}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "হাসপাতালের subsidy ও transport-র ব্যবস্থা আমরা দেখছি; সামাজিক ওয়ার্কার সাথে কথা বলব; আপনারা আগে বুকিং-ও বুঝে নিন, ঠিক? চাইলে আমরা সাহায্য করতে প্রস্তুত।"}
+{"speaker": "Patient", "date": "", "dialogue": "এখনই বললে ভালো হয়, ল্যারিংস্কোপে যদি কিছু abnormality না থাকে, তাহলে বায়োপসি দরকার হবে না এ কথা?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "ঠিক আছে, যদি ল্যারিংস্কোপে abnormalities থাকে, তবে বায়োপসি করা হবে; না থাকলে কেবল imaging—CT আজই হবে; MRI লাগলে করা হবে; pathology ৩–৫ দিন; MDT ১–৩ সপ্তাহে স্টেজ ঠিক হবে।"}
+{"speaker": "Patient", "date": "", "dialogue": "আমি খুশি হয়েই বলছি, MDT-র আগে কোন ডাক্তারকে আগে দেখা উচিত? কিসে সবচেয়ে বেশি সাহায্য করবে?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT-র আগে ল্যারিংস্কোপ ও CT-র ফলাফলগুলো দরকার হবে; এরপর MRI দরকার হলে নেয়া হবে; এরপর pathology রিপোর্ট যা-ই আসুক, MDT-র সাথে আলোচনা হবে।"}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "ইচ্ছে করলে MDT-র সময় আমরা পরিবারের অংশ নিয়ে জিজ্ঞাসা করব; আপনারা তখন বুঝিয়ে দেবেন কেমন কাগজপত্র লাগবে।"}
+{"speaker": "Patient", "date": "", "dialogue": "DT-র পরে আমরা দেখতে পাবো জিনিসটা কেমন এগোচ্ছে; আপনি যদি বলেন, আমি প্রশ্নগুলো আগে থেকে প্রস্তুত রাখবো।"}
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT-র আলোচনায় স্টেজ I–II হলে এককালীন রিজিম হয়; III–IV হলে multimodal; কেমো লাগলে সেটি MDT-র সিদ্ধান্তে।"}
+{"speaker": "Patient", "date": "", "dialogue": "আমি এখনই টিউমারের ধারণা নিয়ে ভাবতে চাই, নাকি আগে পরীক্ষার ফল আসলে ভালো? ধারণা আর ফলাফল একসাথে না করলে ঠিক কথা হবে না?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "আপনি ধাপে ধাপে ভাবুন। MDT-র আলোচনার আগে কল্পনা করা ঠিক নয়; ফলাফল আসলে আমরা স্পষ্ট ধারণা দেব, তারপর সিদ্ধান্ত নেব।"} 
+{"speaker": "Relative", "date": "", "dialogue": "ধন্যবাদ, আমরা পরিবারের সবাই মন্থর করতে পারব না; MDT-র সঙ্গে জয়েন্টলি সিদ্ধান্ত নেব।"}
+{"speaker": "Patient", "date": "", "dialogue": "HPV vaccination নিয়ে health-review শেষে সিদ্ধান্ত নেব; বয়স ৪৮, লাভ সীমিত বলতে পারি?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "HPV টিকা নিয়ে আজই সিদ্ধান্ত নেওয়া হবে না; স্বাস্থ্য-রিভিউ শেষে সিদ্ধান্ত; আপাতত রিস্ক-ফ্যাক্টর নিয়েই কাজ চলবে। আপনি ধৈর্য ধরুন।"}
+{"speaker": "Patient", "date": "", "dialogue": "ডেন্টাল ওয়ার্ক আপ ও mouthcare ঠিক আছে তো? radiotherapy-র আগে কি সঠিক MouthCare দরকার?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "oral care guideline: chlorhexidine mouthwash ব্যবহার করুন, আলাদা টুথব্রাশ, নরম খাবার; সমসাময়িক গলা-ক্ষরণ এড়াতে মসৃণ নরম খাবার খান, লবণ-ঘোলার বিকল্প নিন।"}
+{"speaker": "Patient", "date": "", "dialogue": "মুখের যত্ন ঠিক রাখলে ওষুধ না খেয়ে থাকলে চলবে না; chlorhexidine মাউথওয়াশ রাতে ঠিক মতো ব্যবহার করব।"}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "আমরা dental clinic-এ যাব, ঠিক? ডেন্টাল-চেকআপ সারতে কোন দিন ভালো হবে?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "ডেন্টাল-চেকআপ সাধারণত সপ্তাহে দিনভর হয়; আপনি MDT-র সঙ্গে ঠিক করবেন কোন দিনসই ছুটি নিয়ে যাওয়াটা সহজ হবে।"}
+{"speaker": "Patient", "date": "", "dialogue": "CT আজই করতে পারি তো? MRI দরকার হলে পরে 알려বেন?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "CT আজই সম্ভব; MRI দরকার হলে নির্ধারণ করা হবে; সময় লাগবে না বেশি; MDT-র সিদ্ধান্তে থাকবে।"}
+{"speaker": "Patient", "date": "", "dialogue": "বায়োপসি হলে ব্যথা হবে কি? sedative দেওয়া হবে তো?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "বায়োপসি করলে সামান্য ব্যথা হতে পারে; সাধারণত সেডেশন দেওয়া হয়, এরপর আর সমস্যা নয়।"}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "সেডেশন-র কথা শুনেছি; ডাক্তার বলবেন কত গভীরতায়, monitor কোথায়, recovering কতক্ষণ?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "সেডেশন-র মাধ্যমে প্রক্রিয়া শান্ত থাকবে; মনিটরিং ঠিকমতো হবে; recovering সাধারণত খুব বেশি সময় নেয় না।"}
+{"speaker": "Patient", "date": "", "dialogue": "অ্যালকোহল-সেবন কি ঠিক সময়ে বন্ধ রাখব, নাকি পরে একটু ছাড় দিতেই পারি?"}
+{"speaker": "Health Worker", "date": "", "dialogue": " eval ও চিকিৎসার সময়Alcohol পরিহার করুন; এটি সেরে উঠতে প্রভাব ফেলতে পারে; বিকল্প পানীয় আলোচনায় থাকবে।"}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "মাঝে মাঝে alcohol পুরোপুরি ত্যাগ করা কঠিন; MDT-র সঙ্গে কথা বললে হয়তো কোন বিকল্প পাওয়া যাবে?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, MDT-র সাথে আলোচনায় আমরা আপনার জন্য নরম সমাধান খুঁজব; তবে eval চলাকালীন পর্যবেক্ষণ দরকার।"}
+{"speaker": "Patient", "date": "", "dialogue": "রক্ত-চাপ ও ডেন্টাল ইনফেকশন নিয়ে আড়াল নয় তো? রোগীর জন্য কি একটু extra সেফটি?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "ডেন্টাল ইনফেকশন এড়াতে chlorhexidine ব্যবহৃত হবে; রোগীর general health-কে আমাদের সবসময় নজর দিতে হবে।"}
+{"speaker": "Patient", "date": "", "dialogue": "ঠিকঠাক; কাল আমি ডাক্তারের সঙ্গেই কথা বলে পরিকল্পনা নেব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT-র আলোচনায় স্টেজ নির্ণয় ১–৩ সপ্তাহের মধ্যে সমাপ্ত হবে; তখন আমরা নির্দিষ্ট থেরাপি तय করব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "এমন হলে আমার পরিবারের সাথে মিটিংয়ের আগে কী কী কাগজ লাগবে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "Income certificate, health ID, subsidies সম্পর্কিত নথি, এবং MDT-র নির্ধারণ-চূড়ান্ত Plan—সব লিখিত Plan-এ থাকবে।"} 
+{"speaker": "Patient's Relative", "date": "", "dialogue": "আমরা আগে থেকেই কাগজপত্র জোগাড় করে নেব; transport subsidy-র জন্য প্রয়োজনীয় নথিও দেখি নেব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "গলা ও কণ্ঠ নিয়ে বর্তমানে কোন red-flag আমাকে মনে রাখা উচিত?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "গুরুতর লক্ষণ হলে: দীর্ঘস্থায়ী ধমকি, non-healing আলসার, swallow করার সময় ব্যথা বা ear pain—এগুলো দ্রুত দেখা উচিত।"}
+{"speaker": "Patient", "date": "", "dialogue": "আপাতত আমি কেমন ফলাফল পাব, তা MDT-র আগে জানতে পারি?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT-র আগে ফলাফলগুলোর সমন্বয় করা হবে; আপনি MDT-র লেখা Plan ও খসড়া শীঘ্রই পাবেন।"} 
+{"speaker": "Patient", "date": "", "dialogue": "ভাল, আমি লম্বা সময় ধরে অপেক্ষা করতে চাই না; MDT-র সময় আগে প্রশ্ন থাকলে জিজ্ঞেস করব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "চলুন, আজ laryngoscope ও CT-র প্রস্তুতি নিয়ে কথা বলি; MRI লাগলে পরে জানাব।"} 
+{"speaker": "Patient's Relative", "date": "", "dialogue": "হাসপাতাল-এ লিখিত Plan-এ সব কিছু থাকবে তো? পরিবার হিসেবে ওখানে থাকবেন?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, লিখিত Plan-এ থাকবে; MDT-র কলে আপনারা উপস্থিত থাকবেন, আমরা পুরো প্রক্রিয়া ব্যাখ্যা করব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "HPV vaccination নিয়ে health-review শেষে সিদ্ধান্ত নেব; আজকের মধ্যে কোনো সিদ্ধান্ত নেব না তো?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "HPV vaccination নিয়ে আজই সিদ্ধান্ত নয়; health-review শেষে সিদ্ধান্ত; আপাতত risk factors নিয়ে কাজ চলবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "ডেন্টাল ও Mouthcare-র সাথে সাথে চিবানোর সময় কিছু সমস্যা থাকে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "ডেন্টাল-চেকআপ ও Mouthcare ভালো থাকলে radiotherapy-র infection risk কমে; chlorhexidine mouthwash নিয়মিত ব্যবহার করুন।"} 
+{"speaker": "Patient", "date": "", "dialogue": "CT আজই করতে পারলে ভালো; MRI দরকার হলে আমরা জানাব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "CT আজই সম্ভব; MRI দরকার হলে নির্ধারণ করা হবে; MDT-র সিদ্ধান্তে থাকবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "বায়োপসি করলে ব্যথা হলে আমরা আগে জানিয়েছেন চিকিৎসা নেব? সাধারণত sedative দেওয়া হয়?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "বায়োপসি করলে সামান্য ব্যথা হতে পারে; sedative দেওয়া হয়, এরপর recovery বেশি সময় লাগে না।"} 
+{"speaker": "Patient", "date": "", "dialogue": "হাতে-পায়ে ব্যথা যদি হয় বা ফ্লু-সিম্পটম থাকে, কোন চিকিৎসাকে আগে আনা উচিত?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "যদি fever, facial swelling, বা swallowing-এ সমস্যা থাকে, দ্রুত eval নিন; তবে আজকের পরিকল্পনায় এগুলো সাধারণত নয়।"} 
+{"speaker": "Patient", "date": "", "dialogue": "সময় পেলেই আমি ডেন্টাল ক্লিনিকে যাব; আপনারা MDT-র সাথে সব জানিয়ে দেবেন তো?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "অবশ্যই; ডেন্টাল-চেকআপ শেষে MDT-র মিটিং-এ তথ্যগুলো শেয়ার হবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "সংক্ষিপ্তভবে বললে, যদি স্টেজ I–II হয়, সাধারণত কি হয়?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "স্টেজ I–II-তে সাধারণত একক modality; surgery বা radiotherapy নির্বাচন হয়; III–IV-এ multimodal বা chemoradiation প্রয়োজন হতে পারে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি বুঝতে পারছি, MDT-র সিদ্ধান্তে আমরা কোথায় যাব, সেটা লিখিত Plan-এ থাকবে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, MDT-র consensus লিখিত Plan-এ থাকবে, এবং 가족ের সঙ্গে আলোচনা হবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "ডেন্টাল ও Mouthcare বিষয়ে আমি কোন-কোনটা বেশি যত্ন নিলে ভাল?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "নরম খাবার খান, chlorhexidine মাউথওয়াশ ব্যবহার করুন, brushing নরম ব্রাশে করুন; infection risk কমাবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আচমকা কফ-খরচা বাড়লে আমরা কীভাবে আপডেট পাব?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "Written plan ও MDT-র কলে আপনার মোবাইল নম্বরে আপডেট চলে যাবে; weekly checks থাকবে 40-day follow-up পরিকল্পনায়।"} 
+{"speaker": "Patient", "date": "", "dialogue": "40-দিন ফলো-আপ প্ল্যানটা ঠিক কী; কোন কোন তথ্য থাকবে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "Risk-factor checklist, imaging ও pathology ফলাফল, MDT consensus, এবং family support plan থাকবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "হসপিটাল Subsidy-র জন্য আমাকে কী দিচ্ছেন? transport-র সমস্যা থাকলে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "Social worker subsidy options ও transport support বুঝিয়ে দেব; income certificate ও health ID প্রয়োজন হলে সাথে নিন।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি আজই কাগজপত্র নিয়ে দেখা করতে পারি কি? MDT-র আগে প্রস্তুতি শেষ করতে চাই।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, আজই কাগজপত্র নিয়ে আসুন; MDT-র আগে সব মিলিয়ে ঠিক রাখব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "গলা দুর্গন্ধ নিয়ে আপনি কী মনে করেন; এটা কোনো ক্যান্সারের আলামত কি?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "গলা দুর্গন্ধ সাধারণত ব্যাকটেরিয়াল বা আলসারের কারণে হতে পারে; বায়োপসি ও imaging–এই জিনিসগুলো দিয়ে মিলিয়ে দেখা হবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি চাই আপনি সবসময় আমাকে সোজা বলবেন, ফলাফল এলে আমি কীভাবে জানতে পারব?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "সবসময় লিখিত Plan ও patient-notes-এ ফলাফল ও MDT-র সিদ্ধান্ত থাকবে; আপনি নম্বরে আপডেট পাবেন।"} 
+{"speaker": "Patient", "date": "", "dialogue": "HPV vaccination নিয়ে health-review হলে, সিদ্ধান্ত নিলে আমরা কীভাবে জানব?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "HPV-র সিদ্ধান্ত health-review শেষে হবে; আজকে তেমন কিছু পরিবর্তন নেই; আমরা ধরেই এগাব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "CT আজই করতে পারি; MRI দরকার হলে তখন বলবেন; আমি প্রস্তুত আছি।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "CT আজই করা হবে; MRI দরকার হলে আমি জানাব; সবকিছু MDT-র consensus-এ শেষ হবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "ল্যারিংস্কোপ ফলাফল যতক্ষণ না আসল ততক্ষণ আমি কীভাবে বুঝব?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "ল্যারিংস্কোপ-র ফলাফল ১০–১৫ মিনিটে দেখা হবে; abnormalities থাকলে বায়োপসি করা হবে; না থাকলে imaging সিদ্ধান্ত হবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি ছেলে না মেয়ে, পরিবারের সাথে MDT-র মিটিংয়ে উপস্থিত থাকতে পারব তো?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "পরিবর্তিত হয়েছে; পরিবার অংশ নিতেই হয়; MDT-র লিখিত Planে আপনারা থাকবেন এবং প্রশ্ন করলে আমরা বোঝাব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি প্রাথমিকভাবে কীভাবে প্রস্তুতি নেব, ডেন্টাল-চেকআপ ঠিক কখন করবেন?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "প্রথম ধাপে ল্যারিংস্কোপ, তারপর CT. ডেন্টাল-চেকআপকে MDT-র সাথে সামঞ্জস্য করে ঠিক করা হবে; দিন ঠিক করে নিন।"} 
+{"speaker": "Patient", "date": "", "dialogue": "গরিবদের জন্য কোনও subsidy বেশি সুবিধা দেয়? 40-day follow-up plan-এ কীভাবে অংশ নেব?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": " subsidy-options; income certificate ও subsidy নথি নিয়ে MDT-র সঙ্গে আলাপচারিতা হবে; 40-day plan-এ weekly checks থাকবে।"} 
+{"speaker": "Patient", "date", "dialogue": "এখন আমি কীভাবে প্রশ্ন জিজ্ঞেস করব MDT-র সময়, যাতে কনফিউজ না হয়?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT-র সময় আপনি স্পষ্ট প্রশ্ন লিখে নিয়ে যান; আমরা সবমিলিয়ে বুঝিয়ে দেব।"} 
+{"speaker": "Patient's Relative", "date": "", "dialogue": "MDT-র আগেই আপনি যদি ডাক্তার-সঙ্গে আলাদা কথা বলেন, সেটা কি নরম সময়ে ঠিক হবে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, MDT-র আগে একটুও সমস্যা থাকলে আলাদা কথাও চলবে; আমরা সময় বের করব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "ডেন্টাল ক্লিনিকে যাব আগে; কোন ডেন্টাল নথি দরকার হবে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "ডেন্টাল নথি, oral-care plan, এবং dental-clinic ফটোফাইল–এখানে MDT-র ব্যাখ্যার সাথে চলবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "এখনই যদি আমি জিজ্ঞেস করি, স্টেজ নির্ধারণ ১–৩ সপ্তাহে হবে; তাহলে আপনি কীভাবে নিশ্চিত করবেন?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "CT ও ল্যারিংস্কোপ ফলাফল MDT-র কাছে যাবে; পরে pathology ও imaging মিলিয়ে স্টেজ finalised হবে; MDT consensus-written plan থাকবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আপনি যদি বলেন, আমি MDT-র consensus বুঝে নিয়ে যাব; কিছু জটিল শব্দ থাকলে আমরা প্রশ্ন করব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "এটাই লক্ষ্য; আমরা সহজ ভাষায় ব্যাখ্যা করি; প্রয়োজনে ভাষা-চেঞ্জ করব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আসলে আমি জানতে চাই, আজকের পরিকল্পনায় আমি কতটা আশার জায়গায়?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "오늘 계획 অনুযায়ী Early-stage হলে এক modality; Advanced-stage হলে multimodal; সবাই চেষ্টা করবে আপনার tolerance বাড়াতে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "এখানে কীভাবে ফিজিওথেরাপি বা সাইকোলজি-সহ psychosocial support জুড়ে যাবে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT-യ്ക്ക് dietitian, therapist ও psychosocial support রয়েছে; পরিবারকে অংশ করার মাধ্যমে স্ট্রেস কমানোর জন্য সাহায্য করব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি কথা ছিলাম, HPV vaccination নিয়ে health review-এ নিনো সিদ্ধান্ত নিন।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "HPV vaccination নিয়ে আজ একটি সিদ্ধান্ত নেয়া হবে না; health review শেষে সিদ্ধান্ত।"} 
+{"speaker": "Patient", "date": "", "dialogue": "চলে, আমি MDT-র consensus বুঝে নেব; আজ আমি একটু বেশিই প্রশ্ন করেছি, ক্ষমা করবেন।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "কোনো অসুবিধা নেই; আপনি যত প্রশ্ন করছেন, তত স্পষ্টতা বাড়ে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "শেষে বলব, আমি ধৈর্য ধরে সবার সাথে সহযোগিতা করব; আপনারা যেমন বলেন, তেমনটাই করব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "ধন্যবাদ; আমরা আপনার পাশে রয়েছি; MDT-র consensus-Plan নিশ্চিত করি।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আজ 40 দিন পর আমাকে কীভাবে ফলাফল দেখা দেবে, সেটি লিখিত Plan-এ থাকবে তো?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, 40-day follow-up Plan-এ ফলাফল ও risk-factor checklist থাকবে; MDT-র consensus-পরবর্তী পথ নির্দেশ করবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "শেষ কথা বলতে পারি, আমি ধীরে ধীরে এগোব, আমাকে সাহায্য করতে পুরো পরিবারই থাকবে তো?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, পরিবারই সহযোগী হবে; MDT-র consensus অনুযায়ী আমরা এগোব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "ধন্যবাদ, আজকের আলোচনাটা বুঝে নিলাম; আমরা আজই ডেন্টাল-চেকআপ ও CT-র প্রস্তুতি নেব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "চমৎকার; আজই CT ও ল্যারিংস্কোপে প্রস্তুতি নেওয়া হবে; যদি MRI দরকার হয়, তখন জানাব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি আর একটু প্রশ্ন করতে পারি—ল্যারিংস্কোপে abnormality থাকলে কি বায়োপসি হবে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "হ্যাঁ, abnormality থাকলে বায়োপসি করা হবে; না থাকলে imaging-চালু থাকবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আচ্ছা, খরচা ও subsidy নিয়ে আপনারা কী করবেন আগে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "Subsidy ও transport পরিকল্পনা আগে Social Work-এ যাচাই হবে; income certificate ও খাদ্য-সহায়ক নথি নিয়ে আসুন।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি আগামীকাল ডেন্টাল-চেকআপ ও CT-র ফল নিয়ে ফিরব; MDT-র consensus হলে আমরা পরিবারকে জানাব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "ঠিক আছে; MDT-র consensus-Plan লিখিতভাবে আপনাদের কাছে পাঠিয়ে দেওয়া হবে।"} 
+{"speaker": "Patient", "date": "", "dialogue": "শেষে আমি জানতে চাই, যদি বায়োপসি হলে কেমন ব্যথা হয়, recovering কতক্ষণ লাগে?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "বায়োপসি-তে সামান্য ব্যথা হতে পারে; sedative দেওয়া হয়; তারপর recovery চমৎকার দ্রুত হয়।"} 
+{"speaker": "Patient's Relative", "date": "", "dialogue": "চিকিৎসকদের কাছ থেকে আমরা যদি কিছু ভুল বুঝে ফেলি তাহলে আমরা কোথায় গিয়ে সাহায্য নেব?"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT-র কাছে লিখিত Plan থাকবে; ভুল বোঝা গেলে MDT@hospital helpline-এ কল করবেন; পরিবারের সবাইকে আমরা সহায়তা করব।"} 
+{"speaker": "Patient", "date": "", "dialogue": "আমি আজই ল্যারিংস্কোপের ফলাফল জোরে নিয়ে কথা বলব; MDT-র consensus-Plan অনুযায়ী চলব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "চলে, আজই ল্যারিংস্কোপ ও CT-র প্রস্তুতি নিশ্চিত করি; MRI দরকার হলে বলব; pathology ৩–৫ দিন; MDT ১–৩ সপ্তাহে স্টেজ-finalize।"} 
+{"speaker": "Patient", "date": "", "dialogue": "ধন্যবাদ; আমি বুঝেছি, ধাপে ধাপে এগোব।"} 
+{"speaker": "Patient's Relative", "date": "", "dialogue": "আমি ও আমার পরিবারের সবাই প্রস্তুত আছি; MDT-র consensus হলে আমরা সঙ্গে থাকব।"} 
+{"speaker": "Health Worker", "date": "", "dialogue": "চমৎকার; ধাপে ধাপে এগুন। আপনারা প্রস্তুত থাকুন, আমরা সমস্ত তথ্য লিখিত Plan-এ দেব।"}
 
+Summary
+Summary of Rahimuddin’s head and neck cancer risk assessment and planned workup
 
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]
-Fetching 4 files:  25%|██▌       | 1/4 [01:56<05:49, 116.45s/it]
-Fetching 4 files: 100%|██████████| 4/4 [01:56<00:00, 29.11s/it] 
+Key symptoms and risk factors
+- Symptoms: About 3 weeks of hoarseness and voice fatigue; throat probing yielded an unusual odor/taste; no throat pain.
+- Risk factors: daily Gutka/Pan Masala use; occasional hookah; alcohol 1–2 glasses/day. HPV vaccination status unclear. Dental hygiene reported as good.
 
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.26s/it]
-Loading checkpoint shards:  50%|█████     | 2/4 [00:07<00:07,  3.87s/it]
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:11<00:03,  3.99s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:14<00:00,  3.49s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:14<00:00,  3.61s/it]
+Immediate diagnostic actions and timeline
+- Today: Laryngoscopy planned for 10–15 minutes. If abnormalities are found, an endoscopic biopsy will be performed.
+- Biopsy: Results sent to pathology; mild sedation may be used.
+- Post-biopsy imaging: CT scan planned today to assess tumor size and bony involvement; MRI may be added for enhanced soft-tissue detail.
+- Staging: Based on TNM, integrating endoscopy findings, biopsy results, and imaging.
 
-�
---- Attention related modules ---
+Pathology and staging schedule
+- Preliminary pathology results expected in 3–5 days after biopsy.
+- Full staging (pathology plus imaging) typically finalized within 1–3 weeks.
 
-model.embed_tokens
-model.layers.0.self_attn
-model.layers.0.self_attn.q_proj
-model.layers.0.self_attn.k_proj
-model.layers.0.self_attn.v_proj
-model.layers.0.self_attn.o_proj
-model.layers.0.mlp.gate_proj
-model.layers.0.mlp.up_proj
-model.layers.0.mlp.down_proj
-model.layers.1.self_attn
-model.layers.1.self_attn.q_proj
-model.layers.1.self_attn.k_proj
-model.layers.1.self_attn.v_proj
-model.layers.1.self_attn.o_proj
-model.layers.1.mlp.gate_proj
-model.layers.1.mlp.up_proj
-model.layers.1.mlp.down_proj
-model.layers.2.self_attn
-model.layers.2.self_attn.q_proj
-model.layers.2.self_attn.k_proj
-model.layers.2.self_attn.v_proj
-model.layers.2.self_attn.o_proj
-model.layers.2.mlp.gate_proj
-model.layers.2.mlp.up_proj
-model.layers.2.mlp.down_proj
-model.layers.3.self_attn
-model.layers.3.self_attn.q_proj
-model.layers.3.self_attn.k_proj
-model.layers.3.self_attn.v_proj
-model.layers.3.self_attn.o_proj
-model.layers.3.mlp.gate_proj
-model.layers.3.mlp.up_proj
-model.layers.3.mlp.down_proj
-model.layers.4.self_attn
-model.layers.4.self_attn.q_proj
-model.layers.4.self_attn.k_proj
-model.layers.4.self_attn.v_proj
-model.layers.4.self_attn.o_proj
-model.layers.4.mlp.gate_proj
-model.layers.4.mlp.up_proj
-model.layers.4.mlp.down_proj
-model.layers.5.self_attn
-model.layers.5.self_attn.q_proj
-model.layers.5.self_attn.k_proj
-model.layers.5.self_attn.v_proj
-model.layers.5.self_attn.o_proj
-model.layers.5.mlp.gate_proj
-model.layers.5.mlp.up_proj
-model.layers.5.mlp.down_proj
-model.layers.6.self_attn
-model.layers.6.self_attn.q_proj
-model.layers.6.self_attn.k_proj
-model.layers.6.self_attn.v_proj
-model.layers.6.self_attn.o_proj
-model.layers.6.mlp.gate_proj
-model.layers.6.mlp.up_proj
-model.layers.6.mlp.down_proj
-model.layers.7.self_attn
-model.layers.7.self_attn.q_proj
-model.layers.7.self_attn.k_proj
-model.layers.7.self_attn.v_proj
-model.layers.7.self_attn.o_proj
-model.layers.7.mlp.gate_proj
-model.layers.7.mlp.up_proj
-model.layers.7.mlp.down_proj
-model.layers.8.self_attn
-model.layers.8.self_attn.q_proj
-model.layers.8.self_attn.k_proj
-model.layers.8.self_attn.v_proj
-model.layers.8.self_attn.o_proj
-model.layers.8.mlp.gate_proj
-model.layers.8.mlp.up_proj
-model.layers.8.mlp.down_proj
-model.layers.9.self_attn
-model.layers.9.self_attn.q_proj
-model.layers.9.self_attn.k_proj
-model.layers.9.self_attn.v_proj
-model.layers.9.self_attn.o_proj
-model.layers.9.mlp.gate_proj
-model.layers.9.mlp.up_proj
-model.layers.9.mlp.down_proj
-model.layers.10.self_attn
-model.layers.10.self_attn.q_proj
-model.layers.10.self_attn.k_proj
-model.layers.10.self_attn.v_proj
-model.layers.10.self_attn.o_proj
-model.layers.10.mlp.gate_proj
-model.layers.10.mlp.up_proj
-model.layers.10.mlp.down_proj
-model.layers.11.self_attn
-model.layers.11.self_attn.q_proj
-model.layers.11.self_attn.k_proj
-model.layers.11.self_attn.v_proj
-model.layers.11.self_attn.o_proj
-model.layers.11.mlp.gate_proj
-model.layers.11.mlp.up_proj
-model.layers.11.mlp.down_proj
-model.layers.12.self_attn
-model.layers.12.self_attn.q_proj
-model.layers.12.self_attn.k_proj
-model.layers.12.self_attn.v_proj
-model.layers.12.self_attn.o_proj
-model.layers.12.mlp.gate_proj
-model.layers.12.mlp.up_proj
-model.layers.12.mlp.down_proj
-model.layers.13.self_attn
-model.layers.13.self_attn.q_proj
-model.layers.13.self_attn.k_proj
-model.layers.13.self_attn.v_proj
-model.layers.13.self_attn.o_proj
-model.layers.13.mlp.gate_proj
-model.layers.13.mlp.up_proj
-model.layers.13.mlp.down_proj
-model.layers.14.self_attn
-model.layers.14.self_attn.q_proj
-model.layers.14.self_attn.k_proj
-model.layers.14.self_attn.v_proj
-model.layers.14.self_attn.o_proj
-model.layers.14.mlp.gate_proj
-model.layers.14.mlp.up_proj
-model.layers.14.mlp.down_proj
-model.layers.15.self_attn
-model.layers.15.self_attn.q_proj
-model.layers.15.self_attn.k_proj
-model.layers.15.self_attn.v_proj
-model.layers.15.self_attn.o_proj
-model.layers.15.mlp.gate_proj
-model.layers.15.mlp.up_proj
-model.layers.15.mlp.down_proj
-model.layers.16.self_attn
-model.layers.16.self_attn.q_proj
-model.layers.16.self_attn.k_proj
-model.layers.16.self_attn.v_proj
-model.layers.16.self_attn.o_proj
-model.layers.16.mlp.gate_proj
-model.layers.16.mlp.up_proj
-model.layers.16.mlp.down_proj
-model.layers.17.self_attn
-model.layers.17.self_attn.q_proj
-model.layers.17.self_attn.k_proj
-model.layers.17.self_attn.v_proj
-model.layers.17.self_attn.o_proj
-model.layers.17.mlp.gate_proj
-model.layers.17.mlp.up_proj
-model.layers.17.mlp.down_proj
-model.layers.18.self_attn
-model.layers.18.self_attn.q_proj
-model.layers.18.self_attn.k_proj
-model.layers.18.self_attn.v_proj
-model.layers.18.self_attn.o_proj
-model.layers.18.mlp.gate_proj
-model.layers.18.mlp.up_proj
-model.layers.18.mlp.down_proj
-model.layers.19.self_attn
-model.layers.19.self_attn.q_proj
-model.layers.19.self_attn.k_proj
-model.layers.19.self_attn.v_proj
-model.layers.19.self_attn.o_proj
-model.layers.19.mlp.gate_proj
-model.layers.19.mlp.up_proj
-model.layers.19.mlp.down_proj
-model.layers.20.self_attn
-model.layers.20.self_attn.q_proj
-model.layers.20.self_attn.k_proj
-model.layers.20.self_attn.v_proj
-model.layers.20.self_attn.o_proj
-model.layers.20.mlp.gate_proj
-model.layers.20.mlp.up_proj
-model.layers.20.mlp.down_proj
-model.layers.21.self_attn
-model.layers.21.self_attn.q_proj
-model.layers.21.self_attn.k_proj
-model.layers.21.self_attn.v_proj
-model.layers.21.self_attn.o_proj
-model.layers.21.mlp.gate_proj
-model.layers.21.mlp.up_proj
-model.layers.21.mlp.down_proj
-model.layers.22.self_attn
-model.layers.22.self_attn.q_proj
-model.layers.22.self_attn.k_proj
-model.layers.22.self_attn.v_proj
-model.layers.22.self_attn.o_proj
-model.layers.22.mlp.gate_proj
-model.layers.22.mlp.up_proj
-model.layers.22.mlp.down_proj
-model.layers.23.self_attn
-model.layers.23.self_attn.q_proj
-model.layers.23.self_attn.k_proj
-model.layers.23.self_attn.v_proj
-model.layers.23.self_attn.o_proj
-model.layers.23.mlp.gate_proj
-model.layers.23.mlp.up_proj
-model.layers.23.mlp.down_proj
-model.layers.24.self_attn
-model.layers.24.self_attn.q_proj
-model.layers.24.self_attn.k_proj
-model.layers.24.self_attn.v_proj
-model.layers.24.self_attn.o_proj
-model.layers.24.mlp.gate_proj
-model.layers.24.mlp.up_proj
-model.layers.24.mlp.down_proj
-model.layers.25.self_attn
-model.layers.25.self_attn.q_proj
-model.layers.25.self_attn.k_proj
-model.layers.25.self_attn.v_proj
-model.layers.25.self_attn.o_proj
-model.layers.25.mlp.gate_proj
-model.layers.25.mlp.up_proj
-model.layers.25.mlp.down_proj
-model.layers.26.self_attn
-model.layers.26.self_attn.q_proj
-model.layers.26.self_attn.k_proj
-model.layers.26.self_attn.v_proj
-model.layers.26.self_attn.o_proj
-model.layers.26.mlp.gate_proj
-model.layers.26.mlp.up_proj
-model.layers.26.mlp.down_proj
-model.layers.27.self_attn
-model.layers.27.self_attn.q_proj
-model.layers.27.self_attn.k_proj
-model.layers.27.self_attn.v_proj
-model.layers.27.self_attn.o_proj
-model.layers.27.mlp.gate_proj
-model.layers.27.mlp.up_proj
-model.layers.27.mlp.down_proj
+Treatment planning and MDT process
+- Treatment is determined by TNM stage (I–IV):
+  - Early stages (I–II): usually a single modality (surgery or radiotherapy).
+  - More advanced stages (III–IV): multimodal approach (surgery + radiotherapy, with chemotherapy as needed).
+- After cancer confirmation, additional imaging may refine tumor size, nodal spread, and metastasis; the Treatment Planning MDT will finalize therapy.
+
+MDT, vaccination, dental care, nutrition, and lifestyle guidance
+- MDT composition: surgeon; radiation/chemo-oncologist; dietitian; therapist; family involvement encouraged.
+- HPV vaccination: discussed; potential benefit limited at age 48; decision after health review.
+- Dental/oral care: emphasis on brushing, flossing, mouthwash; oral care to reduce infection risk during radiotherapy.
+- Nutrition: focus on adequate protein/calories, hydration, vitamins; planning to support treatment tolerance.
+- Preventive/infection care: chlorhexidine mouthwash recommended; dental follow-up planned.
+
+Follow-up, care coordination, and logistics
+- Structured 40-day follow-up plan with written plan and risk-factor checklist.
+- Transport and cost/subsidy support arranged; insurance/subsidy options reviewed by social work; ongoing MDT coordination.
+- Family involvement encouraged; written plan and weekly checklists to guide follow-up; results reviewed before MDT consensus.
+- Written plan and MDT contact details provided; hospital helpline listed.
+
+Red flags requiring urgent evaluation
+- Persistent hoarseness, non-healing mouth ulcers, swallowing pain or unilateral ear pain.
+
+Current status and next steps
+- No definitive cancer diagnosis yet; aim is risk assessment and initial screening/workup.
+- Next steps: laryngoscopy today (biopsy if indicated); CT today; MRI if needed; preliminary pathology in 3–5 days; staging targeted within 1–3 weeks.
+- HPV vaccination decision revisited after health review; dental hygiene and MDT coordination underway.
+- Plan to inform family and coordinate with social work for subsidies and transport; dental check-ups arranged to align with MDT timelines.
+
+Overall context
+- Goal: early cancer identification via laryngoscopy and imaging to establish staging.
+- Plan: MDT-guided treatment depending on stage; early-stage may use a single modality; advanced disease likely multimodal.
+- Plan also integrates HPV vaccination considerations, dental/oral care, nutrition, psychosocial support, and financial logistics, with family involvement and structured follow-up to support planning and logistics.
