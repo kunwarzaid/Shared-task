@@ -1,129 +1,50 @@
-Here is a clean, professional revised email that removes Domain-O1, does not mention Gemini, and clearly explains why GPT is needed, including its use as an LLM-as-a-judge for evaluation.
+f"""
+You are a clinical reasoning assistant.
 
-You can copy-paste this directly.
+Generate a **concise** Domaino1s-style reasoning summary. 
+Use ALL TAGS exactly as below. TOTAL OUTPUT ≤ 350 WORDS.
 
-⸻
+<PATIENT_OVERVIEW>
+(1–2 sentences)
+</PATIENT_OVERVIEW>
 
-📧 Email Draft to Supervisor — Request for GPT API Access
+<CHIEF_COMPLAINT>
+(1 sentence)
+</CHIEF_COMPLAINT>
 
-Subject: Request for GPT API Access for Medical Dialogue Summarisation Project (EACL Deadline: 19 December)
+<HISTORY_OF_PRESENT_ILLNESS>
+(2–3 short sentences)
+</HISTORY_OF_PRESENT_ILLNESS>
 
-Dear [Supervisor’s Name],
+<SOCIAL_HISTORY_AND_RISK_FACTORS>
+(1–2 sentences)
+</SOCIAL_HISTORY_AND_RISK_FACTORS>
 
-I hope you’re doing well. I am writing to request API access to the OpenAI GPT models (GPT-4.1 / GPT-4o / o1 / o1-mini) for our ongoing research on medical dialogue summarisation for low-resource Indic languages, which we plan to submit to EACL 2025 (deadline: 19 December).
+<EXAMINATION_INVESTIGATIONS_AND_PLAN>
+(3–4 short sentences)
+</EXAMINATION_INVESTIGATIONS_AND_PLAN>
 
-⸻
+<SAFETY_AND_RED_FLAGS>
+(1–2 sentences)
+</SAFETY_AND_RED_FLAGS>
 
-🔍 Research Problem
+<OVERALL_SUMMARY>
+(2–3 sentences)
+</OVERALL_SUMMARY>
 
-Our project focuses on building high-quality summarisation systems for doctor–patient dialogues in Hindi, Marathi, Bangla, and Tamil.
-Each dialogue in our dataset is paired with:
-	•	a short English clinical summary
-	•	a structured JSON clinical summary
-	•	metadata fields
+Rules:
+- USE ONLY INFO from dialogue or structured facts.
+- DO NOT invent new tests, symptoms, or diagnoses.
+- If unknown, say “Not specified.”
 
-Our goal is to investigate how different styles of intermediate reasoning and structured transformation can improve summarisation quality when training small and efficient open-source models (Qwen 1.5B / 7B).
+------------- DIALOGUE ({lang}) -------------
+{dialogue}
 
-⸻
+------------- FREE-TEXT SUMMARY -------------
+{txt_summary}
 
-🧪 Planned Experiments
+------------- STRUCTURED FACTS --------------
+{structured}
 
-We plan to conduct the following experiments:
-
-1. Generate high-quality structured reasoning from GPT
-
-We will use GPT to produce:
-	•	step-by-step structured medical reasoning
-	•	interpretable intermediate summaries
-	•	clean clinical explanations of the dialogue
-
-These GPT-generated reasoning traces will be used as training signals to improve small open-source models.
-
-2. Fine-tune open-source models
-
-We will fine-tune Qwen 1.5B and Qwen 7B using:
-	•	basic text summaries
-	•	structured JSON summaries
-	•	GPT-generated structured reasoning
-
-and compare which leads to the best summarisation performance.
-
-3. Use GPT as an “LLM-as-a-judge”
-
-For evaluation, we will use GPT to:
-	•	assess factual correctness
-	•	score clinical accuracy
-	•	detect hallucinations
-	•	evaluate adherence to summarisation instructions
-
-This is critical because human clinical evaluation for 7–9 languages is not feasible within the short timeframe.
-
-4. Compare summarisation styles
-
-Our goal is to show:
-	•	how structured reasoning improves summarisation
-	•	which training strategy generalizes best across the four Indic languages
-	•	how small models can be made more clinically reliable
-
-⸻
-
-🎯 Why GPT Access Is Essential
-
-To run this project properly and meet the EACL deadline:
-
-✔ We need high-quality reasoning signals
-
-Open-source models do not reliably generate clean, medically accurate intermediate reasoning without strong supervision. GPT models produce:
-	•	consistent
-	•	factual
-	•	structured
-	•	multilingual
-
-reasoning, which we need to build our training dataset.
-
-✔ We need GPT for LLM-as-a-judge evaluation
-
-Many of the evaluation aspects—clinical correctness, insightfulness, risk-related hallucinations—require a high-accuracy judge model. GPT-4-class models are currently the best available option for this.
-
-✔ We need stable, high-throughput generation
-
-To prepare the dataset and run our experiments, we need reliable generation that:
-	•	handles long dialogues
-	•	maintains structure
-	•	stays consistent across languages
-
-GPT models are significantly more robust for this purpose.
-
-⸻
-
-⏳ Deadline
-
-The submission deadline for EACL is 19 December, so it is important to begin dataset generation and model training as soon as possible.
-
-⸻
-
-🙏 Request
-
-I kindly request access to the OpenAI GPT API, preferably with enough quota to:
-	•	generate structured reasoning for our multilingual dataset
-	•	run evaluation using GPT as an LLM judge
-	•	iterate on modelling experiments before the submission deadline
-
-I will maintain a detailed record of usage and ensure efficient cost management.
-
-⸻
-
-Please let me know if you’d like a short discussion—I can walk through the experiment plan and timeline in more detail. Thank you very much for your support.
-
-Warm regards,
-[Your Name]
-[Your Position / Lab]
-[Institution]
-
-⸻
-
-If you’d like, I can also:
-
-✔ provide a shorter, one-paragraph version
-✔ write a version tailored to industry, academia, or government
-✔ prepare a budget estimate showing expected API usage costs
+Generate ONLY the tagged reasoning summary below:
+""".strip()
