@@ -1,50 +1,240 @@
-f"""
-You are a clinical reasoning assistant.
+import os, json, time, re
+from pathlib import Path
+from tqdm import tqdm
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from langdetect import detect, DetectorFactory
 
-Generate a **concise** Domaino1s-style reasoning summary. 
-Use ALL TAGS exactly as below. TOTAL OUTPUT ≤ 350 WORDS.
+DetectorFactory.seed = 42
+torch.set_grad_enabled(False)
 
-<PATIENT_OVERVIEW>
-(1–2 sentences)
-</PATIENT_OVERVIEW>
+# ============================================================
+# CONFIG – EDIT THESE
+# ============================================================
 
-<CHIEF_COMPLAINT>
-(1 sentence)
-</CHIEF_COMPLAINT>
+# Hugging Face model ID, e.g. "meta-llama/Llama-3.1-8B-Instruct"
+BASE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 
-<HISTORY_OF_PRESENT_ILLNESS>
-(2–3 short sentences)
-</HISTORY_OF_PRESENT_ILLNESS>
+# Root directory containing language subfolders: English/ Hindi/ Marathi/ Tamil/
+TEST_DIR = "/path/to/test"
 
-<SOCIAL_HISTORY_AND_RISK_FACTORS>
-(1–2 sentences)
-</SOCIAL_HISTORY_AND_RISK_FACTORS>
+# Output root directory
+OUTPUT_DIR = "/path/to/output"
 
-<EXAMINATION_INVESTIGATIONS_AND_PLAN>
-(3–4 short sentences)
-</EXAMINATION_INVESTIGATIONS_AND_PLAN>
+# Use 4-bit quantization (recommended for 32GB GPU)
+USE_4BIT = True
 
-<SAFETY_AND_RED_FLAGS>
-(1–2 sentences)
-</SAFETY_AND_RED_FLAGS>
+# Only these language folders will be processed
+TARGET_LANGS = ["English", "Hindi", "Marathi", "Tamil"]
 
-<OVERALL_SUMMARY>
-(2–3 sentences)
-</OVERALL_SUMMARY>
+# Generation length (summary length), not context length
+MAX_NEW_TOKENS_SUMMARY = 512
 
-Rules:
-- USE ONLY INFO from dialogue or structured facts.
-- DO NOT invent new tests, symptoms, or diagnoses.
-- If unknown, say “Not specified.”
+SYSTEM_SUMMARY = (
+    "You are a clinical summarization assistant. Write a fluent English summary "
+    "focusing on diagnosis, symptoms, investigations, and management plan. "
+    "Write 6–10 sentences. End your summary with the token <<END>>."
+)
 
-------------- DIALOGUE ({lang}) -------------
-{dialogue}
+# ============================================================
+# UTILS
+# ============================================================
+def tprint(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
-------------- FREE-TEXT SUMMARY -------------
-{txt_summary}
+def safe_read_jsonl(path: Path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            s = line.strip()
+            if not s:
+                continue
+            try:
+                rows.append(json.loads(s))
+            except Exception:
+                continue
+    return rows
 
-------------- STRUCTURED FACTS --------------
-{structured}
+def write_text(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
 
-Generate ONLY the tagged reasoning summary below:
-""".strip()
+def detect_lang(text: str) -> str:
+    try:
+        return detect(text)
+    except Exception:
+        return "unknown"
+
+def clip_tokens(tokenizer, text, max_tokens: int):
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    ids = ids[-max_tokens:]
+    return tokenizer.decode(ids, skip_special_tokens=True)
+
+def build_messages(system_prompt, user_prompt):
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+def chat_generate(model, tokenizer, messages, max_new_tokens: int):
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+    inputs = tokenizer([text], return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            num_beams=1,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    gen = output[0][len(inputs.input_ids[0]):]
+    return tokenizer.decode(gen, skip_special_tokens=True).strip()
+
+# ============================================================
+# MODEL LOADING FROM HUGGING FACE
+# ============================================================
+def load_model(model_id: str, use_4bit=True):
+    tprint(f"Loading tokenizer: {model_id}")
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    quant_cfg = None
+    if use_4bit:
+        quant_cfg = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16
+        )
+
+    tprint(f"Loading model from Hugging Face: {model_id}")
+    hf_token = os.getenv("HF_TOKEN", None)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        device_map="auto",
+        quantization_config=quant_cfg,
+        torch_dtype=torch.float16,
+        token=hf_token
+    )
+
+    model.eval()
+    return model, tokenizer
+
+def get_model_context_length(model) -> int:
+    """
+    Infer the model's max context length from its config.
+    Fallback to 8192 if not explicitly available.
+    """
+    cfg = model.config
+    candidates = [
+        getattr(cfg, "max_position_embeddings", None),
+        getattr(cfg, "max_sequence_length", None),
+        getattr(cfg, "n_positions", None),
+        getattr(cfg, "max_context_length", None),
+    ]
+    for v in candidates:
+        if isinstance(v, int) and v > 0:
+            return v
+    return 8192  # safe default if nothing is defined
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+def run_summary_only():
+    if not BASE_MODEL:
+        raise ValueError("BASE_MODEL is empty. Set a Hugging Face model id.")
+    if not TEST_DIR or not OUTPUT_DIR:
+        raise ValueError("Please set TEST_DIR and OUTPUT_DIR in the CONFIG section.")
+
+    model, tokenizer = load_model(BASE_MODEL, use_4bit=USE_4BIT)
+
+    # Dynamically set max input tokens from model config
+    raw_ctx = get_model_context_length(model)
+    safety_margin = 512 if raw_ctx > 4096 else 256  # leave room for generated tokens
+    max_input_tokens = max(1024, raw_ctx - safety_margin)
+
+    tprint(f"Model reported context length: {raw_ctx} tokens")
+    tprint(f"Using {max_input_tokens} tokens for input truncation")
+
+    langs = [
+        p for p in Path(TEST_DIR).iterdir()
+        if p.is_dir() and p.name in TARGET_LANGS
+    ]
+
+    tprint(f"Processing languages: {[p.name for p in langs]}")
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        dlg_dir = lang_dir / "Dialogues"
+        out_lang = Path(OUTPUT_DIR) / lang
+
+        tprint(f"Language: {lang}")
+
+        if not dlg_dir.exists():
+            tprint(f"  • No Dialogues directory found for {lang}, skipping.")
+            continue
+
+        files = sorted(dlg_dir.glob("*.jsonl"))
+        tprint(f"  • Dialogues: {len(files)}")
+
+        for f in tqdm(files, desc=f"{lang} summaries"):
+            out_sum_txt = out_lang / "Summary_Text" / f"{f.stem}_summary.txt"
+
+            if out_sum_txt.exists():
+                continue
+
+            rows = safe_read_jsonl(f)
+            dialogue = " ".join(
+                r.get("dialogue", "") if isinstance(r, dict) else str(r)
+                for r in rows
+            )
+
+            # Clip dialogue according to model's context length
+            dialogue_clip = clip_tokens(tokenizer, dialogue, max_input_tokens)
+
+            # Generate Summary
+            messages = build_messages(
+                SYSTEM_SUMMARY,
+                f"Dialogue:\n{dialogue_clip}\n\nWrite the summary and end with <<END>>."
+            )
+
+            summary_raw = chat_generate(
+                model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
+            )
+
+            end_pos = summary_raw.find("<<END>>")
+            summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+
+            # Ensure English summary
+            if detect_lang(summary) != "en":
+                messages = build_messages(
+                    SYSTEM_SUMMARY,
+                    f"Dialogue:\n{dialogue_clip}\n\nWrite ONLY in English. End with <<END>>."
+                )
+                summary_raw = chat_generate(
+                    model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
+                )
+                end_pos = summary_raw.find("<<END>>")
+                summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+
+            write_text(out_sum_txt, summary)
+
+        torch.cuda.empty_cache()
+
+    tprint(f"Summary-only inference complete! Saved to: {OUTPUT_DIR}")
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+if __name__ == "__main__":
+    run_summary_only()
