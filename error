@@ -1,60 +1,87 @@
-🧠 1. Introduction (Expanded, 2.5 pages)
+Code
+import torch, bitsandbytes as bnb, transformers
+print(torch.__version__)
+print(torch.version.cuda)      # None = CPU build; must match your system CUDA
+print(bnb.__version__)
+print(transformers.__version__)
 
-Large Language Models (LLMs) such as GPT-4 (OpenAI, 2023), Gemini (Reid et al., 2024), and Med-PaLM 2 (Singhal et al., 2023) have demonstrated unprecedented progress in natural language understanding, reasoning, and generalization across a wide range of tasks, including medicine. They have achieved performance comparable to clinicians in medical question-answering benchmarks (Kung et al., 2023; Nori et al., 2023), suggesting potential use in clinical support, documentation, and patient triage (Lee et al., 2024). However, the same properties that make LLMs powerful—scale, open-endedness, and fluency—also render them unreliable in domains requiring factual precision and ethical accountability (Ji et al., 2023; Begoli et al., 2019).
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-The integration of LLMs into healthcare poses unique challenges that extend beyond predictive accuracy. Medicine is not only a domain of information retrieval but one of explanation, justification, and trust. Clinicians make decisions based on causal reasoning, evidence weighting, and context sensitivity—abilities that current LLMs only partially emulate. When an AI system proposes a diagnosis or prescription, its credibility depends as much on why it reached a conclusion as on what it predicts (Tonekaboni et al., 2019; Amann et al., 2020). Without a transparent reasoning process, even correct answers are unsafe for clinical use.
+from huggingface_hub import login
+def huggingface_login():
+    """
+    Logs into the Hugging Face Hub using the user's token.
+    """
+    # print("Please enter your Hugging Face token. You can generate one at: https://huggingface.co/settings/tokens")
+    token = ''
+    try:
+        # Log in to the Hugging Face Hub
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
+    except Exception as e:
+        print(f"Failed to log in: {e}")
 
-Despite progress in alignment and red-teaming (Mireshghallah et al., 2024; Zhou et al., 2024), existing clinical LLMs remain limited in their trustworthiness—a multidimensional property encompassing accuracy, consistency, safety, and explainability (Wiens et al., 2019; Xu et al., 2023). Models often produce internally inconsistent reasoning (Bang et al., 2023), express unjustified confidence (Kadavath et al., 2022), or fail to recognize uncertainty in ambiguous cases. This phenomenon—known as epistemic overconfidence—is particularly problematic in medicine, where acknowledging “I don’t know” is a marker of safety, not failure.
+huggingface_login()
 
-Efforts to align models for healthcare have emphasized safety and ethical compliance. For instance, the World Health Organization (WHO, 2021) and the European Commission (2023) have outlined governance frameworks emphasizing transparency, fairness, and accountability as essential prerequisites for AI in health. Yet these frameworks rarely provide operational metrics for trustworthiness. Similarly, commercial and academic systems such as Med-PaLM (Singhal et al., 2023), BioGPT (Luo et al., 2022), and ChatDoctor (Li et al., 2023) showcase impressive factual accuracy but offer limited visibility into why they reach conclusions or how stable their reasoning is under slight prompt variations.
 
-Our prior system, MedGuard (Sharma et al., 2024), introduced a safety-first approach to clinical LLM simulation. It employed a multi-agent architecture—comprising a Doctor, Patient, Measurement, and Safety Agent—to replicate clinical reasoning while monitoring unsafe test or prescription behaviors. MedGuard significantly reduced unsafe recommendations by introducing safety checkpoints, including drug–drug interaction (DDI) detection and risk-aware test assessment. However, MedGuard focused primarily on output validation rather than process transparency. It answered the question: “Is the result safe?” but not “Can we trust how the model got there?”
+MODEL_NAME = "meta-llama/Llama-2-13b"
 
-In this paper, we present MedGuard-X, an evolution of the MedGuard framework toward trustworthy and explainable clinical reasoning. MedGuard-X introduces three new layers of interpretability and reliability:
-	1.	Consensus Reasoning: Multiple independent Doctor Agents collaborate and vote on diagnostic decisions, enabling quantification of epistemic uncertainty via inter-model disagreement.
-	2.	Reasoning Trace Explainability: Each diagnostic step includes an explicit reasoning trace (“<thinking_process>”) that links model actions to medical evidence and tests.
-	3.	Trustworthiness Metrics: Quantitative measures such as Consensus Disagreement Rate (CDR) and Justification Alignment (JA) are introduced to correlate reasoning transparency with diagnostic accuracy.
+# Verify CUDA availability
+use_cuda = torch.cuda.is_available()
+device = "cuda" if use_cuda else "cpu"
+print(f"\nUsing device: {device}\n")
 
-This work thus shifts the focus from safety verification to epistemic accountability. MedGuard-X not only asks whether the model is right but investigates how it reasons, when it hesitates, and whether its explanations are grounded in evidence. By analyzing reasoning traces, differential evolution, and consensus patterns, we demonstrate that even highly aligned LLMs remain susceptible to confident hallucinations—offering rational-sounding but clinically incoherent explanations.
+# 4-bit quantization config (requires bitsandbytes)
+bnb_cfg = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.float16,  # fp16 compute for speed/compat
+)
 
-We argue that explainability and trustworthiness should be viewed as orthogonal properties. A model can be accurate yet opaque, or transparent yet wrong. Our findings suggest that LLMs, while explainable on the surface, often lack causal fidelity—the degree to which their explanations reflect true underlying reasoning (Doshi-Velez & Kim, 2017; Holzinger et al., 2022). Therefore, the path toward trustworthy medical AI requires both transparency in reasoning and mechanisms for self-auditing, uncertainty quantification, and cross-model consensus validation.
+print(f"Loading model: {MODEL_NAME}\n")
+# device_map="auto" lets HF place weights across GPUs/CPU appropriately
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    device_map="auto",
+    quantization_config=bnb_cfg,
+    trust_remote_code=True,
+    low_cpu_mem_usage=True,
+)
 
-This paper contributes to that vision through MedGuard-X — a pipeline that operationalizes trust as a measurable, explainable, and testable property of large-scale clinical reasoning systems.
+# Tokenizer (Qwen requires its tokenizer for generation)
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME,
+    trust_remote_code=True,
+)
 
-⸻
+print("\n--- Attention related modules ---\n")
+for name, module in model.named_modules():
+    lname = name.lower()
+    if any(x in lname for x in ["attn", "proj", "q", "k", "v"]):
+        print(name)
 
-📚 2. Background and Related Work (Expanded, ~2.5 pages)
 
-2.1 Explainability in Medical AI
+Error
 
-Explainable AI (XAI) aims to make black-box models interpretable and accountable (Doshi-Velez & Kim, 2017; Gilpin et al., 2018). In healthcare, explainability is especially critical because opaque models can erode clinician confidence and increase malpractice risk (Tonekaboni et al., 2019; Amann et al., 2020). Early approaches relied on feature importance and surrogate models—such as SHAP (Lundberg & Lee, 2017) and LIME (Ribeiro et al., 2016)—to provide local explanations for risk prediction models. While effective for structured data, these methods are ill-suited for reasoning-driven tasks like diagnosis or triage, where causal relationships unfold over dialogue.
+Successfully logged into Hugging Face!
 
-Recent reviews (Ahmad et al., 2018; Holzinger et al., 2022) highlight that medical explainability requires causability—a human-understandable mapping between data and decision. Clinicians demand not just “why” but “under what evidence and constraints.” However, LLM explanations, even when prompted to “show reasoning,” often produce post-hoc rationalizations that differ from the true generative process (Turpin et al., 2023). This discrepancy underscores a key tension: explainability can be simulated without genuine understanding.
+Using device: cuda
 
-Emerging medical dialogue models, such as DoctorGPT (Yang et al., 2024) and MedDialog (Chen et al., 2024), attempt to address this by including structured reasoning tags (e.g., <thinking_process>) or intermediate reflection steps. However, these systems remain single-model frameworks, lacking external validation or consensus checks. Consequently, they remain vulnerable to “explanation bias,” where the LLM fabricates coherent but false justifications (Ji et al., 2023).
+Loading model: meta-llama/Llama-2-13b
 
-⸻
 
-2.2 Trustworthiness and Safety Frameworks
+�    model = AutoModelForCausalLM.from_pretrained(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/auto_factory.py", line 604, in from_pretrained
 
-Trustworthy AI in healthcare requires not only interpretable outputs but also robust safeguards against harmful or misleading behavior. The EU AI Act (European Commission, 2023) and the WHO guidance on AI ethics (WHO, 2021) classify medical AI as a “high-risk system,” necessitating traceability, transparency, and human oversight. Similar principles appear in the US FDA’s Good Machine Learning Practice (FDA, 2023) and IEEE P7000 series on ethical AI (IEEE, 2021).
+�    return model_class.from_pretrained(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/modeling_utils.py", line 277, in _wrapper
 
-Academic frameworks such as “Do No Harm” (Wiens et al., 2019) and “Safe AI in Medicine” (Rajpurkar et al., 2022) advocate for layered safety verification—combining algorithmic constraints, monitoring agents, and human feedback. Our earlier work, MedGuard (Sharma et al., 2024), followed this philosophy by introducing a multi-agent setup with distinct safety agents to audit tests, prescriptions, and reasoning chains. Yet safety is only one dimension of trustworthiness: an unsafe but explainable model may still fail ethically if its reasoning is inconsistent, misleading, or opaque.
+�    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/modeling_utils.py", line 4900, in from_pretrained
 
-The growing field of LLM safety introduces additional challenges. As noted by Kadavath et al. (2022) and Ganguli et al. (2023), LLMs exhibit high epistemic calibration error—they frequently express confidence disproportionate to correctness. This makes confidence estimation and self-consistency critical to trust calibration. Recent work such as TrustGPT (Liao et al., 2024) and Safe-MedPrompt (Zhou et al., 2024) propose quantitative trust metrics, but these rely on external red-teaming rather than intrinsic reasoning audits.
+�    checkpoint_files, sharded_metadata = _get_resolved_checkpoint_files(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/modeling_utils.py", line 1148, in _get_resolved_checkpoint_files
 
-⸻
-
-2.3 Consensus and Multi-Agent Reliability
-
-Multi-agent LLM systems are an emerging approach to enhance reasoning robustness. Self-Consistency (Wang et al., 2022) and Reflexion (Shinn et al., 2023) demonstrated that generating multiple reasoning paths and selecting the most consistent improves factual correctness. Multi-Agent Debate (Liang et al., 2023) and Socratic Reasoning (Weng et al., 2024) further show that inter-agent dialogue can mitigate hallucinations. In the clinical domain, few systems have applied this paradigm—an exception being MedPrompt-R (Tang et al., 2024), which uses dual-agent reasoning for radiology QA.
-
-MedGuard-X extends this paradigm to consensus-based trust quantification: three doctor agents reason independently, and their disagreements serve as a measure of epistemic instability. This approach transforms consensus from a qualitative signal into a quantitative trust metric—bridging explainability and reliability.
-
-⸻
-
-2.4 Explainability–Trust Trade-offs
-
-Several studies have observed that increasing model transparency can paradoxically reduce trust if explanations expose inconsistency or irrelevance (Lakkaraju et al., 2020; Poursabzi-Sangdeh et al., 2021). In medicine, such a paradox may manifest when an AI provides an interpretable but clinically illogical rationale. Our experiments confirm this effect: explainability improves oversight but does not guarantee correctness.
-
-The causability framework (Holzinger et al., 2022) argues that true explainability requires faithful causal reasoning—something current LLMs lack. Therefore, trust must be seen as a layered property, comprising safety, explainability, consensus, and epistemic humility. MedGuard-X operationalizes these principles by measuring how much LLMs agree with themselves, how consistent their explanations are with evidence, and how transparently they handle uncertainty
+�    raise OSError(
+OSError: meta-llama/Llama-2-13b does not appear to have a file named pytorch_model.bin, model.safetensors, tf_model.h5, model.ckpt or flax_model.msgpack.
