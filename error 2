@@ -1,25 +1,38 @@
-import os, json, time, re
+import os
+import json
+import time
+import re
 from pathlib import Path
-from tqdm import tqdm
+
+import torch
+import bitsandbytes as bnb
+import transformers
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from langdetect import detect, DetectorFactory
 
 from huggingface_hub import login
+from langdetect import detect, DetectorFactory
+from tqdm import tqdm
 
-import torch, bitsandbytes as bnb, transformers
-print(torch.__version__)
-print(torch.version.cuda)      # None = CPU build; must match your system CUDA
-print(bnb.__version__)
-print(transformers.__version__)
+print("Torch:", torch.__version__)
+print("CUDA:", torch.version.cuda)
+print("bitsandbytes:", bnb.__version__)
+print("transformers:", transformers.__version__)
+
+# -------------------------------------------------------------------
+# HUGGING FACE LOGIN
+# -------------------------------------------------------------------
 
 def huggingface_login():
     """
-    Logs into the Hugging Face Hub using the user's token.
+    Logs into the Hugging Face Hub using a token.
+    Prefer reading from env var HF_TOKEN for safety.
     """
-    # print("Please enter your Hugging Face token. You can generate one at: https://huggingface.co/settings/tokens")
-    token = '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'
+    token = os.getenv("HF_TOKEN", None)
+    if token is None:
+        # Fallback: hardcode your token here if needed (not recommended)
+        token = "YOUR_HF_TOKEN_HERE"
+
     try:
-        # Log in to the Hugging Face Hub
         login(token=token)
         print("Successfully logged into Hugging Face!")
     except Exception as e:
@@ -27,16 +40,15 @@ def huggingface_login():
 
 huggingface_login()
 
-
-
+# Deterministic language detection
 DetectorFactory.seed = 42
 torch.set_grad_enabled(False)
 
 # ============================================================
-# CONFIG – EDIT THESE
+# CONFIG
 # ============================================================
 
-# Hugging Face model ID, e.g. "meta-llama/Llama-3.1-8B-Instruct"
+# Chat model
 BASE_MODEL = "meta-llama/Llama-2-13b-chat-hf"
 
 # Root directory containing language subfolders: English/ Hindi/ Marathi/ Tamil/
@@ -54,16 +66,20 @@ TARGET_LANGS = ["English", "Hindi", "Marathi", "Tamil"]
 # Generation length (summary length), not context length
 MAX_NEW_TOKENS_SUMMARY = 512
 
+# System message for the chat model
 SYSTEM_SUMMARY = (
-    "You are a clinical summarization assistant. Write a fluent English summary "
-    "focusing on diagnosis, symptoms, investigations, and management plan. "
+    "You are a clinical summarization assistant. "
+    "Read a doctor–patient dialogue and write a fluent English summary "
+    "focusing on diagnosis, symptoms, investigations, management plan, "
+    "supportive care, and follow-up. Do not hallucinate new diagnoses or tests. "
     "End your summary with the token <<END>>."
 )
 
 # ============================================================
 # UTILS
 # ============================================================
-def tprint(msg):
+
+def tprint(msg: str):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def safe_read_jsonl(path: Path):
@@ -76,6 +92,7 @@ def safe_read_jsonl(path: Path):
             try:
                 rows.append(json.loads(s))
             except Exception:
+                # Skip malformed lines quietly
                 continue
     return rows
 
@@ -90,43 +107,56 @@ def detect_lang(text: str) -> str:
     except Exception:
         return "unknown"
 
-def clip_tokens(tokenizer, text, max_tokens: int):
+def clip_tokens(tokenizer, text: str, max_tokens: int) -> str:
+    """
+    Clip text to the last `max_tokens` tokens to stay within context.
+    """
     ids = tokenizer.encode(text, add_special_tokens=False)
     if len(ids) <= max_tokens:
         return text
     ids = ids[-max_tokens:]
     return tokenizer.decode(ids, skip_special_tokens=True)
 
-def build_messages(system_prompt, user_prompt):
+def build_messages(system_prompt: str, user_prompt: str):
+    """
+    Build chat-style messages for Llama-2-13b-chat-hf.
+    """
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
 
-def chat_generate(model, tokenizer, messages, max_new_tokens: int):
+def chat_generate(model, tokenizer, messages, max_new_tokens: int) -> str:
+    """
+    Use the model's chat template to generate a response.
+    """
+    # Convert messages to a single prompt string using the tokenizer's chat template
     text = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True
     )
+
     inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
     with torch.no_grad():
         output = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
-            do_sample=False,
+            do_sample=False,         # deterministic (you can turn on sampling if desired)
             num_beams=1,
             pad_token_id=tokenizer.eos_token_id
         )
 
-    gen = output[0][len(inputs.input_ids[0]):]
-    return tokenizer.decode(gen, skip_special_tokens=True).strip()
+    # We only care about the generated continuation
+    gen_ids = output[0][len(inputs.input_ids[0]):]
+    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
 
 # ============================================================
-# MODEL LOADING FROM HUGGING FACE
+# MODEL LOADING
 # ============================================================
-def load_model(model_id: str, use_4bit=True):
+
+def load_model(model_id: str, use_4bit: bool = True):
     tprint(f"Loading tokenizer: {model_id}")
     tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
     if tokenizer.pad_token is None:
@@ -172,8 +202,9 @@ def get_model_context_length(model) -> int:
     return 8192  # safe default if nothing is defined
 
 # ============================================================
-# MAIN PIPELINE
+# MAIN PIPELINE – SUMMARY GENERATION WITH CHAT MODEL
 # ============================================================
+
 def run_summary_only():
     if not BASE_MODEL:
         raise ValueError("BASE_MODEL is empty. Set a Hugging Face model id.")
@@ -184,12 +215,14 @@ def run_summary_only():
 
     # Dynamically set max input tokens from model config
     raw_ctx = get_model_context_length(model)
-    safety_margin = 512 if raw_ctx > 4096 else 256  # leave room for generated tokens
+    # leave room for generated tokens + chat template overhead
+    safety_margin = 512 if raw_ctx > 4096 else 256
     max_input_tokens = max(1024, raw_ctx - safety_margin)
 
     tprint(f"Model reported context length: {raw_ctx} tokens")
     tprint(f"Using {max_input_tokens} tokens for input truncation")
 
+    # Collect language folders to process
     langs = [
         p for p in Path(TEST_DIR).iterdir()
         if p.is_dir() and p.name in TARGET_LANGS
@@ -214,6 +247,7 @@ def run_summary_only():
         for f in tqdm(files, desc=f"{lang} summaries"):
             out_sum_txt = out_lang / "Summary_Text" / f"{f.stem}_summary.txt"
 
+            # Skip if already generated
             if out_sum_txt.exists():
                 continue
 
@@ -226,11 +260,12 @@ def run_summary_only():
             # Clip dialogue according to model's context length
             dialogue_clip = clip_tokens(tokenizer, dialogue, max_input_tokens)
 
-            # Generate Summary
-            messages = build_messages(
-                SYSTEM_SUMMARY,
-                f"Dialogue:\n{dialogue_clip}\n\nWrite the summary and end with <<END>>."
+            # First pass: generate summary (may be in English already)
+            user_prompt = (
+                f"Dialogue:\n{dialogue_clip}\n\n"
+                f"Write a detailed but concise English clinical summary and end with <<END>>."
             )
+            messages = build_messages(SYSTEM_SUMMARY, user_prompt)
 
             summary_raw = chat_generate(
                 model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
@@ -239,12 +274,13 @@ def run_summary_only():
             end_pos = summary_raw.find("<<END>>")
             summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
 
-            # Ensure English summary
+            # Ensure English summary – if not, re-ask explicitly
             if detect_lang(summary) != "en":
-                messages = build_messages(
-                    SYSTEM_SUMMARY,
-                    f"Dialogue:\n{dialogue_clip}\n\nWrite ONLY in English. End with <<END>>."
+                user_prompt = (
+                    f"Dialogue:\n{dialogue_clip}\n\n"
+                    f"Write ONLY in English. End with <<END>>."
                 )
+                messages = build_messages(SYSTEM_SUMMARY, user_prompt)
                 summary_raw = chat_generate(
                     model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
                 )
@@ -253,6 +289,7 @@ def run_summary_only():
 
             write_text(out_sum_txt, summary)
 
+        # Free up GPU memory between languages
         torch.cuda.empty_cache()
 
     tprint(f"Summary-only inference complete! Saved to: {OUTPUT_DIR}")
@@ -260,5 +297,6 @@ def run_summary_only():
 # ============================================================
 # ENTRY POINT
 # ============================================================
+
 if __name__ == "__main__":
     run_summary_only()
