@@ -1,62 +1,78 @@
-General Explainable AI Foundations
-	1.	Doshi-Velez, F., & Kim, B. (2017). Towards a rigorous science of interpretable machine learning. arXiv preprint arXiv:1702.08608.
-	2.	Gilpin, L. H., Bau, D., Yuan, B. Z., Bajwa, A., Specter, M., & Kagal, L. (2018). Explaining explanations: An overview of interpretability of machine learning. In ICML Workshop on Human Interpretability in Machine Learning (WHI).
-	3.	Ribeiro, M. T., Singh, S., & Guestrin, C. (2016). “Why should I trust you?”: Explaining the predictions of any classifier. In Proc. of KDD.
-	4.	Lundberg, S. M., & Lee, S. I. (2017). A unified approach to interpreting model predictions. In NeurIPS.
-	5.	Holzinger, A., Müller, H., & Kieseberg, P. (2022). Causability and explainability of artificial intelligence in medicine. Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery.
-	6.	Ahmad, M. A., Eckert, C., & Teredesai, A. (2018). Interpretable machine learning in healthcare. IEEE Intelligent Systems.
-
-⸻
-
-Explainability & Trust in Healthcare
-7. Tonekaboni, S., Joshi, S., McCradden, M. D., & Goldenberg, A. (2019). What clinicians want: Contextualizing explainable AI for clinical end use. npj Digital Medicine.
-8. Amann, J., Blasimme, A., Vayena, E., Frey, D., & Madai, V. I. (2020). Explainability for artificial intelligence in healthcare: A multidisciplinary perspective. BMC Medical Informatics and Decision Making.
-9. Wiens, J., Saria, S., Sendak, M., Ghassemi, M., Liu, V. X., Doshi-Velez, F., Jung, K., Heller, K., Kale, D., Saeed, M., Ossorio, P. N., & Goldenberg, A. (2019). Do no harm: A roadmap for responsible machine learning for health care. Nature Medicine.
-10. Kelly, C. J., Karthikesalingam, A., Suleyman, M., Corrado, G., & King, D. (2019). Key challenges for delivering clinical impact with artificial intelligence. BMC Medicine.
-11. Rajpurkar, P., Chen, E., Banerjee, O., & Topol, E. J. (2022). AI in health and medicine. Nature Medicine.
-12. Holzinger, A., Biemann, C., Pattichis, C. S., & Kell, D. B. (2017). What do we need to build explainable AI systems for the medical domain? Reviews in the Medical Informatics Journal.
-
-⸻
-
-Safety and Ethical AI Frameworks
-13. World Health Organization (WHO). (2021). Ethics and governance of artificial intelligence for health: WHO guidance.
-14. European Commission. (2023). Artificial Intelligence Act: Proposal for a Regulation of the European Parliament and of the Council.
-15. U.S. Food and Drug Administration (FDA). (2023). Good Machine Learning Practice for Medical Device Development: Guiding Principles.
-16. IEEE Standards Association. (2021). IEEE P7000 series on Ethical Concerns in System Design.
-17. Mitchell, M., Wu, S., Zaldivar, A., Barnes, P., Vasserman, L., Hutchinson, B., Spitzer, E., Raji, I. D., & Gebru, T. (2023). Model cards and system cards for responsible AI. Communications of the ACM.
-
-⸻
-
-LLMs in Medicine
-18. Nori, H., King, N., McKinney, S. M., Carignan, D., & Horvitz, E. (2023). Capabilities of GPT-4 on medical challenge problems. NEJM AI.
-19. Singhal, K., Tu, T., Gottweis, J., et al. (2023). Towards expert-level medical question answering with Med-PaLM 2. Nature.
-20. Kung, T. H., Cheatham, M., Medenilla, A., et al. (2023). Performance of ChatGPT on USMLE. PLOS Digital Health.
-21. Lee, P., Bubeck, S., & Petro, J. (2024). Benefits, limits, and risks of GPT-4 as an AI clinician. arXiv:2303.13375.
-22. Luo, R., Sun, L., Xia, Y., Qin, T., Zhang, S., & Liu, T. Y. (2022). BioGPT: Generative pre-trained transformer for biomedical text generation and mining. Briefings in Bioinformatics.
-23. Li, Y., Zhao, Y., Yuan, J., & Zheng, H. (2023). ChatDoctor: A medical dialogue system fine-tuned with real doctor–patient conversations. arXiv:2303.14070.
-24. Thirunavukarasu, A. J., et al. (2023). Large language models in medicine. Nature Medicine.
-
-⸻
-
-Trustworthiness and Uncertainty in LLMs
-25. Kadavath, S., Lin, J., Andreassen, A., et al. (2022). Language models (mostly) know what they know. arXiv:2207.05221.
-26. Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., Ishii, E., Bang, Y., Madotto, A., & Fung, P. (2023). Survey of hallucination in large language models. ACM Computing Surveys.
-27. Begoli, E., Bhattacharya, T., & Kusnezov, D. (2019). The need for uncertainty quantification in machine-assisted medical decision making. Nature Machine Intelligence.
-28. Ganguli, D., Askell, A., Hubinger, E., et al. (2023). Red teaming language models to reduce harmful outputs. arXiv:2305.15324.
-29. Liao, Q., Zhang, T., & Chen, J. (2024). TrustGPT: Quantifying and improving trustworthiness of LLM reasoning. arXiv:2401.04521.
-
-⸻
-
-Multi-Agent and Consensus-Based Reasoning
-30. Wang, X., Wei, J., Schuurmans, D., et al. (2022). Self-consistency improves chain-of-thought reasoning in language models. arXiv:2203.11171.
-31. Shinn, N., Cassano, F., Gopinath, A., Narasimhan, K., & Yao, S. (2023). Reflexion: Language agents with verbal reinforcement learning. arXiv:2303.11366.
-32. Liang, P., Nguyen, T., & Chen, Z. (2023). LLM-powered multi-agent debate improves factuality. arXiv:2305.16367.
-33. Weng, J., Guo, L., & Lin, X. (2024). Socratic reasoning in multi-agent language models. arXiv:2402.07224.
-34. Tang, S., Zhang, R., & Dai, Z. (2024). MedPrompt-R: Reinforced multi-agent prompting for safe radiology reasoning. arXiv preprint arXiv:2403.02112.
-
-⸻
-
-Explainability–Trust Tradeoff Studies
-35. Lakkaraju, H., Kamar, E., Caruana, R., & Leskovec, J. (2020). Faithful and customizable explanations of black-box models. In AAAI.
-36. Poursabzi-Sangdeh, F., Goldstein, D. G., Hofman, J. M., Vaughan, J. W., & Wallach, H. (2021). Manipulating and measuring model interpretability. In CHI.
-37. Turpin, M., Michael, J., Perez, E., Bowman, S., & Goodman, N. (2023). Language models don’t always say what they think: Unfaithful explanations in chain-of-thought reasoning. arXiv:2305.04388.
+FREE-TEXT-SUMMARY:
+Summary of the risk-assessment and radiotherapy-focused visit for Ravi Sharma (42) in Head and Neck Cancer pathway, Mumbai
+ 
+Purpose and context
+- A risk-assessment visit during ongoing radiotherapy for head and neck cancer, with family involvement (sister Priya) and Tamil language support. Emphasis on stepwise diagnostics, supportive care for radiotherapy side effects, and inclusive decision-making.
+ 
+Presenting symptoms and risk factors
+- Ongoing symptoms prompting discussion: intermittent sore throat for weeks, throat dryness, morning throat irritation, mild non-acute voice tiredness.
+- Left neck lump: small, firm, non-tender (grape-sized); right neck exam normal.
+- Risk factors: gutkha chewing twice daily; intermittent beedi smoking (4–6 weekly); social alcohol use (1–2 weekly).
+- Family history: father with cancer.
+- HPV vaccination discussed: preventive, not curative for existing disease.
+ 
+Exam plan and immediate findings
+- Plan: comprehensive oral cavity and neck lymph-node exam today; biopsy under local anesthesia if a suspicious lesion is found; imaging only if indicated.
+- Findings: oral cavity largely normal aside from throat dryness; no ulcers or patches observed; small left neck lymph node; right neck normal.
+ 
+Diagnostic pathway and testing considerations
+- Diagnostic approach: avoid unnecessary testing; biopsy and/or imaging reserved for suspicious findings.
+- If biopsy is performed: quick local anesthesia, small scar; results reviewed at a two-week follow-up.
+- Labs/fasting: not routinely required today unless ordered; fasting guidelines provided if tests planned.
+- Biopsy options: FNAC can suggest malignancy; core biopsy may be needed for confirmation; imaging aids staging.
+ 
+Immediate management, education, and supportive care (radiotherapy context)
+- Home monitoring: watch for persistent ulcers/white patches, new lumps, progressive swallowing difficulty, or voice changes; two-week follow-up to review exam results and quitting progress.
+- Diet/environment: bland diet during healing; hydration and fruits/vegetables; avoid spicy foods; minimize airway irritants.
+- Tobacco/alcohol cessation: tailored plan with counseling; pharmacotherapy options; 24/7 helpline; social worker support; information on low-cost screening and NGO programs.
+- Dental health: plaque control; dental cleaning and fluoride rinses.
+- Language and family involvement: sister Priya invited to accompany; Tamil interpreter available; materials in Tamil and English; one-page summary and symptom-checklists.
+- Mouth-care during radiotherapy: saltwater rinses after meals and before bed; avoid alcohol-based mouthwashes; chlorhexidine if prescribed; monitor for tooth staining.
+- Monitoring and escalation: urgent signs (fever, increasing pain/swelling, foul odor, breathing difficulty); 24/7 nurse line and on-call doctor.
+- Social and logistical supports: NGO networks, government subsidies; social-work referrals for transport, accommodation, and cost containment; hospital transport assistance possible.
+- Nutrition and weight: nutritionist to optimize high-protein, easy-to-digest meals; labs to monitor nutrition markers; check iron stores.
+- Voice and swallowing: discussion of speech/swallow therapy; swallow assessments if aspiration risk rises.
+- Medication and interactions: review of iron/multivitamins; avoid high-dose supplements without benefit; coordinated plan with dietitian/oncologist.
+- Pain management: dose adjustments within safe guidelines; on-call if pain is uncontrolled.
+- Psychosocial support: cancer-care social worker and psychologist; coping strategies and caregiver support groups discussed.
+ 
+Next steps and follow-up
+- Immediate actions: complete oral examination; initiate tobacco-cessation support; biopsy or imaging only if indicated by exam.
+- Follow-up: two-week review to assess exam findings, test results, and quitting progress; plan for biopsy or imaging if warranted.
+- Scheduling and logistics: confirm dates; language support; transport and imaging logistics arranged as needed; pre-visit call to review required items.
+- Documentation: written summaries, Tamil leaflets, transport reminders; symptom diary to be reviewed at follow-up.
+- Contingencies: if symptoms worsen or urgent signs arise before two-week follow-up, seek prompt care; potential delays or adjustments to radiotherapy plan if side effects are prohibitive.
+ 
+Context if cancer is confirmed (biopsy results)
+- Staging with CT/MRI and neck-node evaluation would be pursued; treatment planning could involve surgery, radiotherapy, and possibly chemotherapy, with emphasis on preserving voice and swallowing; nutrition/support integrated; HPV vaccination remains preventive for relatives, not curative for current disease.
+- If disease is widespread: multidisciplinary, combined modality therapy with ongoing supportive care and social subsidies.
+ 
+Key takeaways
+- The visit establishes a careful, family-inclusive, language-supported plan with a two-week follow-up to review exam results and quitting progress, while preparing for biopsy/imaging only if indicated.
+- Strong emphasis on quitting gutkha/smoking, maintaining nutrition and oral care during radiotherapy, and arranging comprehensive psychosocial, transport, and Tamil-language supports.
+- Practical supports provided: Tamil interpreter, Tamil discharge materials, 24/7 nurse line, transport assistance, and symptom diary.
+========================================================================================================
+ 
+ 
+Response:
+ 
+<PATIENT_OVERVIEW>  
+Ravi Sharma, a 42-year-old male undergoing radiotherapy for head and neck cancer, presents for follow-up care focusing on managing mucositis, fatigue, and dermatitis symptoms. Tamil language and social support needs are integrated into his care plan.  
+ 
+<CHIEF_COMPLAINT>  
+Mouth sores, dryness, fatigue, and skin reactions related to ongoing radiotherapy.  
+ 
+<HISTORY_OF_PRESENT_ILLNESS>  
+Symptoms started two weeks ago after initiating radiotherapy and include dry mouth with burning, altered taste, reduced appetite, and left neck lump. Fatigue worsens post meals but improves with rest.  
+ 
+<SOCIAL_HISTORY_AND_RISK_FACTORS>  
+Patient resides with his sister Priya, who aids in care and translation. Additional support for transportation and materials in Tamil was requested. No smoking or alcohol use reported.  
+ 
+<EXAMINATION_INVESTIGATIONS_AND_PLAN>  
+Oral exam and neck evaluation planned with biopsy only if suspicious findings are noted. Nutritional advice includes high-protein, soft foods (dal, eggs, yogurt). Oral hygiene measures involve saltwater rinses and lip moisturization. Social worker will assist with transport and subsidies. Follow-up in two weeks with potential lab tests or imaging if required.  
+ 
+<SAFETY_AND_RED_FLAGS>  
+Patient is advised to monitor for signs of infection (fever >38°C, redness, swelling, foul odor) and uncontrolled symptoms (pain or dehydration). A 24/7 nurse and on-call support are available for urgent issues.  
+ 
+<OVERALL_SUMMARY>  
+Ravi Sharma, undergoing radiotherapy, is managing side effects like dry mouth, fatigue, and a left neck lump. A comprehensive care plan includes symptom management, nutritional guidance, and close monitoring. Tamil language resources, transport assistance, and a two-week follow-up are arranged to address biopsies and ensure continued treatment without interruptions.
