@@ -1,240 +1,385 @@
-import os, json, time, re
-from pathlib import Path
-from tqdm import tqdm
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from langdetect import detect, DetectorFactory
-
-DetectorFactory.seed = 42
-torch.set_grad_enabled(False)
-
-# ============================================================
-# CONFIG – EDIT THESE
-# ============================================================
-
-# Hugging Face model ID, e.g. "meta-llama/Llama-3.1-8B-Instruct"
-BASE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
-
-# Root directory containing language subfolders: English/ Hindi/ Marathi/ Tamil/
-TEST_DIR = "/path/to/test"
-
-# Output root directory
-OUTPUT_DIR = "/path/to/output"
-
-# Use 4-bit quantization (recommended for 32GB GPU)
-USE_4BIT = True
-
-# Only these language folders will be processed
-TARGET_LANGS = ["English", "Hindi", "Marathi", "Tamil"]
-
-# Generation length (summary length), not context length
-MAX_NEW_TOKENS_SUMMARY = 512
-
-SYSTEM_SUMMARY = (
-    "You are a clinical summarization assistant. Write a fluent English summary "
-    "focusing on diagnosis, symptoms, investigations, and management plan. "
-    "Write 6–10 sentences. End your summary with the token <<END>>."
+import os, json, torch, inspect, traceback
+from datasets import Dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    Trainer,
+    TrainingArguments,
+    BitsAndBytesConfig,
+    TrainerCallback
 )
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+
 
 # ============================================================
-# UTILS
+# ACCELERATE SHIM (unwrap_model fix for older versions)
+# ============================================================
+def accelerate_compat_shim():
+    try:
+        import accelerate
+        sig = inspect.signature(accelerate.Accelerator.unwrap_model)
+        if "keep_torch_compile" not in sig.parameters:
+            _orig = accelerate.Accelerator.unwrap_model
+
+            def _shim(self, model, *a, **kw):
+                kw.pop("keep_torch_compile", None)
+                return _orig(self, model, *a, **kw)
+
+            accelerate.Accelerator.unwrap_model = _shim
+            print("[shim] unwrap_model patched for Accelerate.")
+        else:
+            print("[shim] No patch needed.")
+    except Exception as e:
+        print("[shim] Accelerate shim failed:", e)
+        traceback.print_exc()
+
+
+accelerate_compat_shim()
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+DATA_DIR   = "/path/to/data"               # <-- set this
+BASE_MODEL = "Qwen/Qwen2.5-14B-Instruct"   # Qwen 2.5 14B Instruct
+OUTPUT_DIR = "/path/to/output"             # <-- set this
+
+SEED = 42
+CTX_MAX = 2048
+PROMPT_MAX = 768
+TARGET_MAX = CTX_MAX - PROMPT_MAX
+WINDOW_OVERLAP = 256
+BATCH_SIZE = 1
+GRAD_ACCUM = 8
+NUM_EPOCHS = 1
+LR = 2e-4
+SAVE_STEPS = 1000
+FP16 = True
+
+# Only train on these languages (folder-name based, case-insensitive)
+ALLOWED_LANG_DIRS = {
+    "en", "eng", "english",
+    "hi", "hindi",
+    "mr", "marathi",
+    "bn", "bangla", "bengali"
+}
+
+
+# ============================================================
+# HELPERS
 # ============================================================
 def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    print(f"[{msg}]", flush=True)
 
-def safe_read_jsonl(path: Path):
+
+def safe_read_jsonl(path):
     rows = []
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             s = line.strip()
-            if not s:
-                continue
-            try:
-                rows.append(json.loads(s))
-            except Exception:
-                continue
+            if s:
+                try:
+                    rows.append(json.loads(s))
+                except:
+                    continue
     return rows
 
-def write_text(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
 
-def detect_lang(text: str) -> str:
-    try:
-        return detect(text)
-    except Exception:
-        return "unknown"
+def join_dialogue(rows):
+    parts = []
+    for r in rows:
+        if isinstance(r, dict):
+            val = r.get("dialogue", "")
+            if isinstance(val, list):
+                val = " ".join(map(str, val))
+            parts.append(str(val))
+        else:
+            parts.append(str(r))
+    return "\n".join(parts).strip()
 
-def clip_tokens(tokenizer, text, max_tokens: int):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    ids = ids[-max_tokens:]
-    return tokenizer.decode(ids, skip_special_tokens=True)
-
-def build_messages(system_prompt, user_prompt):
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-def chat_generate(model, tokenizer, messages, max_new_tokens: int):
-    text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-    inputs = tokenizer([text], return_tensors="pt").to(model.device)
-
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=False,
-            num_beams=1,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    gen = output[0][len(inputs.input_ids[0]):]
-    return tokenizer.decode(gen, skip_special_tokens=True).strip()
 
 # ============================================================
-# MODEL LOADING FROM HUGGING FACE
+# LOAD TRAINING DATA (Summaries only, multilingual)
 # ============================================================
-def load_model(model_id: str, use_4bit=True):
-    tprint(f"Loading tokenizer: {model_id}")
-    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    quant_cfg = None
-    if use_4bit:
-        quant_cfg = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16
-        )
-
-    tprint(f"Loading model from Hugging Face: {model_id}")
-    hf_token = os.getenv("HF_TOKEN", None)
-
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        device_map="auto",
-        quantization_config=quant_cfg,
-        torch_dtype=torch.float16,
-        token=hf_token
-    )
-
-    model.eval()
-    return model, tokenizer
-
-def get_model_context_length(model) -> int:
-    """
-    Infer the model's max context length from its config.
-    Fallback to 8192 if not explicitly available.
-    """
-    cfg = model.config
-    candidates = [
-        getattr(cfg, "max_position_embeddings", None),
-        getattr(cfg, "max_sequence_length", None),
-        getattr(cfg, "n_positions", None),
-        getattr(cfg, "max_context_length", None),
-    ]
-    for v in candidates:
-        if isinstance(v, int) and v > 0:
-            return v
-    return 8192  # safe default if nothing is defined
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
-def run_summary_only():
-    if not BASE_MODEL:
-        raise ValueError("BASE_MODEL is empty. Set a Hugging Face model id.")
-    if not TEST_DIR or not OUTPUT_DIR:
-        raise ValueError("Please set TEST_DIR and OUTPUT_DIR in the CONFIG section.")
-
-    model, tokenizer = load_model(BASE_MODEL, use_4bit=USE_4BIT)
-
-    # Dynamically set max input tokens from model config
-    raw_ctx = get_model_context_length(model)
-    safety_margin = 512 if raw_ctx > 4096 else 256  # leave room for generated tokens
-    max_input_tokens = max(1024, raw_ctx - safety_margin)
-
-    tprint(f"Model reported context length: {raw_ctx} tokens")
-    tprint(f"Using {max_input_tokens} tokens for input truncation")
-
-    langs = [
-        p for p in Path(TEST_DIR).iterdir()
-        if p.is_dir() and p.name in TARGET_LANGS
-    ]
-
-    tprint(f"Processing languages: {[p.name for p in langs]}")
-
-    for lang_dir in langs:
-        lang = lang_dir.name
-        dlg_dir = lang_dir / "Dialogues"
-        out_lang = Path(OUTPUT_DIR) / lang
-
-        tprint(f"Language: {lang}")
-
-        if not dlg_dir.exists():
-            tprint(f"  • No Dialogues directory found for {lang}, skipping.")
+def make_examples(split):
+    examples = []
+    for lang in os.listdir(split):
+        ldir = os.path.join(split, lang)
+        if not os.path.isdir(ldir):
             continue
 
-        files = sorted(dlg_dir.glob("*.jsonl"))
-        tprint(f"  • Dialogues: {len(files)}")
+        # Filter only the requested languages (English, Hindi, Marathi, Bangla)
+        if lang.lower() not in ALLOWED_LANG_DIRS:
+            continue
 
-        for f in tqdm(files, desc=f"{lang} summaries"):
-            out_sum_txt = out_lang / "Summary_Text" / f"{f.stem}_summary.txt"
+        dlg = os.path.join(ldir, "Dialogues")
+        summ = os.path.join(ldir, "Summary_Text")
+        # qna = os.path.join(ldir, "QnA")  # NOT used anymore (summaries only)
 
-            if out_sum_txt.exists():
-                continue
+        # --- Summaries ONLY ---
+        if os.path.isdir(dlg) and os.path.isdir(summ):
+            for fn in os.listdir(dlg):
+                if not fn.endswith(".jsonl"):
+                    continue
+                rows = safe_read_jsonl(os.path.join(dlg, fn))
+                dialogue = join_dialogue(rows)
+                if not dialogue:
+                    continue
 
-            rows = safe_read_jsonl(f)
-            dialogue = " ".join(
-                r.get("dialogue", "") if isinstance(r, dict) else str(r)
-                for r in rows
-            )
-
-            # Clip dialogue according to model's context length
-            dialogue_clip = clip_tokens(tokenizer, dialogue, max_input_tokens)
-
-            # Generate Summary
-            messages = build_messages(
-                SYSTEM_SUMMARY,
-                f"Dialogue:\n{dialogue_clip}\n\nWrite the summary and end with <<END>>."
-            )
-
-            summary_raw = chat_generate(
-                model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
-            )
-
-            end_pos = summary_raw.find("<<END>>")
-            summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
-
-            # Ensure English summary
-            if detect_lang(summary) != "en":
-                messages = build_messages(
-                    SYSTEM_SUMMARY,
-                    f"Dialogue:\n{dialogue_clip}\n\nWrite ONLY in English. End with <<END>>."
+                sfile = os.path.join(
+                    summ,
+                    fn.replace(".jsonl", "_summary.txt")
                 )
-                summary_raw = chat_generate(
-                    model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
+                if not os.path.exists(sfile):
+                    continue
+
+                text = open(sfile, "r", encoding="utf-8").read().strip()
+                if not text:
+                    continue
+
+                # Multilingual summarization prompt:
+                # Summarize in the SAME language as the dialogue text.
+                prompt = (
+                    "Summarize the following doctor–patient dialogue in the same "
+                    "language as the dialogue:\n"
+                    f"{dialogue}\n\nSummary:"
                 )
-                end_pos = summary_raw.find("<<END>>")
-                summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+                examples.append({"prompt": prompt, "target": text})
 
-            write_text(out_sum_txt, summary)
+    tprint(f"Loaded {len(examples)} examples from {split}")
+    return examples
 
-        torch.cuda.empty_cache()
-
-    tprint(f"Summary-only inference complete! Saved to: {OUTPUT_DIR}")
 
 # ============================================================
-# ENTRY POINT
+# TOKENIZATION + CHUNKING
 # ============================================================
+def build_tokenizer(path):
+    tok = AutoTokenizer.from_pretrained(
+        path,
+        use_fast=True,
+        trust_remote_code=True  # Qwen2.5 uses custom arch in HF
+    )
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    # Right padding is fine for training
+    tok.padding_side = "right"
+    return tok
+
+
+def sliding_chunks(ids, size, overlap):
+    if len(ids) <= size:
+        return [ids]
+    step = size - overlap
+    return [ids[i:i + size] for i in range(0, len(ids), step)]
+
+
+def map_fn(tokenizer):
+    def _map(batch):
+        out = {"input_ids": [], "attention_mask": [], "labels": []}
+        for p, t in zip(batch["prompt"], batch["target"]):
+            # Encode prompt and target
+            p_ids = tokenizer.encode(p, add_special_tokens=False)[-PROMPT_MAX:]
+            t_ids = tokenizer.encode(" " + t, add_special_tokens=False)[:TARGET_MAX]
+            full = p_ids + t_ids
+
+            for ch in sliding_chunks(full, CTX_MAX, WINDOW_OVERLAP):
+                att = [1] * len(ch)
+                plen = min(len(ch), len(p_ids))
+                labels = [-100] * plen + ch[plen:]
+                out["input_ids"].append(ch)
+                out["attention_mask"].append(att)
+                out["labels"].append(labels)
+        return out
+
+    return _map
+
+
+# ============================================================
+# COLLATOR
+# ============================================================
+class Collator:
+    def __init__(self, tok):
+        self.tok = tok
+
+    def __call__(self, batch):
+        m = max(len(x["input_ids"]) for x in batch)
+
+        def pad(lst, val):
+            return lst + [val] * (m - len(lst))
+
+        ids = [pad(x["input_ids"], self.tok.pad_token_id) for x in batch]
+        att = [pad(x["attention_mask"], 0) for x in batch]
+        lbl = [pad(x["labels"], -100) for x in batch]
+        return {
+            "input_ids": torch.tensor(ids),
+            "attention_mask": torch.tensor(att),
+            "labels": torch.tensor(lbl),
+        }
+
+
+# ============================================================
+# MODEL + QLoRA (Qwen2.5 14B)
+# ============================================================
+def build_model():
+    bnb_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        device_map="auto",
+        quantization_config=bnb_cfg,
+        torch_dtype=torch.float16,
+        trust_remote_code=True,
+    )
+
+    model.config.use_cache = False
+    if hasattr(model, "enable_input_require_grads"):
+        model.enable_input_require_grads()
+
+    # Prepare for k-bit (QLoRA) training
+    model = prepare_model_for_kbit_training(model)
+    model.gradient_checkpointing_enable()
+
+    # Ensure pad_token_id is set (important for Qwen)
+    if getattr(model.config, "pad_token_id", None) is None:
+        # Will be set again when we build tokenizer, but keep consistent
+        tokenizer = AutoTokenizer.from_pretrained(
+            BASE_MODEL,
+            trust_remote_code=True,
+            use_fast=True,
+        )
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        model.config.pad_token_id = tokenizer.pad_token_id
+
+    # LoRA configuration: Q/K/V/O projection layers for Qwen2.5
+    lora = LoraConfig(
+        r=8,
+        lora_alpha=32,
+        lora_dropout=0.05,
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        task_type="CAUSAL_LM",
+        bias="none",
+    )
+    model = get_peft_model(model, lora)
+    model.print_trainable_parameters()
+    return model
+
+
+# ============================================================
+# CALLBACK: Save adapter checkpoints
+# ============================================================
+class SavePeftAdapterCallback(TrainerCallback):
+    def __init__(self, out_dir, save_steps=1000):
+        self.out_dir = out_dir
+        self.save_steps = save_steps
+        os.makedirs(out_dir, exist_ok=True)
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step % self.save_steps == 0 and state.global_step > 0:
+            model = kwargs.get("model")
+            if hasattr(model, "save_pretrained"):
+                ckpt = os.path.join(
+                    self.out_dir, f"adapter_step_{state.global_step}"
+                )
+                model.save_pretrained(ckpt, safe_serialization=True)
+                print(
+                    f"[callback] Saved adapter-only checkpoint at step {state.global_step}"
+                )
+
+
+# ============================================================
+# TRAINING LOOP (safe resume for Torch < 2.6)
+# ============================================================
+def main():
+    torch.manual_seed(SEED)
+    tok = build_tokenizer(BASE_MODEL)
+
+    train_raw = make_examples(os.path.join(DATA_DIR, "train"))
+    dev_raw = make_examples(os.path.join(DATA_DIR, "dev"))
+
+    train = Dataset.from_list(train_raw).map(
+        map_fn(tok),
+        batched=True,
+        num_proc=4,
+        remove_columns=["prompt", "target"],
+    )
+    dev = Dataset.from_list(dev_raw).map(
+        map_fn(tok),
+        batched=True,
+        num_proc=4,
+        remove_columns=["prompt", "target"],
+    )
+
+    model = build_model()
+    args = TrainingArguments(
+        output_dir=OUTPUT_DIR,
+        per_device_train_batch_size=BATCH_SIZE,
+        gradient_accumulation_steps=GRAD_ACCUM,
+        num_train_epochs=NUM_EPOCHS,
+        learning_rate=LR,
+        fp16=FP16,
+        logging_steps=50,
+        save_strategy="steps",
+        save_steps=SAVE_STEPS,
+        save_total_limit=3,
+        evaluation_strategy="epoch",  # <- fixed name
+        report_to="none",
+        save_safetensors=True,
+        max_steps=28000,
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=args,
+        train_dataset=train,
+        eval_dataset=dev,
+        data_collator=Collator(tok),
+        callbacks=[SavePeftAdapterCallback(OUTPUT_DIR, SAVE_STEPS)],
+    )
+
+    # ---- Resume from latest checkpoint
+    ckpt = None
+    if os.path.isdir(OUTPUT_DIR):
+        ckpts = [
+            d
+            for d in os.listdir(OUTPUT_DIR)
+            if d.startswith(("checkpoint-", "adapter_step_"))
+        ]
+        if ckpts:
+            ckpt = os.path.join(
+                OUTPUT_DIR,
+                sorted(
+                    ckpts,
+                    key=lambda x: int("".join(filter(str.isdigit, x)) or 0),
+                )[-1],
+            )
+
+    if ckpt:
+        tprint(f"Resuming from {ckpt}")
+        try:
+            trainer.train(resume_from_checkpoint=ckpt)
+        except ValueError as e:
+            if "vulnerability issue in `torch.load`" in str(e):
+                print(
+                    "[safe-resume] Torch < 2.6 detected; resuming weights only (optimizer reset)."
+                )
+                trainer.train(resume_from_checkpoint=None)
+            else:
+                raise
+    else:
+        tprint("Starting fresh training")
+        trainer.train()
+
+    tprint("Saving final model…")
+    trainer.save_model(OUTPUT_DIR)
+    tok.save_pretrained(OUTPUT_DIR)
+    tprint("Training complete!")
+
+
 if __name__ == "__main__":
-    run_summary_only()
+    main()
