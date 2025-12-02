@@ -1,21 +1,43 @@
-Loading checkpoint shards:   0%|          | 0/8 [00:00<?, ?it/s]
-Loading checkpoint shards:  12%|█▎        | 1/8 [00:03<00:22,  3.29s/it]
-Loading checkpoint shards:  25%|██▌       | 2/8 [00:08<00:27,  4.54s/it]
-Loading checkpoint shards:  38%|███▊      | 3/8 [00:18<00:35,  7.10s/it]
-Loading checkpoint shards:  50%|█████     | 4/8 [00:24<00:26,  6.60s/it]
-Loading checkpoint shards:  62%|██████▎   | 5/8 [00:29<00:17,  5.92s/it]
-Loading checkpoint shards:  75%|███████▌  | 6/8 [00:34<00:11,  5.52s/it]
-Loading checkpoint shards:  88%|████████▊ | 7/8 [00:39<00:05,  5.33s/it]
-Loading checkpoint shards: 100%|██████████| 8/8 [00:39<00:00,  3.86s/it]
-Loading checkpoint shards: 100%|██████████| 8/8 [00:39<00:00,  4.97s/it]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.07s/it]
+Loading checkpoint shards:  50%|█████     | 2/4 [00:07<00:07,  3.73s/it]
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:11<00:03,  3.92s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:14<00:00,  3.53s/it]
+
+�Detected kernel version 5.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+
+�trainable params: 5,046,272 || all params: 7,620,662,784 || trainable%: 0.06621828235983522
+[Resuming from /workspace/data/KZ_2117574/EACL/qwen_2.5_14b_finetune/checkpoint-1000]
 
 jTraceback (most recent call last):
   File "/workspace/multi_summ/qwen_finetune.py", line 385, in <module>
 
-^trainable params: 12,582,912 || all params: 14,782,616,576 || trainable%: 0.08511965344774428
-
 N    main()
-  File "/workspace/multi_summ/qwen_finetune.py", line 319, in main
+  File "/workspace/multi_summ/qwen_finetune.py", line 365, in main
 
-    args = TrainingArguments(
-TypeError: TrainingArguments.__init__() got an unexpected keyword argument 'evaluation_strategy'
+�    trainer.train(resume_from_checkpoint=ckpt)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2297, in train
+
+�    self._load_from_checkpoint(resume_from_checkpoint)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 3015, in _load_from_checkpoint
+
+�    model.load_adapter(resume_from_checkpoint, active_adapter, is_trainable=True)
+  File "/usr/local/lib/python3.10/dist-packages/peft/peft_model.py", line 730, in load_adapter
+
+�    load_result = set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
+  File "/usr/local/lib/python3.10/dist-packages/peft/utils/save_and_load.py", line 249, in set_peft_model_state_dict
+
+�    load_result = model.load_state_dict(peft_model_state_dict, strict=False)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 2153, in load_state_dict
+
+�    raise RuntimeError('Error(s) in loading state_dict for {}:\n\t{}'.format(
+RuntimeError: Error(s) in loading state_dict for PeftModelForCausalLM:
+        size mismatch for base_model.model.model.layers.0.self_attn.q_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
+        size mismatch for base_model.model.model.layers.0.self_attn.q_proj.lora_B.default.weight: copying a param with shape torch.Size([5120, 8]) from checkpoint, the shape in current model is torch.Size([3584, 8]).
+        size mismatch for base_model.model.model.layers.0.self_attn.k_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
+        size mismatch for base_model.model.model.layers.0.self_attn.k_proj.lora_B.default.weight: copying a param with shape torch.Size([1024, 8]) from checkpoint, the shape in current model is torch.Size([512, 8]).
+        size mismatch for base_model.model.model.layers.0.self_attn.v_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
+        size mismatch for base_model.model.model.layers.0.self_attn.v_proj.lora_B.default.weight: copying a param with shape torch.Size([1024, 8]) from checkpoint, the shape in current model is torch.Size([512, 8]).
+        size mismatch for base_model.model.model.layers.0.self_attn.o_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
+        size mismatch for base_model.model.model.layers.0.self_attn.o_proj.lora_B.default.weight: copying a param with shape torch.Size([5120, 8]) from checkpoint, the shape in current model is torch.Size([3584, 8]).
+        size mismatch for base_model.model.model.layers.1.self_attn.q_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape 
