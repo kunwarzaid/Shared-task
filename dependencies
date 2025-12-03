@@ -1,43 +1,142 @@
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.07s/it]
-Loading checkpoint shards:  50%|█████     | 2/4 [00:07<00:07,  3.73s/it]
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:11<00:03,  3.92s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:14<00:00,  3.53s/it]
-
-�Detected kernel version 5.4.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
-
-�trainable params: 5,046,272 || all params: 7,620,662,784 || trainable%: 0.06621828235983522
-[Resuming from /workspace/data/KZ_2117574/EACL/qwen_2.5_14b_finetune/checkpoint-1000]
-
 jTraceback (most recent call last):
   File "/workspace/multi_summ/qwen_finetune.py", line 385, in <module>
 
+�{'loss': 1.9685, 'grad_norm': 0.5133945345878601, 'learning_rate': 0.00019965, 'epoch': 0.02}
+{'loss': 1.7893, 'grad_norm': 0.5999431610107422, 'learning_rate': 0.00019929285714285715, 'epoch': 0.04}
+{'loss': 1.7329, 'grad_norm': 0.6373615860939026, 'learning_rate': 0.00019893571428571428, 'epoch': 0.05}
+{'loss': 1.7019, 'grad_norm': 0.6838074922561646, 'learning_rate': 0.00019857857142857143, 'epoch': 0.07}
+{'loss': 1.6665, 'grad_norm': 0.6464743614196777, 'learning_rate': 0.0001982214285714286, 'epoch': 0.09}
+{'loss': 1.6478, 'grad_norm': 0.688974916934967, 'learning_rate': 0.00019786428571428571, 'epoch': 0.11}
+{'loss': 1.6179, 'grad_norm': 0.7354154586791992, 'learning_rate': 0.00019750714285714287, 'epoch': 0.12}
+{'loss': 1.6117, 'grad_norm': 0.6529002785682678, 'learning_rate': 0.00019715000000000002, 'epoch': 0.14}
+{'loss': 1.6018, 'grad_norm': 0.6625312566757202, 'learning_rate': 0.00019679285714285715, 'epoch': 0.16}
+{'loss': 1.5892, 'grad_norm': 0.6786030530929565, 'learning_rate': 0.0001964357142857143, 'epoch': 0.18}
+{'loss': 1.571, 'grad_norm': 0.7233564257621765, 'learning_rate': 0.00019607857142857146, 'epoch': 0.19}
+{'loss': 1.5648, 'grad_norm': 0.68357914686203, 'learning_rate': 0.00019572142857142858, 'epoch': 0.21}
+{'loss': 1.5758, 'grad_norm': 0.6558215618133545, 'learning_rate': 0.00019536428571428574, 'epoch': 0.23}
+{'loss': 1.5654, 'grad_norm': 0.6813733577728271, 'learning_rate': 0.0001950071428571429, 'epoch': 0.25}
+{'loss': 1.5602, 'grad_norm': 0.6416494250297546, 'learning_rate': 0.00019465, 'epoch': 0.26}
+{'loss': 1.5681, 'grad_norm': 0.7228624224662781, 'learning_rate': 0.00019429285714285714, 'epoch': 0.28}
+{'loss': 1.5359, 'grad_norm': 0.7263418436050415, 'learning_rate': 0.0001939357142857143, 'epoch': 0.3}
+{'loss': 1.532, 'grad_norm': 0.7175096273422241, 'learning_rate': 0.00019357857142857142, 'epoch': 0.32}
+{'loss': 1.5192, 'grad_norm': 0.7087768912315369, 'learning_rate': 0.00019322142857142858, 'epoch': 0.33}
+[callback] Saved adapter-only checkpoint at step 1000
+{'loss': 1.5382, 'grad_norm': 0.6954265236854553, 'learning_rate': 0.00019286428571428573, 'epoch': 0.35}
+{'loss': 1.5298, 'grad_norm': 0.7097961902618408, 'learning_rate': 0.00019250714285714285, 'epoch': 0.37}
+{'loss': 1.5182, 'grad_norm': 0.7551944255828857, 'learning_rate': 0.00019215, 'epoch': 0.39}
+{'loss': 1.5267, 'grad_norm': 0.7287666201591492, 'learning_rate': 0.00019179285714285716, 'epoch': 0.4}
+{'loss': 1.5007, 'grad_norm': 0.7341251373291016, 'learning_rate': 0.0001914357142857143, 'epoch': 0.42}
+{'loss': 1.5141, 'grad_norm': 0.7282881140708923, 'learning_rate': 0.00019107857142857144, 'epoch': 0.44}
+{'loss': 1.488, 'grad_norm': 0.793819010257721, 'learning_rate': 0.0001907214285714286, 'epoch': 0.46}
+{'loss': 1.5003, 'grad_norm': 0.6988107562065125, 'learning_rate': 0.00019036428571428572, 'epoch': 0.47}
+{'loss': 1.4962, 'grad_norm': 0.6936253905296326, 'learning_rate': 0.00019000714285714288, 'epoch': 0.49}
+{'loss': 1.4909, 'grad_norm': 0.7188519835472107, 'learning_rate': 0.00018965000000000003, 'epoch': 0.51}
+{'loss': 1.4746, 'grad_norm': 0.7193373441696167, 'learning_rate': 0.00018929285714285716, 'epoch': 0.53}
+{'loss': 1.4794, 'grad_norm': 0.7164349555969238, 'learning_rate': 0.0001889357142857143, 'epoch': 0.54}
+{'loss': 1.4599, 'grad_norm': 0.695478081703186, 'learning_rate': 0.00018857857142857144, 'epoch': 0.56}
+{'loss': 1.465, 'grad_norm': 0.6968657374382019, 'learning_rate': 0.00018822142857142856, 'epoch': 0.58}
+{'loss': 1.4773, 'grad_norm': 0.6977313756942749, 'learning_rate': 0.00018786428571428572, 'epoch': 0.6}
+{'loss': 1.4581, 'grad_norm': 0.735017716884613, 'learning_rate': 0.00018750714285714287, 'epoch': 0.61}
+{'loss': 1.4572, 'grad_norm': 0.7175566554069519, 'learning_rate': 0.00018715, 'epoch': 0.63}
+{'loss': 1.4848, 'grad_norm': 0.7521706223487854, 'learning_rate': 0.00018679285714285715, 'epoch': 0.65}
+{'loss': 1.4613, 'grad_norm': 0.7285295128822327, 'learning_rate': 0.0001864357142857143, 'epoch': 0.67}
+{'loss': 1.4428, 'grad_norm': 0.7504622340202332, 'learning_rate': 0.00018607857142857143, 'epoch': 0.68}
+[callback] Saved adapter-only checkpoint at step 2000
+{'loss': 1.4639, 'grad_norm': 0.850809633731842, 'learning_rate': 0.00018572142857142858, 'epoch': 0.7}
+{'loss': 1.4314, 'grad_norm': 0.714887261390686, 'learning_rate': 0.00018536428571428574, 'epoch': 0.72}
+{'loss': 1.454, 'grad_norm': 0.7588945627212524, 'learning_rate': 0.00018500714285714286, 'epoch': 0.74}
+{'loss': 1.4276, 'grad_norm': 0.697136402130127, 'learning_rate': 0.00018465000000000002, 'epoch': 0.75}
+{'loss': 1.4279, 'grad_norm': 0.6964660286903381, 'learning_rate': 0.00018429285714285717, 'epoch': 0.77}
+{'loss': 1.4253, 'grad_norm': 0.6878835558891296, 'learning_rate': 0.0001839357142857143, 'epoch': 0.79}
+{'loss': 1.4425, 'grad_norm': 0.7453322410583496, 'learning_rate': 0.00018357857142857145, 'epoch': 0.81}
+{'loss': 1.4486, 'grad_norm': 0.7548876404762268, 'learning_rate': 0.00018322142857142858, 'epoch': 0.82}
+{'loss': 1.432, 'grad_norm': 0.7496388554573059, 'learning_rate': 0.00018286428571428573, 'epoch': 0.84}
+{'loss': 1.4103, 'grad_norm': 0.6778209805488586, 'learning_rate': 0.00018250714285714288, 'epoch': 0.86}
+{'loss': 1.4076, 'grad_norm': 0.7510491013526917, 'learning_rate': 0.00018215, 'epoch': 0.88}
+{'loss': 1.4026, 'grad_norm': 0.7426336407661438, 'learning_rate': 0.00018179285714285714, 'epoch': 0.89}
+{'loss': 1.407, 'grad_norm': 0.7823425531387329, 'learning_rate': 0.0001814357142857143, 'epoch': 0.91}
+{'loss': 1.4065, 'grad_norm': 0.7309433221817017, 'learning_rate': 0.00018107857142857144, 'epoch': 0.93}
+{'loss': 1.4129, 'grad_norm': 0.7132323384284973, 'learning_rate': 0.00018072142857142857, 'epoch': 0.95}
+{'loss': 1.3995, 'grad_norm': 0.7644841074943542, 'learning_rate': 0.00018036428571428572, 'epoch': 0.96}
+{'loss': 1.4097, 'grad_norm': 0.7687656879425049, 'learning_rate': 0.00018001428571428571, 'epoch': 0.98}
+{'loss': 1.4012, 'grad_norm': 0.7371028661727905, 'learning_rate': 0.00017965714285714287, 'epoch': 1.0}
+
 N    main()
-  File "/workspace/multi_summ/qwen_finetune.py", line 365, in main
+  File "/workspace/multi_summ/qwen_finetune.py", line 376, in main
 
-�    trainer.train(resume_from_checkpoint=ckpt)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2297, in train
+r    trainer.train()
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2325, in train
 
-�    self._load_from_checkpoint(resume_from_checkpoint)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 3015, in _load_from_checkpoint
+�    return inner_training_loop(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 2790, in _inner_training_loop
 
-�    model.load_adapter(resume_from_checkpoint, active_adapter, is_trainable=True)
-  File "/usr/local/lib/python3.10/dist-packages/peft/peft_model.py", line 730, in load_adapter
+�    self._maybe_log_save_evaluate(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 3221, in _maybe_log_save_evaluate
 
-�    load_result = set_peft_model_state_dict(self, adapters_weights, adapter_name=adapter_name)
-  File "/usr/local/lib/python3.10/dist-packages/peft/utils/save_and_load.py", line 249, in set_peft_model_state_dict
+�    metrics = self._evaluate(trial, ignore_keys_for_eval)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 3170, in _evaluate
 
-�    load_result = model.load_state_dict(peft_model_state_dict, strict=False)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 2153, in load_state_dict
+�    metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 4489, in evaluate
 
-�    raise RuntimeError('Error(s) in loading state_dict for {}:\n\t{}'.format(
-RuntimeError: Error(s) in loading state_dict for PeftModelForCausalLM:
-        size mismatch for base_model.model.model.layers.0.self_attn.q_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
-        size mismatch for base_model.model.model.layers.0.self_attn.q_proj.lora_B.default.weight: copying a param with shape torch.Size([5120, 8]) from checkpoint, the shape in current model is torch.Size([3584, 8]).
-        size mismatch for base_model.model.model.layers.0.self_attn.k_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
-        size mismatch for base_model.model.model.layers.0.self_attn.k_proj.lora_B.default.weight: copying a param with shape torch.Size([1024, 8]) from checkpoint, the shape in current model is torch.Size([512, 8]).
-        size mismatch for base_model.model.model.layers.0.self_attn.v_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
-        size mismatch for base_model.model.model.layers.0.self_attn.v_proj.lora_B.default.weight: copying a param with shape torch.Size([1024, 8]) from checkpoint, the shape in current model is torch.Size([512, 8]).
-        size mismatch for base_model.model.model.layers.0.self_attn.o_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape in current model is torch.Size([8, 3584]).
-        size mismatch for base_model.model.model.layers.0.self_attn.o_proj.lora_B.default.weight: copying a param with shape torch.Size([5120, 8]) from checkpoint, the shape in current model is torch.Size([3584, 8]).
-        size mismatch for base_model.model.model.layers.1.self_attn.q_proj.lora_A.default.weight: copying a param with shape torch.Size([8, 5120]) from checkpoint, the shape 
+�    output = eval_loop(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 4685, in evaluation_loop
+
+�    losses, logits, labels = self.prediction_step(model, inputs, prediction_loss_only, ignore_keys=ignore_keys)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 4902, in prediction_step
+
+�    loss, outputs = self.compute_loss(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/trainer.py", line 4110, in compute_loss
+
+�    outputs = model(**inputs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+
+�    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+
+�    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/accelerate/utils/operations.py", line 820, in forward
+
+�    return model_forward(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/accelerate/utils/operations.py", line 808, in __call__
+
+�    return convert_to_fp32(self.model_forward(*args, **kwargs))
+  File "/usr/local/lib/python3.10/dist-packages/torch/amp/autocast_mode.py", line 16, in decorate_autocast
+
+|    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/peft/peft_model.py", line 1129, in forward
+
+�    return self.base_model(
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+
+�    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/peft/tuners/tuners_utils.py", line 161, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/accelerate/hooks.py", line 170, in new_forward
+
+�    output = module._old_forward(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/generic.py", line 918, in wrapper
+
+�    output = func(self, *args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/models/qwen2/modeling_qwen2.py", line 467, in forward
+
+�    loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.config.vocab_size, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/loss/loss_utils.py", line 67, in ForCausalLMLoss
+
+�    loss = fixed_cross_entropy(logits, shift_labels, num_items_in_batch, ignore_index, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/loss/loss_utils.py", line 36, in fixed_cross_entropy
+
+�    loss = nn.functional.cross_entropy(source, target, ignore_index=ignore_index, reduction=reduction)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/functional.py", line 3059, in cross_entropy
+
+�    return torch._C._nn.cross_entropy_loss(input, target, weight, _Reduction.get_enum(reduction), ignore_index, label_smoothing)
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 9.28 GiB. GPU 0 has a total capacity of 31.75 GiB of which 5.67 GiB is free. Process 973630 has 26.08 GiB memory in use. Of the allocated memory 21.43 GiB is allocated by PyTorch, and 4.27 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+ 10%|█         | 2855/28000 [11:10:02<98:21:13, 14.08s/it]
+
+removing /jobs/281958
+
+Failed to execute script
