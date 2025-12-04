@@ -1,24 +1,58 @@
-What GS AI Proposes
+AI Safety for Everyone
+Reference: https://arxiv.org/pdf/2502.09288
+What is AI Safety for Everyone
 
-A research framework for Guaranteed Safe (GS) AI, built on:
+The paper argues that current debate about “AI safety” is too narrowly focused on existential risks from future, very-advanced AI systems. 
+arXiv
++1
 
-World Model
-Mathematical model describing how AI interacts with the real world.
+Through a systematic review of peer-reviewed literature (383 papers), the authors show that there is already a large body of concrete safety research addressing immediate and practical issues in existing AI systems. 
+arXiv
++1
 
-Safety Specification
-Formal definition of what “safe behavior” means in that context.
+They propose an “epistemically inclusive and pluralistic” conception of AI safety — one that recognizes not just long-term existential risk, but also present-day harms, and allows researchers from different backgrounds (engineering, ethics, ML, governance) to meaningfully contribute. 
+arXiv
++1
 
-Verifier
-A mechanism that produces auditable proof that the AI always stays within safety boundaries.
+🔎 What the Review Found — Key Risk Types & Safety Work
 
-This moves AI safety from “we tested it a lot” → to quantifiable and certifiable safety guarantees.
+The literature covers a wide range of safety concerns across the AI lifecycle: design, development, deployment, operation, and even decommissioning. 
+arXiv
 
-Why Empirical Testing is Not Enough
+Key themes and topics include:
 
-Testing finds problems—but cannot prove the absence of problems.
+Robustness & Reliability: Ensuring AI models (classifiers, neural nets, etc.) work reliably under noisy data, out-of-distribution inputs, adversarial perturbations. 
+arXiv
++1
 
-Rare failures may only appear once deployed.
+Safe Reinforcement Learning / Safe Control: For agent-based systems, research considers control under uncertainty, stability, constraint-satisfaction, and safe behavior under dynamic/uncertain environments. 
+arXiv
 
-Adversarial triggers or environmental shifts break empirical assumptions.
+Adversarial Attacks & Defenses: Work on adversarial robustness, defenses against malicious inputs or perturbations, security-oriented safety. 
+arXiv
++1
 
-For safety-critical systems (like aviation or medicine), this would be unacceptable engineering practice.
+Human & Societal Risks: Issues of trust, accountability, fairness, misuse — treating AI safety as part of broader technological and social safety, not just technical “bugs.” 
+arXiv
++1
+
+Bridging Short-Term and Long-Term Safety: Many safety problems (e.g. robustness, misuse, reliability) persist across time horizons; treating them separately (as “near-term vs long-term”) may be misleading. 
+arXiv
+
+The authors show that these are not fringe problems — they constitute a core part of AI safety research today. 
+Semantic Scholar
++1
+
+✅ Why This Matters — Implications of “AI Safety for Everyone”
+
+Broadens the definition of AI safety: Safety isn’t only about “future superintelligent AI,” but also about making current systems safer, fairer, reliable, and trustworthy.
+
+Inclusivity for researchers: By defining safety broadly, researchers working on adversarial robustness, fairness, reliability, or governance get recognized as doing “real AI safety.” This encourages cross-disciplinary involvement.
+
+Practical relevance now: Many applications — healthcare, finance, autonomous systems — deploy AI today. So focusing only on speculative future risks ignores real, existing harms or failures.
+
+Better alignment with established safety engineering traditions: The paper argues that AI safety should reconnect with the larger history of technological and systems safety (physical engineering, software systems, etc.), and benefit from existing methods, practices, and governance models. 
+arXiv
++1
+
+Guide for policy, regulation, and governance: A broader view helps create regulation, certification, and governance frameworks that deal with real risks now — not just remote existential scenarios.
