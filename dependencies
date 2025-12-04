@@ -1,76 +1,24 @@
-The paper identifies a fundamental challenge: as AI systems become more powerful, autonomous, and are used in sensitive or safety-critical contexts (e.g. healthcare, transportation, infrastructure), it becomes increasingly important that they behave reliably and do not cause harm
-Current AI safety validation mostly relies on empirical testing / red-teaming, i.e. trying to find unsafe behaviours by testing the AI in many situations
-But this is fundamentally limited: no matter how much you test, you can never exhaustively cover all possible inputs or environments. That means there could always be rare, hidden, adversarial, or unexpected scenarios where the AI misbehaves
-Rising relevance and urgency: As AI becomes more capable and deployed in sensitive domains (automation, healthcare, infrastructure, decision-making), demand for reliable safety guarantees — beyond “it worked in tests” — will only increase.
-Reference: https://arxiv.org/pdf/2501.17805
-The International AI Safety Report (IASR) is a major, global collaborative effort: 96 independent AI experts from around the world (nominated by 30 countries, plus UN, EU, OECD) contributed.
-Its purpose: to synthesize current scientific understanding of the capabilities, risks, and safety-mitigation strategies for advanced general-purpose AI systems (i.e. AI that can perform a wide variety of tasks).
-The report reviews recent advances: general-purpose AI systems are already showing strong performance in programming, abstract reasoning, scientific reasoning, and other complex tasks.
-It argues such capabilities are likely to continue improving — meaning these systems will become increasingly powerful, flexible, and widely deployed
-The report categorizes risks into several major types. 
-arXiv
-+1
+What GS AI Proposes
 
-Malicious Use Risks:
+A research framework for Guaranteed Safe (GS) AI, built on:
 
-Creation of fake content, deepfakes — can facilitate fraud, manipulation, misinformation. 
-arXiv
+World Model
+Mathematical model describing how AI interacts with the real world.
 
-Manipulation of public opinion or social discourse at scale. 
-arXiv
+Safety Specification
+Formal definition of what “safe behavior” means in that context.
 
-Cyber-offences or automated cyberattacks. 
-arXiv
+Verifier
+A mechanism that produces auditable proof that the AI always stays within safety boundaries.
 
-Even more dangerous: potential for bio- or chemical-attack facilitation (e.g. AI-generated instructions).
-Malfunction Risks / Reliability Issues:
+This moves AI safety from “we tested it a lot” → to quantifiable and certifiable safety guarantees.
 
-AI systems may behave unpredictably, produce biased or incorrect outputs, or degrade under distributional shifts. 
-arXiv
-+1
+Why Empirical Testing is Not Enough
 
-Risk of “loss of control” — as AI becomes more autonomous, we may lose the ability to guarantee safe behaviour in all conditions. 
-arXiv
+Testing finds problems—but cannot prove the absence of problems.
 
-Systemic / Societal Risks:
+Rare failures may only appear once deployed.
 
-Disruption to labor markets (automation replacing jobs). 
-arXiv
+Adversarial triggers or environmental shifts break empirical assumptions.
 
-Concentration of power: centralization of AI R&D or deployment could create “single points of failure.” 
-arXiv
-
-Environmental impacts (e.g. energy usage), privacy harms, copyright/IP risks. 
-arXiv
-+1
-
-Widening global inequalities: the “AI R&D divide” — countries/organizations with resources may dominate the benefits and risks. 
-arXiv
-
-Impact of Open-weight / Open-access Models:
-
-The report also warns that freely available models (“open-weight”) may increase risks, because they lower barriers for malicious or irresponsible use.
-The report does not just list risks — it also surveys technical and governance approaches to manage and mitigate these risks. 
-arXiv
-+1
-
-Some of the approaches and considerations:
-
-Training more trustworthy models — using better data, alignment techniques, robustness evaluation. 
-arXiv
-
-Ongoing monitoring & intervention — tracking deployed AI behavior; having mechanisms to intervene or shut down if unsafe behaviour arises. 
-arXiv
-
-Privacy-preserving designs — mitigating privacy and data misuse risks. 
-arXiv
-+1
-
-Risk-identification & assessment frameworks — systematically evaluating potential harms before deployment. 
-arXiv
-
-Policymaker & governance engagement — because some risks are societal, not just technical. The report emphasizes the need for global cooperation. 
-arXiv
-+1
-
-At the same time, the report notes significant evidence gaps — many future risks remain uncertain and under-studied.
+For safety-critical systems (like aviation or medicine), this would be unacceptable engineering practice.
