@@ -1,58 +1,292 @@
-AI Safety for Everyone
-Reference: https://arxiv.org/pdf/2502.09288
-What is AI Safety for Everyone
+import os, json, time, re
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from langdetect import detect, DetectorFactory
 
-The paper argues that current debate about “AI safety” is too narrowly focused on existential risks from future, very-advanced AI systems. 
-arXiv
-+1
+from huggingface_hub import login
 
-Through a systematic review of peer-reviewed literature (383 papers), the authors show that there is already a large body of concrete safety research addressing immediate and practical issues in existing AI systems. 
-arXiv
-+1
+import torch, bitsandbytes as bnb, transformers
+print(torch.__version__)
+print(torch.version.cuda)      # None = CPU build; must match your system CUDA
+print(bnb.__version__)
+print(transformers.__version__)
 
-They propose an “epistemically inclusive and pluralistic” conception of AI safety — one that recognizes not just long-term existential risk, but also present-day harms, and allows researchers from different backgrounds (engineering, ethics, ML, governance) to meaningfully contribute. 
-arXiv
-+1
+def huggingface_login():
+    """
+    Logs into the Hugging Face Hub using the user's token.
+    """
+    # print("Please enter your Hugging Face token. You can generate one at: https://huggingface.co/settings/tokens")
+    token = ''
+    try:
+        # Log in to the Hugging Face Hub
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
+    except Exception as e:
+        print(f"Failed to log in: {e}")
 
-🔎 What the Review Found — Key Risk Types & Safety Work
+huggingface_login()
 
-The literature covers a wide range of safety concerns across the AI lifecycle: design, development, deployment, operation, and even decommissioning. 
-arXiv
 
-Key themes and topics include:
+# Deterministic language detection
+DetectorFactory.seed = 42
+torch.set_grad_enabled(False)
 
-Robustness & Reliability: Ensuring AI models (classifiers, neural nets, etc.) work reliably under noisy data, out-of-distribution inputs, adversarial perturbations. 
-arXiv
-+1
+# ============================================================
+# CONFIG
+# ============================================================
 
-Safe Reinforcement Learning / Safe Control: For agent-based systems, research considers control under uncertainty, stability, constraint-satisfaction, and safe behavior under dynamic/uncertain environments. 
-arXiv
+# Chat model
+BASE_MODEL = "mistralai/Mistral-7B-Instruct-v0.3"
 
-Adversarial Attacks & Defenses: Work on adversarial robustness, defenses against malicious inputs or perturbations, security-oriented safety. 
-arXiv
-+1
+# Root directory containing language subfolders: English/ Hindi/ Marathi/ Tamil/
+TEST_DIR = "/workspace/data/KZ_2117574/test_data_release/test_data_release"
 
-Human & Societal Risks: Issues of trust, accountability, fairness, misuse — treating AI safety as part of broader technological and social safety, not just technical “bugs.” 
-arXiv
-+1
+# Output root directory
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/mistral_7B_Instruct"
 
-Bridging Short-Term and Long-Term Safety: Many safety problems (e.g. robustness, misuse, reliability) persist across time horizons; treating them separately (as “near-term vs long-term”) may be misleading. 
-arXiv
+# Use 4-bit quantization (recommended for 32GB GPU)
+USE_4BIT = True
 
-The authors show that these are not fringe problems — they constitute a core part of AI safety research today. 
-Semantic Scholar
-+1
+# Only these language folders will be processed
+TARGET_LANGS = ["English","Hindi","Marathi","Bangla"]
 
-✅ Why This Matters — Implications of “AI Safety for Everyone”
+# Generation length (summary length), not context length
+MAX_NEW_TOKENS_SUMMARY = 512
 
-Broadens the definition of AI safety: Safety isn’t only about “future superintelligent AI,” but also about making current systems safer, fairer, reliable, and trustworthy.
+# System message for the chat model
+SYSTEM_SUMMARY = (
+    ",|im_start|>system"
+    "You are a clinical summarization assistant. "
+    "Read a doctor–patient dialogue and write a fluent English summary "
+    "focusing on diagnosis, symptoms, investigations, management plan, "
+    "supportive care, and follow-up. Do not hallucinate new diagnoses or tests. "
+    "End your summary with the token <<END>>."
+    "<|im_end|>"
+)
 
-Inclusivity for researchers: By defining safety broadly, researchers working on adversarial robustness, fairness, reliability, or governance get recognized as doing “real AI safety.” This encourages cross-disciplinary involvement.
+# ============================================================
+# UTILS
+# ============================================================
 
-Practical relevance now: Many applications — healthcare, finance, autonomous systems — deploy AI today. So focusing only on speculative future risks ignores real, existing harms or failures.
+def tprint(msg: str):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
-Better alignment with established safety engineering traditions: The paper argues that AI safety should reconnect with the larger history of technological and systems safety (physical engineering, software systems, etc.), and benefit from existing methods, practices, and governance models. 
-arXiv
-+1
+def safe_read_jsonl(path: Path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            s = line.strip()
+            if not s:
+                continue
+            try:
+                rows.append(json.loads(s))
+            except Exception:
+                # Skip malformed lines quietly
+                continue
+    return rows
 
-Guide for policy, regulation, and governance: A broader view helps create regulation, certification, and governance frameworks that deal with real risks now — not just remote existential scenarios.
+def write_text(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
+
+def detect_lang(text: str) -> str:
+    try:
+        return detect(text)
+    except Exception:
+        return "unknown"
+
+def clip_tokens(tokenizer, text: str, max_tokens: int) -> str:
+    """
+    Clip text to the last `max_tokens` tokens to stay within context.
+    """
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    ids = ids[-max_tokens:]
+    return tokenizer.decode(ids, skip_special_tokens=True)
+
+def build_messages(system_prompt: str, user_prompt: str):
+    """
+    Build chat-style messages for Llama-2-13b-chat-hf.
+    """
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+def chat_generate(model, tokenizer, messages, max_new_tokens: int) -> str:
+    """
+    Use the model's chat template to generate a response.
+    """
+    # Convert messages to a single prompt string using the tokenizer's chat template
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+    inputs = tokenizer([text], return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,         # deterministic (you can turn on sampling if desired)
+            num_beams=1,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    # We only care about the generated continuation
+    gen_ids = output[0][len(inputs.input_ids[0]):]
+    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+
+# ============================================================
+# MODEL LOADING
+# ============================================================
+
+def load_model(model_id: str, use_4bit: bool = True):
+    tprint(f"Loading tokenizer: {model_id}")
+    tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    quant_cfg = None
+    if use_4bit:
+        quant_cfg = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16
+        )
+
+    tprint(f"Loading model from Hugging Face: {model_id}")
+    hf_token = os.getenv("HF_TOKEN", None)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        device_map="auto",
+        quantization_config=quant_cfg,
+        torch_dtype=torch.float16,
+        token=hf_token
+    )
+
+    model.eval()
+    return model, tokenizer
+
+def get_model_context_length(model) -> int:
+    """
+    Infer the model's max context length from its config.
+    Fallback to 8192 if not explicitly available.
+    """
+    cfg = model.config
+    candidates = [
+        getattr(cfg, "max_position_embeddings", None),
+        getattr(cfg, "max_sequence_length", None),
+        getattr(cfg, "n_positions", None),
+        getattr(cfg, "max_context_length", None),
+    ]
+    for v in candidates:
+        if isinstance(v, int) and v > 0:
+            return v
+    return 8192  # safe default if nothing is defined
+
+# ============================================================
+# MAIN PIPELINE – SUMMARY GENERATION WITH CHAT MODEL
+# ============================================================
+
+def run_summary_only():
+    if not BASE_MODEL:
+        raise ValueError("BASE_MODEL is empty. Set a Hugging Face model id.")
+    if not TEST_DIR or not OUTPUT_DIR:
+        raise ValueError("Please set TEST_DIR and OUTPUT_DIR in the CONFIG section.")
+
+    model, tokenizer = load_model(BASE_MODEL, use_4bit=USE_4BIT)
+
+    # Dynamically set max input tokens from model config
+    raw_ctx = get_model_context_length(model)
+    # leave room for generated tokens + chat template overhead
+    safety_margin = 512 if raw_ctx > 4096 else 256
+    max_input_tokens = max(1024, raw_ctx - safety_margin)
+
+    tprint(f"Model reported context length: {raw_ctx} tokens")
+    tprint(f"Using {max_input_tokens} tokens for input truncation")
+
+    # Collect language folders to process
+    langs = [
+        p for p in Path(TEST_DIR).iterdir()
+        if p.is_dir() and p.name in TARGET_LANGS
+    ]
+
+    tprint(f"Processing languages: {[p.name for p in langs]}")
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        dlg_dir = lang_dir / "Dialogues"
+        out_lang = Path(OUTPUT_DIR) / lang
+
+        tprint(f"Language: {lang}")
+
+        if not dlg_dir.exists():
+            tprint(f"  • No Dialogues directory found for {lang}, skipping.")
+            continue
+
+        files = sorted(dlg_dir.glob("*.jsonl"))
+        tprint(f"  • Dialogues: {len(files)}")
+
+        for f in tqdm(files, desc=f"{lang} summaries"):
+            out_sum_txt = out_lang / "Summary_Text" / f"{f.stem}_summary.txt"
+
+            # Skip if already generated
+            if out_sum_txt.exists():
+                continue
+
+            rows = safe_read_jsonl(f)
+            dialogue = " ".join(
+                r.get("dialogue", "") if isinstance(r, dict) else str(r)
+                for r in rows
+            )
+
+            # Clip dialogue according to model's context length
+            dialogue_clip = clip_tokens(tokenizer, dialogue, max_input_tokens)
+
+            # First pass: generate summary (may be in English already)
+            user_prompt = (
+                f"Dialogue:\n{dialogue_clip}\n\n"
+                f"Write a detailed but concise English clinical summary and end with <<END>>."
+            )
+            messages = build_messages(SYSTEM_SUMMARY, user_prompt)
+
+            summary_raw = chat_generate(
+                model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
+            )
+
+            end_pos = summary_raw.find("<<END>>")
+            summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+
+            # Ensure English summary – if not, re-ask explicitly
+            if detect_lang(summary) != "en":
+                user_prompt = (
+                    f"Dialogue:\n{dialogue_clip}\n\n"
+                    f"Write ONLY in English. End with <<END>>."
+                )
+                messages = build_messages(SYSTEM_SUMMARY, user_prompt)
+                summary_raw = chat_generate(
+                    model, tokenizer, messages, MAX_NEW_TOKENS_SUMMARY
+                )
+                end_pos = summary_raw.find("<<END>>")
+                summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+
+            write_text(out_sum_txt, summary)
+
+        # Free up GPU memory between languages
+        torch.cuda.empty_cache()
+
+    tprint(f"Summary-only inference complete! Saved to: {OUTPUT_DIR}")
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    run_summary_only()
