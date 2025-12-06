@@ -1,20 +1,45 @@
-[Original train dir: /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train]
-[New train dir:      /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split]
-[New test dir:       /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test]
-[Processing language: Marathi]
-[  Found 3624 dialogue-summary pairs]
----------------------------------------------------------------------------
-UnboundLocalError                         Traceback (most recent call last)
-Cell In[1], line 160
-    156     tprint(f"Use {NEW_TRAIN} as new train split and {TEST_DIR} as test split.")
-    159 if __name__ == "__main__":
---> 160     main()
+for lang in os.listdir(ORIG_TRAIN):
+    lang_dir = os.path.join(ORIG_TRAIN, lang)
+    if not os.path.isdir(lang_dir):
+        continue
 
-Cell In[1], line 126, in main()
-    123 if not pairs:
-    124     continue
---> 126 train_pairs, test_pairs = split_pairs(pairs, TRAIN_RATIO, SEED)
-    127 tprint(f"  -> Train: {len(train_pairs)}, Test: {len(test_pairs)}")
-    129 # Copy files to new train + test splits
+    # only target languages
+    if lang.lower() not in ALLOWED_LANG_DIRS:
+        tprint(f"Skipping non-target language dir: {lang}")
+        continue
 
-UnboundLocalError: local variable 'split_pairs' referenced before assignment
+    tprint(f"Processing language: {lang}")
+
+    pairs = collect_dialogue_summary_pairs(lang_dir)
+    tprint(f"  Found {len(pairs)} dialogue-summary pairs")
+
+    if not pairs:
+        continue
+
+    train_pairs, test_pairs = split_pairs(pairs, TRAIN_RATIO, SEED)
+    tprint(f"  -> Train: {len(train_pairs)}, Test: {len(test_pairs)}")
+
+    # FIX: rename loop variable from split_pairs → split_data
+    for split_name, split_data, split_root in [
+        ("train_split", train_pairs, NEW_TRAIN),
+        ("test",        test_pairs,  TEST_DIR),
+    ]:
+        for dlg_path, summ_path in split_data:
+            lang_name = os.path.basename(lang_dir)
+
+            # Dialogues
+            dst_dlg = os.path.join(
+                split_root, lang_name, "Dialogues",
+                os.path.basename(dlg_path)
+            )
+
+            # Summary
+            dst_summ = os.path.join(
+                split_root, lang_name, "Summary_Text",
+                os.path.basename(summ_path)
+            )
+
+            copy_file(dlg_path, dst_dlg)
+            copy_file(summ_path, dst_summ)
+
+    tprint(f"  Done language: {lang}")
