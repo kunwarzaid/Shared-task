@@ -1,160 +1,20 @@
-import os
-import shutil
-import random
+[Original train dir: /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train]
+[New train dir:      /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split]
+[New test dir:       /workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test]
+[Processing language: Marathi]
+[  Found 3624 dialogue-summary pairs]
+---------------------------------------------------------------------------
+UnboundLocalError                         Traceback (most recent call last)
+Cell In[1], line 160
+    156     tprint(f"Use {NEW_TRAIN} as new train split and {TEST_DIR} as test split.")
+    159 if __name__ == "__main__":
+--> 160     main()
 
-# ==========================
-# CONFIG
-# ==========================
-DATA_DIR = "/path/to/data"          # <-- set this to the same DATA_DIR you use in training
-ORIG_TRAIN = os.path.join(DATA_DIR, "train")
+Cell In[1], line 126, in main()
+    123 if not pairs:
+    124     continue
+--> 126 train_pairs, test_pairs = split_pairs(pairs, TRAIN_RATIO, SEED)
+    127 tprint(f"  -> Train: {len(train_pairs)}, Test: {len(test_pairs)}")
+    129 # Copy files to new train + test splits
 
-# New splits that will be CREATED by this script
-NEW_TRAIN = os.path.join(DATA_DIR, "train_split")  # new train split directory
-TEST_DIR  = os.path.join(DATA_DIR, "test")         # new test split directory
-
-TRAIN_RATIO = 0.9   # 90% train, 10% test
-SEED = 42
-
-# Only split these language dirs (same idea as ALLOWED_LANG_DIRS in your code)
-ALLOWED_LANG_DIRS = {
-    "en", "eng", "english",
-    "hi", "hindi",
-    "mr", "marathi",
-    "bn", "bangla", "bengali",
-}
-
-# ==========================
-# HELPERS
-# ==========================
-def tprint(msg):
-    print(f"[{msg}]", flush=True)
-
-
-def ensure_dir(path):
-    os.makedirs(path, exist_ok=True)
-
-
-def copy_file(src, dst):
-    ensure_dir(os.path.dirname(dst))
-    shutil.copy2(src, dst)
-
-
-def collect_dialogue_summary_pairs(lang_dir):
-    """
-    Collects (dialogue_path, summary_path) pairs for this language.
-    Only includes examples where both files exist and are non-empty.
-    """
-    dlg_dir  = os.path.join(lang_dir, "Dialogues")
-    summ_dir = os.path.join(lang_dir, "Summary_Text")
-
-    if not (os.path.isdir(dlg_dir) and os.path.isdir(summ_dir)):
-        return []
-
-    pairs = []
-    for fn in os.listdir(dlg_dir):
-        if not fn.endswith(".jsonl"):
-            continue
-
-        dlg_path = os.path.join(dlg_dir, fn)
-        summ_name = fn.replace(".jsonl", "_summary.txt")
-        summ_path = os.path.join(summ_dir, summ_name)
-
-        if not os.path.exists(summ_path):
-            continue
-
-        # (Optional) basic sanity check: non-empty files
-        if os.path.getsize(dlg_path) == 0:
-            continue
-        if os.path.getsize(summ_path) == 0:
-            continue
-
-        pairs.append((dlg_path, summ_path))
-
-    return pairs
-
-
-def split_pairs(pairs, train_ratio, seed):
-    """
-    Randomly shuffle and split list of pairs into train and test.
-    """
-    random.Random(seed).shuffle(pairs)
-    n_total = len(pairs)
-    n_train = int(n_total * train_ratio)
-    train_pairs = pairs[:n_train]
-    test_pairs  = pairs[n_train:]
-    return train_pairs, test_pairs
-
-
-def relative_lang_subpath(lang_dir):
-    """
-    Returns the language folder name (last component).
-    e.g. /data/train/en  -> 'en'
-    """
-    return os.path.basename(lang_dir)
-
-
-# ==========================
-# MAIN SPLIT LOGIC
-# ==========================
-def main():
-    tprint(f"Original train dir: {ORIG_TRAIN}")
-    tprint(f"New train dir:      {NEW_TRAIN}")
-    tprint(f"New test dir:       {TEST_DIR}")
-
-    ensure_dir(NEW_TRAIN)
-    ensure_dir(TEST_DIR)
-
-    # Loop over language folders in original train
-    for lang in os.listdir(ORIG_TRAIN):
-        lang_dir = os.path.join(ORIG_TRAIN, lang)
-        if not os.path.isdir(lang_dir):
-            continue
-
-        # Only operate on target languages
-        if lang.lower() not in ALLOWED_LANG_DIRS:
-            tprint(f"Skipping non-target language dir: {lang}")
-            continue
-
-        tprint(f"Processing language: {lang}")
-
-        pairs = collect_dialogue_summary_pairs(lang_dir)
-        tprint(f"  Found {len(pairs)} dialogue-summary pairs")
-
-        if not pairs:
-            continue
-
-        train_pairs, test_pairs = split_pairs(pairs, TRAIN_RATIO, SEED)
-        tprint(f"  -> Train: {len(train_pairs)}, Test: {len(test_pairs)}")
-
-        # Copy files to new train + test splits
-        for split_name, split_pairs, split_root in [
-            ("train_split", train_pairs, NEW_TRAIN),
-            ("test",        test_pairs,  TEST_DIR),
-        ]:
-            for dlg_path, summ_path in split_pairs:
-                # Build destination paths with same relative structure
-                lang_name = relative_lang_subpath(lang_dir)
-
-                # Dialogues
-                rel_dlg_name = os.path.basename(dlg_path)
-                dst_dlg = os.path.join(
-                    split_root, lang_name, "Dialogues", rel_dlg_name
-                )
-
-                # Summary_Text
-                rel_summ_name = os.path.basename(summ_path)
-                dst_summ = os.path.join(
-                    split_root, lang_name, "Summary_Text", rel_summ_name
-                )
-
-                copy_file(dlg_path, dst_dlg)
-                copy_file(summ_path, dst_summ)
-
-        tprint(f"  Done language: {lang}")
-
-    tprint("Split complete!")
-    tprint(f"Use {NEW_TRAIN} as new train split and {TEST_DIR} as test split.")
-
-
-if __name__ == "__main__":
-    main()
+UnboundLocalError: local variable 'split_pairs' referenced before assignment
