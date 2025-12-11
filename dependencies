@@ -1,1 +1,204 @@
+Great — let’s build a strong Methodology section for a computational linguistics / NLP conference paper (EACL).
+I will write it in a clean academic style, with placeholders where you can later insert exact numbers, models, dataset sizes, etc.
 
+Before I generate the full polished section, here is the outline I recommend for your paper based on the work you described:
+
+⸻
+
+Proposed Methodology Structure
+
+3. Methodology
+
+3.1 Task Definition
+3.2 Dataset Description
+3.3 Baseline Summarization Models
+3.4 Domain-Style Reasoning Supervision (Domain-Style SFT)
+3.5 Data Transformation Pipeline
+3.6 Fine-Tuning Setup
+3.7 Inference-Time Prompting
+3.8 Evaluation Framework
+3.9 LLM-as-a-Judge Protocol (for qualitative + reasoning coherence evaluation)
+
+⸻
+
+Now I will draft a complete, publication-quality Methodology section using the structure above and tailored to your exact project:
+
+⸻
+
+3. Methodology
+
+3.1 Task Definition
+
+We study the problem of clinical dialogue summarisation for low-resource Indic languages, where the input consists of multi-turn doctor–patient conversations and the output is a concise English clinical summary appropriate for downstream clinical decision-making. The task is challenging due to:
+	•	conversational noise and redundancies,
+	•	mixed-language (code-switched) utterances,
+	•	low availability of supervised data per language,
+	•	specialised medical vocabulary, and
+	•	long-context reasoning requirements.
+
+Our goal is to evaluate whether explicit reasoning-style supervision improves the quality, factuality, and clinical usefulness of summaries produced by medium-scale open-source LLMs (LLaMA-2-13B, Qwen-1.5B/7B).
+
+⸻
+
+3.2 Dataset Description
+
+We use the EACL Doctor–Patient Conversation Dataset, which includes dialogues and reference summaries for four Indic languages:
+	•	Hindi
+	•	Marathi
+	•	Bangla
+	•	Tamil
+
+Each language directory contains:
+	1.	Dialogues/ — scenario-level JSONL files containing turn-level doctor/patient utterances.
+	2.	Summary_Text/ — corresponding English free-text reference summaries.
+
+In addition, each scenario includes a structured JSON schema summarisation file created by domain experts. This schema contains clinically grounded fields (e.g., symptoms, investigations, safety red flags).
+
+We train only on Hindi, Marathi, Bangla, and Tamil, but all results are compared at both language-specific and aggregated levels.
+
+⸻
+
+3.3 Baseline Summarisation Models
+
+We establish baseline performance using off-the-shelf LLMs in a zero-shot or few-shot setting:
+	•	LLaMA-2-13B-Chat (instruction-tuned)
+	•	Qwen-1.5B and 7B (baseline for smaller models)
+
+The baseline prompt is a conventional instruction-style input:
+
+“Read the following doctor–patient dialogue and write a concise clinical summary in English.”
+
+This represents typical summarisation without explicit reasoning supervision.
+
+⸻
+
+3.4 Domain-Style Reasoning Supervision (Domain-Style SFT)
+
+To introduce structured reasoning, we derive a Domain-Style Reasoning Target for each training example.
+
+Instead of training directly on the short reference summary, we convert each summary into a multi-paragraph, semantically decomposed reasoning explanation, covering:
+	1.	Patient overview
+	2.	Chief complaint
+	3.	History of present illness
+	4.	Risk factors & social history
+	5.	Examination & investigations
+	6.	Assessment & planning
+	7.	Safety concerns / red flags
+	8.	Overall clinical synthesis
+
+This transformation is applied only to the training data.
+During supervised fine-tuning (SFT), the model learns to produce structured reasoning narrative summaries.
+
+Before fine-tuning, all XML-like tags are stripped, and the model sees only the multi-paragraph reasoning text, ensuring it learns content structure, not formatting.
+
+The hypothesis is:
+
+Explicit reasoning-style supervision teaches the model a more clinically grounded summarisation style, improving faithfulness, completeness, and factual structure compared to direct summary training.
+
+⸻
+
+3.5 Data Transformation Pipeline
+
+The data transformation consists of three steps:
+	1.	Input fusion — All dialogue turns are concatenated into a chronological input sequence with speaker markers.
+	2.	Summary restructuring — The original English summary is rewritten using GPT-4 into the fixed reasoning schema described above.
+	•	GPT-4 is constrained not to add clinical facts.
+	•	Only re-structuring and clarification is allowed.
+	3.	Tag stripping — The structured output is converted into a clean reasoning narrative.
+
+This produces a parallel dataset:
+
+(input dialogue) → (reasoning-style target)
+
+We provide the exact mechanised prompts so the process is reproducible and language-agnostic.
+
+⸻
+
+3.6 Fine-Tuning Setup
+
+We fine-tune two model families:
+	•	LLaMA-2-13B-Chat (primary)
+	•	Qwen-1.5B and Qwen-7B (secondary ablations)
+
+Training details:
+	•	Optimiser: AdamW
+	•	Precision: FP16 or 4-bit quantised parameters (bitsandbytes)
+	•	Max input length: 4k tokens
+	•	Output length: 512–768 tokens
+	•	Batch size: adjusted dynamically per GPU
+	•	Training objective: next-token prediction on the reasoning-style summary
+	•	Languages: Hindi, Marathi, Bangla, Tamil
+	•	Validation split: held-out dev data per language
+
+The chat template for LLaMA-2-13B-Chat ([INST] format or tokenizer chat template) is used consistently during both training and inference.
+
+⸻
+
+3.7 Inference-Time Prompting
+
+At inference, the model receives only:
+	•	the dialogue, and
+	•	a simple, natural instruction requesting a clinical summary.
+
+We test two variants:
+	1.	Direct Summary Output — The model is asked to produce a concise summary.
+	2.	Reasoning → Summary (Chain-of-Thought style) — The model is asked to first reason, then summarise (without exposing reasoning to evaluators).
+
+Both allow us to measure whether reasoning-trained models outperform plain summary-trained ones.
+
+⸻
+
+3.8 Evaluation Framework
+
+We evaluate across:
+
+Automatic Metrics
+	•	ROUGE-1 / ROUGE-2 / ROUGE-L
+	•	BERTScore
+	•	Clinical-BERT similarity scores
+	•	Length-normalised faithfulness metrics
+
+Human Clinical Evaluation
+
+Experts judge each summary on:
+	•	Faithfulness to the dialogue
+	•	Clinical correctness
+	•	Completeness
+	•	Harm potential (missing red flags, hallucinated labs/tests)
+	•	Readability
+
+Model-based Evaluation (“LLM-as-Judge”)
+
+We independently evaluate summaries using GPT-4 or LLaMA-3-70B with a rubric that measures:
+	•	Coverage of symptoms
+	•	Risk factor inclusion
+	•	Diagnostic accuracy
+	•	Plan completeness
+	•	Absence of hallucinations
+	•	Logical clarity of reasoning
+
+The judge sees only summary + dialogue, not the model identity.
+
+⸻
+
+3.9 LLM-as-a-Judge Protocol
+
+To avoid evaluation bias:
+	1.	Each summary (baseline vs reasoning-trained) is paired with the original dialogue.
+	2.	The judge model is prompted with a 10-criterion clinical evaluation rubric.
+	3.	Scores are aggregated across languages and models.
+	4.	Statistical tests (Wilcoxon signed-rank or paired t-tests) assess improvement significance.
+
+This allows us to check whether reasoning-trained models systematically outperform baselines on clinical faithfulness and reasoning coherence.
+
+⸻
+
+✔️ Next Step
+
+If you want, I can now generate:
+	•	A polished camera-ready version of the Methodology
+	•	A shortened version (if page limit is strict)
+	•	A matching Results section template
+	•	Methodology figure diagrams (flowcharts, model diagrams)
+
+Just tell me which version you want next.
