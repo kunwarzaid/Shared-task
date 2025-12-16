@@ -1,8 +1,7 @@
 import json
 import re
-import csv
 from pathlib import Path
-from collections import Counter
+from collections import Counter, defaultdict
 import numpy as np
 import torch
 
@@ -15,23 +14,23 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 # CONFIG
 # ============================================================
 
-TEST_DIR = Path("/workspace/data/test")
-PRED_ROOT = Path("/workspace/data/predictions")
-OUTPUT_DIR = Path("./eval_results")
+TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
+
+# Each entry = one model's prediction directory
+MODELS = {
+    "Mistral-7B-Instruct": "/workspace/data/KZ_2117574/EACL/mistral_7B_Instruct_split",
+    "LLaMA2-13B": "/workspace/data/KZ_2117574/EACL/llama_2_13b_split",
+    "Qwen_2.5_7B": "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split",
+}
 
 LANGS = ["English", "Hindi", "Marathi", "Bangla"]
 
-MODELS = {
-    "Mistral-7B-Instruct": "mistral_7B",
-    "LLaMA2-13B": "llama2_13B",
-    "Gemma-7B": "gemma_7B"
-}
-
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+# Multilingual metrics
 BERT_MODEL = "xlm-roberta-large"
 NLI_MODEL = "joeddav/xlm-roberta-large-xnli"
-ENTAILMENT_LABEL = 2
+LABEL_ENTAILMENT = 2
 
 
 # ============================================================
@@ -44,16 +43,14 @@ nli_tokenizer = AutoTokenizer.from_pretrained(NLI_MODEL)
 nli_model = AutoModelForSequenceClassification.from_pretrained(NLI_MODEL).to(DEVICE)
 nli_model.eval()
 
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
 
 # ============================================================
 # UTILS
 # ============================================================
 
-def safe_read_jsonl(path):
+def safe_read_jsonl(path: Path):
     rows = []
-    with open(path, encoding="utf-8", errors="replace") as f:
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
                 rows.append(json.loads(line))
@@ -62,22 +59,19 @@ def safe_read_jsonl(path):
     return rows
 
 
-def simple_tokenize(text):
+def tokenize(text):
     return re.findall(r"\b\w+\b", text.lower())
 
 
 def token_f1(pred, gold):
-    p, g = simple_tokenize(pred), simple_tokenize(gold)
+    p, g = tokenize(pred), tokenize(g)
     if not p or not g:
         return 0.0
-
     pc, gc = Counter(p), Counter(g)
     overlap = sum((pc & gc).values())
-
-    precision = overlap / len(p)
-    recall = overlap / len(g)
-
-    return 0.0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
+    prec = overlap / len(p)
+    rec = overlap / len(g)
+    return 0.0 if prec + rec == 0 else 2 * prec * rec / (prec + rec)
 
 
 def nli_faithfulness(source, summary):
@@ -93,22 +87,26 @@ def nli_faithfulness(source, summary):
     with torch.no_grad():
         probs = torch.softmax(nli_model(**inputs).logits, dim=-1)
 
-    return probs[:, ENTAILMENT_LABEL].item()
+    return probs[:, LABEL_ENTAILMENT].item()
 
 
 # ============================================================
 # DATA LOADING
 # ============================================================
 
-def load_data(lang, pred_dir):
+def load_data(test_root, pred_root, lang):
     sources, preds, golds = [], [], []
 
-    dlg_dir = TEST_DIR / lang / "Dialogues"
-    gold_dir = TEST_DIR / lang / "Summary_Text"
-    pred_dir = pred_dir / lang / "Summary_Text"
+    dlg_dir = Path(test_root) / lang / "Dialogues"
+    gold_dir = Path(test_root) / lang / "Summary_Text"
+    pred_dir = Path(pred_root) / lang / "Summary_Text"
+
+    if not dlg_dir.exists():
+        return sources, preds, golds
 
     for dlg_file in dlg_dir.glob("*.jsonl"):
         name = dlg_file.stem + "_summary.txt"
+
         gold_file = gold_dir / name
         pred_file = pred_dir / name
 
@@ -123,8 +121,8 @@ def load_data(lang, pred_dir):
 
         if source and gold and pred:
             sources.append(source)
-            preds.append(pred)
             golds.append(gold)
+            preds.append(pred)
 
     return sources, preds, golds
 
@@ -133,9 +131,8 @@ def load_data(lang, pred_dir):
 # EVALUATION
 # ============================================================
 
-def evaluate_language(lang, pred_dir):
-    sources, preds, golds = load_data(lang, pred_dir)
-
+def evaluate_language(lang, pred_root):
+    sources, preds, golds = load_data(TEST_DIR, pred_root, lang)
     if len(preds) == 0:
         return None
 
@@ -146,21 +143,21 @@ def evaluate_language(lang, pred_dir):
     )["rougeL"]
 
     _, _, bert_f1 = bert_score(
-        preds, golds,
+        preds,
+        golds,
         model_type=BERT_MODEL,
-        lang="xx",
-        device=DEVICE
+        device=DEVICE,
+        lang="xx"
     )
-    bert_f1 = bert_f1.mean().item()
 
-    token = np.mean([token_f1(p, g) for p, g in zip(preds, golds)])
-    faith = np.mean([nli_faithfulness(s, p) for s, p in zip(sources, preds)])
+    token_scores = [token_f1(p, g) for p, g in zip(preds, golds)]
+    faith_scores = [nli_faithfulness(s, p) for s, p in zip(sources, preds)]
 
     return {
         "ROUGE-L": rouge_l,
-        "BERTScore": bert_f1,
-        "Token-F1": token,
-        "Faithfulness": faith,
+        "BERTScore": bert_f1.mean().item(),
+        "Token-F1": float(np.mean(token_scores)),
+        "Faithfulness": float(np.mean(faith_scores)),
         "N": len(preds)
     }
 
@@ -170,48 +167,34 @@ def evaluate_language(lang, pred_dir):
 # ============================================================
 
 def main():
-    results = {}
+    results = defaultdict(dict)
 
-    for model_name, model_dir in MODELS.items():
+    for model_name, pred_root in MODELS.items():
         print(f"\nEvaluating {model_name}")
-        results[model_name] = {}
-
-        pred_dir = PRED_ROOT / model_dir
-
         for lang in LANGS:
-            scores = evaluate_language(lang, pred_dir)
+            scores = evaluate_language(lang, pred_root)
             if scores:
                 results[model_name][lang] = scores
-                print(f"  {lang}: done ({scores['N']} samples)")
 
-    save_csv(results)
+    # -----------------------------
+    # PRINT TABLES (EACL STYLE)
+    # -----------------------------
 
+    metrics = ["ROUGE-L", "BERTScore", "Token-F1", "Faithfulness"]
 
-def save_csv(results):
-    out_file = OUTPUT_DIR / "per_language_results.csv"
+    for metric in metrics:
+        print(f"\n=== {metric} (per language, macro-avg) ===")
+        header = "Model\t" + "\t".join(LANGS) + "\tMacro"
+        print(header)
 
-    header = [
-        "Model", "Language",
-        "ROUGE-L", "BERTScore",
-        "Token-F1", "Faithfulness", "N"
-    ]
+        for model in MODELS:
+            vals = []
+            for lang in LANGS:
+                vals.append(results[model][lang][metric])
 
-    with open(out_file, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-
-        for model, langs in results.items():
-            for lang, scores in langs.items():
-                writer.writerow([
-                    model, lang,
-                    f"{scores['ROUGE-L']:.4f}",
-                    f"{scores['BERTScore']:.4f}",
-                    f"{scores['Token-F1']:.4f}",
-                    f"{scores['Faithfulness']:.4f}",
-                    scores["N"]
-                ])
-
-    print(f"\nSaved results to {out_file.resolve()}")
+            macro = np.mean(vals)
+            row = [model] + [f"{v:.4f}" for v in vals] + [f"{macro:.4f}"]
+            print("\t".join(row))
 
 
 if __name__ == "__main__":
