@@ -1,287 +1,217 @@
-import os, json, time, random
+y
+[notice] A new release of pip is available: 23.2.1 -> 25.3
+[notice] To update, run: python -m pip install --upgrade pip
+
+i[nltk_data] Error loading punkt: <urlopen error Tunnel connection
+[nltk_data]     failed: 403 Forbidden>
+
+Downloading builder script: 0.00B [00:00, ?B/s]
+Downloading builder script: 6.14kB [00:00, 21.9MB/s]
+
+`Traceback (most recent call last):
+  File "/workspace/multi_summ/eval.py", line 41, in <module>
+
+v    summac = SummaCZS(
+  File "/usr/local/lib/python3.10/dist-packages/summac/model_summac.py", line 341, in __init__
+
+�    self.imager = SummaCImager(model_name=model_name, granularity=granularity, device=self.device, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/summac/model_summac.py", line 41, in __init__
+
+�    assert model_name in model_map.keys(), "Unrecognized model name: `%s`" % (model_name)
+AssertionError: Unrecognized model name: `roberta-large-mnli`
+
+removing /jobs/283739
+
+code
+import os
+import json
 from pathlib import Path
-from tqdm import tqdm
-
+from collections import Counter
+import numpy as np
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
-from langdetect import detect, DetectorFactory
 
-# ============================================================
-# ENV + LOGS
-# ============================================================
+import evaluate
+from bert_score import score as bert_score
+from summac.model_summac import SummaCZS
 
-DetectorFactory.seed = 42
-torch.set_grad_enabled(False)
+import nltk
+nltk.download("punkt")
+from nltk.tokenize import word_tokenize
 
-print("Torch:", torch.__version__)
-print("CUDA:", torch.version.cuda)
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
-
-# 🔴 PATH TO YOUR FINETUNED LoRA ADAPTER DIRECTORY
-ADAPTER_DIR = "/workspace/data/KZ_2117574/EACL/qwen_2.5_7b_finetuned"
-
+# Gold summaries + source dialogues (test split)
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
-TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/fewshot"
 
-TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
+# Model predictions
+PRED_DIR = "/workspace/data/KZ_2117574/EACL/mistral_7B_Instruct_split"
 
-USE_4BIT = True
-FEW_SHOT_K = 2
-FEW_SHOT_SEED = 42
+LANGS = ["English", "Hindi", "Marathi", "Bangla"]
 
-# 🔒 HARD MEMORY-SAFE LIMITS (CRITICAL)
-MAX_TOTAL_INPUT_TOKENS = 8192
-TARGET_DIALOGUE_TOKENS = 2048
-EXAMPLE_DIALOGUE_TOKENS = 512
+# BERTScore backbone (English summaries)
+BERT_MODEL = "microsoft/deberta-xlarge-mnli"
 
-MAX_NEW_TOKENS_SUMMARY = 512
-MAX_TEST_EXAMPLES = 100
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-SYSTEM_SUMMARY = (
-    "You are a clinical summarization assistant. "
-    "Read a doctor–patient dialogue and write a fluent English summary "
-    "focusing on diagnosis, symptoms, investigations, management plan, "
-    "supportive care, and follow-up. "
-    "Do not hallucinate new diagnoses or tests. "
-    "End your summary with the token <<END>>."
+
+# ============================================================
+# METRICS INITIALIZATION
+# ============================================================
+
+rouge = evaluate.load("rouge")
+
+summac = SummaCZS(
+    granularity="sentence",
+    model_name="roberta-large-mnli",
+    device=DEVICE
 )
+
 
 # ============================================================
 # UTILS
 # ============================================================
 
-def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path):
+def safe_read_jsonl(path: Path):
     rows = []
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
+            s = line.strip()
+            if not s:
+                continue
             try:
-                rows.append(json.loads(line))
-            except:
+                rows.append(json.loads(s))
+            except Exception:
                 continue
     return rows
 
-def write_text(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
 
-def detect_lang(text):
-    try:
-        return detect(text)
-    except:
-        return "unknown"
+def compute_token_f1(pred: str, gold: str):
+    pred_tokens = word_tokenize(pred.lower())
+    gold_tokens = word_tokenize(gold.lower())
 
-def clip_tokens(tokenizer, text, max_tokens):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
+    if not pred_tokens or not gold_tokens:
+        return 0.0
 
-def clip_prompt_after_template(tokenizer, text, max_tokens):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
+    pred_counter = Counter(pred_tokens)
+    gold_counter = Counter(gold_tokens)
 
-def build_messages(system_prompt, user_prompt):
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
+    overlap = sum((pred_counter & gold_counter).values())
+
+    precision = overlap / len(pred_tokens)
+    recall = overlap / len(gold_tokens)
+
+    if precision + recall == 0:
+        return 0.0
+
+    return 2 * precision * recall / (precision + recall)
+
 
 # ============================================================
-# FEW-SHOT EXAMPLES
+# LOAD DATA (SOURCE + GOLD + PRED)
 # ============================================================
 
-def collect_few_shot_examples(root, lang, k, seed):
-    rng = random.Random(seed)
-    dlg_dir = Path(root) / lang / "Dialogues"
-    sum_dir = Path(root) / lang / "Summary_Text"
+def load_data(test_root: str, pred_root: str, langs):
+    sources = []
+    golds = []
+    preds = []
 
-    if not dlg_dir.exists():
-        return []
+    for lang in langs:
+        dlg_dir = Path(test_root) / lang / "Dialogues"
+        gold_dir = Path(test_root) / lang / "Summary_Text"
+        pred_dir = Path(pred_root) / lang / "Summary_Text"
 
-    files = sorted(dlg_dir.glob("*.jsonl"))[:100]
-    rng.shuffle(files)
-
-    examples = []
-    for f in files:
-        sfile = sum_dir / f"{f.stem}_summary.txt"
-        if not sfile.exists():
+        if not (dlg_dir.exists() and gold_dir.exists() and pred_dir.exists()):
+            print(f"[WARN] Missing directories for {lang}, skipping.")
             continue
 
-        dialogue = " ".join(
-            r.get("dialogue", "")
-            for r in safe_read_jsonl(f)
-            if isinstance(r, dict)
-        ).strip()
+        for dlg_file in sorted(dlg_dir.glob("*.jsonl")):
+            summ_name = f"{dlg_file.stem}_summary.txt"
 
-        summary = sfile.read_text(encoding="utf-8", errors="replace").strip()
-        if dialogue and summary:
-            examples.append((dialogue, summary))
+            gold_file = gold_dir / summ_name
+            pred_file = pred_dir / summ_name
 
-        if len(examples) == k:
-            break
-
-    return examples
-
-# ============================================================
-# MODEL LOADING (FINETUNED)
-# ============================================================
-
-def load_model(base_model, adapter_dir):
-    tprint("Loading tokenizer")
-    tokenizer = AutoTokenizer.from_pretrained(base_model, use_fast=True)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    quant_cfg = BitsAndBytesConfig(
-        load_in_4bit=USE_4BIT,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    tprint("Loading base model")
-    base_model = AutoModelForCausalLM.from_pretrained(
-        base_model,
-        device_map="auto",
-        quantization_config=quant_cfg,
-        dtype=torch.float16,
-        trust_remote_code=True
-    )
-
-    tprint("Loading fine-tuned LoRA adapter")
-    model = PeftModel.from_pretrained(
-        base_model,
-        adapter_dir,
-        dtype=torch.float16
-    )
-
-    model.eval()
-    return model, tokenizer
-
-# ============================================================
-# GENERATION
-# ============================================================
-
-def chat_generate(model, tokenizer, messages):
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-
-    # 🔴 HARD CLIP FINAL PROMPT
-    prompt = clip_prompt_after_template(
-        tokenizer,
-        prompt,
-        MAX_TOTAL_INPUT_TOKENS
-    )
-
-    inputs = tokenizer([prompt], return_tensors="pt").to(model.device)
-
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
-            do_sample=False,
-            num_beams=1,
-            use_cache=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    gen = output[0][len(inputs.input_ids[0]):]
-    return tokenizer.decode(gen, skip_special_tokens=True).strip()
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
-
-def run_summary_only():
-    model, tokenizer = load_model(BASE_MODEL, ADAPTER_DIR)
-
-    for lang_dir in Path(TEST_DIR).iterdir():
-        if lang_dir.name not in TARGET_LANGS:
-            continue
-
-        tprint(f"Language: {lang_dir.name}")
-        dlg_dir = lang_dir / "Dialogues"
-        out_dir = Path(OUTPUT_DIR) / lang_dir.name / "Summary_Text"
-
-        files = sorted(dlg_dir.glob("*.jsonl"))[:MAX_TEST_EXAMPLES]
-
-        few_shot = collect_few_shot_examples(
-            TRAIN_SPLIT_DIR,
-            lang_dir.name,
-            FEW_SHOT_K,
-            FEW_SHOT_SEED
-        )
-
-        for f in tqdm(files, desc=lang_dir.name):
-            out_file = out_dir / f"{f.stem}_summary.txt"
-            if out_file.exists():
+            if not (gold_file.exists() and pred_file.exists()):
                 continue
 
-            dialogue = " ".join(
-                r.get("dialogue", "")
-                for r in safe_read_jsonl(f)
-                if isinstance(r, dict)
-            )
-            dialogue = clip_tokens(tokenizer, dialogue, TARGET_DIALOGUE_TOKENS)
+            rows = safe_read_jsonl(dlg_file)
+            source = " ".join(
+                r.get("dialogue", "") if isinstance(r, dict) else str(r)
+                for r in rows
+            ).strip()
 
-            prefix = ""
-            for i, (d, s) in enumerate(few_shot, 1):
-                d = clip_tokens(tokenizer, d, EXAMPLE_DIALOGUE_TOKENS)
-                s = s.replace("<<END>>", "").strip()
-                prefix += (
-                    f"Example {i}:\nDialogue:\n{d}\n\n"
-                    f"English Summary:\n{s}\n---\n"
-                )
+            gold = gold_file.read_text(encoding="utf-8", errors="replace").strip()
+            pred = pred_file.read_text(encoding="utf-8", errors="replace").strip()
 
-            user_prompt = (
-                f"{prefix}\nDialogue:\n{dialogue}\n\n"
-                "Write a detailed but concise English clinical summary and end with <<END>>."
-            )
+            if source and gold and pred:
+                sources.append(source)
+                golds.append(gold)
+                preds.append(pred)
 
-            summary = chat_generate(
-                model,
-                tokenizer,
-                build_messages(SYSTEM_SUMMARY, user_prompt)
-            )
+    return sources, preds, golds
 
-            summary = summary.split("<<END>>")[0].strip()
-
-            # enforce English if needed
-            if detect_lang(summary) != "en":
-                user_prompt = (
-                    f"{prefix}\nDialogue:\n{dialogue}\n\n"
-                    "Write ONLY an English clinical summary. End with <<END>>."
-                )
-                summary = chat_generate(
-                    model,
-                    tokenizer,
-                    build_messages(SYSTEM_SUMMARY, user_prompt)
-                )
-                summary = summary.split("<<END>>")[0].strip()
-
-            write_text(out_file, summary)
-
-        torch.cuda.empty_cache()
-
-    tprint("Inference complete.")
 
 # ============================================================
-# ENTRY POINT
+# MAIN EVALUATION
 # ============================================================
+
+def main():
+    sources, preds, golds = load_data(TEST_DIR, PRED_DIR, LANGS)
+
+    assert len(preds) == len(golds) == len(sources)
+    print(f"Evaluating {len(preds)} examples")
+
+    # --------------------
+    # ROUGE-L (F1)
+    # --------------------
+    rouge_scores = rouge.compute(
+        predictions=preds,
+        references=golds,
+        rouge_types=["rougeL"]
+    )
+    rouge_l_f1 = rouge_scores["rougeL"]
+
+    # --------------------
+    # BERTScore (F1)
+    # --------------------
+    _, _, bert_f1 = bert_score(
+        preds,
+        golds,
+        model_type=BERT_MODEL,
+        lang="en",
+        device=DEVICE,
+        verbose=True
+    )
+    bert_f1 = bert_f1.mean().item()
+
+    # --------------------
+    # Token-level F1
+    # --------------------
+    token_f1s = [compute_token_f1(p, g) for p, g in zip(preds, golds)]
+    token_f1 = float(np.mean(token_f1s))
+
+    # --------------------
+    # SummaC-ZS (faithfulness)
+    # --------------------
+    summac_scores = []
+    for src, pred in zip(sources, preds):
+        score = summac.score([src], [pred])["score"]
+        summac_scores.append(score)
+
+    summac_score = float(np.mean(summac_scores))
+
+    # --------------------
+    # RESULTS
+    # --------------------
+    print("\n===== FINAL EVALUATION RESULTS =====")
+    print(f"ROUGE-L (F1):        {rouge_l_f1:.4f}")
+    print(f"BERTScore (F1):     {bert_f1:.4f}")
+    print(f"Token-level F1:     {token_f1:.4f}")
+    print(f"SummaC-ZS:          {summac_score:.4f}")
+    print("===================================")
+
 
 if __name__ == "__main__":
-    run_summary_only()
+    main()
