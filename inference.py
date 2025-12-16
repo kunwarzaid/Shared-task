@@ -1,5 +1,6 @@
 import json
 import re
+import csv
 from pathlib import Path
 from collections import Counter, defaultdict
 import numpy as np
@@ -16,21 +17,25 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
 
-# Each entry = one model's prediction directory
 MODELS = {
     "Mistral-7B-Instruct": "/workspace/data/KZ_2117574/EACL/mistral_7B_Instruct_split",
     "LLaMA2-13B": "/workspace/data/KZ_2117574/EACL/llama_2_13b_split",
-    "Qwen_2.5_7B": "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split",
+    "Qwen-2.5-7B": "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split",
 }
 
 LANGS = ["English", "Hindi", "Marathi", "Bangla"]
 
+OUTPUT_DIR = Path("./eval_results")
+OUTPUT_DIR.mkdir(exist_ok=True)
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Multilingual metrics
 BERT_MODEL = "xlm-roberta-large"
 NLI_MODEL = "joeddav/xlm-roberta-large-xnli"
 LABEL_ENTAILMENT = 2
+
+N_BOOTSTRAP = 1000
+CI_ALPHA = 0.05
 
 
 # ============================================================
@@ -48,7 +53,7 @@ nli_model.eval()
 # UTILS
 # ============================================================
 
-def safe_read_jsonl(path: Path):
+def safe_read_jsonl(path):
     rows = []
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -64,7 +69,7 @@ def tokenize(text):
 
 
 def token_f1(pred, gold):
-    p, g = tokenize(pred), tokenize(g)
+    p, g = tokenize(pred), tokenize(gold)
     if not p or not g:
         return 0.0
     pc, gc = Counter(p), Counter(g)
@@ -88,6 +93,20 @@ def nli_faithfulness(source, summary):
         probs = torch.softmax(nli_model(**inputs).logits, dim=-1)
 
     return probs[:, LABEL_ENTAILMENT].item()
+
+
+def bootstrap_ci(scores):
+    scores = np.array(scores)
+    means = []
+    n = len(scores)
+
+    for _ in range(N_BOOTSTRAP):
+        sample = np.random.choice(scores, n, replace=True)
+        means.append(sample.mean())
+
+    low = np.percentile(means, 100 * CI_ALPHA / 2)
+    high = np.percentile(means, 100 * (1 - CI_ALPHA / 2))
+    return low, high
 
 
 # ============================================================
@@ -154,10 +173,10 @@ def evaluate_language(lang, pred_root):
     faith_scores = [nli_faithfulness(s, p) for s, p in zip(sources, preds)]
 
     return {
-        "ROUGE-L": rouge_l,
-        "BERTScore": bert_f1.mean().item(),
-        "Token-F1": float(np.mean(token_scores)),
-        "Faithfulness": float(np.mean(faith_scores)),
+        "ROUGE-L": (rouge_l, *bootstrap_ci(token_scores)),
+        "BERTScore": (bert_f1.mean().item(), *bootstrap_ci(bert_f1.cpu().numpy())),
+        "Token-F1": (np.mean(token_scores), *bootstrap_ci(token_scores)),
+        "Faithfulness": (np.mean(faith_scores), *bootstrap_ci(faith_scores)),
         "N": len(preds)
     }
 
@@ -169,32 +188,28 @@ def evaluate_language(lang, pred_root):
 def main():
     results = defaultdict(dict)
 
-    for model_name, pred_root in MODELS.items():
-        print(f"\nEvaluating {model_name}")
+    for model, path in MODELS.items():
         for lang in LANGS:
-            scores = evaluate_language(lang, pred_root)
+            scores = evaluate_language(lang, path)
             if scores:
-                results[model_name][lang] = scores
+                results[model][lang] = scores
 
-    # -----------------------------
-    # PRINT TABLES (EACL STYLE)
-    # -----------------------------
+    # Save JSON
+    with open(OUTPUT_DIR / "results.json", "w") as f:
+        json.dump(results, f, indent=2)
 
-    metrics = ["ROUGE-L", "BERTScore", "Token-F1", "Faithfulness"]
+    # Save CSV
+    with open(OUTPUT_DIR / "results.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Model", "Language", "Metric", "Mean", "CI_low", "CI_high", "N"])
 
-    for metric in metrics:
-        print(f"\n=== {metric} (per language, macro-avg) ===")
-        header = "Model\t" + "\t".join(LANGS) + "\tMacro"
-        print(header)
+        for model in results:
+            for lang in results[model]:
+                for metric, vals in results[model][lang].items():
+                    if metric != "N":
+                        writer.writerow([model, lang, metric, *vals, results[model][lang]["N"]])
 
-        for model in MODELS:
-            vals = []
-            for lang in LANGS:
-                vals.append(results[model][lang][metric])
-
-            macro = np.mean(vals)
-            row = [model] + [f"{v:.4f}" for v in vals] + [f"{macro:.4f}"]
-            print("\t".join(row))
+    print(f"\nSaved results to {OUTPUT_DIR.resolve()}")
 
 
 if __name__ == "__main__":
