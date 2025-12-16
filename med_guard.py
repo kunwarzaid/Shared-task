@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import os
 import json
@@ -12,9 +11,7 @@ from fpdf import FPDF
 
 from openai import OpenAI
 
-# ============================================================
-#  SIMPLE TRACE LOG
-# ============================================================
+
 
 TRACE_LOG: List[str] = []
 DEBUG_MODE_ENABLED: bool = True
