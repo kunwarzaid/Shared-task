@@ -1,109 +1,287 @@
-2`torch_dtype` is deprecated! Use `dtype` instead!
+import os, json, time, random
+from pathlib import Path
+from tqdm import tqdm
 
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]
-Fetching 4 files:  25%|██▌       | 1/4 [02:34<07:42, 154.04s/it]
-Fetching 4 files: 100%|██████████| 4/4 [02:34<00:00, 38.51s/it] 
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
+from langdetect import detect, DetectorFactory
 
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.15s/it]
-Loading checkpoint shards:  50%|█████     | 2/4 [00:07<00:07,  3.61s/it]
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:11<00:03,  3.77s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:13<00:00,  3.44s/it]
+# ============================================================
+# ENV + LOGS
+# ============================================================
 
-+[06:55:35] Loading fine-tuned LoRA adapter
+DetectorFactory.seed = 42
+torch.set_grad_enabled(False)
 
-/<class 'peft.peft_model.PeftModelForCausalLM'>
+print("Torch:", torch.__version__)
+print("CUDA:", torch.version.cuda)
 
-Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
-�Token indices sequence length is longer than the specified maximum sequence length for this model (191090 > 131072). Running this sequence through the model will result in indexing errors
+# ============================================================
+# CONFIG
+# ============================================================
 
-�The following generation flags are not valid and may be ignored: ['temperature', 'top_p', 'top_k']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
-Marathi:   0%|          | 0/100 [00:14<?, ?it/s]
+# 🔴 PATH TO YOUR FINETUNED LoRA ADAPTER DIRECTORY
+ADAPTER_DIR = "/workspace/data/KZ_2117574/EACL/qwen_2.5_7b_finetuned"
 
-qTraceback (most recent call last):
-  File "/workspace/multi_summ/inference_qwen_fine1.py", line 227, in <module>
+TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
+TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/fewshot"
 
-m    run_summary_only()
-  File "/workspace/multi_summ/inference_qwen_fine1.py", line 213, in run_summary_only
+TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
 
-p    summary = chat_generate(
-  File "/workspace/multi_summ/inference_qwen_fine1.py", line 103, in chat_generate
+USE_4BIT = True
+FEW_SHOT_K = 2
+FEW_SHOT_SEED = 42
 
-v    out = model.generate(
-  File "/usr/local/lib/python3.10/dist-packages/peft/peft_model.py", line 1190, in generate
+# 🔒 HARD MEMORY-SAFE LIMITS (CRITICAL)
+MAX_TOTAL_INPUT_TOKENS = 8192
+TARGET_DIALOGUE_TOKENS = 2048
+EXAMPLE_DIALOGUE_TOKENS = 512
 
-�    outputs = self.base_model.generate(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+MAX_NEW_TOKENS_SUMMARY = 512
+MAX_TEST_EXAMPLES = 100
 
-�    return func(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/generation/utils.py", line 2564, in generate
+SYSTEM_SUMMARY = (
+    "You are a clinical summarization assistant. "
+    "Read a doctor–patient dialogue and write a fluent English summary "
+    "focusing on diagnosis, symptoms, investigations, management plan, "
+    "supportive care, and follow-up. "
+    "Do not hallucinate new diagnoses or tests. "
+    "End your summary with the token <<END>>."
+)
 
-�    result = decoding_method(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/generation/utils.py", line 2784, in _sample
+# ============================================================
+# UTILS
+# ============================================================
 
-�    outputs = self(**model_inputs, return_dict=True)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+def tprint(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
-�    return self._call_impl(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+def safe_read_jsonl(path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                rows.append(json.loads(line))
+            except:
+                continue
+    return rows
 
-�    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/accelerate/hooks.py", line 170, in new_forward
+def write_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
 
-�    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/generic.py", line 918, in wrapper
+def detect_lang(text):
+    try:
+        return detect(text)
+    except:
+        return "unknown"
 
-�    output = func(self, *args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/qwen2/modeling_qwen2.py", line 449, in forward
+def clip_tokens(tokenizer, text, max_tokens):
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
 
-�    outputs: BaseModelOutputWithPast = self.model(
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+def clip_prompt_after_template(tokenizer, text, max_tokens):
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
 
-�    return self._call_impl(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+def build_messages(system_prompt, user_prompt):
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
 
-�    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/accelerate/hooks.py", line 170, in new_forward
+# ============================================================
+# FEW-SHOT EXAMPLES
+# ============================================================
 
-�    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/generic.py", line 1072, in wrapper
+def collect_few_shot_examples(root, lang, k, seed):
+    rng = random.Random(seed)
+    dlg_dir = Path(root) / lang / "Dialogues"
+    sum_dir = Path(root) / lang / "Summary_Text"
 
-�    outputs = func(self, *args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/qwen2/modeling_qwen2.py", line 384, in forward
+    if not dlg_dir.exists():
+        return []
 
-�    hidden_states = decoder_layer(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/modeling_layers.py", line 94, in __call__
+    files = sorted(dlg_dir.glob("*.jsonl"))[:100]
+    rng.shuffle(files)
 
-�    return super().__call__(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+    examples = []
+    for f in files:
+        sfile = sum_dir / f"{f.stem}_summary.txt"
+        if not sfile.exists():
+            continue
 
-�    return self._call_impl(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+        dialogue = " ".join(
+            r.get("dialogue", "")
+            for r in safe_read_jsonl(f)
+            if isinstance(r, dict)
+        ).strip()
 
-�    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/accelerate/hooks.py", line 170, in new_forward
+        summary = sfile.read_text(encoding="utf-8", errors="replace").strip()
+        if dialogue and summary:
+            examples.append((dialogue, summary))
 
-�    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+        if len(examples) == k:
+            break
 
-�    return func(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/qwen2/modeling_qwen2.py", line 249, in forward
+    return examples
 
-�    hidden_states = self.mlp(hidden_states)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+# ============================================================
+# MODEL LOADING (FINETUNED)
+# ============================================================
 
-�    return self._call_impl(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+def load_model(base_model, adapter_dir):
+    tprint("Loading tokenizer")
+    tokenizer = AutoTokenizer.from_pretrained(base_model, use_fast=True)
+    tokenizer.pad_token = tokenizer.eos_token
 
-�    return forward_call(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/accelerate/hooks.py", line 170, in new_forward
+    quant_cfg = BitsAndBytesConfig(
+        load_in_4bit=USE_4BIT,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
+    )
 
-�    output = module._old_forward(*args, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/qwen2/modeling_qwen2.py", line 46, in forward
+    tprint("Loading base model")
+    base_model = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        device_map="auto",
+        quantization_config=quant_cfg,
+        dtype=torch.float16,
+        trust_remote_code=True
+    )
 
-Q    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+    tprint("Loading fine-tuned LoRA adapter")
+    model = PeftModel.from_pretrained(
+        base_model,
+        adapter_dir,
+        dtype=torch.float16
+    )
 
- torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 6.74 GiB. GPU 0 has a total capacity of 31.75 GiB of which 4.80 GiB is free. Process 3695566 has 26.94 GiB memory in use. Of the allocated memory 23.26 GiB is allocated by PyTorch, and 3.31 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+    model.eval()
+    return model, tokenizer
 
-removing /jobs/283642
+# ============================================================
+# GENERATION
+# ============================================================
+
+def chat_generate(model, tokenizer, messages):
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+    # 🔴 HARD CLIP FINAL PROMPT
+    prompt = clip_prompt_after_template(
+        tokenizer,
+        prompt,
+        MAX_TOTAL_INPUT_TOKENS
+    )
+
+    inputs = tokenizer([prompt], return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
+            do_sample=False,
+            num_beams=1,
+            use_cache=True,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    gen = output[0][len(inputs.input_ids[0]):]
+    return tokenizer.decode(gen, skip_special_tokens=True).strip()
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+
+def run_summary_only():
+    model, tokenizer = load_model(BASE_MODEL, ADAPTER_DIR)
+
+    for lang_dir in Path(TEST_DIR).iterdir():
+        if lang_dir.name not in TARGET_LANGS:
+            continue
+
+        tprint(f"Language: {lang_dir.name}")
+        dlg_dir = lang_dir / "Dialogues"
+        out_dir = Path(OUTPUT_DIR) / lang_dir.name / "Summary_Text"
+
+        files = sorted(dlg_dir.glob("*.jsonl"))[:MAX_TEST_EXAMPLES]
+
+        few_shot = collect_few_shot_examples(
+            TRAIN_SPLIT_DIR,
+            lang_dir.name,
+            FEW_SHOT_K,
+            FEW_SHOT_SEED
+        )
+
+        for f in tqdm(files, desc=lang_dir.name):
+            out_file = out_dir / f"{f.stem}_summary.txt"
+            if out_file.exists():
+                continue
+
+            dialogue = " ".join(
+                r.get("dialogue", "")
+                for r in safe_read_jsonl(f)
+                if isinstance(r, dict)
+            )
+            dialogue = clip_tokens(tokenizer, dialogue, TARGET_DIALOGUE_TOKENS)
+
+            prefix = ""
+            for i, (d, s) in enumerate(few_shot, 1):
+                d = clip_tokens(tokenizer, d, EXAMPLE_DIALOGUE_TOKENS)
+                s = s.replace("<<END>>", "").strip()
+                prefix += (
+                    f"Example {i}:\nDialogue:\n{d}\n\n"
+                    f"English Summary:\n{s}\n---\n"
+                )
+
+            user_prompt = (
+                f"{prefix}\nDialogue:\n{dialogue}\n\n"
+                "Write a detailed but concise English clinical summary and end with <<END>>."
+            )
+
+            summary = chat_generate(
+                model,
+                tokenizer,
+                build_messages(SYSTEM_SUMMARY, user_prompt)
+            )
+
+            summary = summary.split("<<END>>")[0].strip()
+
+            # enforce English if needed
+            if detect_lang(summary) != "en":
+                user_prompt = (
+                    f"{prefix}\nDialogue:\n{dialogue}\n\n"
+                    "Write ONLY an English clinical summary. End with <<END>>."
+                )
+                summary = chat_generate(
+                    model,
+                    tokenizer,
+                    build_messages(SYSTEM_SUMMARY, user_prompt)
+                )
+                summary = summary.split("<<END>>")[0].strip()
+
+            write_text(out_file, summary)
+
+        torch.cuda.empty_cache()
+
+    tprint("Inference complete.")
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    run_summary_only()
