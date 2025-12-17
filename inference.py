@@ -1,32 +1,20 @@
+```markdown
+PATIENT_OVERVIEW:
+Ajay is a four-month-old infant presenting for evaluation of chronic respiratory symptoms and growth concerns. The main purpose of this visit is to investigate the possibility of cystic fibrosis (CF) and establish a diagnostic and management plan.
 
-p    import evaluate
-  File "/usr/local/lib/python3.10/dist-packages/evaluate/__init__.py", line 29, in <module>
+CHIEF_COMPLAINT:
+Ajay presents with a persistent cough since birth, poor weight gain, and oily stools.
 
-�    from .evaluation_suite import EvaluationSuite
-  File "/usr/local/lib/python3.10/dist-packages/evaluate/evaluation_suite/__init__.py", line 10, in <module>
+HISTORY_OF_PRESENT_ILLNESS:
+Ajay has experienced a chronic cough since birth, along with poor weight gain despite adequate feeding and steatorrhea. His meconium history raises suspicion for cystic fibrosis, necessitating further investigation through a sweat test. The family is engaged in monitoring Ajay's symptoms and growth to guide further management.
 
-�    from ..evaluator import evaluator
-  File "/usr/local/lib/python3.10/dist-packages/evaluate/evaluator/__init__.py", line 17, in <module>
+INVESTIGATIONS_AND_PLAN:
+The primary diagnostic strategy involves performing a sweat test to confirm or rule out cystic fibrosis. If the sweat test is unavailable locally, symptom documentation and referral to a CF expert will guide further management. Plans include maintaining a home diary to track weight, feeding, stool characteristics, and respiratory symptoms. Follow-up is scheduled in two weeks to reassess Ajay's growth and respiratory status, with additional evaluations as needed based on the test results.
 
-�    from transformers.pipelines import SUPPORTED_TASKS as SUPPORTED_PIPELINE_TASKS
-  File "/usr/local/lib/python3.10/dist-packages/transformers/pipelines/__init__.py", line 64, in <module>
+RISK_FACTORS:
+Ajay's symptoms suggest a potential genetic predisposition to cystic fibrosis, warranting consideration of genetic counseling for the family. The family is actively involved in monitoring Ajay's health and is prepared to seek further support from CF specialists.
 
-�    from .document_question_answering import DocumentQuestionAnsweringPipeline
-  File "/usr/local/lib/python3.10/dist-packages/transformers/pipelines/document_question_answering.py", line 30, in <module>
+OVERALL_SUMMARY:
+The visit focused on evaluating Ajay for cystic fibrosis, with a plan to conduct a sweat test and maintain a comprehensive home diary for symptom tracking. Follow-up appointments are scheduled to reassess his condition and determine the next steps based on test outcomes. The family is encouraged to remain engaged in Ajay's care and to seek further assistance as needed.
+```
 
-�    from .question_answering import select_starts_ends
-  File "/usr/local/lib/python3.10/dist-packages/transformers/pipelines/question_answering.py", line 9, in <module>
-
-�    from ..data import SquadExample, SquadFeatures, squad_convert_examples_to_features
-  File "/usr/local/lib/python3.10/dist-packages/transformers/data/__init__.py", line 15, in <module>
-
-�    from .data_collator import (
-  File "/usr/local/lib/python3.10/dist-packages/transformers/data/data_collator.py", line 763, in <module>
-
-�    class DataCollatorForLanguageModeling(DataCollatorMixin):
-  File "/usr/local/lib/python3.10/dist-packages/transformers/data/data_collator.py", line 1233, in DataCollatorForLanguageModeling
-
-�    offsets: np.ndarray[np.ndarray[tuple[int, int]]], special_tokens_mask: np.ndarray[np.ndarray[int]]
-TypeError: Too few arguments for numpy.ndarray
-
-removing /jobs/283787
