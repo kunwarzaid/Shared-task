@@ -134,127 +134,149 @@ If there are no issues for a metric, write: “No major issues found.”
 
 
 Dialouges:
-{"speaker": "Health Worker", "date": "", "dialogue": "डॉक्टर: आपण एकत्र काम करणार आहोत, त्यामुळे कोणतेही प्रश्न किंवा चिंताएं नाहीत; कृपया आपलं नाव, वय, राहण्याचं ठिकाण, आणि आजची मुख्य तक्रार काय आहे ते सखोलपणे सांगा."}
-{"speaker": "Patient", "date": "", "dialogue": "रजा, मी राजेश पटेल, 45 वर्षाचा, मुंबईत राहतो. गेल्या काही आठवड्यांपासून गळ्यात गोळा असल्यासारखी जाणीव, आवाज हलका व्हायचा, खायला अडचण, आणि वजन घटतंय असा अनुभव आहे."}
-{"speaker": "Health Worker", "date": "", "dialogue": "समजलं; यातलं सर्व एकत्र पाहायला हवं. धूम्रपान, pan masala, किंवा अलीकडे अॅल्कोहोलचा वापर सुरु/वired? HPV बद्दल माहिती आहे का, असा इतिहास ठरवण्याचा विचार आहे."}
-{"speaker": "Patient", "date": "", "dialogue": "होय, मी दीर्घकालीन तंबाखू वापरतोय, pan masala दररोज 2-3 वेळा; अलीकडे अॅल्कोहोल कमी केलं. HPV बद्दल माहिती नाही; चाचणी करावी का ते मला कळत नाही."}
-{"speaker": "Health Worker", "date": "", "dialogue": "चांगलं; पुढे तोंड, घसा तपासणी, बायोप्सीची योजना, आणि CT/MRI चा क्रम ठरेल; निकाल 2-3 दिवसांत मिळण्याची शक्यता. या सर्व प्रक्रियेत तुमचं मुल्यवान परिवार साथ देईल का?"}
-{"speaker": "Patient", "date": "", "dialogue": "हो, मी आज एकटा आलोय; पुढच्या भेटीला माझं कुटुंब सदस्य येईल, परंतु या वेळेस मला सगळं स्पष्टपणे समजावून घ्यायचं आहे."}
-{"speaker": "Health Worker", "date": "", "dialogue": "तयार असाल तर आजच बेसलाइन तपासणी साधू, परंतु फक्त आपल्या आणि तुमच्या कुटुंबाच्या सोयीसाठी. आधारकार्ड, आरोग्य कार्ड, जुनी रिपोर्ट्स, इमेजिंग कागदपत्रं आणण्याची तयारी करा."}
-{"speaker": "Patient", "date": "", "dialogue": "समजलं; बायोप्सीसाठी तयारी कशा प्रकारची असते? वेदना, anesthesiaचा प्रकार, आणि निकाल कधी मिळतील हे मला समजायला हवं."}
-{"speaker": "Health Worker", "date": "", "dialogue": "बायोप्सीमध्ये सामान्यतः हलकी वेदना असते; स्थानिक anesthesia लागू होतो; निकाल 2-5 दिवसांत मिळण्याचा प्रयत्न; जर गळा-फ्लोअर भाग असेल तर ENT विशेषज्ञांची मदत घ्यावी शकते."}
-{"speaker": "Patient", "date": "", "dialogue": "मला वजन कमी झालेलं आहे, अन्न घेण्यात अडचण होते, आवाज काहीसे बदलला आहे; या स्थितीला आपण काय उपाय सुचवाल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "या चिन्हांवर आधारित आपला प्रथमिक विचार metastasisची शक्यता आहे; परंतु एकत्रितपणे पडताळणी करावी लागते, ज्यामध्ये बायोप्सी, imaging आणि HPV चाचणी सामील असतील."}
-{"speaker": "Patient", "date": "", "dialogue": "HPV चाचणी tumorच्या स्टेजिंगवर कसा परिणाम करेल? माझ्या परिस्थितीत तो निर्णयक ठरेल काय?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "HPVचा परिणाम tumorच्या वर्तन, स्टेजिंग आणि उपचारांच्या पर्यायांवर काही प्रमाणात प्रभाव पाडू शकतो; परंतु निर्णय एकाधिक घटकांवर आधारित असतो."}
-{"speaker": "Patient", "date": "", "dialogue": "तुम्ही निकाल सोप्या भाषेत समजावून सांगू शकाल का? मला माझं कुटुंब जमल्यासोबत घेऊन पुढील स्टेप्स स्पष्टपणे सांगता."}
-{"speaker": "Health Worker", "date": "", "dialogue": "होय, आम्ही प्रत्येक शब्द साफ भाषेत समजावू; MDT चा संदर्भ, कधी बैठक होईल, कुठे, कोणाचे उपस्थिती आवश्यक, ते स्पष्टपणे कळवू आणि आवश्यक तयारीही सांगू."}
-{"speaker": "Patient", "date": "", "dialogue": "आधार तपासणी, रक्त तपासणी, dental exam, इमेजिंग, बायोप्सीची तयारी यात दोन आठवडे धडधड चालतील;	report्स आल्यानंतर MDT कोणती दिशा देईल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "होय, baseline tests दोन आठवड्यात पूर्ण होण्याची शक्यता; नंतर MDT रिपोर्ट देईल आणि स्टेजिंग स्पष्ट होईल; त्यानुसार ऑपरेशन, radiotherapy किंवा कॉम्बिनेशन ठरवायचं."}
-{"speaker": "Patient", "date": "", "dialogue": "आहारात प्रोटीन-युक्त पदार्थ, फळं-भाज्या, पुरेपुर पाणी; वजन घटला आहे, त्यामुळे सुधारण्यासाठी कोणते आहार-सपोर्ट्स उपयोगी ठरणार?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "nutritionist सोबत संधी साधू, प्रोटीन-युक्त आहार, हलके frequent meals, हार्वर्ड-स्तराचे सप्लिमेंट्स विचारात घेऊ; वजन टिकवण्यासाठी पाणी आणि हाय-कॅलरी स्नॅक्स."}
-{"speaker": "Patient", "date": "", "dialogue": "धूम्रपान सोडण्यासाठी स्थानिक कार्यक्रम, निकोटिन रिप्लेसमेंट थेरपी, आणि कुटुंबाचं योगदान कसे वाढवायचं, या बाबीची योजना सांगू शकाल का?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "होय, निकोटिन रिप्लेसमेंट आणि सपोर्ट ग्रुप्स, सोशल वर्करचा समन्वय; तुमच्या सगळ्या पथ्य-श्रोतांना एकत्र करून एक सुदृढ योजना तयार करतो."}
-{"speaker": "Patient", "date": "", "dialogue": "क्लिनिकल ट्रायल्सची संभाव्यता तपासण्यासाठी कोणत्या अटीं असतात? आयुष्मान भारत योजना क्लिनिकल ट्रायल्सशी कशी जुळते?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "ट्रायल्सची अटी वेगवेगळी असतात; पात्रता, सह्या, आणि लॉजिस्टिक्स स्पष्ट करतो. Ayushman Bharat सारख्या योजना काही रुग्णांना मदत करतात, परंतु प्रत्येक केस वेगळा."}
-{"speaker": "Patient", "date": "", "dialogue": "कागदपत्रांची सूची पुन्हा एकवार देऊ शकाल का? MDT बैठकीसाठी कोणते फॉर्म्स, कोणते रिपोर्ट्स, आणि कोणत्या प्रमाणपत्रांची गरज आहे?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "आधार कार्ड, आरोग्य कार्ड, जुने रिपोर्ट्स, CT/MRI रिपोर्ट्स, बायोप्सी निकाल, फॉर्म्स; MDTपूर्व तयारीसाठी सर्व काही अचूक ठेवा."}
-{"speaker": "Patient", "date": "", "dialogue": "MDT बैठकीची तारीख कायम कधी असते, आणि आम्ही दोन आठवड्यात तयारी पूर्ण करण्याचा ध्यास ठेवतो; आम्हाला उपलब्ध وقت कळवा."}
-{"speaker": "Health Worker", "date": "", "dialogue": "तारीख सामान्यतः पुढील आठवड्यात ठरते; तुम्ही उपलब्ध असाल तर आम्ही त्यानुसार वेळ ठरवतो; MDT स्पष्ट झाल्यावर तुम्हाला माहिती देतो."}
-{"speaker": "Patient's Relative", "date": "", "dialogue": "मी लवकरच येणार आहे; मला संथ भाषा समजावी असे वाटते, कृपया कागदपत्रे सोप्या शब्दात समजावून सांगाल का?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "निश्चित, आम्ही प्रत्येक शब्द सोप्या भाषेत समजावू; क्लिनिकल टर्म्सची लिस्ट देतो, आणि शक्यतो डायग्रामने स्पष्टीकरण देतो."}
-{"speaker": "Patient", "date": "", "dialogue": "गळ्यात वेदना, आवाज बदलला, अन्न खाण्यात अडचण; मला धैर्य टिकवून पुढे जायचंय; MDTजवळील तयारी कशी ठेवावी?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "तुमचं धैर्य महत्त्वाचं आहे. या स्थितीमध्ये ENT/ओरोल-एंडो-रेडियोलॉजीची अणिबंधक तपासणी, बायोप्सी, आणि MDT निर्णय घेईल."}
-{"speaker": "Patient", "date": "", "dialogue": "बायोप्सीसाठी anesthesia प्रकार कोणते असतील? तयारीत कोणते विशेष तपशील आवश्यक?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "अक्सर स्थानिक anesthesia फायदेशीर; काही प्रकरणात संपूर्ण-चेष्टा; तयारीत स्वच्छता, श्वासोच्छ्वास पद्धत, आणि निकाल मिळण्याच्या वेळेची कल्पना समजवतो."}
-{"speaker": "Patient", "date": "", "dialogue": "स्टेजिंग कशी ठरते? ट्यूमरचा आकार, ठिकाण, लिम्फ नोड्स, HPV परिणाम एकत्र कसे विचारात घेतले जात?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "स्टेजिंग इमेजिंग (CT/MRI) आणि बायोप्सी निकालाने होते; HPV, ट्यूमराचा प्रकार, आकार, नोडल इन्वॉल्वमेंट या सर्वांचा विचार MDTमध्ये एकत्र केला जातो."}
-{"speaker": "Patient", "date": "", "dialogue": "पद्धतशी सामना करण्यासाठी दोन आठवडे आत baseline tests पूर्ण होतील का?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "होय, baseline tests दोन आठवड्यात पूर्ण होतील; इमेजिंग, रक्त तपासणी, दंत स्थिती, आणि biopsy तयारी; नंतर MDT निर्णय होईल."}
-{"speaker": "Patient", "date": "", "dialogue": "जर सर्जरीचा पर्याय निवडला तर ते किती दिवस टिकेल आणि पोस्ट-ऑप रीकव्हरी कशी असेल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "शस्त्रक्रियेचा प्रकारावर अवलंबून काळ लागू होतो; पोस्ट-ऑप आहार, औषध-ऑपरेशननंतरची काळजी, फिजिकल थेरेपी आणि डिस्चार्ज-फॉलोअप महत्त्वाचे असते."}
-{"speaker": "Patient", "date": "", "dialogue": "Radiotherapy किंवा Chemoradiationचा कोणता मार्ग जास्त फायदेशीर ठरेल? स्टेजिंगनुसार कधी निर्णय होते?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "स्टेजिंग आणि इमेजिंगनुसार radiotherapy किंवा chemoradiationचा निर्णय घेतला जातो; काही प्रकरणात दोन्हीचा कॉम्बिनेशन देखील प्रभावी ठरते."}
-{"speaker": "Patient", "date": "", "dialogue": " nutritionsupport खूप आवश्यक दिसतो; वजन गमावणं रोखण्यासाठी कोणते आहार-सल्ले उपयोगी ठरतील?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "न्यूट्रिशन plan महत्त्वाचा; प्रोटीनयुक्त आहार, छोटी-छोटी frequent meals, पाणी आणि चांगल्या प्रकारचे सप्लिमेंट्स विचारात घ्या."}
-{"speaker": "Patient", "date": "", "dialogue": "सरकारी योजना, विमा क्लेम, आणि MDTच्या खर्चासाठी कोणते फायदे आहेत? आवश्यक फॉर्म्स कोणते?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "Ayushman Bharat सारख्या योजना काही रुग्णांना मदत करतात; विमा क्लेमसाठी आधार-कार्ड, आरोग्य कार्ड, आणि रुग्ण प्रोफाइल आवश्यक असते."}
-{"speaker": "Patient", "date": "", "dialogue": "आधार कार्ड आणि आयडी असल्यास काही खर्च कमी होतो का? आणखी कोणते फायदे मिळू शकतात?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "खर्च कमी होऊ शकतो; कधी कधी दवाखाना-फीसमध्ये सूट, कधी विमा-शर्तांची सवलत; सोशल वर्कर कडून योजनांची थेट मदत मिळते."}
-{"speaker": "Patient", "date": "", "dialogue": "आपण भाषेचं अडचण न सोडता सोप्या शब्दात माहिती देता, ही मोठी मदत. आपल्याकडील साधे उदाहरण देता येईल का?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "होय, आम्ही सोप्या भाषेत सांगतो; मुद्रित लिस्ट, डायग्राम, आणि FAQ देतो; काही शब्द समजत नसतील तर लगेच विचारा."}
-{"speaker": "Patient", "date": "", "dialogue": "इंटरनेटवर विश्वसनीय माहिती मिळवण्यासाठी कोणते स्रोत योग्य? मी चुकीची माहिती टाळण्याचे उपाय विचारत आलो आहे."}
-{"speaker": "Health Worker", "date": "", "dialogue": "सरकारी वेबसाइट्स, सरकारी योजनांची पन्ने, आणि रुग्ण-समर्थन संस्था यांच्या लिंक देतो; सत्यापनासाठी आम्ही आपल्याला मदत करू."}
-{"speaker": "Patient", "date": "", "dialogue": "MDT बैठकची तिथी कधी निश्चित केली जाते? आम्ही तयारीसाठी कधी उपलब्ध रहावं?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "MDT बैठक सामान्यतः पुढील 1-2 आठवड्यात होते; तुमच्या उपलब्धतेनुसार आम्ही वेळ निश्चित करतो, आणि प्रत्येकीला माहिती देण्याचा प्रयत्न करतो."}
-{"speaker": "Patient's Relative", "date": "", "dialogue": "मी येईन तेव्हा सोप्या भाषेत माहिती देऊ शकता का? आम्हाला डॉक्टरांचा शब्द समजण्यासाठी थोडा अतिरिक्त स्पष्टीकरण हवा."}
-{"speaker": "Health Worker", "date": "", "dialogue": "होय, आम्ही सोप्या शब्दांत स्पष्टीकरण देऊ; MDT निकाल, स्टेजिंग, आणि उपचाराच्या योजना स्पष्टपणे सांगू; साथ देण्याच्या प्रकारांनाही आम्ही माहिती देऊ."}
-{"speaker": "Patient", "date": "", "dialogue": "आणखी एक प्रश्न; बायोप्सी निकाल कधी स्पष्ट होईल, त्या निकालाची अंतिम तारीख कधी कळेल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "बायोप्सी निकाल दोन ते पाँच दिवसांत येईल; काही प्रकरणांत थोडा जास्त वेळ लागू शकतो, परंतु आम्ही तुमच्याशी त्या वेळेस कळवू."}
-{"speaker": "Patient's Relative", "date": "", "dialogue": "त्या दिवशी आम्ही हॉस्पिटलमध्येच येऊ; आवश्यक असलेल्या मदतीसाठी आम्ही तयार राहू."}
-{"speaker": "Health Worker", "date": "", "dialogue": "चांगलं. तुम्हाला कोणत्याही वेळी प्रश्न असतील तर आपण चेकलिस्ट, फॉर्म्स, व MDT नोट्स खास करून सोप्या भाषेत देऊ."}
-{"speaker": "Patient", "date": "", "dialogue": "धन्यवाद डॉक्टर, मला आता स्पष्टपणे कळले आहे. MDTची बैठक कधी होईल ते कळवावी; मी आणि माझं कुटुंब तयारीला लागू."}
-{"speaker": "Health Worker", "date": "", "dialogue": "तयार राहा; आम्ही बैठकाची तारीख लवकरच कळवू आणि आवश्यक तयारीची अंतिम चेकलिस्टही पाठवू."}
+{"speaker": "Health Worker", "date": "", "dialogue": "आपला मुलगा 3 महिनेांचा आहे, मुंबईत राहतो. जन्मापासून हलका खोकला, वजन वाढत नाहीये, तेलकट शौचाचा त्रास, पाचनात अडचण आणि कधी कधी constipation झाले आहेत."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "नमस्कार डॉक्टर, हो आम्ही या बाबतीत सतर्क आहोत. आम्ही मुंबईतच राहतो, मुलगा आत्ता खूप थकलेला दिसतो, वजन कमी वाढतंय, शौच तेलकट दिसते."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF चा विचार करता येतो; पुढचं पाऊल pilocarpine Sweat Test मोठ्या केंद्रात करणे हितकारक ठरेल. तेव्हापासून CF diary सुरु करुयात."}
+{"speaker": "Patient", "date": "", "dialogue": "बाळ म्हणून मी अजून बोलू शकत नाही; परंतू माझ्या आई-वडलांना पोटात वेदना दिसतात, खोकला चालू असतो, झोप कमी होते."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF diary सुरू करणार आहोत. diary तीन भागात असतो: Respiratory, Diet/Hydration, Weight/Stool."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "ठीक आहे डॉक्टर. आम्ही रोज खोकला, पाणी/ORS, वजन आणि शौच या तीन भागांचे लेखन करणार."}
+{"speaker": "Health Worker", "date": "", "dialogue": "आजपासून diaryची सुरुवात करा; baseline वजन लिहा, पुढील चार आठवडे दररोज नोंद ठेवा, क्लिनिकल भेट चार आठवड्यानंतर ठरवू."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "समजलं. वजनाच्या सुरवातीचा मापा आम्ही आज करतो. आणखी काही आवश्यक असंल तर सांगा."}
+{"speaker": "Health Worker", "date": "", "dialogue": "ORS घरगुती रेसिपी सोपं पद्धतीने देतो: 1 लिटर पाण्यात 6 टीस्पून साखर आणि एक चिमटी मीठ मिसळा; थंड पाणी मध्ये देत जा."}
+{"speaker": "Mother", "date": "", "dialogue": "ठीक आहे. आम्ही दर काही तासांनी छोटे-small पाणी देत आहोत, पण प्रवासात कुठे आणायचं ते कसं ठरवायचं?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "हो, हलक्या पाण्यात छोटे-छोटे घास देत जा; मुलाला ओलावा ठेवण्यासाठी पाणी भरपूर द्या. वजन baseline करता दररोज वजन मोजा."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "आम्ही दररोज वजन मोजत आहोत; शौच तेलकट दिसते, काही दिवस पोटात गॅस होतो."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF diary तीन भागांमध्ये एकत्र ठेवा: Respiratory - खोकला कोणत्या वेळी, कोणत्या परिस्थितीत; Diet/Hydration - पाणी/ORS/मीठ; Weight/Stool - वजन व शौचाचे प्रकार."}
+{"speaker": "Patient", "date": "", "dialogue": "खोकला दिवसाला किती वेळा येतो? पाणी किती द्यायचं ठरवायचं? शौचात तेलकट स्वर कुठं दिसतो?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "खोकला काही वेळा ठराविक परिस्थितीत वाढतो; दिवसभराचं वेळ-वेळ ठरवल्या जाऊ शकतो; शंका असल्यास आम्हाला माहिती द्या."}
+{"speaker": "Mother", "date": "", "dialogue": "समजलं. मला काही अभ्यासालयाच्या पत्ते मिळतील का ज्याठिकाणी Sweat Test करता येईल?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "हो, Sweat Testसाठी केंद्रांची सूची तयार करतो; CMC Vellore, AIIMS Delhi, PGI Chandigarh अशी प्रमुख ठिकाणं आहेत."}
+{"speaker": "Father", "date": "", "dialogue": "खर्चाची चिंता आहे; subsidies काय उपलब्ध आहेत ते कसं मिळवू शकतो?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "सरकारी योजना आणि subsidiesचा अवकाश असतो; आम्ही तुमच्यासाठी आवश्यक तर चालू प्रकरणात मदत करतो."}
+{"speaker": "Mother", "date": "", "dialogue": "काय आम्ही चार आठवड्यात Sweat Testची तयारी करू शकतो? आम्हाला केंद्रांची माहिती आणि संपर्क हवं."}
+{"speaker": "Health Worker", "date": "", "dialogue": "हो, चार आठवड्यात क्लिनिकल भेट घेऊ; Sweat Testची तयारी, शेड्यूलिंगसाठी केंद्रांची पत्ता-सम्पर्क देईन."}
+{"speaker": "Patient", "date": "", "dialogue": "CF diary काही-न काही आठवड्यात पूर्ण करण्याचा प्रयत्न करतो; आम्हाला अडचण आली तर कळव."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF diaryमध्ये तीन भागांचे नोंदी व्यवस्थित घ्या; baseline वजन आणि आजचा वजन बरोबरीने नोंदवा."}
+{"speaker": "Mother", "date": "", "dialogue": "आम्ही आजपासून diaryचा फॉर्मॅट तयार करतो, तुम्ही मार्गदर्शन देत रहा."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Airway clearance ही महत्त्वाची स्तम्भ आहे; Manual Chest Physiotherapy (clapping) दिवसा दोन वेळा 5-10 मिनिटं करा."}
+{"speaker": "Father", "date": "", "dialogue": "काय CPT असं ते कसं करायचं? कोणत्या आवाजाने गाणी म्हणायचं?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "CPT साधं, हाताच्या हलक्या थरथरणे देऊन, पोराच्या छाती-पोटाजवळून लाइट पम्पिंग; गाणी किंवा कथा सांगून आरामदायी बनवा."}
+{"speaker": "Mother", "date": "", "dialogue": "ठीक आहे, आम्ही रात्री CPT काही खास वेळी सुरू करतो. मुलाला कसं प्रोत्साहन देऊ?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "कथा-गाणी, झोपवताना हलका आवाज; CPT नियमित करा, रोज केली जायला पाहिजे."}
+{"speaker": "Father", "date": "", "dialogue": "Nutrition भागासाठी काय खाऊ द्यावं? घरगुती उच्च-कॅलरी पदार्थ कोणते?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "आहारासाठी उच्च-कॅलरी भारतीय अन्न: गी, संपूर्ण दूध, पनीर, groundnuts आणि गुळ; गरम हवामानात पाणी आणि मीठ अधिक द्या."}
+{"speaker": "Mother", "date": "", "dialogue": "घी आणि पनीर मुलासाठी चांगले आहेत, परंतु पोटात वेदना असतील तर अन्नात बदल करायचा?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "कधी-कधी पोटातील अडचण असेल तर पाणी कमी- जास्त करावी; आवश्यक असल्यास pancreatic enzymesचा विचार करायचा."}
+{"speaker": "Father", "date": "", "dialogue": "Pancreatic enzymes बद्दल आणखी माहिती; डोस कसा ठरवतात, कोणती ब्रँड उपलब्ध आणि कोणत्या लक्षणांवर डॉक्टरांना सांगावं?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Weight-based dosing; भारतीय जनरिक Panlipase, Enzar Forte उपलब्ध; डॉक्टरांच्या निर्देशानुसार देणे सुरक्षित."}
+{"speaker": "Mother", "date": "", "dialogue": "धन्यवाद, आम्ही डॉक्टरांचे आदेश पाळू."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Infection prevention: हात साबणाने चांगलं धुव्या, nebulizer रोज स्वच्छ करा, उकळलेले पाणी वापरा."}
+{"speaker": "Father", "date": "", "dialogue": "Nebulizer वापरत आहोत; ते साफ ठेवायला आम्हाला मार्गदर्शन करा."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Nebulizer भागांना रोज साबणाने धुवा, धुण्यानंतर पूर्ण सुखवा; वापरताना स्वच्छ सामग्रीच वापरा."}
+{"speaker": "Mother", "date": "", "dialogue": "घरात तापमान कसं ठेवावं, nebulizerसाठी पाणी कसं उकळायचं?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "घरात आरामदायक तापमान ठेवा; nebulizerसाठी पाणी उकळलं असावं; प्रत्येक सत्रानंतर स्वच्छ्ता जपा."}
+{"speaker": "Patient", "date": "", "dialogue": "आमचं घर दिवस-रात्र पावसाचं मौसम असतं; पर ठरावीक योजना करायला मदत होईल."}
+{"speaker": "Health Worker", "date": "", "dialogue": "चार आठवड्यांच्या क्लिनिकल फॉलो-अपची तयारी करा; वजन, hydration, शौचाची स्थिती तपासू."}
+{"speaker": "Mother", "date": "", "dialogue": "चार आठवड्यानंतर क्लिनिकला जायचं; diary प्रगती आणि Sweat Testची तयारी दोन्ही करायची."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF awareness शिक्षण परिवाराला द्या; TB मिसअंडरस्टँडिंग टाळण्यासाठी CFची माहिती ठेवा."}
+{"speaker": "Father", "date": "", "dialogue": "समजलं. CF बद्दल अधिक माहिती मिळाली तर आम्ही इकडे-तिकडे समुदायात सांगू."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Carrier testing एक पर्याय; CF वाहक आढळल्यास genetic counselling उपयुक्त ठरू शकतं."}
+{"speaker": "Mother", "date": "", "dialogue": "या संदर्भात माहिती द्या, आम्ही विचार करून निर्णय घेऊ."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Carrier testingचा फायदा-जोखमींचा विचार करुन निर्णय घ्या; genetic counsellingची शक्यता पाहू."}
+{"speaker": "Patient", "date": "", "dialogue": "पाळणा सकारात्मक राहिला तरीही आम्ही मेहनत करणार; हरकत नाही."}
+{"speaker": "Health Worker", "date": "", "dialogue": "महत्त्वाचं भाग: Sweat Test केंद्रांची सूची, पत्ता, वेळा, संपर्क माहिती एकत्र ठेवू."}
+{"speaker": "Mother", "date": "", "dialogue": "हो, आम्ही त्या केंद्रांची पत्ता आणि संपर्क मिळवून तयारी करतो."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF diary रोज तीन भागांतले नोंदी लिहा; baseline वजन, आजचा वजन, शौचाची अवस्था."}
+{"speaker": "Father", "date": "", "dialogue": "हो, diaryची संरचना आम्ही नीट समजून घेतो; रोज लिहायला सुरुवात करतो."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Red flags: जास्त ताप, उलटी, ओरल इन्टेक कमी होणे, थोडा lethargy किंवा dehydration असल्यास तत्काळ क्लिनिकला जा."}
+{"speaker": "Mother", "date": "", "dialogue": "जर काही अडचण आली तर आम्ही लगेच आपल्याला संपर्क करणार."}
+{"speaker": "Health Worker", "date": "", "dialogue": " Sweat Test procedure: pilocarpine पसीना संकलन; काही दिवसांत परिणाम मिळतात; केंद्रांची तयारी करा."}
+{"speaker": "Patient", "date": "", "dialogue": "आता आम्ही मार्गदर्शनानुसार तयारी करतो; माझ्या अडचणींवर लक्ष द्या."}
+{"speaker": "Health Worker", "date": "", "dialogue": "चार आठवड्यानंतर CF डायरी, वजन, hydration, शौचाचा आढावा घेऊ."}
+{"speaker": "Mother", "date": "", "dialogue": "चार आठवड्यानंतर क्लिनिकला जायचं; diary प्रगती आणि Sweat Testची तयारी दोन्ही करतो."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF awareness शिक्षण आणि TB मिसअंडरस्टँडिंग टाळण्यासाठी CFची माहिती देऊन संस्था माहिती देऊ."}
+{"speaker": "Father", "date": "", "dialogue": "CF बद्दल अधिक माहिती मिळाली तर आम्ही इकडे समुदायातही सांगू."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Carrier testing एक पर्याय; CF वाहक आढळल्यास genetic counselling उपयुक्त ठरू शकतं."}
+{"speaker": "Mother", "date": "", "dialogue": "या संदर्भात माहिती द्या, आम्ही विचार करून निर्णय घेऊ."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Carrier testingचा फायदा-जोखमींचा विचार करुन निर्णय घ्या; genetic counsellingची शक्यता पाहू."}
+{"speaker": "Patient", "date": "", "dialogue": "पाळणा सकारात्मक राहिला तरीही आम्ही मेहनत करणार; हरकत नाही."}
+{"speaker": "Health Worker", "date": "", "dialogue": "महत्त्वाचं भाग: Sweat Test केंद्रांची सूची, पत्ता, वेळा, संपर्क माहिती एकत्र ठेवू."}
+{"speaker": "Mother", "date": "", "dialogue": "हो, आम्ही त्या केंद्रांची पत्ता आणि संपर्क मिळवून तयारी करतो."}
+{"speaker": "Health Worker", "date": "", "dialogue": "CF diary रोज तीन भागांतले नोंदी लिहा; baseline वजन, आजचा वजन, शौचाची अवस्था."}
+{"speaker": "Father", "date": "", "dialogue": "हो, diaryची संरचना आम्ही नीट समजून घेतो; रोज लिहायला सुरुवात करतो."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Red flags: जास्त ताप, उलटी, ओरल इन्टेक कमी होणे, थोडा lethargy किंवा dehydration असल्यास तत्काळ क्लिनिकला जा."}
+{"speaker": "Mother", "date": "", "dialogue": "जर काही अडकं आली तर आम्ही तात्काळ आपल्याला संपर्क करणार."}
 
 Ground Truth
-Summary of the Head and Neck Cancer dialogue (key events, symptoms, diagnosis, and treatment steps)
+Summary of the CF-focused dialogue (key events, symptoms, diagnosis, and treatment steps)
 
-- Patient presentation and risk factors
-  - Patient: Rajesh Patel, 45, Mumbai.
-  - Symptoms: sensation of a lump in the throat, hoarseness, trouble sleeping, difficulty swallowing, and unintended weight loss.
-  - Risk factors: long history of tobacco use and areca nut products (pan masala 2–3 times daily); occasional cigarettes/hookah; alcohol use decreased recently.
-  - HPV: considered as a factor to assess and inform decisions.
+- Presentation and clinical context
+  - A 3-month-old male in Mumbai presents with intermittent mild cough since birth, poor weight gain, oily bulky stools, digestive discomfort, and intermittent constipation, raising strong suspicion for cystic fibrosis (CF). Family seeks structured monitoring and evaluation.
 
-- Initial assessment and diagnostic plan
-  - Planned investigations: thorough intraoral/dental examination and pharyngeal evaluation; possible biopsy; CT/MRI imaging; basic blood tests as needed.
-  - Biopsy timeline: results typically available in 2–5 days; imaging and biopsy results will guide next steps.
-  - Patient preference: requested family involvement to support and understand results.
+- Diagnostic plan and rationale
+  - Pilocarpine-induced Sweat Test is identified as the primary diagnostic test for CF and should be arranged at a larger center. If Sweat Test is not locally available, clinicians should document symptoms and data to guide next steps.
+  - A CF diary is mandated to accompany the diagnostic process for systematic symptom tracking and outcomes.
 
-- Multidisciplinary evaluation and next steps
-  - MDT approach: diagnosis to be confirmed by a multidisciplinary team (oral surgeon, oncologist, radiation-oncologist, imaging specialist, nutritionist); clinical trial options considered on a case-by-case basis.
-  - HPV testing and trials: discussed as case-based decisions; full information provided to help decide.
-  - Communication: emphasis on clear, plain-language explanations; MDT logistics (where/when meetings occur, who attends) explained.
+- CF diary and data collection
+  - Diary comprises three parts: Respiratory (cough timing/context), Diet/Hydration (fluids/ORS/electrolytes), Weight/Stool (weight trend and stool characteristics).
+  - Baseline weight to be recorded; weight tracked over 2–4 weeks; diary entries start immediately. A clinical visit is planned after 4 weeks of diary data.
 
-- Timeline and sequencing of evaluation
-  - Within two weeks: complete baseline assessment (oral/dental exam, blood tests) and arrangements for initial imaging/biopsy.
-  - After results: MDT meeting to determine direction; imaging-based staging to decide between surgery, radiotherapy, or a combination.
+- Immediate and initial management guidance
+  - Emphasize increased hydration and electrolyte intake.
+  - If Sweat Test isn’t readily available locally, explore government schemes or subsidies to support testing.
+  - Educate the family about CF to prevent misdiagnoses (e.g., TB or malnutrition) and avoid delays.
 
-- Treatment planning framework (surgery vs radiotherapy)
-  - Both options discussed with their advantages and risks; final plan may involve combined modality therapy depending on staging.
-  - Decision factors: staging and imaging results drive the final choice, with transparent explanations to aid informed consent.
+- Follow-up plan and logistics
+  - After 4 weeks, conduct a clinical check-up to review weight, hydration, and stool characteristics; Sweat Test preparation and scheduling should proceed in parallel.
+  - Prepare a list of Sweat Test centers with addresses, timings, and contact information (examples: CMC Vellore, AIIMS Delhi, PGI Chandigarh).
+  - Encourage travel planning to central hospitals while adhering to safety protocols.
+  - Consider genetic carrier testing as a parallel option with balanced discussion of benefits and risks.
 
-- Nutrition, lifestyle, and psychosocial support
-  - Nutrition: protein-rich diet, fruits/vegetables, adequate fluids; potential follow-up with a nutritionist to tailor plans due to weight loss.
-  - Tobacco/alcohol cessation: counseling and resources offered; local cessation programs and strategies to improve therapy tolerability.
-  - Psychosocial support: family involvement encouraged; social worker support; guidance on insurance and government schemes.
+- Information management and safeguards
+  - Maintain updated addresses and contact numbers for key centers; ensure mobile numbers are current.
+  - Stay in touch with local health authorities for guidance or assistance.
+  - Seek information on government schemes or subsidies to support testing and travel.
 
-- Logistics, documentation, and access to resources
-  - Essential documents: Aadhaar card, health card, medical history, imaging reports; online registration and verified documentation needed.
-  - Family involvement: families encouraged to join visits; ongoing online chat/phone support for questions.
-  - Insurance and schemes: information provided on accessing coverage; clinical trials and approvals discussed.
+- Expected outcomes and milestones
+  - Finalize Sweat Test plan with timing and center details; use diary, weight, hydration, and stool data to inform the physician.
+  - Schedule a 4-week clinical follow-up to review progress and finalize Sweat Test arrangements.
+  - Use CF awareness efforts to educate the family and the local community.
 
-- HPV testing and clinical trials in decision process
-  - HPV status may influence tumor behavior and staging, but treatment decisions remain multi-factorial (imaging, biopsy, blood work, clinical status).
-  - Clinical trials: eligibility criteria and logistics explained; costs and processes to enroll explained; Ayushman Bharat-type schemes discussed for potential support.
+- Immediate actions and ongoing execution
+  - Start the CF diary today (record cough timing, weight trend, fluids, stool characteristics).
+  - At the 4-week mark, attend the clinical check-up with a detailed report and prepare for Sweat Test scheduling.
+  - If Sweat Test centers aren’t local, obtain a list of potential centers and subsidy options in advance.
 
-- Next steps and anticipated events
-  - In the next two weeks: completion of baseline tests (blood work, dental status, imaging, biopsy preparations).
-  - MDT meeting: to finalize staging and treatment direction after results; patient and family will be promptly informed.
-  - Coordination: appointment of the upcoming MDT date and scheduling of visits with the patient and family.
+- Overall plan
+  - Central objective: arrange a Sweat Test at an appropriate hospital while meticulously documenting symptoms via a structured diary.
+  - Four-week follow-up to assess weight, hydration, and stools to finalize Sweat Test logistics.
+  - Parallel actions include travel planning to a major center, subsidy options, and genetic counseling as appropriate.
 
-Overall, the dialogue outlines a structured diagnostic-to-treatment pathway for suspected head-and-neck cancer: initial symptom review and risk assessment, baseline clinical exams, biopsy and imaging within two weeks, MDT-driven staging to guide surgery, radiotherapy, or chemoradiation (individually or in combination), with integrated nutritional, cessation, and psychosocial support, plus attention to documentation, insurance access, and potential clinical trials. Family involvement and plain-language communication are emphasized throughout to support informed decision-making.
+- Context and practical notes
+  - Set in the Indian healthcare context, with awareness of TB misdiagnosis, potential funding options, and active family engagement in education and planning.
+  - Sweat Test details: pilocarpine-based sweat collection; results typically available in a few days; subsidies may support testing where local availability is limited.
 
+- Key practical takeaway
+  - Initiate the CF diary immediately and arrange Sweat Test at a recognized center within 4 weeks, while navigating subsidies and travel logistics; use collected data to guide subsequent CF care if CF is diagnosed.
+
+- Key treatment steps and supportive measures
+  - Hydration and electrolyte management; home-made ORS guidance (water, salt, sugar) with dosing guided by a clinician.
+  - Pancreatic enzyme replacement therapy discussed as needed (weight-based dosing; Indian generics like Panlipase, Enzar Forte mentioned).
+  - Respiratory care and airway clearance: chest physiotherapy (CPT) about 5–10 minutes twice daily; child-friendly approaches (stories/songs).
+  - Nebulizer hygiene: daily cleaning with soap and water, thorough drying, safe storage.
+  - Diet considerations: monitor greasy stools; consider reducing easily digestible sugars if abdominal pain or constipation occurs; maintain hydration.
+  - Red flags: fever, vomiting, or poor oral intake during monitoring warrant urgent clinic visit.
+  - Genetic counseling and carrier testing discussed as future considerations; current focus remains on Sweat Test and diary-driven monitoring.
+  - CF-awareness education for the family to reduce fear of misdiagnosis and enable community education.
+
+In short: the plan emphasizes an early, structured CF evaluation via pilocarpine Sweat Test at a central center within four weeks, guided by a detailed CF diary and comprehensive supportive care. Parallel logistics cover travel, potential subsidies, and consideration of genetic counseling.
 Qwen-2.5-7B-Instruct-zero-shot
-The patient, Rajesh Patel, 45 years old, from Mumbai, reports symptoms of weight loss, hoarseness, difficulty swallowing, and reduced appetite for several months. He has a history of long-term tobacco use (tobacco chewing and pan masala), occasional alcohol consumption, and no known Human Papillomavirus (HPV) infection. The patient is scheduled for a biopsy, followed by CT/MRI within 2-3 days. Family members will accompany him to all medical appointments.
+The patient is a 3-month-old male infant from Mumbai who has been underweight, experiencing poor weight gain, and having intermittent loose stools since birth. The parents report that he is often lethargic, has difficulty feeding, and occasionally experiences constipation. They suspect Cystic Fibrosis (CF) and have taken him for a pilocarpine sweat test at a major center. They have also started maintaining a CF diary. The child is currently being evaluated for possible CF, with respiratory, diet/hydration, and stool parameters recorded daily in the diary. The parents are advised to record these details in three sections: respiratory, diet/hydration, and weight/stool. They are instructed to measure his baseline weight daily and continue doing so for the next four weeks. They are also advised to give small amounts of water frequently during travel to prevent dehydration. 
 
-The patient's primary concerns include understanding the process and preparing for the biopsy. He mentions experiencing pain during the procedure, which would be managed with local anesthesia. The patient also discusses potential nutritional support due to weight loss and difficulty eating. He inquires about quitting smoking and the role of family support in this process.
+Airway clearance techniques such as manual chest physiotherapy (clapping) twice a day for 5-10 minutes are recommended. The parents are provided with information on how to perform CPT and given tips to make it more comfortable for the child. They are advised to start CPT at night if needed. Nutritional advice includes high-calorie foods like ghee, full-fat milk, paneer, groundnuts, and rice, especially during hot weather. If the child experiences pain while feeding, they should switch to softer foods and consider pancreatic enzymes if necessary. The dosage and brand of pancreatic enzymes are discussed, and the parents are advised to follow their doctor's instructions for safe administration.
 
-The patient is concerned about the staging of his condition and the implications for treatment decisions. He asks about the role of HPV testing and its impact on tumor staging and treatment options. The doctor explains that while HPV status can influence treatment decisions, the final decision is based on multiple factors including imaging results and biopsy findings.
+Infection prevention measures include regular hand washing, cleaning the nebulizer daily, and using boiled water. The use of nebulizers is encouraged, and the parents are advised to keep them clean and dry after use. They are also advised to maintain a comfortable room temperature and ensure the nebulizer is clean before each use. The parents are reminded to take breaks between nebulizer sessions and to keep the room well-ventilated.
 
-The patient is scheduled for baseline tests over the next two weeks, after which an MDT (Multidisciplinary Team) meeting will review the results and determine the stage of the tumor. Based on the stage, surgical intervention, radiotherapy, or combination therapy may be recommended. The patient is advised to maintain a high-protein diet, stay hydrated, and consume high-calorie snacks to aid in weight gain and recovery.
+Follow-up is planned in four to eight weeks for weight, hydration status, and stool condition. At this visit, the parents will present the CF diary and results of the sweat test. CF awareness education is provided to the family, including information about CF and understanding the difference between CF and tuberculosis (TB). Additional resources for CF information are shared, and carrier testing is discussed as an option if the child is found to be a CF carrier. Genetic counseling may be considered if the parents wish to explore further.
 
-Nutritional support is emphasized, and the patient is referred to a nutritionist for personalized dietary advice. The patient inquires about the logistics of participating in clinical trials through the Ayushman Bharat program and the necessary documentation required for such trials.
-
-MDT meetings are scheduled for the following month, and the patient is encouraged to prepare all necessary documents in advance. The patient expresses gratitude for the clear communication and requests further clarification on medical terms and procedures. The doctor provides a list of clinical terms and diagrams to assist in understanding.
-
-The patient is advised to follow up with the MDT team regarding the biopsy results, which are expected within 2-5 days. The patient is reassured that the MDT will provide updates and guidance throughout the process. The patient is reminded to ask any questions at any time and to refer to checklists, forms, and MDT notes for further information.
+The parents are reassured that even
