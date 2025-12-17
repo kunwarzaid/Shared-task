@@ -134,256 +134,127 @@ If there are no issues for a metric, write: “No major issues found.”
 
 
 Dialouges:
-{"speaker": "Patient", "date":"", "dialogue": "मी राजेश पटेल, मुंबईत राहतो, वय 52 वर्षे. गळ्यात गांठ, आवाजात बदल, अन्न गिळताना त्रास, रात्री झोप न येणे, वजन थोडे कमी झाले. खरंतर काय होते ते सांगायचंय."}
-{"speaker": "Health Worker", "date":"", "dialogue": "ही समस्या गंभीर आहे; MDT च्या चौकटीत आपण स्टेजिंग, तपासणी आणि पुढील टप्पे ठरवणार आहोत. सगळे स्पष्टपणे समजवण्यासाठी base-line तपासण्या सुरू करतो, तुम्हाला काही प्रश्न आहेत का?"}
-{"speaker": "Patient", "date":"", "dialogue": "मी दररोज धूम्रपान करतो, पान मसाला पण वापरतो. HPV तपासणीची शक्यता काय, आणि ती कधी केली जाईल? ही माहिती मला कधी मिळेल आणि पुढे काय?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV तपासणी होईल, बायोप्सी व endoscopy असतील; imaging म्हणजे CT/MRI; निकाल 2-5 दिवसांत मिळेल. MDT बैठक ठरणाऱ्या तारखा, स्टेजिंग निर्णय व उपचारयोजनाबद्दल साफ माहिती देऊ."}
-{"speaker": "Patient", "date":"", "dialogue": "तपासणीची वेळ कधी मिळेल, वारंवार तपासायचे असते?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "baseline checks दोन आठवड्यात पूर्ण होतील; रक्त तपासणी, dental status, Endoscopy तयारी, imaging (CT/MRI). MDT बैठक two सप्ताहानंतर असेल; स्टेजिंग स्पष्ट झाल्यावर पुढची रस्ता दिसेल."}
-{"speaker": "Patient", "date":"", "dialogue": "स्टेजिंग कसे ठरते, आणि HPVचा परिणाम काय असतो?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "स्टेजिंग CT/MRI, endoscopy, biopsy, तुमचा इतिहास आणि धोक्याच्या घटक; HPV स्थिती तसेच tumor localization या गोष्टी स्टेजिंगमध्ये मदत करतात."}
-{"speaker": "Patient", "date":"", "dialogue": "जर स्टेज III आली तर उपचार कसा असतो, किती वेळाचा टप्पा, दुष्परिणाम काय?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "Advanced स्टेजमध्ये सामान्यतः surgery + radiotherapy; काही वेळात chemotherapy सोबत; MDT निर्णय निवडते."}
-{"speaker": "Patient", "date":"", "dialogue": "उदा. सर्जरी म्हणजे काय, गळ्यातल्या लिम्फ नोड्स कसे काढतात, आणि गरज पडल्यास अवयव बदल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "ट्यूमर व मार्जिन; घेरातील गळ्याच्या भागातील लिम्फ नोड्सची शस्त्रक्रिया; आवश्यक असेल तर reconstruction/ flap."}
-{"speaker": "Patient", "date":"", "dialogue": "रेडिएशन कसं असतं, दररोज किती वेळा देतात आणि त्वचेला काय परिणाम होतो?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "रेडिएशन दररोज एक सत्र, साधारणपणे 6-7 आठवडे; त्वचा लाल होऊ शकते, शुष्कता, काही लोकांना अन्नाची चव कमी होते."}
-{"speaker": "Patient", "date":"", "dialogue": "Chemotherapyची भूमिका काय असते, Cisplatin कसा देतात, आणि दुष्परिणाम काय?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "Radiation सोबत chemo देण्याचा हेतू tumor sensitivity वाढवणं; India मध्ये साप्ताहिक Cisplatin किंवा कमी डोस सामान्य. पोटात, किडनी-फंक्शन तपासले जाते."}
-{"speaker": "Patient", "date":"", "dialogue": "हे खर्च कसा भागवता येईल, विमा किंवा सरकारी स्कीमवर काय उपलब्ध आहे?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "आयुष्मान भारत, राज्य योजना, हॉस्पिटल-आधारित सहाय्य; MDT अर्हता असल्यास काही खर्च कव्हर होतो."}
-{"speaker": "Patient", "date":"", "dialogue": "तेव्हा निर्णयासाठी तयारी कशी करायची, MDT कधी होईल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "तयारी: baseline टेस्ट्स, imaging; 2-3 दिवसांत निकाल; MDT बैठक दोन आठवड्यात अंतिम निर्णय घेते."}
-{"speaker": "Patient", "date":"", "dialogue": "HPV टेस्टचा निकाल आल्यानंतर स्टेजिंग किंवा उपचारात काय बदल दिसेल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV पॉझिटिव्ह असल्यास काही ट्रायल किंवा कमी आक्रामक रेडिएशन डिटेल्स विचारात येऊ शकतात."}
-{"speaker": "Patient", "date":"", "dialogue": "आणखी कोणत्या प्रकारचा साथीदार मला मार्गदर्शन देऊ शकतो, माझ्या आवाजाचं प्रश्न कितपत संभवतो?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "You won't be alone in this. A full multidisciplinary team of surgeons, radiation doctors, chemotherapy doctors, dietitians, and therapists will work together on your case."}
-{"speaker": "Patient", "date":"", "dialogue": "ही टीम कुठे भेटते, कोणत्या तारखांना, आणि कसा समन्वय साधता?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "MDT बैठक ठरलेल्या तारखा/स्थितींच्या अनुरोधाने होतात आणि patient family सहभागी होऊ शकतात; स्टेजिंग नंतर पुढचा रस्ता स्पष्ट केला जातो."}
-{"speaker": "Patient", "date":"", "dialogue": "आम्हाला baseline tests दोन आठवडे आत पूर्ण करायचे आहेत, आणि imaging/biopsy व्यवस्थित करायचे आहेत, हो?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, baseline tests दोन आठवड्यात पूर्ण होतील; ऑरल/डेंटल exam, रक्तचाचण्या, imaging, biopsy तयारी व्यवस्थित आयोजित केली जाईल."}
-{"speaker": "Patient", "date":"", "dialogue": "HPV रिपोर्ट सकारात्मक आला तर काय करायचं, डॉक्टर?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV स्थिती tumor चालनांमध्ये काही प्रमाणात फरक आणते; पर निर्णय अनेक घटकांवर अवलंबून असतो; MDT निर्णय महत्त्वाचा."}
-{"speaker": "Patient", "date":"", "dialogue": "आम्हाला आहार-आणि आहार-तज्ज्ञ काय मदत करतात, वजन राखण्यासाठी?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "प्रोटीन-युक्त आहार, फळ/भाजी, पुरेसे पाणी; पोषणतज्ज्ञ विशिष्ट योजनानुसार मार्गदर्शन करतील."}
-{"speaker": "Patient", "date":"", "dialogue": "तुम्ही काही क्लिनिकल ट्रायलची माहिती देता का, अर्हता काय असते?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "क्लिनिकल ट्रायल्स अर्हता, logistics, खर्च याचा स्पष्ट विचार MDT बैठकानंतर होतो; Ayushman Bharat-type schemes बद्दल माहिती दिली जाते."}
-{"speaker": "Patient", "date":"", "dialogue": "डायनिंग-आहार ठेवायचा तर मी कोणते अडचण आढळतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "नियोजनात प्रोटीन-युक्त आहार, लहान-लहान भरे-भरे कार्यक्रम; पाणी आणि पौष्टिक आहार सुरक्षित ठेवण्यावर लक्ष."}
-{"speaker": "Patient", "date":"", "dialogue": "गेल्या वर्षी वजन कमी झाले; वजन धारण्यासाठी काय योजना असतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "प्रोटीन-समृद्ध डाएट, मिनी-भोजन, स्मूधी, पोषणतज्ज्ञ मार्गदर्शन; तर वजन वाढीसाठी विशेष प्लान तयार केला जाईल."}
-{"speaker": "Patient", "date":"", "dialogue": "डॉक्टर, घरच्यांना कसे माहिती द्यावी, कोणते शब्द सोपे असतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": " MDT च्या निर्णय-योजनेसाठी plain-language स्पष्टीकरण देऊन family सदस्यांनाही समजेल असे पुरवतो; स्टेजिंग, अरोप, उपचार-योजना स्पष्ट केली जाते."}
-{"speaker": "Patient", "date":"", "dialogue": "कधी回 MDT बैठक निर्धारित केली जाते आणि माझ्या कुटुंबाला कसे सहभागी करता येईल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "MDT बैठक निर्धारित तारखेला; आपला परिवार उपस्थित राहू शकतो; MDT निर्णयानुसार स्टेजिंग आणि पुढील दिशा स्पष्ट केली जाते."}
-{"speaker": "Relative", "date":"", "dialogue": "डॉक्टर, आम्ही कोणत्या प्रकारच्या प्रश्नांची तयारी ठेवू? कोणते प्रश्न आपल्याला आवश्यक समजतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "तुम्ही स्टेजिंग, उपचार-योजना, क्लिनिकल ट्रायल अर्हता, खर्च, विमा, आणि सहाय्यकार्याची माहिती साधारणपणे विचारू शकता; plain-language मध्ये सगळे स्पष्ट करतो."}
-{"speaker": "Patient", "date":"", "dialogue": "आणि जर operation झाली तर पुनर्स्थापना किती दिवसात होईल, फुड-आहार कसा असेल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "ऑपरेशननंतर पुनर्प्राप्ती عدة आठवडे ते महिने घेते; आहार सुरळीत चालवण्यासाठी dietician मार्गदर्शन करतील; खासगी/स्वास्थ्य-आहार योजना सुरू होईल."}
-{"speaker": "Patient", "date":"", "dialogue": "रेडिएशनच्या दरम्यान माझ्या त्वचेवर काही त्रास झाली तर काय उपाय असतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "त्वचेला कोरडेपणा, जळцу, म्यूकोसा-रंजकता असल्यास त्वचा-आथवा mucosa-रक्षक उपाय, ओरेडा-हायड्रेशन, local skin care माहिती देईल."}
-{"speaker": "Relative", "date":"", "dialogue": "आम्हाला किती वेळापूर्वी हॉस्पिटलला ड्रा-फॉलो-अपची माहिती दिली जाईल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "MDT निर्णयानंतर, फॉलो-अप तपासणी महिन्यातून एकदा ठेवणे सामान्य; तारखा MDT ने स्पष्ट केल्या जातील."}
-{"speaker": "Patient", "date":"", "dialogue": "HPV स्थिती tumor चालनांमध्ये कोणते संभाव्य बदल करते, ते समजेल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV स्थिती tumor चालनात काही प्रमाणात वेगळेपणा आणू शकते; पर निर्णय MDटीवर अवलंबून असतो."}
-{"speaker": "Relative", "date":"", "dialogue": "कुटुंबाप्रमाणे आम्हाला कधी कशा प्रकारे मदत करावी, घरात कोणते समन्वय ठेवावे?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "कुटुंब सदस्यांना साथ देण्यासाठी social worker, transport, अनुवाद सेवा, आणि insurance guidance उपलब्ध; स्पष्ट समन्वय ठेवून निर्णय घेतला जाईल."}
-{"speaker": "Patient", "date":"", "dialogue": "अगदी शक्य झालं तर आम्ही क्लिनिकल ट्रायलची अर्हता बघणार आहोत. ती कशी चालते?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "क्लिनिकल ट्रायलची अर्हता MDT मध्ये तपासली जाते; logistics, travel, खर्च स्पष्ट केला जाईल; आपल्यासाठी उपलब्ध असतील तेव्हा माहिती दिली जाते."}
-{"speaker": "Patient", "date":"", "dialogue": "काऊंसिलिंगची गरज वाटते; तंबाकू/दारू चालू ठेवावे का?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "तंबाकू/दारूचा थांबवणं आग्रहाचं; cessation counseling, स्थानिक कार्यक्रम, प्रेरक संभाषण मदत करतात."}
-{"speaker": "Relative", "date":"", "dialogue": "धन्यवाद, डॉक्टर. आम्हाला अगोदरच योजना समजली तरच आपल्याला मदत करतो."}
-{"speaker": "Health Worker", "date":"", "dialogue": "चांगलं. plain-language माहिती, तयारीची सूची, आणि कागदपत्रे तयार, MDT तारखांची माहिती लवकर कळवू."}
-{"speaker": "Patient", "date":"", "dialogue": "खर्च व विमाच्या बाबतीत आणखी काही प्रश्न आहेत; आपण कधी कॉल करायचं?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "तुम्हाला आवश्यक असल्यास फोन/ईमेलद्वारे कळवू; पुढच्या MDT तारखेपासून आधीच आवश्यकता असल्यास आम्ही माहिती देऊ."}
-{"speaker": "Patient", "date":"", "dialogue": "या पृष्ठभागावर क्लिनिकल ट्रायला कसं जायचं, खर्च किती येतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "पर्सनल अर्हता, प्रवास, खर्च, तपासण्या आणि उपचार-योजनेची माहिती MDT देईल; काही खर्च विमा-आधारित कव्हर होऊ शकतो."}
-{"speaker": "Patient", "date":"", "dialogue": "घरच्यांच्या कवरेजची आवश्यकता पडली तर कोणते कागदपत्रे आवश्यक असतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "आधारकार्ड, हेल्थ कार्ड, विमा पॉलसी, पूर्वचाचण्या/Imaging reports; ऑनलाइन रजिस्ट्रेशनसाठी आधारकुटुंबाचा पत्ता असणं उपयोगी."}
-{"speaker": "Relative", "date":"", "dialogue": "तारखा कळली की आम्ही कसे तयारी करू? हॉस्पिटलला येण्याची सोय कशी करायची?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "तारखा कळवू; रुग्णवाहिका/बस-टिकिटची व्यवस्था, अनुवाद सेवा, सोबत घेण्याच्या सूचना, प्रि-ऑपरेशन निर्देश."}
-{"speaker": "Patient", "date":"", "dialogue": "गेल्या काही महिन्यांत वजन कमी झाले; आहारात कोणते उपाय चांगले?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "प्रोटीन-समृद्ध आहार, दुध-जन्य पदार्थ, अंडी, पनीर, बदाम; छोटे पण अनेकदा खाणे; पोषणतज्ज्ञ योजना तयार करतील."}
-{"speaker": "Patient", "date":"", "dialogue": "HPV टेस्टची अंतेचं स्पष्टीकरण देऊ शकता का?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV च्या स्थितीनुसार ट्यूमरच्या आचार-धारणा काहीशी वेगळी दिसू शकते; पर निर्णय MDT घेतं."}
-{"speaker": "Relative", "date":"", "dialogue": "आम्हाला या सर्वांची भाषा स्पष्टपणे समजली पाहिजे; आपण कमी-अधिक शब्दांत समजवायला मदत कराल ना?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, MDT सर्व माहिती plain-language मध्ये देईल; क्लिनिकल ट्रायल, अर्हता, खर्च, सर्व काही स्पष्टपणे."}
-{"speaker": "Patient", "date":"", "dialogue": "सर्जरीची तयारी कशी करावी, कोणत्या दिवशी घडते, रुग्णालयात कसे रहायचं?"}
-{"speaker": "Health Worker", "date":"","dialogue": "ऑपरेशनपूर्व बेसलाइन तपासण्या, डेंटल स्थिती तपासणी, नर्सिंग तयारी; MDT निर्णयानुसार पुढची तयारी."}
-{"speaker": "Patient", "date":"", "dialogue": "रेडिएशन सुरू होईल तर दररोज किती वेळा, आणि त्वचा-ताळाबद्दल काय करावं?"}
-{"speaker": "Health Worker", "date":"","dialogue": "सत्रे दररोज एक, 6-7 आठवडे; त्वचा सुरक्षित ठेवण्यासाठी सल्ले, ल्यूब्रिकेशन, म्यूकोसा काळजी."}
-{"speaker": "Patient", "date":"", "dialogue": "चेमोची डोस कशी दिली जाईल, किती वेळ लागतो?"}
-{"speaker": "Health Worker", "date":"","dialogue": "लोकल-आयोडिन करण्याची आवश्यकता असलेल्या केसेसमध्ये weekly डोस किंवा कमी डोस दराच्या चेमोची कल्पना असते; तुमच्यावर MDT निर्णय."}
-{"speaker": "Relative", "date":"", "dialogue": "आम्हाला ठेका-रहण्याची माहिती द्या; आम्ही तयारी करतो."}
-{"speaker": "Health Worker", "date":"", "dialogue": "यथाशक्ती तयारीची मदत केली जाईल; social worker, transportation, भाषांतर सेवा उपलब्ध."}
-{"speaker": "Patient", "date":"", "dialogue": "HPV स्थिती tumor वर कसा परिणाम करते ते कळले तरच चांगले."}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV स्थिती tumor ची आचरण करण्याची क्षमता बदलू शकते; पर निर्णय MDTवर अवलंबून."}
-{"speaker": "Patient", "date":"", "dialogue": "तुमची टीम मला नेहमी समजावून सांगेल अशी आशा आहे."}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, आपण कोणत्याही टप्प्यावर विचारलेच पाहिजे तशी माहिती देऊ; MDT तुमच्याकडे स्पष्ट माहिती राहील."}
-{"speaker": "Patient", "date":"", "dialogue": "काय-काय कागदपत्रे माझ्याकडे असावीत, ते तयार ठेवायला हवे?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "आधारकार्ड, हेल्थ कार्ड, वैद्यकीय इतिहासाचा સnk, imaging reports; online registration/verified documents."}
-{"speaker": "Patient", "date":"", "dialogue": "कधी माझ्या क्षेत्रात MRI उपलब्ध असेल, मुंबईतील कोणते केंद्र योग्य आहेत?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "MRI उपलब्धता चांगली आहे; माझ्या मार्गदर्शनानुसार तुमच्यासाठी स्थानिक केंद्रांची सूची देतो."}
-{"speaker": "Patient", "date":"", "dialogue": "आपण मला एकदम स्पष्टपणे योजना सांगाल का? मी तुम्हाला प्रश्नांची यादी देईन."}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, MDT च्या पथदर्शकानुसार baseline tests, MDT बैठक, स्टेजिंग, पुढील दिशा—सर्जरी/रेडिएशन/चेमो—एकत्रितपणे स्पष्ट होईल."}
-{"speaker": "Patient", "date":"", "dialogue": "ठीक. तुम्ही कोणत्या प्रश्नांची तयारी करू शकाल आणि मी कोणते दरवर्षी विचारू?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "Tumhi स्टेजिंग, उपचार-योजना, क्लिनिकल ट्रायल अर्हता, खर्च, विमा, आणि सहाय्यकार्याची माहिती विचारू शकता; आम्ही plain-language मध्ये उत्तर देऊ."}
-{"speaker": "Patient", "date":"", "dialogue": "त्यानुसार आम्ही एक प्रश्नांची सूची बनवू आणि MDTच्या दिवशी आणू."}
-{"speaker": "Health Worker", "date":"", "dialogue": "बरं, तुमची सूची MDT मध्ये सादर होईल; आम्ही स्पष्टपणे उत्तर देऊन निर्णय सोपा करतो."}
-{"speaker": "Patient", "date":"", "dialogue": "धन्यवाद, काही प्रश्न आधीच माझ्या कुटुंबाला पाठवायचे आहे."}
-{"speaker": "Health Worker", "date":"", "dialogue": "ठीक; plain-language सामग्री, ऑनलाइन लिंक, आणि clinic-फोल्डर दोन्ही तुमच्यासाठी उपलब्ध."}
-{"speaker": "Patient", "date":"", "dialogue": "काही दिवसांत MDTची तारखा कळतील, होय ना?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "होय, baseline result मिळाल्यानंतर MDT बैठक ठरते; स्टेजिंग झाल्यावर शक्यता-आधारित रस्ता स्पष्ट होतो."}
-{"speaker": "Patient", "date":"", "dialogue": "अंतिम स्टेजिंग नंतर आपल्याला काय सूचना मिळतील?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "स्टेजिंगनुसार सर्जरी, रेडिएशन किंवा chemoradiation, एकत्रित किंवा वैयक्तिक रस्ता; प्रत्येक टप्प्यावर स्पष्ट माहिती."}
-{"speaker": "Patient", "date":"", "dialogue": "याच्या प्रत्येक टप्प्यावर माझ्या आवाजाचं परिणाम काय होईल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "उच्चारात काही बदल राहू शकतो, पण स्पीच थेरपीने सुधारणा शकते; वेळोवेळी मूल्यांकन आवश्यक."}
-{"speaker": "Patient", "date":"", "dialogue": "खर्चाच्या बाबतीत काही विशिष्ट अट असल्यास सांगाल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "आयुष्मान भारत व अन्य योजनांमध्ये कव्हर होत असलेल्या बाबी तपासू; क्लिनिकल ट्रायल अर्हता असल्यास खर्च कमी होऊ शकतो."}
-{"speaker": "Relative", "date":"", "dialogue": "कुटुंबाच्या कोविड-यासारख्या तालमींसारखा आता आपल्याला मार्गदर्शन मिळेल का? आम्हाला माहितीची गरज आहे."}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, आम्ही सोशल वर्करद्वारे घरून-घरापर्यंत माहिती पोहोचवू; भाषांतर सुविधा, ट्रान्सपोर्ट, आणि insurance guidance उपलब्ध."}
-{"speaker": "Patient", "date":"", "dialogue": "कधीपर्यंत baselineTests पूर्ण होतील आणि MDTकधी होईल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "baseline tests दोन आठवड्यात पूर्ण होतील; imaging/bio-opsy सोबत MDT बैठक दोन आठवड्यात निश्चित केली जाईल."}
-{"speaker": "Patient", "date":"", "dialogue": "HPVचा परिणाम काय असेल, आणि आपल्याला काही क्लिनिकल-ट्रायलोंची संधी मिळते का?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV सकारात्मक असला तरी निर्णय बहुधा MDTचे; क्लिनिकल ट्रायलची संधी अर्हतेनुसार दिसते; मार्गदर्शन दिले जाईल."}
-{"speaker": "Relative", "date":"", "dialogue": "आम्हाला डॉक्टरांच्या भाषेत अधिक समजावून सांगाल ना? आम्ही प्रश्न तयार करायलाच हवे."}
-{"speaker": "Health Worker", "date":"", "dialogue": "नक्की. MDTचा मार्ग plain-language मध्ये स्पष्ट करतो; प्रश्नांची सूची घेऊन या."}
-{"speaker": "Patient", "date":"", "dialogue": "तुम्ही कोणत्याही प्रक्रियेच्या वेळापत्रकाची एक ठराविक रचना देऊ शकता?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, baseline tests, imaging, biopsy, MDT बैठक, स्टेजिंग, आणि त्यानंतर सर्जरी/रेडिएशन/चेमो-योजना—ही एकत्रित रचना असते."}
-{"speaker": "Patient", "date":"", "dialogue": "चला तर पुढे काय करायचं, आम्ही आजच तयारी करतो का?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, baseline tests आता सुरू करू; रक्त, dental status, imaging, biopsy-प्रस्ताव; MDT बैठक दोन आठवड्यात ठरते."}
-{"speaker": "Patient", "date":"", "dialogue": "आम्ही चालतोय; कृपया तुम्ही आम्हाला वेळापत्रक कळवा."}
-{"speaker": "Health Worker", "date":"", "dialogue": "चालेल. MDT तारखा/visit schedule तुमच्यासोबत coordinating करतो."}
-{"speaker": "Patient", "date":"", "dialogue": "धन्यवाद. आपण या जगातला आणखी एक प्रश्न."}
-{"speaker": "Health Worker", "date":"", "dialogue": "मग इथेच विचारलं जाऊ शकतं; आम्ही तुम्हाला सोबतच मार्गदर्शन देऊ."}
-{"speaker": "Patient", "date":"", "dialogue": "तुम्ही मला कसे संपर्कात ठेवाल, आणि आकडेवारी कशी सुरक्षित ठेवायची?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "फोन, ईमेल, आणि ऑनलाइन पोर्टलवर संपर्क; तुमची माहिती encrypted पद्धतीने सुरक्षित ठेवली जाईल."}
-{"speaker": "Patient", "date":"", "dialogue": "तुमच्या टीममध्ये Nutritionist, Pharmacist, Social Worker आणि Speech Therapist असतील का?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "होय, MDT मध्ये Nutritionist, Speech Therapist, Social Worker, Nursing टीम, Imaging Specialist सर्व सहभागी असतील."}
-{"speaker": "Relative", "date":"", "dialogue": "आम्हाला प्रत्येक डॉक्टरांची भूमिका समजावी; आम्ही स्टेजिंग-नंतर कोणते निर्णय घेऊ ते समजावून सांगा."}
-{"speaker": "Health Worker", "date":"", "dialogue": "ठीक; MDT स्पष्ट भूमिका देईल: Surgical Team, Medical Oncologist, Radiation Oncologist, Dietitian, Social Worker."}
-{"speaker": "Patient", "date":"", "dialogue": "खर्चांचे अचूक बांधकाम कधी काय माहिती मिळेल? विमा-आधारित कव्हर कसं मिळेल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "आम्ही विमा-गाइडन्स देतो; आयुष्मान भारत व अन्य योजनांची माहिती; कव्हरिंग तीन स्तरांवर तपासली जाते."}
-{"speaker": "Patient", "date":"", "dialogue": "आता मी डॉक्टरांना कळवतो, आम्ही MDT लाईन-अपकडे वळूया."}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, MDT-समन्वयासाठी आपण पुढे जा; basalene tests पूर्ण झाल्यावर पुढची बैठक होईल."}
-{"speaker": "Patient", "date":"", "dialogue": "काय तुमच्याकडे या संदर्भात काही खास मिनी-लिस्ट आहे का?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "Baseline test checklist, HPV status, imaging reports, biopsy results, consent documents, and appointments schedule—या सहज चेकलिस्ट देतो."}
-{"speaker": "Relative", "date":"", "dialogue": "आमची भूमिका काय अपेक्षित आहे? कडेकोट चर्चा होईल का?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "तुम्ही उपस्थित असाल तर MDT चर्चेत family-फ्रेंडली संवाद होतो; प्रश्नांना उत्तर देण्यात येईल."}
-{"speaker": "Patient", "date":"", "dialogue": "आपण dua-line Tata Rijter? आम्हाला आपली language support आवश्यक."}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, language support, translator, आणि essential language-appropriate information उपलब्ध."}
-{"speaker": "Patient", "date":"", "dialogue": "धन्यवाद, काही दिवसांत आम्ही दोघेही तयारी करतो."}
-{"speaker": "Health Worker", "date":"", "dialogue": "चांगलं; baseline tests सुरू करु; MDT 2-3 आठवड्यात निर्णय देईल."}
-{"speaker": "Relative", "date":"", "dialogue": "आम्ही क्लिनिकल-ट्रायल बद्दल विचार करणार; आपल्याला दिशानिर्देश दिलेले आहेत ना?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "होय; ट्रायल-गाइडन्स MDT देईल; अर्हता असल्यास तुम्हाला संधी मिळेल."}
-{"speaker": "Patient", "date":"", "dialogue": "आपण माझ्या मुलींसोबतही बोलू शकता का, तिला माहिती देण्यासाठी?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, परिवारातील सदस्यांना समजावा म्हणून plain-language माहिती देतो; मुलींसुद्धा उपस्थित राहू शकतात."}
-{"speaker": "Patient", "date":"", "dialogue": "त्यांची मदत महत्त्वाची आहे; MOTIVATION आणि सपोर्ट कसा देऊ?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "Motivational interviewing, cessation support groups, local programs, आणि social worker-initiatives उपलब्ध."}
-{"speaker": "Patient", "date":"", "dialogue": "कनिष्ठपणे, आम्ही डॉक्टरांना पुढील आठवड्यात भेटू."}
-{"speaker": "Health Worker", "date":"", "dialogue": "ठीक; MDT तारखा कळवतो; baseline results येताच भविष्यवाणी आणि स्टेजिंग स्पष्ट होईल."}
-{"speaker": "Patient", "date":"", "dialogue": "एकटीच आलो होतो, पर आता माझा मित्र/परिवार माझ्यासोबत असणार."}
-{"speaker": "Health Worker", "date":"", "dialogue": "तुम्हाला साथ देण्यासाठी परिवार आणू शकतो; MDT बैठकात ते सहभागी होऊ शकतात."}
-{"speaker": "Patient", "date":"", "dialogue": "खूप चांगलं. आता मला काही प्रश्नांची तयारी करायची आहे."}
-{"speaker": "Health Worker", "date":"", "dialogue": "होय, तुमची प्रश्नांची सूची तयार करून आणा; आम्ही एक-एक करुन स्पष्ट करतो."}
-{"speaker": "Patient", "date":"", "dialogue": "HPV चा निकाल कसा उपयोगी ठरतो, आणि क्लिनिकल ट्रायलची अर्हता कशी तपासते?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "HPV चा निकाल tumor behavior बदलेल; ट्रायलमध्ये अर्हता, प्रवेश व खर्च स्पष्ट करतो."}
-{"speaker": "Relative", "date":"", "dialogue": "आम्ही आम्ही आरोग्य विमा आणि सरकारी योजना कोणत्या स्टेजिंग-जन्य खर्चांवर उपयोगी ठरतील ते तपासतो."}
-{"speaker": "Health Worker", "date":"", "dialogue": "होय, विमा-कव्हर व सरकारी योजना, ट्राय-आधी योजना स्पष्ट करतो; आमच्या टीमकडे कागदपत्रांची तयारी ठेवू."}
-{"speaker": "Patient", "date":"", "dialogue": "कधी मी पुन्हा भेटू आणि MDTची अंतिम रचना काय असेल?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "बेसलाइन परिणामांनुसार MDT दोन आठवड्यात अंतिम निर्णय देईल; मग सर्जरी/रेडिएशन/चेमोचा क्रम आकारले जाईल."}
-{"speaker": "Patient", "date":"", "dialogue": "गलेाच्या आजारांनी आवाजावर परिणाम झाला तर स्पीच-थेरपी कशी मदत करते?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "स्पीच-थेरपी ध्वनीची गुणवत्ता परत आणण्यास मदत करते; ठोस अभ्यासांनी देखील फायदे दिले आहेत."}
-{"speaker": "Patient", "date":"", "dialogue": "नुकतीच डॉक्टरांनी वजन वाढीवर भर द्यायला सांगितलं; आम्हाला काही खास उपाय देऊ शकता?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "हाई-प्रोटीन आहार, छोटे-छोटे आहार आणि पोषणतज्ज्ञाचा प्लान; लवकर वजन परत प्राप्त होइल."}
-{"speaker": "Relative", "date":"", "dialogue": "अर्थात. आम्ही सर्वांची तयारी ठेवत आहोत; कोणते प्रश्नांना उत्तर दयायला हवे?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "स्टेजिंग, उपचार-योजना, क्लिनिकल ट्रायल अर्हता, खर्च, विमा, आणि सहाय्यकार्याची माहिती स्पष्टपणे द्यावी."}
-{"speaker": "Patient", "date":"", "dialogue": "मी विचारूं थोडे, तुमची टीम मला नेहमी सपोर्ट देईल ना?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "होय, आम्ही नेहमी तुम्हाला साथ देण्यास तयार आहोत; MDT मार्गदर्शन, follow-up आणि आवश्यकतेप्रमाणे सहायता."}
-{"speaker": "Patient", "date":"", "dialogue": "धन्यवाद. मला आता जरा विश्रांती हवी आहे."}
-{"speaker": "Health Worker", "date":"", "dialogue": "तुम्हाला आराम हवा असेल तर आराम करा; baselines पूर्ण झाल्यावर आम्ही पुन्हा संपर्कात येऊ."}
-{"speaker": "Patient", "date":"", "dialogue": "ठीक. MDT कधी असते ते मला कळवायला हरकत नाही."}
-{"speaker": "Health Worker", "date":"", "dialogue": "हो, MDT तारखा आम्ही लवकरच कळवू; त्या दिवशी स्टेजिंग व पुढील उपचार स्पष्ट होईल."}
-{"speaker": "Patient", "date":"", "dialogue": "आणखी एक प्रश्न. क्लिनिकल ट्रायलमध्ये अर्ज करायचा असल तर मला काय करायचं?"}
-{"speaker": "Health Worker", "date":"", "dialogue": "MDT निर्णयानंतर ट्रायलची अर्हता पाहण्यात येते; travel-आणि logistically तयारी आपणाच असते; सामील होण्याची प्रक्रिया सोपी."}
-{"speaker": "Relative", "date":"", "dialogue": "कदाचित आता आम्हाला परिवार सदस्यांच्या स्पर्धा-भागासाठी माहिती देउ."}
-{"speaker": "Health Worker", "date":"", "dialogue": "तुमच्या कुटुंबाला क्लिनिकल ट्रायल व क्लिनिकल-ट्रायलोंचा प्रॉस्सेस स्पष्टपणे देत_planes."}
-{"speaker": "Patient", "date":"", "dialogue": "आम्ही तयार आहोत; कृपया पुढील 2-3 दिवसांत आपला दृष्टी-निर्देश देऊ."}
-{"speaker": "Health Worker", "date":"", "dialogue": "ठीक; baseline tests सुरू; रक्त, dental status, imaging, biopsy तयारी; 2-3 दिवसांत निकाल; MDT निर्णय."}
-{"speaker": "Patient", "date":"", "dialogue": "तुमच्याशी आणखी एकदा बोलू. धन्यवाद."}
-{"speaker": "Health Worker", "date":"", "dialogue": "नक्की. MDT तारखा, स्टेजिंग, आणि पुढील दिशा आम्ही लवकरच तुमच्याशी शेअर करतो."}
-{"speaker": "Patient", "date":"", "dialogue": "मी तयार आहे. कृपया मला मार्गदर्शन दे."}
-{"speaker": "Health Worker", "date":"", "dialogue": "तुमच्यासाठी baseline tests सुरू; MDT निर्णयानुसार पुढचा रस्ता ठरेल; तसेच आहार, cessation support, psychosocial services संचालित होतील."}
-{"speaker": "Relative", "date":"", "dialogue": "धन्यवाद; आम्ही तुमचा विश्वास वाढवतो आणि सर्वतोपरी साथ देऊ."}
+{"speaker": "Health Worker", "date": "", "dialogue": "डॉक्टर: आपण एकत्र काम करणार आहोत, त्यामुळे कोणतेही प्रश्न किंवा चिंताएं नाहीत; कृपया आपलं नाव, वय, राहण्याचं ठिकाण, आणि आजची मुख्य तक्रार काय आहे ते सखोलपणे सांगा."}
+{"speaker": "Patient", "date": "", "dialogue": "रजा, मी राजेश पटेल, 45 वर्षाचा, मुंबईत राहतो. गेल्या काही आठवड्यांपासून गळ्यात गोळा असल्यासारखी जाणीव, आवाज हलका व्हायचा, खायला अडचण, आणि वजन घटतंय असा अनुभव आहे."}
+{"speaker": "Health Worker", "date": "", "dialogue": "समजलं; यातलं सर्व एकत्र पाहायला हवं. धूम्रपान, pan masala, किंवा अलीकडे अॅल्कोहोलचा वापर सुरु/वired? HPV बद्दल माहिती आहे का, असा इतिहास ठरवण्याचा विचार आहे."}
+{"speaker": "Patient", "date": "", "dialogue": "होय, मी दीर्घकालीन तंबाखू वापरतोय, pan masala दररोज 2-3 वेळा; अलीकडे अॅल्कोहोल कमी केलं. HPV बद्दल माहिती नाही; चाचणी करावी का ते मला कळत नाही."}
+{"speaker": "Health Worker", "date": "", "dialogue": "चांगलं; पुढे तोंड, घसा तपासणी, बायोप्सीची योजना, आणि CT/MRI चा क्रम ठरेल; निकाल 2-3 दिवसांत मिळण्याची शक्यता. या सर्व प्रक्रियेत तुमचं मुल्यवान परिवार साथ देईल का?"}
+{"speaker": "Patient", "date": "", "dialogue": "हो, मी आज एकटा आलोय; पुढच्या भेटीला माझं कुटुंब सदस्य येईल, परंतु या वेळेस मला सगळं स्पष्टपणे समजावून घ्यायचं आहे."}
+{"speaker": "Health Worker", "date": "", "dialogue": "तयार असाल तर आजच बेसलाइन तपासणी साधू, परंतु फक्त आपल्या आणि तुमच्या कुटुंबाच्या सोयीसाठी. आधारकार्ड, आरोग्य कार्ड, जुनी रिपोर्ट्स, इमेजिंग कागदपत्रं आणण्याची तयारी करा."}
+{"speaker": "Patient", "date": "", "dialogue": "समजलं; बायोप्सीसाठी तयारी कशा प्रकारची असते? वेदना, anesthesiaचा प्रकार, आणि निकाल कधी मिळतील हे मला समजायला हवं."}
+{"speaker": "Health Worker", "date": "", "dialogue": "बायोप्सीमध्ये सामान्यतः हलकी वेदना असते; स्थानिक anesthesia लागू होतो; निकाल 2-5 दिवसांत मिळण्याचा प्रयत्न; जर गळा-फ्लोअर भाग असेल तर ENT विशेषज्ञांची मदत घ्यावी शकते."}
+{"speaker": "Patient", "date": "", "dialogue": "मला वजन कमी झालेलं आहे, अन्न घेण्यात अडचण होते, आवाज काहीसे बदलला आहे; या स्थितीला आपण काय उपाय सुचवाल?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "या चिन्हांवर आधारित आपला प्रथमिक विचार metastasisची शक्यता आहे; परंतु एकत्रितपणे पडताळणी करावी लागते, ज्यामध्ये बायोप्सी, imaging आणि HPV चाचणी सामील असतील."}
+{"speaker": "Patient", "date": "", "dialogue": "HPV चाचणी tumorच्या स्टेजिंगवर कसा परिणाम करेल? माझ्या परिस्थितीत तो निर्णयक ठरेल काय?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "HPVचा परिणाम tumorच्या वर्तन, स्टेजिंग आणि उपचारांच्या पर्यायांवर काही प्रमाणात प्रभाव पाडू शकतो; परंतु निर्णय एकाधिक घटकांवर आधारित असतो."}
+{"speaker": "Patient", "date": "", "dialogue": "तुम्ही निकाल सोप्या भाषेत समजावून सांगू शकाल का? मला माझं कुटुंब जमल्यासोबत घेऊन पुढील स्टेप्स स्पष्टपणे सांगता."}
+{"speaker": "Health Worker", "date": "", "dialogue": "होय, आम्ही प्रत्येक शब्द साफ भाषेत समजावू; MDT चा संदर्भ, कधी बैठक होईल, कुठे, कोणाचे उपस्थिती आवश्यक, ते स्पष्टपणे कळवू आणि आवश्यक तयारीही सांगू."}
+{"speaker": "Patient", "date": "", "dialogue": "आधार तपासणी, रक्त तपासणी, dental exam, इमेजिंग, बायोप्सीची तयारी यात दोन आठवडे धडधड चालतील;	report्स आल्यानंतर MDT कोणती दिशा देईल?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "होय, baseline tests दोन आठवड्यात पूर्ण होण्याची शक्यता; नंतर MDT रिपोर्ट देईल आणि स्टेजिंग स्पष्ट होईल; त्यानुसार ऑपरेशन, radiotherapy किंवा कॉम्बिनेशन ठरवायचं."}
+{"speaker": "Patient", "date": "", "dialogue": "आहारात प्रोटीन-युक्त पदार्थ, फळं-भाज्या, पुरेपुर पाणी; वजन घटला आहे, त्यामुळे सुधारण्यासाठी कोणते आहार-सपोर्ट्स उपयोगी ठरणार?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "nutritionist सोबत संधी साधू, प्रोटीन-युक्त आहार, हलके frequent meals, हार्वर्ड-स्तराचे सप्लिमेंट्स विचारात घेऊ; वजन टिकवण्यासाठी पाणी आणि हाय-कॅलरी स्नॅक्स."}
+{"speaker": "Patient", "date": "", "dialogue": "धूम्रपान सोडण्यासाठी स्थानिक कार्यक्रम, निकोटिन रिप्लेसमेंट थेरपी, आणि कुटुंबाचं योगदान कसे वाढवायचं, या बाबीची योजना सांगू शकाल का?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "होय, निकोटिन रिप्लेसमेंट आणि सपोर्ट ग्रुप्स, सोशल वर्करचा समन्वय; तुमच्या सगळ्या पथ्य-श्रोतांना एकत्र करून एक सुदृढ योजना तयार करतो."}
+{"speaker": "Patient", "date": "", "dialogue": "क्लिनिकल ट्रायल्सची संभाव्यता तपासण्यासाठी कोणत्या अटीं असतात? आयुष्मान भारत योजना क्लिनिकल ट्रायल्सशी कशी जुळते?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "ट्रायल्सची अटी वेगवेगळी असतात; पात्रता, सह्या, आणि लॉजिस्टिक्स स्पष्ट करतो. Ayushman Bharat सारख्या योजना काही रुग्णांना मदत करतात, परंतु प्रत्येक केस वेगळा."}
+{"speaker": "Patient", "date": "", "dialogue": "कागदपत्रांची सूची पुन्हा एकवार देऊ शकाल का? MDT बैठकीसाठी कोणते फॉर्म्स, कोणते रिपोर्ट्स, आणि कोणत्या प्रमाणपत्रांची गरज आहे?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "आधार कार्ड, आरोग्य कार्ड, जुने रिपोर्ट्स, CT/MRI रिपोर्ट्स, बायोप्सी निकाल, फॉर्म्स; MDTपूर्व तयारीसाठी सर्व काही अचूक ठेवा."}
+{"speaker": "Patient", "date": "", "dialogue": "MDT बैठकीची तारीख कायम कधी असते, आणि आम्ही दोन आठवड्यात तयारी पूर्ण करण्याचा ध्यास ठेवतो; आम्हाला उपलब्ध وقت कळवा."}
+{"speaker": "Health Worker", "date": "", "dialogue": "तारीख सामान्यतः पुढील आठवड्यात ठरते; तुम्ही उपलब्ध असाल तर आम्ही त्यानुसार वेळ ठरवतो; MDT स्पष्ट झाल्यावर तुम्हाला माहिती देतो."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "मी लवकरच येणार आहे; मला संथ भाषा समजावी असे वाटते, कृपया कागदपत्रे सोप्या शब्दात समजावून सांगाल का?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "निश्चित, आम्ही प्रत्येक शब्द सोप्या भाषेत समजावू; क्लिनिकल टर्म्सची लिस्ट देतो, आणि शक्यतो डायग्रामने स्पष्टीकरण देतो."}
+{"speaker": "Patient", "date": "", "dialogue": "गळ्यात वेदना, आवाज बदलला, अन्न खाण्यात अडचण; मला धैर्य टिकवून पुढे जायचंय; MDTजवळील तयारी कशी ठेवावी?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "तुमचं धैर्य महत्त्वाचं आहे. या स्थितीमध्ये ENT/ओरोल-एंडो-रेडियोलॉजीची अणिबंधक तपासणी, बायोप्सी, आणि MDT निर्णय घेईल."}
+{"speaker": "Patient", "date": "", "dialogue": "बायोप्सीसाठी anesthesia प्रकार कोणते असतील? तयारीत कोणते विशेष तपशील आवश्यक?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "अक्सर स्थानिक anesthesia फायदेशीर; काही प्रकरणात संपूर्ण-चेष्टा; तयारीत स्वच्छता, श्वासोच्छ्वास पद्धत, आणि निकाल मिळण्याच्या वेळेची कल्पना समजवतो."}
+{"speaker": "Patient", "date": "", "dialogue": "स्टेजिंग कशी ठरते? ट्यूमरचा आकार, ठिकाण, लिम्फ नोड्स, HPV परिणाम एकत्र कसे विचारात घेतले जात?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "स्टेजिंग इमेजिंग (CT/MRI) आणि बायोप्सी निकालाने होते; HPV, ट्यूमराचा प्रकार, आकार, नोडल इन्वॉल्वमेंट या सर्वांचा विचार MDTमध्ये एकत्र केला जातो."}
+{"speaker": "Patient", "date": "", "dialogue": "पद्धतशी सामना करण्यासाठी दोन आठवडे आत baseline tests पूर्ण होतील का?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "होय, baseline tests दोन आठवड्यात पूर्ण होतील; इमेजिंग, रक्त तपासणी, दंत स्थिती, आणि biopsy तयारी; नंतर MDT निर्णय होईल."}
+{"speaker": "Patient", "date": "", "dialogue": "जर सर्जरीचा पर्याय निवडला तर ते किती दिवस टिकेल आणि पोस्ट-ऑप रीकव्हरी कशी असेल?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "शस्त्रक्रियेचा प्रकारावर अवलंबून काळ लागू होतो; पोस्ट-ऑप आहार, औषध-ऑपरेशननंतरची काळजी, फिजिकल थेरेपी आणि डिस्चार्ज-फॉलोअप महत्त्वाचे असते."}
+{"speaker": "Patient", "date": "", "dialogue": "Radiotherapy किंवा Chemoradiationचा कोणता मार्ग जास्त फायदेशीर ठरेल? स्टेजिंगनुसार कधी निर्णय होते?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "स्टेजिंग आणि इमेजिंगनुसार radiotherapy किंवा chemoradiationचा निर्णय घेतला जातो; काही प्रकरणात दोन्हीचा कॉम्बिनेशन देखील प्रभावी ठरते."}
+{"speaker": "Patient", "date": "", "dialogue": " nutritionsupport खूप आवश्यक दिसतो; वजन गमावणं रोखण्यासाठी कोणते आहार-सल्ले उपयोगी ठरतील?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "न्यूट्रिशन plan महत्त्वाचा; प्रोटीनयुक्त आहार, छोटी-छोटी frequent meals, पाणी आणि चांगल्या प्रकारचे सप्लिमेंट्स विचारात घ्या."}
+{"speaker": "Patient", "date": "", "dialogue": "सरकारी योजना, विमा क्लेम, आणि MDTच्या खर्चासाठी कोणते फायदे आहेत? आवश्यक फॉर्म्स कोणते?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Ayushman Bharat सारख्या योजना काही रुग्णांना मदत करतात; विमा क्लेमसाठी आधार-कार्ड, आरोग्य कार्ड, आणि रुग्ण प्रोफाइल आवश्यक असते."}
+{"speaker": "Patient", "date": "", "dialogue": "आधार कार्ड आणि आयडी असल्यास काही खर्च कमी होतो का? आणखी कोणते फायदे मिळू शकतात?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "खर्च कमी होऊ शकतो; कधी कधी दवाखाना-फीसमध्ये सूट, कधी विमा-शर्तांची सवलत; सोशल वर्कर कडून योजनांची थेट मदत मिळते."}
+{"speaker": "Patient", "date": "", "dialogue": "आपण भाषेचं अडचण न सोडता सोप्या शब्दात माहिती देता, ही मोठी मदत. आपल्याकडील साधे उदाहरण देता येईल का?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "होय, आम्ही सोप्या भाषेत सांगतो; मुद्रित लिस्ट, डायग्राम, आणि FAQ देतो; काही शब्द समजत नसतील तर लगेच विचारा."}
+{"speaker": "Patient", "date": "", "dialogue": "इंटरनेटवर विश्वसनीय माहिती मिळवण्यासाठी कोणते स्रोत योग्य? मी चुकीची माहिती टाळण्याचे उपाय विचारत आलो आहे."}
+{"speaker": "Health Worker", "date": "", "dialogue": "सरकारी वेबसाइट्स, सरकारी योजनांची पन्ने, आणि रुग्ण-समर्थन संस्था यांच्या लिंक देतो; सत्यापनासाठी आम्ही आपल्याला मदत करू."}
+{"speaker": "Patient", "date": "", "dialogue": "MDT बैठकची तिथी कधी निश्चित केली जाते? आम्ही तयारीसाठी कधी उपलब्ध रहावं?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "MDT बैठक सामान्यतः पुढील 1-2 आठवड्यात होते; तुमच्या उपलब्धतेनुसार आम्ही वेळ निश्चित करतो, आणि प्रत्येकीला माहिती देण्याचा प्रयत्न करतो."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "मी येईन तेव्हा सोप्या भाषेत माहिती देऊ शकता का? आम्हाला डॉक्टरांचा शब्द समजण्यासाठी थोडा अतिरिक्त स्पष्टीकरण हवा."}
+{"speaker": "Health Worker", "date": "", "dialogue": "होय, आम्ही सोप्या शब्दांत स्पष्टीकरण देऊ; MDT निकाल, स्टेजिंग, आणि उपचाराच्या योजना स्पष्टपणे सांगू; साथ देण्याच्या प्रकारांनाही आम्ही माहिती देऊ."}
+{"speaker": "Patient", "date": "", "dialogue": "आणखी एक प्रश्न; बायोप्सी निकाल कधी स्पष्ट होईल, त्या निकालाची अंतिम तारीख कधी कळेल?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "बायोप्सी निकाल दोन ते पाँच दिवसांत येईल; काही प्रकरणांत थोडा जास्त वेळ लागू शकतो, परंतु आम्ही तुमच्याशी त्या वेळेस कळवू."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "त्या दिवशी आम्ही हॉस्पिटलमध्येच येऊ; आवश्यक असलेल्या मदतीसाठी आम्ही तयार राहू."}
+{"speaker": "Health Worker", "date": "", "dialogue": "चांगलं. तुम्हाला कोणत्याही वेळी प्रश्न असतील तर आपण चेकलिस्ट, फॉर्म्स, व MDT नोट्स खास करून सोप्या भाषेत देऊ."}
+{"speaker": "Patient", "date": "", "dialogue": "धन्यवाद डॉक्टर, मला आता स्पष्टपणे कळले आहे. MDTची बैठक कधी होईल ते कळवावी; मी आणि माझं कुटुंब तयारीला लागू."}
+{"speaker": "Health Worker", "date": "", "dialogue": "तयार राहा; आम्ही बैठकाची तारीख लवकरच कळवू आणि आवश्यक तयारीची अंतिम चेकलिस्टही पाठवू."}
+
 Ground Truth
-Summary of Head and Neck Cancer dialogue (key events, symptoms, diagnosis, and treatment steps)
+Summary of the Head and Neck Cancer dialogue (key events, symptoms, diagnosis, and treatment steps)
 
-- Patient profile and presenting symptoms
-  - Names Rajesh Patel, ~52 years, Mumbai. Symptoms: lump in neck, hoarseness, dysphagia (difficulty swallowing), sleep disturbance, unintended weight loss.
-  - Risk factors noted: daily tobacco smoking, pan masala use; HPV testing considered.
-  - Question about HPV testing and its impact on plan.
+- Patient presentation and risk factors
+  - Patient: Rajesh Patel, 45, Mumbai.
+  - Symptoms: sensation of a lump in the throat, hoarseness, trouble sleeping, difficulty swallowing, and unintended weight loss.
+  - Risk factors: long history of tobacco use and areca nut products (pan masala 2–3 times daily); occasional cigarettes/hookah; alcohol use decreased recently.
+  - HPV: considered as a factor to assess and inform decisions.
 
-- Diagnostic plan and initial assessments
-  - Baseline investigations plan: oral/dental examination, pharyngeal evaluation, endoscopy, FNAC/biopsy, basic blood tests, CT/MRI imaging.
-  - HPV testing to be considered; results (biopsy) expected in 2–5 days; imaging important for MDT decisions.
-  - Goal to complete baseline assessments within about two weeks; imaging/biopsy organized and results reviewed by MDT.
+- Initial assessment and diagnostic plan
+  - Planned investigations: thorough intraoral/dental examination and pharyngeal evaluation; possible biopsy; CT/MRI imaging; basic blood tests as needed.
+  - Biopsy timeline: results typically available in 2–5 days; imaging and biopsy results will guide next steps.
+  - Patient preference: requested family involvement to support and understand results.
 
-- MDT framework and decision-making
-  - Multidisciplinary Team (MDT) includes oral surgeon, medical oncologist, radiation oncologist, imaging specialist, nutritionist; clinical trial options discussed.
-  - Emphasis on presenting information in plain language; HPV status and trials considered case-by-case.
-  - MDT meetings scheduled at defined times; patient and family may participate.
+- Multidisciplinary evaluation and next steps
+  - MDT approach: diagnosis to be confirmed by a multidisciplinary team (oral surgeon, oncologist, radiation-oncologist, imaging specialist, nutritionist); clinical trial options considered on a case-by-case basis.
+  - HPV testing and trials: discussed as case-based decisions; full information provided to help decide.
+  - Communication: emphasis on clear, plain-language explanations; MDT logistics (where/when meetings occur, who attends) explained.
 
 - Timeline and sequencing of evaluation
-  - Baseline tests aimed to be completed within two weeks; then MDT meeting about staging and next steps.
-  - Final treatment path (surgery, radiotherapy, or chemoradiation; combined or individual) decided after MDT based on staging.
+  - Within two weeks: complete baseline assessment (oral/dental exam, blood tests) and arrangements for initial imaging/biopsy.
+  - After results: MDT meeting to determine direction; imaging-based staging to decide between surgery, radiotherapy, or a combination.
 
 - Treatment planning framework (surgery vs radiotherapy)
-  - Both surgery and radiotherapy discussed; final plan depends on staging.
-  - If advanced stage, typical approaches include surgery + radiotherapy, sometimes with chemotherapy; MDT makes final choice and explains it for informed consent.
-
-- HPV testing and clinical trials in decision process
-  - HPV status may influence tumor behavior and potentially lead to trial options or adjustments in radiotherapy approach.
-  - Clinical trials assessed for eligibility, logistics, and costs; schemes like Ayushman Bharat discussed.
+  - Both options discussed with their advantages and risks; final plan may involve combined modality therapy depending on staging.
+  - Decision factors: staging and imaging results drive the final choice, with transparent explanations to aid informed consent.
 
 - Nutrition, lifestyle, and psychosocial support
-  - Nutrition emphasized: protein-rich diet, fruits/vegetables, adequate fluids; dietitian will tailor plan.
-  - Tobacco/alcohol cessation counseling; local cessation programs offered.
-  - Psychosocial support highlighted: family involvement, social worker, insurance guidance, government schemes, and trial eligibility assistance.
+  - Nutrition: protein-rich diet, fruits/vegetables, adequate fluids; potential follow-up with a nutritionist to tailor plans due to weight loss.
+  - Tobacco/alcohol cessation: counseling and resources offered; local cessation programs and strategies to improve therapy tolerability.
+  - Psychosocial support: family involvement encouraged; social worker support; guidance on insurance and government schemes.
 
 - Logistics, documentation, and access to resources
-  - Required documents: identity cards, medical history, imaging reports; online registration and verified documents.
-  - Language support and translation services available; social worker assistance; insurance guidance; rural-urban access considerations.
-  - Coordination for travel and patient-family involvement in MDT discussions.
+  - Essential documents: Aadhaar card, health card, medical history, imaging reports; online registration and verified documentation needed.
+  - Family involvement: families encouraged to join visits; ongoing online chat/phone support for questions.
+  - Insurance and schemes: information provided on accessing coverage; clinical trials and approvals discussed.
+
+- HPV testing and clinical trials in decision process
+  - HPV status may influence tumor behavior and staging, but treatment decisions remain multi-factorial (imaging, biopsy, blood work, clinical status).
+  - Clinical trials: eligibility criteria and logistics explained; costs and processes to enroll explained; Ayushman Bharat-type schemes discussed for potential support.
 
 - Next steps and anticipated events
-  - Baseline tests to be completed in about two weeks; imaging and biopsy arranged.
-  - MDT meeting to finalize staging and determine direction (surgery/radiotherapy/chemoradiation).
-  - Post-MDT: results shared with patient/family; follow-up schedule and logistics planned; ongoing nutritional, cessation, and psychosocial support.
+  - In the next two weeks: completion of baseline tests (blood work, dental status, imaging, biopsy preparations).
+  - MDT meeting: to finalize staging and treatment direction after results; patient and family will be promptly informed.
+  - Coordination: appointment of the upcoming MDT date and scheduling of visits with the patient and family.
 
-- Patient concerns and counseling expectations
-  - Endoscopy: minor procedure with local anesthesia or light sedation; brief duration; pain control explained.
-  - Potential treatment effects: voice changes, swallowing difficulties, fatigue; radiotherapy-related skin and mucosal effects; long-term follow-up.
-  - Travel and access: availability of imaging centers; rural-urban differences addressed.
-  - Follow-up: typically monthly initially; MDT-driven updates provided as needed.
-
-- Key takeaways and trajectory
-  - Presentation leads to baseline evaluation, HPV testing, and imaging within ~2 weeks; results guide MDT-based staging.
-  - Final plan (surgery, radiotherapy, chemoradiation, or combinations) decided by MDT after staging; treatment plans explained in plain language.
-  - Integrated support: nutritional counseling, cessation programs, psychosocial services, and assistance with paperwork, insurance, and potential clinical trials.
-  - Family involvement is encouraged; MDT and care team aim to keep the patient and family well-informed at every step.
-
-- Core message
-  - The patient’s condition, imaging/biopsy results, and HPV status will drive MDT-guided staging and treatment decisions. Throughout, there will be emphasis on plain-language explanations, comprehensive supportive care (nutrition, cessation, psychosocial), and assistance with documentation, insurance, and trial access.
+Overall, the dialogue outlines a structured diagnostic-to-treatment pathway for suspected head-and-neck cancer: initial symptom review and risk assessment, baseline clinical exams, biopsy and imaging within two weeks, MDT-driven staging to guide surgery, radiotherapy, or chemoradiation (individually or in combination), with integrated nutritional, cessation, and psychosocial support, plus attention to documentation, insurance access, and potential clinical trials. Family involvement and plain-language communication are emphasized throughout to support informed decision-making.
 
 Qwen-2.5-7B-Instruct-zero-shot
-Mr. Rajesh Patel, 52 years old from Mumbai, presents with throat pain, voice change, difficulty swallowing, night sweats, and weight loss. He is a known smoker and uses tobacco and spices. The patient seeks evaluation for possible head and neck cancer. An HPV test is recommended to assess risk. The baseline tests include blood work, dental examination, imaging (CT/MRI), and endoscopy preparation. The MDT (Multidisciplinary Team) meeting is scheduled for two weeks later to discuss staging, treatment options, and further steps based on initial test results. 
+The patient, Rajesh Patel, 45 years old, from Mumbai, reports symptoms of weight loss, hoarseness, difficulty swallowing, and reduced appetite for several months. He has a history of long-term tobacco use (tobacco chewing and pan masala), occasional alcohol consumption, and no known Human Papillomavirus (HPV) infection. The patient is scheduled for a biopsy, followed by CT/MRI within 2-3 days. Family members will accompany him to all medical appointments.
 
-The patient asks about the timing of HPV testing and further investigations. The baseline tests are completed within two weeks, including blood work, dental status, imaging, and endoscopy preparation. The MDT meeting is set for two weeks after baseline results to determine staging and next steps. The patient inquires about the impact of HPV status on staging and prognosis. HPV positivity may influence treatment decisions, but final staging is determined by the MDT considering multiple factors.
+The patient's primary concerns include understanding the process and preparing for the biopsy. He mentions experiencing pain during the procedure, which would be managed with local anesthesia. The patient also discusses potential nutritional support due to weight loss and difficulty eating. He inquires about quitting smoking and the role of family support in this process.
 
-The patient asks about the role of chemotherapy and radiation in advanced stages. Surgery, followed by radiation, is common for advanced cases, with chemotherapy added in some cases. The MDT will decide on the exact treatment plan. The patient inquires about the specifics of surgery, including lymph node removal and reconstruction. Radiation involves daily sessions over 6-7 weeks, with potential side effects like skin irritation and reduced appetite. Chemotherapy dosage and side effects are discussed, with local iodine application considered in certain cases.
+The patient is concerned about the staging of his condition and the implications for treatment decisions. He asks about the role of HPV testing and its impact on tumor staging and treatment options. The doctor explains that while HPV status can influence treatment decisions, the final decision is based on multiple factors including imaging results and biopsy findings.
 
-The patient asks about financial assistance and insurance coverage. Government schemes like Ayushman Bharat and state programs may cover costs. The MDT team coordinates follow-up visits and provides plain-language explanations to the patient and family. The patient inquires about the availability of MRI scans and suitable centers in Mumbai. The MDT provides a list of local facilities.
+The patient is scheduled for baseline tests over the next two weeks, after which an MDT (Multidisciplinary Team) meeting will review the results and determine the stage of the tumor. Based on the stage, surgical intervention, radiotherapy, or combination therapy may be recommended. The patient is advised to maintain a high-protein diet, stay hydrated, and consume high-calorie snacks to aid in weight gain and recovery.
 
-The patient asks about the MDT's role in decision-making and coordination. The MDT team includes surgeons, oncologists, dietitians, and therapists who work together on the patient's case. The patient inquires about the MDT's communication and coordination methods. The MDT team uses plain-language to explain complex medical concepts to the patient and family.
+Nutritional support is emphasized, and the patient is referred to a nutritionist for personalized dietary advice. The patient inquires about the logistics of participating in clinical trials through the Ayushman Bharat program and the necessary documentation required for such trials.
 
-The patient asks about the MDT's decision-making process and timeline. The MDT meeting is scheduled based on baseline results, with family members potentially involved. The patient inquires about the MDT's role in decision-making and coordination. The MDT team coordinates follow-up visits and provides plain
+MDT meetings are scheduled for the following month, and the patient is encouraged to prepare all necessary documents in advance. The patient expresses gratitude for the clear communication and requests further clarification on medical terms and procedures. The doctor provides a list of clinical terms and diagrams to assist in understanding.
+
+The patient is advised to follow up with the MDT team regarding the biopsy results, which are expected within 2-5 days. The patient is reassured that the MDT will provide updates and guidance throughout the process. The patient is reminded to ask any questions at any time and to refer to checklists, forms, and MDT notes for further information.
