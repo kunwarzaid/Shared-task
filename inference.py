@@ -134,130 +134,186 @@ If there are no issues for a metric, write: “No major issues found.”
 
 
 Dialouges:
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "आज आपला मुलगा Ajay चार महिनेाचा आहे. जन्मापासून खोकला, वजन कमी होणं, आणि तेलकट मल दिसतोय. ग्रामीण भागात राहत आहात, CFची शक्यता तपासूया."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो डॉक्टर, Ajay चार महिनेाचा आहे. वजन काही आठवड्यांपासून थांबलंय, ताप नाही. जन्मानंतर खोकला सुरू झाला होता, आता तरी काहीसा कमी- जास्त असतो."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "ठीक आहे. खोकला दिवसातून कसा असतो? रात्रभर जास्त अडचण होते का? मलामध्ये तेलकटपणा कधी दिसतोय?"}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "खोकला सध्या थोडा कमी-जास्त असतो; रात्री अडचण फार नाही. तेलकट मल गेल्या आठवड्याभरापासून दिसतोय."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CFची शक्यता असून Sweat Test ही निदानाची निर्णायक चाचणी आहे. शहरातील CF सेंटरमध्ये शक्यतो करायचं."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "Sweat Test कागदपत्रांसोबत किती खर्च येतो? प्रवासाचं खर्च कसं जमतं?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "प्रवास व राखीणी सवलती CF टीमकडे बघतात. Subsidy मिळू शकतो; कागदपत्रं साहित्यिकपणे असावं."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. गावाकडून शहरात येताना आम्ही तयार आहोत. Sweat Test कुठे करायचं ठरवायचं?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Test सामान्यतः शहरातील CF Center किंवा शिकवण्या हॉस्पिटलमध्ये होतो. baseline तपासणी करण्यासाठी वजन, उंची, ऑक्सिजन, ताप तपासावं."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्ही प्रवासासाठी अडचण जाणवत असल्यामुळे Subsidyची कृपया मार्गदर्शन करा."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF टीम Aadhaar, राशन कार्ड, गावाचा पत्ता, मोबाईल नंबर आणि वैद्यकीय इतिहास माहिती घेईल. प्रवासाची तयारी करुया."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. आम्ही ते सर्व देऊ. Sweat Testची तारीख कधी देणार?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Testची तारीख CF Centerकडून पुढच्या भेटीत ठरवली जाते. Baseline तपासणी पोस्ट करायची."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आता काही कागदपत्रं आणायची आहेत का?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Aadhaar, राशन कार्ड, गावाचा पत्ता, मोबाईल नंबर, वैद्यकीय इतिहास आणि कुटुंबिक आरोग्य माहिती आवश्यक आहेत."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. आम्ही ते देऊ, Sweat Testची तयारी सुरू ठेवू."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "घरात diary ठेवा: वजन, उंची, आहार, खोकला, मलाचा रंग/घनता. दर 2-3 आठवड्यात अपडेट करावे."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, आम्ही ते चालू ठेवू. आहारात बदल काय करावे?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "हाय-कॅलोरी आहार सुरू ठेवा. पाणी जास्त प्या. पॅन्क्रियास एंजाइम डॉक्टर ठरवतील, जरा जवळच्या तुलन्यास."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "एंजायमची डोस कशी ठरवतात? जनरिक चालतील का?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "जगातील पद्धतीप्रमाणे, जेवणानंतर 15-30 मिनिटांनी देण्यास म्हंटलं जातं. स्टूल फॅट व वाढ पाहून डोस समायोजित होईल."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "जर तेलकट मल दिसलं नाही, तरी काय करायचं?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "तेलकट मल दिसल्यास stool fat studies महत्त्वाचे; त्यानुसार आहार आणि एंजाइम समायोजित करतात."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "CPT काय असते? ते घरातून कसे करायचे?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CPT Chest physiotherapy आहे. दिव Eaton दोनदा करणे सोपे; गाणी/कथा बोलून मुलाला सांगा. उपकरणांची स्वच्छता ठेवा."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "घरी CPT करण्यासाठी काही खास वेळ असतो का?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "कुटुंबासोबत करण्यास सोपे असे ठरवा; दररोजच करा, मुलाला आरामदायक वाटेल."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "फॉलो-अप किती दिवसांनी करायचा?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Baseline तपासणीनंतर सामान्यतः दोन आठवडे फॉलो-अप. Sweat Testची तारीख CF Center ठरवेल."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "गावहून शहरात येताना खर्च वाढतो. subsidy कसा मिळतो?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF टीम subsidy प्रक्रिया चालवते. lodging व प्रवासासाठी मार्गदर्शन देईल."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. Ajay च्याHydration कसं राखायचं?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "पाणी व इलेक्ट्रोलाइट्सची काळजी घ्या. गरजेप्रमाणे लायट सोडा देऊ."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "गावात पाणी स्वच्छ असेल तर? तुमचं मार्गदर्शन महत्त्वाचं."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "होय, स्वच्छ पाणी खूप महत्त्वाचं. आहारात विविध अन्नाचा समावेश ठेवा."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "प्रवासाचा विचार करतोय; कोणत्या काळात कुठे राहायचं?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF टीमसोबत प्रवास-योजना बनवा. प्रवासात काही अडचण आली तर फोन/व्हॉट्सअॅपवर संपर्क ठेवा."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "तुमचा मदतकारक कोण असेल तर?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF Center मध्ये तुम्हाला Lodging वगैरेची माहिती दिली जाईल; प्रत्येक कागदपत्राची पूर्तता करावी."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "Sweat Testची निकाल कधी येईल?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "निकाल काही दिवसांत CF Center कडून कळवण्यात येईल. सकारात्मक आल्यास CF-उपचार सुरु होईल."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "नकारात्मक आल्यास इतर कारणे तपासायची आहेत काय?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "होय, CF नसल्यास अन्य पाचन-श्वसन कारणे तपासली जातील."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "तुम्हाला आणखी काही स्पष्टीकरणायोग्य घटक देऊ का?"}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "होय, Sweat Testची तारीख ठरवून पुढील योजना ठरवू. डॉक्टर्स तुम्हाला सर्व बाबी समजावतील."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "धन्यवाद, आम्ही तयारीत आहोत."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "डायरी अपडेट ठेवणे गरजेचे. वजन, आहार, खोकला, मलाचा रंग कोणतीही परिवर्तन त्वरित कळवा."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, दर 2-3 आठवड्यांत अपडेट करू."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Testची तारीख ज्याक्षणी CF Center डॉक करेल, त्यानुसार तयारी सुरू करा."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्ही सर्व तयारी करतो. धन्यवाद."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "चला तर ठीक, Sweat Test व baseline तपासणींसाठी पुढचं नियोजन करुया."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, आम्ही तुम्हाला पुन्हा विचारू."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "तुमचे स्वागत. अजून काही त्रास असेल तर कळवा."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "खूप धन्यवाद, डॉक्टर."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Testची तारीख लवकरच निश्चित करतो. कृपया आवश्यक कागदपत्रे तयार ठेवा."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. आम्ही प्रकरण पुढे नेऊ."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "ठीक. Aarogya राखा; पुढील भेटीची वेळ देतो."}
-{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "येत्या भेटीमध्ये baseline data नुसार अतिरिक्त चाचण्या ठरू शकतात."}
-{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्ही तयार आहोत. धन्यवाद."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "तुमचा मुलगा तीन महिन्यांचा आहे. जन्मापासून हलका खोकला येतोय, वजन वाढ ठराविक वेगाने होत नाही आणि अत्यंत तेलकट, मोठे stevige ढेकरासारखे पाणी बाहेर न पडणारे श्वासन स्राव दिसत आहेत; काही दिवस शौच होत नाहीत."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो डॉक्टर, आम्ही बाळाचं वजन पाहून चिंता झालीये. भूक चांगली असते, कोणी वेळेस अडकत नाही, पण वजन थांबलेलं किंवा कमी झालेले दिसते."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "तुमचा मुलग्याचा डेटा एकत्र करायचा आहे.  आणखी एक Anaerobic quick ques: कधी खोकला जास्त थंड हवामानात किंवा रात्री वगैरे वाढतो का?"}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "खोकला आतापर्यंत सतत नाही, पण काही वेळा सकाळी जास्त वाटतो, दिवसात फरक दिसतो."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "आम्ही एक CF डायरी सुरू करणार आहोत. Respiratory, Diet/Hydration, Weight/Stool हा तीन भागात दिवसाला 1-2 पानांचे नोंद करायचे."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "डायरी सुरु करायला ठरवलंय, पण आम्ही काही प्रश्नांची भीति आहे. शॉर्ट-फॉर्म सांगाल का कसे भरणे?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "भरपूर माहिती द्यावी लगेचच नाही. आपण सुरुवात थोडी मुलाखतीने कराल; नंतर diary नीट समजावून देईन."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "बरं, तरीही आम्हाला Sweat Test कधी आणि कुठे करायचं ते ठरवायचंय."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Test हा CF ची महत्त्वाची चाचणी आहे. स्थानिक हॉस्पिटलमध्ये उपलब्ध नसेल तर आम्ही डेटा गोळा करून लायनिंग डॉक्टरांना पाठवू शकतो."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्हाला थेट केंद्र उघडायचं आहे. कुठे जाऊ शकतो?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "उच्चस्तरीय केंद्रांमध्ये CMC Vellore, AIIMS, PGI Chandigarh यांचा विचार केला जावा. ४ आठवड्यात क्लिनिकल फोलो-अप ठेवतो."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "चार आठवड्यात फॉलो-अप? आता तिथे जाऊन येणं कठीण असतं, प्रवास खर्चाचा प्रश्न आहे."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "त्यासाठी सरकारच्या योजना किंवा सबसिडी तपासून देऊ. डायरीने आम्ही स्थितीची माहिती ठेवू; Sweat Test च्या तयारीत मार्गदर्शन देईन."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, आम्ही योजना वगैरे तपासू. डोंगरी तालुक्यात राहत आहोत, प्रवासासाठी मदत मिळावी."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "DIARYचा पहिला दोन-तीन पान भरून देतो. Respiratory भागात खोकल्याच्या वेळा, कशा परिस्थिती, ताप-श्वास हा भाग."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक आहे. आत्तापर्यंत शौचाचा वर्णन काढायचा तर तेलकट पांढरे पडेले दिसतात."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Diet/Hydration विभागात दैनंदिन fluids, ORS, पाणी- electrolytes कसे देणार आहात ते लिहाल."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्ही ORS देतो; दिवसात तीन वेळा 100-120 ml प्रमाणात."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Weight/Stool भागात वजनाचे ट्रेंड, stool रंग-घनता, बदाम पित्ताचा प्रकार लिहा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "जास्तीचं वजन काही दिवसांपूर्वी 4.0 kg होता, आता 3.9-4.0 kg च्या आसपास आहे; stools तेलकट आणि मोठे दिसतात."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "तुम्ही शौचाच्या दिवशी रविवार-रात्रची गडबड पाहिलीत तर म्हणालात की वेळ-वेळ ठरवायची."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, आम्ही शौच केव्हा येते ते लक्षात ठेवू."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "वर्षातील कुटुंबाला CF बद्दल जागरूक करायचं. CF awareness, TB misdiagnosis याबद्दल माहिती देईल."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, TB विचार केला जातो आजी-आजोबांनीही सांगितलं. CF बद्दल शंका होती."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "किशोरांच्या बाबतीतदेखील genetic carrier testing विचारात घ्या. फायदे-जोखिम स्पष्ट करेन."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "carrier testing चांगलं असेल तर कशाप्रकारे फायदे होतात ते समजावून सांगा."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "गणित काय? CF मध्ये पेरणाऱ्यांना भविष्यातील निर्णय घेण्यासाठी माहिती मिळते; जोडे-जोड़े परिवारांना तयारी करायची."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक आहे, आम्ही विचार करूं."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "पहिलाDiary इनपुट मिळाल्यानंतर, दुसर्‍या आठवड्यात वजनाचे वजन तपासणार आहोत. तुम्ही diary कसे भरताय ते सांगाल."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "शेवटचा दिवस वजन 5400 g होता. आज पुन्हा वजन मोजणार. डायरी पहिल्या दिवशी 1 full day भरलं."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "आजचा दिवसभराचा data फोटो किंवा अचूक चित्रण देऊ शकता का? श्वास-खोकला वेळा."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "आज दिवसभरात खोकला तुलनेने कमी झाला होता; परंतु अर्ध्या दिवशी थोडा खोकला होता."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "Density/weight बदलावर लक्ष ठेवा. ORS किती देत आहात? कॅलोरीने भरपूर पाणी देताना."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "ORS तीन वेळा 100-120 ml दिले; दूध- फार काळजी घेतो."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "Stool मध्ये तेलकटपणा आहेच; रंग कसा, गंध कसा, पातळ-पाणी असेल तर लिहा."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "स्टूल पातळच, रंग पिवळसर; पर küm दुखत नाही."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "Sweat Test केंद्रासाठी तयार राहा. 4 आठवड्यांचं फॉलो-अप ठरलं. केंद्राची सूची तुम्हाला दिली जाईल."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "केंद्रांची सूची मिळाली तर आम्ही देखील प्रवास योजना करु."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "government schemes, subsidies, मार्गदर्शक माहिती देतो. travel safety ने COVID protocol चा विचार करायचा."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "COVID guidelines पाळू; रात्रीचे प्रवास सुरक्षित असेल ते बघू."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "चार आठवड्यात क्लिनिकल फॉलो-अप, वजन-हायड्रेशन-स्टूल फीचर्स पाहणे, Sweat Test तयारी चालू ठेवणे."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "समजा Sweat Test कधी करायचं ते ठरलं तर आम्ही त्यादिवशीच तयारी करणार."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "Four-week milestone. वजन स्थिर किंवा थोडं कमी. Hydration वाढली आहे का, स्टूल कसा आहे?"}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "वजन थोडं स्थिर, hydration जास्त झाली, स्टूल तेलकटपणा काहीसे कमी पण नाही."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "कुठे जायचंय? CMC Vellore (VC) किंवा AIIMS Delhi? आपलं प्राधान्य?"}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "आम्हाला Vellore जास्त पसंत. तेथील sweat test लवकर होईल का माहिती दे."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "CMC Vellore मध्ये Sweat Testची योजना सुरू करणार. प्रवासासाठी subsidy व घेण्याचा प्रयत्न कराल."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "चला, आम्ही पुढील तयारी करतो. डॉक्टर, Genetic counseling ची चर्चा पक्का करायची."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "हो, genetic counseling फायदेशीर ठरू शकते. तिच्या फायदा-जोखीम स्पष्ट करतो."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "तयार राहू; आता Sweat Test बुक करायचं आहे. केंद्राचा पत्ता कसा मिळवायचा?"}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "CMC Vellore चा पत्ता, timings आणि संपर्क क्रमांक देतो; बुकिंगसाठी आवश्यक माहिती देईन."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "ठीक आहे. safety protocol चा अहवाल देखील आवश्यक आहे."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "हो, COVID नियमांची प्रतिमा; प्रवासात मास्क, सानुकूल बरोबर चालेल."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "लास्ट महिन्याच्या तुलनेत आज आराम वाटतंय; परंतु लहान मुलगा अडकलेल्या आव्हानांवर विचार करतो."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "CF लक्षात घेऊन गटिंग: 4-वहाळी फॉलो-अप, diary data for physician review."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "हो, diary डेटा डॉक्टरांकडे पाठवू."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "Sweat Test लॉजिक व बुकिंग: family going to CMC Vellore; plan to travel with safety guidelines."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "आता तयारी चालू. subsidies मिळाल्या तर travel सुलभ होईल."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "Diary अपडेट चालू: Respiratory पक्षात खोकलाचे विशिष्ट वेळा, Diet/Hydration मध्ये ORS प्रमाण, Weight/Stool मध्ये वजन गोळा."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "डायरी updated मुलांच्या दैनंदिन हालचालीप्रमाणे भरत आहात."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "Genetic counseling पर्याय चर्चा झाली; लाभ-जोखीम स्पष्ट करतो."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "हो, genetic counseling बद्दल अधिक माहिती हवी."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "पारंपारिक CF awareness, TB misdiagnosis याबद्दल माहिती देत राही. CF असल्यास लवकर ओळख केलं तर मुलाच्या फुफ्फूस मजबूत राहतात."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "समजलं. आम्ही शक्य ते उपाय करणार."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "अगली फेरीत Sweat Test बुक करणे, diary तपशील डॉक्टरांना देणे, प्रवास योजना finalize करणे."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "OK डॉक्टर, आम्ही तयारी करतो."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "येत्या आठवड्यात Sweat Test च्या centers ची पक्की यादी देतो; तुम्ही कोणत्या दिवशी प्रवास करणार ते कळवा."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "CMC Vellore पुणे/ बंगलोरच्या दिवशी; वेळ ठरवायची."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "त्यानुसार बुकिंग, यात्रा सुरक्षा, ताबडतोब पुढील पायरी."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "धन्यवाद, डॉक्टर. आम्ही लवकरच पुढील पाऊलं घेतो."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "अतिशय चांगलं. आपण Diary मध्ये आणखी काही लिहित राहा; पुढील भेटीत आम्ही तपशील फाइनल करतो."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "तः चाdiary मध्ये हल्ली खोकला, शौच, वजन - सगळं व्यवस्थित नोंद करतो."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "आजच्या संभाषणानंतर, diary चा प्राथमिक नमुना देतो; तुम्ही भरण्यास सुरुवात करा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, आम्ही आजच डायरीची फाइल सुरू करतो."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "ब्रेक: On my side, a brief plan: 4-week follow-up, Sweat Test coordination, subsidies check, and genetic counseling."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "बरं, आम्ही त्या योजना पाळू."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "पहिला फॉलो-अप लक्षणांची पुनरावलोकन, वजन, हायड्रेशन, स्टूल स्थिती, आणि Sweat Test center details finalize."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "तयार आहोत. वजन 5400 g होते, आज वजन पाहू."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "Stool status: तेलकटपणा कायम, परिमाण थोडं कमी झालंय का?"}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "थोडं कमी झालंय, पर तेलकटपणा अजून आहे."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "Diet/Hydration: ORS कधी आणि कसं दिलं गेलं?"}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "गेल्या दिवशी तीन वेळा 100-120 ml."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "Respiratory: खोकला कोणत्या परिस्थितीत वाढतो/कमी होते?"}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "गहूं-फळांच्या धुण्या मेंदूला हलकं knji."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "कृपया दुसऱ्या दिवशी diary retell; वजन-हायड्रेशन-स्टूल."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "हो, दुसऱ्या दिवसाचा डेटा देईन."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "चार आठवड्यांची जुळवणी: Sweat Test केंद्रासाठी अंतिम तयारी; आपल्या प्रवासाचे विषमता."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "CMC Vellore मध्ये Sweat Test करण्याचा निर्णय घेतला, subsidy तपासतो."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "Genetic counselingची चर्चा चालू. फायदे-जोखीम स्पष्ट करतो."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "हो, genetic counseling ची माहिती हवी."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "Weather/Travel: सध्या мувоास येतंय. प्रवास सुरक्षित ठेवा, PPE वापरा."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "हो, पर्सनल सुरक्षा लक्षात घेऊन जाऊ."}
+{"speaker": "Health Worker", "date": "2025-10-09", "dialogue": "We will finalize Sweat Test booking and provide addresses, timings, contact numbers."}
+{"speaker": "Patient's Relative", "date": "2025-10-09", "dialogue": "या दिवशी बुकिंगसाठी संपर्क करायचा."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "Sweat Test logistics discuss: family plans to go to CMC Vellore; government travel subsidies to explore."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "सरकारी subsidies आल्या तर प्रवास अधिक सुलभ होईल."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "Genetic counseling reiterated; discuss benefits, limitations, and whether to screen parents."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "parentsची carrier status जाणून घेऊन भविष्यात निर्णय घेऊ."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "Diary saw 1-2 पान 1-दिवसात, चार विभागात भाग."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "हो, diary प्रशासन पुढील पातळीवर گळव."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "Final notes: 4-week follow-up, Sweat Test arrangements parallel to diary data review."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "समजलं. आम्ही पुढे जाऊ."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "क्लिनिकल context: CFची लक्षणे भारतीय संदर्भात उघड करणं महत्त्वाचं आहे."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "सुद्देश्य CF बद्दल जागरूकता आम्ही वाढवू."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "या डॉक्टर-पालक संवादाचे पुढील भाग 60+ टर्न्समध्ये होईल; diary प्रवेश, Sweat Test बुकिंग, आणि प्रवास योजना."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "अगं, आम्ही तयार आहोत; CF awareness वाढवण्यास मदत करणार."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "त्यानंतर आपण 4 आठवड्यात भेट घेऊन वजन, हायड्रेशन आणि शौचाचा मूल्यांकन करणार."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "हो, आम्ही त्या भेटीला येऊ; Sweat Test ची तयारी ठेवतो."}
+{"speaker": "Health Worker", "date": "2025-10-02", "dialogue": "Sweat Test साठी शक्य तो ताबडतोब बुकिंग पूर्ण करावं; केंद्रांची माहिती आपल्याला देतो."}
+{"speaker": "Patient's Relative", "date": "2025-10-02", "dialogue": "आम्ही बुकिंग करण्यासाठी आवश्यक माहिती देऊ."}
+{"speaker": "Health Worker", "date": "2025-10-16", "dialogue": "दररोज डायरी नोंद केल्यास CF निदान आणि उपचारांची गती सुधारते; आम्ही तुमच्यासाठी तपशील-संशोधन तयार ठेवतो."}
+{"speaker": "Patient's Relative", "date": "2025-10-16", "dialogue": "तयार आहोत, आम्ही diary आणि प्रवास दोन्ही सुसंगतपणे करणार."}
 
 Ground Truth
-Summary of the Ajay CF-focused dialogue (key symptoms, diagnosis, and treatment steps)
+Summary of the CF-focused medical dialogue (key events, symptoms, diagnosis, and treatment steps)
 
-- Presenting symptoms and initial suspicion
-  - Ajay, about 4 months old, has had a persistent cough since birth, weight loss, and oily stools; no fever and stable respiratory status.
-  - Rural setting raises suspicion for cystic fibrosis (CF); meconium ileus discussed as a possibility.
-  - Emphasis on genetic counseling and reviewing family history.
+- Presentation and symptoms
+  - A 3-month-old male infant with suspected cystic fibrosis (CF).
+  - Symptoms include intermittent mild cough since birth, poor weight gain despite adequate appetite, oily bulky stools, digestion issues, and intermittent days without a bowel movement.
+  - Family expresses concern about weight trajectory and asks for structured monitoring.
 
-- Diagnostic plan and baseline evaluation
-  - Sweat Test identified as the decisive diagnostic test for CF.
-  - Baseline checks planned: weight, height, oxygen saturation, temperature, and physical examination.
-  - Additional tests considered if needed: chest imaging; stool studies are important, with stool fat studies stressed to guide management.
-  - If Sweat Test is negative: CF is less likely, but other etiologies will be explored.
-  - If Sweat Test is positive: initiate CF-directed therapies, nutrition, respiratory care, and genetic counseling.
-  - General emphasis on hydration, catch-up vaccinations, and infection prevention.
+- Primary diagnostic plan
+  - Sweat test identified as the key diagnostic test for CF and should be conducted at a larger hospital.
+  - If Sweat Test is not locally available, clinicians will document symptoms systematically and share data with doctors to guide next steps.
+  - A daily CF diary will be used to track symptoms and outcomes in parallel with Sweat Test.
 
-- Logistics, funding, and access
-  - Sweat Test available at city centers and major teaching hospitals.
-  - Subsidies/travel grants require documentation: Aadhaar, ration card, village address, mobile number, and medical history.
-  - Lodging and travel assistance coordinated with the CF team; documentation and guidance provided by the CF team.
+- Diary and data collection plan
+  - Diary consists of three parts: Respiratory (timing/context of cough), Diet/Hydration (fluids including ORS/electrolytes), and Weight/Stool (weight trend and stool characteristics).
+  - Weight trend to be tracked over 2–4 weeks; diary starts immediately.
+  - After the diary begins, a clinical visit is planned after 4 weeks.
+  - Diary entries should be 1–2 pages daily, divided into four sections for each day.
 
-- Home management and diary tracking
-  - Families advised to maintain a diary of weight/height, diet, cough, and stool color/consistency; update every 2–3 weeks.
-  - Focus on adequate fluids and a balanced diet; CF is non-infectious but hygiene and hand-washing remain important.
-  - Catch-up vaccinations reviewed as part of the CF plan to protect household members.
+- Initial management guidance
+  - Emphasize increasing hydration and providing electrolytes/fluids per doctor’s advice.
+  - If Sweat Test isn’t readily available locally, obtain information about government schemes or subsidies to support testing.
+  - Promote CF awareness and educate about potential misdiagnoses (e.g., TB, malnutrition) to avoid delays.
 
-- Interim management and treatment planning
-  - Nutritional emphasis: high-calorie diet; sodium intake may be adjusted as needed.
-  - Pancreatic enzyme dosing to be determined by the physician; affordable generics acceptable if branded options are expensive.
-  - Enzyme dosing typically after meals; common guidance is 15–30 minutes post-meal; adjust based on stool fat and growth.
-  - If oily/fatty stools persist, stool fat studies become important to guide dietary and enzyme adjustments.
-  - Chest physiotherapy (CPT) recommended twice daily; make CPT kid-friendly with songs or stories.
-  - Document stool characteristics to guide management.
-  - Nebulizer hygiene guidelines discussed (boiled/sterilized water, regular cleaning).
+- Follow-up plan and logistics
+  - After 4 weeks, a clinical check-up to review weight, hydration status, and stool characteristics; Sweat Test preparation and scheduling should progress in parallel.
+  - Prepare a list of Sweat Test centers with addresses, timings, and contact information (examples: CMC Vellore, AIIMS, PGI Chandigarh) to aid travel planning.
+  - Encourage travel planning to central hospitals with attention to safety protocols (e.g., COVID-19 guidelines).
+  - Consider genetic carrier status testing and genetic counseling, with a clear discussion of benefits and risks.
 
-- Follow-up schedule and next steps
-  - After baseline testing, follow-up planned within about two weeks to finalize decisions.
-  - Sweat Test scheduling discussed: negative result lowers CF likelihood but doesn’t rule out other causes; positive result directs CF-directed therapies.
-  - 2025–2026 horizon includes genetic counseling, subsidy processing, travel planning, and integrated care: nutrition program, respiratory care, infection prevention, and vaccination scheduling.
-  - Enzyme dosing/timing to be finalized with physician; ensure 15–30 minutes post-meal administration when starting.
-  - Plan to add extra salt in hot weather; hydration and electrolytes guided by the CF team.
+- Contact, safety, and information management
+  - Maintain updated addresses and contact numbers for key centers; ensure mobile numbers and addresses are current.
+  - Stay in touch with local health authorities if guidance or assistance is needed.
 
-- Documentation and entries
-  - Subsidy paperwork to be prepared; Sweat Test date to be set by the CF center.
-  - Diaries and dietary/health plans to be shared with the CF team; travel and lodging arrangements to be supported by the CF team.
-  - Maintain copies of diary and health plans for visits.
+- Expected outcomes and milestones
+  - Finalize a Sweat Test plan with timing and center details; use diary and weight/hydration/stool data to inform the physician.
+  - Schedule a clinical follow-up at 4 weeks to review progress and finalize Sweat Test arrangements.
+  - Use CF awareness efforts to educate the family and the local community.
 
-- Overall outlook
-  - Ajay’s chronic cough, weight loss, and oily stools strongly raise suspicion for CF; Sweat Test is the key diagnostic step.
-  - Care involves a multidisciplinary CF team, with genetic counseling, travel subsidies, and an integrated plan covering nutrition, respiratory care, infection prevention, vaccination, and home monitoring.
-  - Family engagement emphasized: maintain diaries and prepare for a potential two-week follow-up after initial investigations.
-  - If Sweat Test is positive, proceed with CF-directed therapies and a structured, team-based care plan.
+- Immediate actions
+  - Start the CF diary today (record cough timing, weight trend, fluids, and stool characteristics).
+  - In 4 weeks, attend the clinical check-up with a detailed report and prepare for Sweat Test scheduling.
+  - If Sweat Test centers aren’t local, obtain a list of potential centers and subsidy options in advance.
 
-- Notable timeline highlights
-  - 2025-09 to 2025-10: Presentation, CF suspicion, planning for Sweat Test, baseline checks, and subsidy/travel logistics; home diary setup.
-  - 2025-11: Interim follow-ups on weight, stool-fat considerations, CPT training, subsidy/travel planning, and preparation for genetic counseling.
-  - 2025-12: Focus on baseline data, stool-fat re-evaluation, nutritional updates (higher calories, salt), ongoing CPT training, and finalizing Sweat Test scheduling and CF treatment planning; follow-ups emphasize hydration, diary updates, and infection prevention. Sweat Test date to be confirmed with CF center.
+- Timeline highlights (selected)
+  - 2025-09-25: Initial discussion; centers suggested (CMC Vellore, AIIMS, PGI Chandigarh); diary to start immediately; emphasis on hydration and ORS; 4-week follow-up planned.
+  - 2025-10-02: Diary’s first full day documented; weight around 5400 g; stools oily; three ORS servings (100–120 ml each); center list retained; genetic carrier testing discussed.
+  - 2025-10-09: Four-week milestone approaching; weight stable or slightly decreased; hydration increased; decision to pursue Sweat Test at a major center (preferably CMC Vellore); genetic counseling considered.
+  - 2025-10-16: Sweat Test logistics discussed; family plans to go to CMC Vellore; explore government schemes and travel subsidies; safety protocols highlighted; diary continued; genetic counseling reiterated; aim to finalize Sweat Test booking and travel plans.
 
-Timeline context
-- The dialogue outlines a systematic CF work-up starting with presenting symptoms, proceeding to Sweat Test-driven decisions, and integrating nutrition, respiratory care, and genetic counseling, with substantial attention to logistics, family engagement, and follow-up planning.
+- Key conclusions
+  - The plan centers on arranging Sweat Test at an appropriate hospital while meticulously documenting symptoms through a structured diary.
+  - A four-week follow-up will assess weight, hydration, and stools to finalize Sweat Test logistics.
+  - Parallel actions include travel logistics to a major center, subsidy options, and genetic counseling as relevant.
+
+Notes on context
+- The dialogue emphasizes CF-specific considerations in an Indian healthcare setting, including awareness of TB misdiagnosis, the potential need for subsidies to access testing, and the importance of parental/guardian education and engagement.
 
 Qwen-2.5-7B-Instruct-zero-shot
-The patient is a 4-month-old male named Ajay who has had poor weight gain since birth, intermittent fever, and a history of malnutrition. The parents suspect cystic fibrosis (CF) and have brought him for evaluation. Ajay has gained some weight recently but still appears underweight. He does not have night sweats or significant fever. The parents report that he has had intermittent sweating since birth. Given the suspicion of CF, a sweat test is recommended as the diagnostic test of choice. The parents can visit a nearby CF center to arrange for the sweat test. The cost of the sweat test and travel expenses will be covered by a subsidy program. The parents should bring necessary documents such as Aadhaar card, ration card, village address, mobile number, and medical history to the CF team. They should prepare for the trip and contact the CF center for the sweat test date. 
+The patient is a 3-month-old male infant who has been underweight since birth, with poor weight gain, excessive sweating, and persistent cough. The mother reports that he sweats more in cooler temperatures and at night. The child has a stevie (a type of cystic fibrosis-related lung infection). The mother has started a CF (Cystic Fibrosis) diary to track respiratory symptoms, hydration, and weight/stool changes over three days. 
 
-Baseline measurements including weight, height, oxygen saturation, and temperature should be taken before the trip. The parents should maintain a diary of weight, height, diet, and bowel movements every 2-3 weeks. They should increase calorie intake, drink more water, and take pancreatic enzymes as prescribed. If there is no sweating, stool fat studies may be needed to adjust diet and enzyme dosage. Chest physiotherapy (CPT) is recommended twice a day; parents should perform it gently and involve the child in activities like singing or storytelling. They should ensure the equipment is clean and find a suitable time for CPT at home. Follow-up is scheduled two months after the sweat test results are available.
+The doctor recommends completing the short-form diary for three days, noting times of coughing, temperature, and respiration. A sweat test is planned to confirm CF, as it is an important diagnostic tool. The nearest facility for this test is CMC Vellore, with other options being AIIMS and PGI Chandigarh. Follow-ups are scheduled every four weeks, with the next one in two weeks.
 
-The parents should ensure proper hydration, maintain a balanced diet, and consider travel plans if needed. The CF team will provide guidance on travel arrangements and accommodations. If there are any changes in hydration status, they should contact the CF center. The sweat test results will determine if CF is confirmed or if other causes need to be investigated. The parents should keep the appointment for the sweat test and follow the plan accordingly. They should continue to monitor weight, diet, and bowel movements and update the doctor every 2-3 weeks. The next visit will include additional follow-up based on baseline data. The parents are advised to stay calm and the doctor is available for further consultation if needed.
+The family will explore travel subsidies for the trip. The doctor advises on travel safety and COVID protocols. The child's weight was 5400g, and today's weight will be measured again. Stool consistency remains oily, though slightly less than before. ORS (Oral Rehydration Solution) is given three times daily, along with adequate fluids and calories.
+
+Genetic counseling is discussed to understand the benefits and risks of carrier testing for parents. If the child is diagnosed with CF, parents can be screened to make future decisions. The family will visit CMC Vellore for the sweat test, and the doctor will provide necessary information for booking. Travel logistics and safety measures are discussed.
+
+The next follow-up will assess weight, hydration, and stool status, with the sweat test completed. The family will finalize travel plans and book the sweat test. The doctor emphasizes the importance of raising awareness about CF in the community. The next clinic visit will evaluate the child's condition based on the diary entries and sweat test results.
+
+In conclusion, the child shows signs consistent with CF, and further diagnostic steps are being taken. The family is advised to continue the CF diary and prepare for travel. The doctor will monitor the child's progress and adjust the management plan accordingly.
