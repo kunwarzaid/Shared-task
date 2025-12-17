@@ -134,141 +134,130 @@ If there are no issues for a metric, write: “No major issues found.”
 
 
 Dialouges:
-{"speaker": "Patient", "date": "", "dialogue": "मी राजेश पटेल, वय 52 वर्ष, मुंबई. chemo-radiation पूर्ण झालंय आणि आता रीकव्हरी फेज चालू आहे. माझ्या आरोग्यासाठी फॉलो-अप आणि आहाराबद्दल मार्गदर्शन हवयं."}
-{"speaker": "Health Worker", "date": "", "dialogue": "नमस्कार राजेश, मी डॉ. आहेर. आपण फॉलो-अप, आहार आणि पुनर्वास याबद्दल बोलणार आहोत. तुमचं प्राथमिक माहिती स्पष्टपणे देऊ शकता का?"}
-{"speaker": "Patient", "date": "", "dialogue": "हो, माझं नाव राजेश पटेल, वय 52, मुंबई. सध्या थकवा थोडा वाढतोय, swallowing हलका अड़थळा, वजन थोडं कमी झालंय."}
-{"speaker": "Health Worker", "date": "", "dialogue": "समजलं. पहिल्या वर्षी त्रैमासिक फॉलो-अप राहतो; प्रत्येक भेटीमध्ये MDT निर्णय घेतात, त्यामुळे तुमच्या शारीरिक तपासणी, लैब तपासणी आणि प्रतिमा एकत्र पाहून पुढचा plan ठरवतो."}
-{"speaker": "Patient", "date": "", "dialogue": "ठिक आहे. मला थकवा जास्त अनुभव होतो, अन्न खाण्यात अडचण, आवाजात काही अडचण नाही का ते जाणून घ्यायचं."}
-{"speaker": "Health Worker", "date": "", "dialogue": "थकवा कमी करण्यासाठी उर्जेचं आहार, हलका व्यायाम, swallowing-थेरपी आवश्यक. स्पीच थेरपी जरी कमी झाले तरी चालेल; आम्ही home-based exercises देऊ, ज्यांनी गळ्यातल्या स्नायूंना चालना मिळते."}
-{"speaker": "Patient", "date": "", "dialogue": "स्पीच थेरपी कधीपासून सुरू करायची? आवाज नीट होण्यासाठी काय कराल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "स्पीच थेरपी लवकर सुरू करतो; swallowing थेरपीही एकत्रितपणे चालतील. आपण घरून केलेले सराव दैनंदिनदर्शकपद्धतीने आम्ही देऊ, ज्याने सुरळीत बोलणे आणि निगडित अन्न चबण्यास मदत होईल."}
-{"speaker": "Patient", "date": "", "dialogue": "घरचं सराव कोणते-कोणे, दररोज किती वेळ करायचा, आणि कोणत्या अडचणी आली तर काय करायचं?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "घरचं सराव कोणते-कोणे, दररोज 10-15 मिनिटे सराव; गळ्याच्या हलक्या हालचाल, जबड्याच्या हलका-हलका व्यायाम, swallowing-सराव, आणि अडचण आली तर तोडगं ब्रेक घेऊन पुन्हा सुरू करायचं."}
-{"speaker": "Patient", "date": "", "dialogue": "फीडिंग ट्यूब बद्दल कधी विचार करायचं? आपलं म्हणणं काय आहे?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "फीडिंग ट्यूब दीर्घकाळ oral intake कमी असेल तेव्हा विचारात येते. आधी soft-आहार चालू राखा; MDT निर्णयावरच अंतिम, त्यामुळे आवश्यक असेल तर आम्ही योग्य समयी ट्यूबची शक्यता तपासू."}
-{"speaker": "Patient", "date": "", "dialogue": "आहारासाठी काय-काय ठेवलं पाहिजे? soft, high-protein, high-calorie खाणं हवं."}
-{"speaker": "Health Worker", "date": "", "dialogue": "खिचडी-डाळ-भात, दही, दूध, अंडी, प्रोटीन शेक. दररोज छोटे अन्न, 2-3 तासांनी; आहारात विविधता, हलक्या अन्नांचा समावेश आणि पाण्याच्या योग्य प्रमाणाची काळजी."}
-{"speaker": "Patient", "date": "", "dialogue": "पाणी किती पिणं? वजन वाढीसाठी काही खास नियम?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "रोज कमीत कमी 2-3 लिटर पाणी प्या. आहारात प्रोटीन आणि कॅलरी वाढवा; गरज असेल तर प्रोटीन सप्लिमेंट विचारात येईल. आहाराच्या वेळापत्रकाची नियमितता जपू."}
-{"speaker": "Patient's Relative", "date": "", "dialogue": "मी राजेशची बायको, आम्ही येथे आलो आहोत, MDT च्या निर्णयात भाग घेऊ. आम्हाला घरात अन्न-आहार, पुनर्वास, किराणा खरेदी, व स्वच्छता कसे व्यवस्थित करायचे, ते स्पष्टपणे समजेल का?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "कुटुंबाचं सहकार्य खूप महत्त्वाचं आहे. सकाळी उठल्यापासून रात्री झोपेपर्यंत या प्रक्रियेत आपला सहभाग ठेवू. स्मोकिंग आणि अॅल्कोहोल पूर्णपणे थांबवा; तुमच्यासोबत आम्ही मार्गक्रमण करणार."}
-{"speaker": "Patient", "date": "", "dialogue": "हो, मी पूर्णपणे थांबवण्याचा ठाम निर्णय घेतो आणि तुमचं मार्गदर्शन पाळीन. कुटुंबाचं पाठबळ असल्याने मला अधिक विश्वास वाटतो."}
-{"speaker": "Health Worker", "date": "", "dialogue": "तर प्रेरणा कायम ठेवण्यासाठी सपोर्ट ग्रुप्स शोधून घेतो, निकोटीन रिप्लेसमेंट थेरपीचं सल्ला घेणं, आणि माझ्या साथित तुमचं म्हणणं पडल्यास आम्ही लगेच संपर्कात राहू."}
-{"speaker": "Relative", "date": "", "dialogue": "घरात अन्न-आहारासाठी मार्गदर्शक योजना कशी तयार करायची ते आपणच विचारू. आम्ही नेहमी प्रोटीनयुक्त पदार्थ, नरम अन्न, वेळेवर फळं, आणि पाण्याची सोय देऊ."}
-{"speaker": "Patient", "date": "", "dialogue": "जर घरात अडचण आली तर आम्हाला कसे माहिती द्याल? तुम्हाला मदत कधी मिळेल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "Tele-consult उपलब्ध आहे; त्रास वाढल्यास आम्ही तत्काळ संपर्क क्रमांक आणि आपत्कालीन मार्गदर्शन देतो; काही प्रश्न असतील तर फोन करू शकता."}
-{"speaker": "Patient", "date": "", "dialogue": "MDT बैठक कधी होते? तीन महिन्यानंतर एकदा येतो का? त्या दिवशी care plan, प्रतिमा आणि लैब पाहून पुढील दिशा कळेल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "MDT बैठक तीन महिन्यानंतर निश्चित; त्याच दिवशी तुम्हाला एक स्पष्ट केअर प्लॅन, पुढील टप्पे, आणि आवश्यक तात्पुरते प्रयोग समजावून दिले जाईल."}
-{"speaker": "Relative", "date": "", "dialogue": "आम्ही ऑनलाइन रजिस्ट्रेशनची तयारी केलीय; आपली आयडेंटिटी, विमा-प्रूफ, MDT बैठकीची वेळ देऊन तुमच्यावर लक्ष ठेवू."}
-{"speaker": "Health Worker", "date": "", "dialogue": "ऑनलाइन रजिस्ट्रेशन, आयडेंटिटी डॉक्युमेंट, विमा-प्रूफ, MDT भेटीची वेळ—हे सगळं घरातून व्यवस्थित करा; गरज पडल्यास आम्ही मदत करू."}
-{"speaker": "Patient", "date": "", "dialogue": "घरात अन्न-आहारासाठी काही खास पदार्थांची नावं देता येतील का, ज्यामुळे प्रोटीन-युक्त आणि नरम अन्न सहज मिळेल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "उच्च प्रोटीन शेक्स, दूध, दही, पनीर, अंडी, स्प्राउट्स, नरम फळं, आणि पाण्याच्या योग्य प्रमाणाची काळजी. आहारात विविधता ठेवा."}
-{"speaker": "Patient", "date": "", "dialogue": "आवाजाच्या अडचणी काय कधीपर्यंत सुधारणार?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "स्पीच थेरपी लवकर सुरू केल्यास काही आठवड्यातच सुधार दिसतो; swallowing-थेरपीही घरगुती सरावांसह सुरू राहील."}
-{"speaker": "Relative", "date": "", "dialogue": "आम्ही एक सोपी घरगुती चेकलिस्ट तयार करतोय; swallowing-खाण्याच्या अडचणींचा दिवसागणिक रेकॉर्ड ठेवला जाईल, ज्याने progress कळणार."}
-{"speaker": "Health Worker", "date": "", "dialogue": "स्वल्प-चेकलिस्ट घरगुती थेरपीमध्ये मदत करेल; अन्नाच्या गळण्याच्या अडचणींचे नोंद ठेवा."}
-{"speaker": "Patient", "date": "", "dialogue": "वजन वाढीसाठी आहाराचा नेट-फ्लो कसा ठेवायचा, कोणत्या आहाराच्या वेळेस प्रोटीनचे प्रमाण कसे टिकवायचे?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "आहारात प्रोटीन-युक्त पदार्थांना स्थिर ठेवून वजन टिकवू. दररोज प्रोटीनयुक्त आहार, संतुलित आहार, आणि कॅलरी व्यवस्थापन ठेवा."}
-{"speaker": "Patient", "date": "", "dialogue": "फक्त पोषण पुरेसे नाही; हलका व्यायाम, आराम, चांगली झोप यांचीही काळजी घ्या. वजन वाढवण्यासाठी आणखी काय करता येईल?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "हलका व्यायाम, चहा-कॉफीचे प्रमाण मर्यादित ठेवा; औषधांची वेळेवर मात्रा घेणे, डॉक्टरांच्या सल्ल्यानुसार पालन करणे महत्त्वाचे."}
-{"speaker": "Relative", "date": "", "dialogue": "आम्ही योग-व्यायाम आणि हलकी चालण्याचा कार्यक्रम तयार करतो; श्वासोच्छ्वास सुधारणे, स्नायूंना मजबूती देणे, आणि शरीरातील लचीलापन वाढवणे हा हेतू."}
-{"speaker": "Patient", "date": "", "dialogue": "गळ्यावर swallowing-issues आल्यास घरात काय उपाय करायचे? जसं थोडे पाणी पाजणे, पातळ अन्न, वेळेवर विश्रांती."}
-{"speaker": "Health Worker", "date": "", "dialogue": "घरातून सराव दैनंदिन; गळ्याच्या हलचालासाठी छोटे-छोटे व्यायाम, swallowing-सराव, आणि अन्नाचे पातळ टेक्स्चर वापरणे या सर्वांची संयुक्त रचना."}
-{"speaker": "Patient", "date": "", "dialogue": "ड्राय माऊथची समस्या असल्यास काय उपाय कराल? mouth moisturizers व गाळण्या आणि आवश्यक असल्यास सल्विया-स्वल्प्स?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "mouth-moisturizers, गाळण्या, पाण्याच्या योग्य हायड्रेशनची काळजी. डॉक्टरांच्या सल्ल्यानुसार सल्विया-स्वल्प देऊ."}
-{"speaker": "Relative", "date": "", "dialogue": "आम्ही कुटुंबाला माहिती देतो; तेवढी तयारी करतो."}
-{"speaker": "Health Worker", "date": "", "dialogue": "सरकारी योजना, रेशनिंग, वैयक्तिक सहाय्य पुढील भेटीत स्पष्ट करतो; सर्व कागदपत्रे तयार ठेवा."}
-{"speaker": "Patient", "date": "", "dialogue": "धन्यवाद. या मार्गदर्शकाने मला आत्मविश्वास देतंय."}
-{"speaker": "Health Worker", "date": "", "dialogue": "आत्मविश्वास वाढवण्यासाठी मानसिक सपोर्ट ठेवा; आणि निकोटिन रिप्लेसमेंट थेरपी नियमितपणे चालू ठेवा."}
-{"speaker": "Relative", "date": "", "dialogue": "आम्ही घरात एक छोटा रूटीन तयार करतो; एखादी अडचण आल्यास लगेच कळेल."}
-{"speaker": "Health Worker", "date": "", "dialogue": "हो, पुढील भेटीची तयारी करा; MDT तीन महिन्यानंतर होईल; रिपोर्ट्स ऑनलाइन दिसतील."}
-{"speaker": "Patient", "date": "", "dialogue": "तीन महिन्यानंतर MDT होईल का? रिपोर्ट ऑनलाइन दिसतील; ते बरोबर?"}
-{"speaker": "Health Worker", "date": "", "dialogue": "हो, MDT तीन महिन्यानंतर होईल; परिणाम ऑनलाइन उपलब्ध असतील आणि तुम्हाला care plan स्पष्टपणे समजेल."}
-{"speaker": "Relative", "date": "", "dialogue": "तयार आहोत. आवश्यक असल्यास आम्ही प्रवासात मदत करतो."}
-{"speaker": "Patient", "date": "", "dialogue": "त्यादिवशी care plan स्पष्टपणे समजेल असा विश्वास."}
-{"speaker": "Health Worker", "date": "", "dialogue": "हो, त्या दिवशी एक स्पष्ट केअर प्लॅन देईन; पुढील टप्पे स्पष्टपणे समजावून सांगू."}
-{"speaker": "Patient", "date": "", "dialogue": "कृपया काही प्रश्न असतील तेव्हा सांगू; आम्ही त्यांच्या उत्तरांची तयारी करतो."}
-{"speaker": "Health Worker", "date": "", "dialogue": "काही प्रश्न असतील तर कॉल करा; tele-consult उपलब्ध आहे, आणि ऑनलाइन रिपोर्ट्सची सुविधा आहे."}
-{"speaker": "Patient", "date": "", "dialogue": "हो, निश्चितपणे. धन्यवाद."}
-{"speaker": "Relative", "date": "", "dialogue": "धन्यवाद डॉक्टरांना."}
-{"speaker": "Health Worker", "date": "", "dialogue": "तुमचं फॉलो-अप दीर्घकालीन आरोग्यासाठी अत्यंत आवश्यक आहे; नियमित तपासण्या तुमचं संरक्षण करतील."}
-{"speaker": "Patient", "date": "", "dialogue": "हो, ही सुरुवातच आहे; पुढे काय करायचं ते स्पष्टपणे सांगितलं तर उत्तम."}
-{"speaker": "Health Worker", "date": "", "dialogue": "पुढील भेटीची तयारी करा; MDT तीन महिन्यानंतर होईल; রিপোর্ট्स ऑनलाइन उपलब्ध असतील."}
-{"speaker": "Relative", "date": "", "dialogue": "आम्ही तयार आहोत; आवश्यक असल्यास आम्ही प्रवासात मदत करतो."}
-{"speaker": "Patient", "date": "", "dialogue": "चला, तीन महिन्यात पुन्हा भेटू."}
-{"speaker": "Health Worker", "date": "", "dialogue": "होय, आपण तीन महिन्यात पुन्हा भेटू; त्या दिवशी care plan आणि पुढील टप्पे स्पष्टपणे समजतील."}
-{"speaker": "Patient's Relative", "date": "", "dialogue": "धन्यवाद डॉक्टरांना, आम्ही तयार आहोत."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "आज आपला मुलगा Ajay चार महिनेाचा आहे. जन्मापासून खोकला, वजन कमी होणं, आणि तेलकट मल दिसतोय. ग्रामीण भागात राहत आहात, CFची शक्यता तपासूया."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो डॉक्टर, Ajay चार महिनेाचा आहे. वजन काही आठवड्यांपासून थांबलंय, ताप नाही. जन्मानंतर खोकला सुरू झाला होता, आता तरी काहीसा कमी- जास्त असतो."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "ठीक आहे. खोकला दिवसातून कसा असतो? रात्रभर जास्त अडचण होते का? मलामध्ये तेलकटपणा कधी दिसतोय?"}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "खोकला सध्या थोडा कमी-जास्त असतो; रात्री अडचण फार नाही. तेलकट मल गेल्या आठवड्याभरापासून दिसतोय."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CFची शक्यता असून Sweat Test ही निदानाची निर्णायक चाचणी आहे. शहरातील CF सेंटरमध्ये शक्यतो करायचं."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "Sweat Test कागदपत्रांसोबत किती खर्च येतो? प्रवासाचं खर्च कसं जमतं?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "प्रवास व राखीणी सवलती CF टीमकडे बघतात. Subsidy मिळू शकतो; कागदपत्रं साहित्यिकपणे असावं."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. गावाकडून शहरात येताना आम्ही तयार आहोत. Sweat Test कुठे करायचं ठरवायचं?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Test सामान्यतः शहरातील CF Center किंवा शिकवण्या हॉस्पिटलमध्ये होतो. baseline तपासणी करण्यासाठी वजन, उंची, ऑक्सिजन, ताप तपासावं."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्ही प्रवासासाठी अडचण जाणवत असल्यामुळे Subsidyची कृपया मार्गदर्शन करा."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF टीम Aadhaar, राशन कार्ड, गावाचा पत्ता, मोबाईल नंबर आणि वैद्यकीय इतिहास माहिती घेईल. प्रवासाची तयारी करुया."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. आम्ही ते सर्व देऊ. Sweat Testची तारीख कधी देणार?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Testची तारीख CF Centerकडून पुढच्या भेटीत ठरवली जाते. Baseline तपासणी पोस्ट करायची."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आता काही कागदपत्रं आणायची आहेत का?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Aadhaar, राशन कार्ड, गावाचा पत्ता, मोबाईल नंबर, वैद्यकीय इतिहास आणि कुटुंबिक आरोग्य माहिती आवश्यक आहेत."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. आम्ही ते देऊ, Sweat Testची तयारी सुरू ठेवू."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "घरात diary ठेवा: वजन, उंची, आहार, खोकला, मलाचा रंग/घनता. दर 2-3 आठवड्यात अपडेट करावे."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, आम्ही ते चालू ठेवू. आहारात बदल काय करावे?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "हाय-कॅलोरी आहार सुरू ठेवा. पाणी जास्त प्या. पॅन्क्रियास एंजाइम डॉक्टर ठरवतील, जरा जवळच्या तुलन्यास."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "एंजायमची डोस कशी ठरवतात? जनरिक चालतील का?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "जगातील पद्धतीप्रमाणे, जेवणानंतर 15-30 मिनिटांनी देण्यास म्हंटलं जातं. स्टूल फॅट व वाढ पाहून डोस समायोजित होईल."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "जर तेलकट मल दिसलं नाही, तरी काय करायचं?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "तेलकट मल दिसल्यास stool fat studies महत्त्वाचे; त्यानुसार आहार आणि एंजाइम समायोजित करतात."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "CPT काय असते? ते घरातून कसे करायचे?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CPT Chest physiotherapy आहे. दिव Eaton दोनदा करणे सोपे; गाणी/कथा बोलून मुलाला सांगा. उपकरणांची स्वच्छता ठेवा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "घरी CPT करण्यासाठी काही खास वेळ असतो का?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "कुटुंबासोबत करण्यास सोपे असे ठरवा; दररोजच करा, मुलाला आरामदायक वाटेल."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "फॉलो-अप किती दिवसांनी करायचा?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Baseline तपासणीनंतर सामान्यतः दोन आठवडे फॉलो-अप. Sweat Testची तारीख CF Center ठरवेल."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "गावहून शहरात येताना खर्च वाढतो. subsidy कसा मिळतो?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF टीम subsidy प्रक्रिया चालवते. lodging व प्रवासासाठी मार्गदर्शन देईल."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. Ajay च्याHydration कसं राखायचं?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "पाणी व इलेक्ट्रोलाइट्सची काळजी घ्या. गरजेप्रमाणे लायट सोडा देऊ."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "गावात पाणी स्वच्छ असेल तर? तुमचं मार्गदर्शन महत्त्वाचं."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "होय, स्वच्छ पाणी खूप महत्त्वाचं. आहारात विविध अन्नाचा समावेश ठेवा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "प्रवासाचा विचार करतोय; कोणत्या काळात कुठे राहायचं?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF टीमसोबत प्रवास-योजना बनवा. प्रवासात काही अडचण आली तर फोन/व्हॉट्सअॅपवर संपर्क ठेवा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "तुमचा मदतकारक कोण असेल तर?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "CF Center मध्ये तुम्हाला Lodging वगैरेची माहिती दिली जाईल; प्रत्येक कागदपत्राची पूर्तता करावी."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "Sweat Testची निकाल कधी येईल?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "निकाल काही दिवसांत CF Center कडून कळवण्यात येईल. सकारात्मक आल्यास CF-उपचार सुरु होईल."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "नकारात्मक आल्यास इतर कारणे तपासायची आहेत काय?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "होय, CF नसल्यास अन्य पाचन-श्वसन कारणे तपासली जातील."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "तुम्हाला आणखी काही स्पष्टीकरणायोग्य घटक देऊ का?"}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "होय, Sweat Testची तारीख ठरवून पुढील योजना ठरवू. डॉक्टर्स तुम्हाला सर्व बाबी समजावतील."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "धन्यवाद, आम्ही तयारीत आहोत."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "डायरी अपडेट ठेवणे गरजेचे. वजन, आहार, खोकला, मलाचा रंग कोणतीही परिवर्तन त्वरित कळवा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, दर 2-3 आठवड्यांत अपडेट करू."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Testची तारीख ज्याक्षणी CF Center डॉक करेल, त्यानुसार तयारी सुरू करा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्ही सर्व तयारी करतो. धन्यवाद."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "चला तर ठीक, Sweat Test व baseline तपासणींसाठी पुढचं नियोजन करुया."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "हो, आम्ही तुम्हाला पुन्हा विचारू."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "तुमचे स्वागत. अजून काही त्रास असेल तर कळवा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "खूप धन्यवाद, डॉक्टर."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "Sweat Testची तारीख लवकरच निश्चित करतो. कृपया आवश्यक कागदपत्रे तयार ठेवा."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "ठीक. आम्ही प्रकरण पुढे नेऊ."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "ठीक. Aarogya राखा; पुढील भेटीची वेळ देतो."}
+{"speaker": "Health Worker", "date": "2025-09-25", "dialogue": "येत्या भेटीमध्ये baseline data नुसार अतिरिक्त चाचण्या ठरू शकतात."}
+{"speaker": "Patient's Relative", "date": "2025-09-25", "dialogue": "आम्ही तयार आहोत. धन्यवाद."}
 
 Ground Truth
-Summary of Post-Treatment Head and Neck Cancer Dialogue (Rajesh Patel, 52, Mumbai)
+Summary of the Ajay CF-focused dialogue (key symptoms, diagnosis, and treatment steps)
 
-- Status and goals
-  - Rajesh has completed chemo-radiation and is in the recovery phase.
-  - Primary goals: prevent recurrence, monitor post-treatment symptoms, optimize nutrition and quality of life.
-  - Follow-up planned as regular tri-monthly visits in the first year, guided by a multidisciplinary team (MDT).
+- Presenting symptoms and initial suspicion
+  - Ajay, about 4 months old, has had a persistent cough since birth, weight loss, and oily stools; no fever and stable respiratory status.
+  - Rural setting raises suspicion for cystic fibrosis (CF); meconium ileus discussed as a possibility.
+  - Emphasis on genetic counseling and reviewing family history.
 
-- Symptoms and rehabilitation
-  - Current issues: fatigue, reduced throat mobility affecting swallowing, and slight weight loss.
-  - Rehabilitation focus: stabilize weight, improve swallowing function, enhance voice clarity, and boost energy.
-  - Home-based rehab: swallowing and speech therapy started early; daily exercises 10–15 minutes, targeting throat muscles, jaw movements, and swallowing patterns.
+- Diagnostic plan and baseline evaluation
+  - Sweat Test identified as the decisive diagnostic test for CF.
+  - Baseline checks planned: weight, height, oxygen saturation, temperature, and physical examination.
+  - Additional tests considered if needed: chest imaging; stool studies are important, with stool fat studies stressed to guide management.
+  - If Sweat Test is negative: CF is less likely, but other etiologies will be explored.
+  - If Sweat Test is positive: initiate CF-directed therapies, nutrition, respiratory care, and genetic counseling.
+  - General emphasis on hydration, catch-up vaccinations, and infection prevention.
 
-- Diagnostics and monitoring
-  - Investigations: periodic labs (CBC, CMP) and imaging (CT/MRI) planned; MDT reviews will guide next steps.
-  - Access to care: tele-consult options and online result reporting to reduce travel.
-  - Baseline tests and imaging results will inform MDT staging and decisions.
+- Logistics, funding, and access
+  - Sweat Test available at city centers and major teaching hospitals.
+  - Subsidies/travel grants require documentation: Aadhaar, ration card, village address, mobile number, and medical history.
+  - Lodging and travel assistance coordinated with the CF team; documentation and guidance provided by the CF team.
 
-- Nutrition and weight management
-  - Diet plan: soft, high-protein, high-calorie foods (e.g., kichdi-dal-rice, dairy, protein shakes); emphasis on hydration.
-  - Professional support: referral to a dietitian; supplements considered if needed.
-  - Feeding tube: discussed as an option if long-term inadequate oral intake occurs; initial approach prioritizes soft foods with gradual progression.
-  - Hydration and intake goals: at least 2–3 liters of water daily; regular meals with protein and calories; adherence to a structured eating schedule.
+- Home management and diary tracking
+  - Families advised to maintain a diary of weight/height, diet, cough, and stool color/consistency; update every 2–3 weeks.
+  - Focus on adequate fluids and a balanced diet; CF is non-infectious but hygiene and hand-washing remain important.
+  - Catch-up vaccinations reviewed as part of the CF plan to protect household members.
 
-- Swallowing, voice, and rehabilitation
-  - Rehabilitation: swallowing therapy and speech therapy recommended to improve swallowing and speech.
-  - Progress tracking: simple home program and checklists to monitor daily practice and swallowing comfort; early rehab emphasized to maximize recovery of throat muscles and articulation.
-
-- Dental and oral care
-  - Post-radiation dental care is critical; plan includes a dental check-up about three months after radiation and ongoing oral hygiene.
-
-- Therapeutic and supportive services
-  - Additional therapies: swallowing therapy, physical therapy, and speech therapy as needed; structured progressive exercise plan provided.
-  - Psychosocial support: family involvement and social-work/insurance guidance offered; assistance with trial access discussed.
-
-- Smoking, alcohol, and behavioral health
-  - Strongly recommended cessation of smoking and alcohol; cessation support groups and counseling available.
-  - Support for motivation and mental well-being emphasized; tele-consults and online resources are available.
-
-- Trials and financial considerations
-  - Evaluation for clinical trial eligibility; discussion of costs and logistics.
-  - Government schemes (e.g., Ayushman Bharat) and local funding options discussed; detailed guidance to follow at next visit.
-
-- Family involvement and logistics
-  - Family support encouraged; spouse participation in MDT discussions valued.
-  - Documentation, online registrations, and travel planning support provided; tele-consult options available.
-  - Home-based care and caregiver involvement emphasized.
+- Interim management and treatment planning
+  - Nutritional emphasis: high-calorie diet; sodium intake may be adjusted as needed.
+  - Pancreatic enzyme dosing to be determined by the physician; affordable generics acceptable if branded options are expensive.
+  - Enzyme dosing typically after meals; common guidance is 15–30 minutes post-meal; adjust based on stool fat and growth.
+  - If oily/fatty stools persist, stool fat studies become important to guide dietary and enzyme adjustments.
+  - Chest physiotherapy (CPT) recommended twice daily; make CPT kid-friendly with songs or stories.
+  - Document stool characteristics to guide management.
+  - Nebulizer hygiene guidelines discussed (boiled/sterilized water, regular cleaning).
 
 - Follow-up schedule and next steps
-  - First-year follow-up every three months; assessments to include weight, swallowing, voice, diet, and dental status.
-  - Baseline tests and imaging/biopsy results inform MDT staging and decisions.
-  - After MDT reviews, a plain-language care plan will be shared; concrete follow-up timetable and logistics arranged.
-  - Nutrition, cessation support, psychosocial services, and trial opportunities to be integrated into ongoing care.
+  - After baseline testing, follow-up planned within about two weeks to finalize decisions.
+  - Sweat Test scheduling discussed: negative result lowers CF likelihood but doesn’t rule out other causes; positive result directs CF-directed therapies.
+  - 2025–2026 horizon includes genetic counseling, subsidy processing, travel planning, and integrated care: nutrition program, respiratory care, infection prevention, and vaccination scheduling.
+  - Enzyme dosing/timing to be finalized with physician; ensure 15–30 minutes post-meal administration when starting.
+  - Plan to add extra salt in hot weather; hydration and electrolytes guided by the CF team.
 
-Core message
-- Rajesh’s post-treatment care will be guided by objective recovery markers—nutrition, swallowing/voice function, and dental health—with imaging and potential trial eligibility informing MDT-driven decisions about further treatment or surveillance. A comprehensive, family-informed plan will be communicated in plain language, with integrated support across nutrition, rehabilitation, psychosocial services, and access to government schemes or trials.
+- Documentation and entries
+  - Subsidy paperwork to be prepared; Sweat Test date to be set by the CF center.
+  - Diaries and dietary/health plans to be shared with the CF team; travel and lodging arrangements to be supported by the CF team.
+  - Maintain copies of diary and health plans for visits.
+
+- Overall outlook
+  - Ajay’s chronic cough, weight loss, and oily stools strongly raise suspicion for CF; Sweat Test is the key diagnostic step.
+  - Care involves a multidisciplinary CF team, with genetic counseling, travel subsidies, and an integrated plan covering nutrition, respiratory care, infection prevention, vaccination, and home monitoring.
+  - Family engagement emphasized: maintain diaries and prepare for a potential two-week follow-up after initial investigations.
+  - If Sweat Test is positive, proceed with CF-directed therapies and a structured, team-based care plan.
+
+- Notable timeline highlights
+  - 2025-09 to 2025-10: Presentation, CF suspicion, planning for Sweat Test, baseline checks, and subsidy/travel logistics; home diary setup.
+  - 2025-11: Interim follow-ups on weight, stool-fat considerations, CPT training, subsidy/travel planning, and preparation for genetic counseling.
+  - 2025-12: Focus on baseline data, stool-fat re-evaluation, nutritional updates (higher calories, salt), ongoing CPT training, and finalizing Sweat Test scheduling and CF treatment planning; follow-ups emphasize hydration, diary updates, and infection prevention. Sweat Test date to be confirmed with CF center.
+
+Timeline context
+- The dialogue outlines a systematic CF work-up starting with presenting symptoms, proceeding to Sweat Test-driven decisions, and integrating nutrition, respiratory care, and genetic counseling, with substantial attention to logistics, family engagement, and follow-up planning.
 
 Qwen-2.5-7B-Instruct-zero-shot
-Dr. Ahare is following up with Rajesh Patel, a 52-year-old male from Mumbai who has completed chemotherapy and radiotherapy and is in the recovery phase. Rajesh reports feeling fatigued, difficulty swallowing, and weight loss. The follow-up involves a trimeal follow-up, where an MDT (Multidisciplinary Team) makes decisions based on physical examination, lab tests, and imaging to formulate a plan.
+The patient is a 4-month-old male named Ajay who has had poor weight gain since birth, intermittent fever, and a history of malnutrition. The parents suspect cystic fibrosis (CF) and have brought him for evaluation. Ajay has gained some weight recently but still appears underweight. He does not have night sweats or significant fever. The parents report that he has had intermittent sweating since birth. Given the suspicion of CF, a sweat test is recommended as the diagnostic test of choice. The parents can visit a nearby CF center to arrange for the sweat test. The cost of the sweat test and travel expenses will be covered by a subsidy program. The parents should bring necessary documents such as Aadhaar card, ration card, village address, mobile number, and medical history to the CF team. They should prepare for the trip and contact the CF center for the sweat test date. 
 
-Rajesh mentions experiencing fatigue more than usual, difficulty eating, and some difficulty speaking. To reduce fatigue, he needs to consume energy-rich food, engage in light exercise, and undergo swallowing therapy. Speech therapy starts as needed, and home-based exercises are provided for the affected muscles. The speech therapist initiates speech therapy when ready and provides guidance on daily activities like speaking and eating.
+Baseline measurements including weight, height, oxygen saturation, and temperature should be taken before the trip. The parents should maintain a diary of weight, height, diet, and bowel movements every 2-3 weeks. They should increase calorie intake, drink more water, and take pancreatic enzymes as prescribed. If there is no sweating, stool fat studies may be needed to adjust diet and enzyme dosage. Chest physiotherapy (CPT) is recommended twice a day; parents should perform it gently and involve the child in activities like singing or storytelling. They should ensure the equipment is clean and find a suitable time for CPT at home. Follow-up is scheduled two months after the sweat test results are available.
 
-Rajesh is considering tube feeding if oral intake remains low for an extended period. He should maintain a soft, high-protein, high-calorie diet, consuming small meals every two to three hours. He should drink at least 2-3 liters of water daily to aid weight gain. For protein supplementation, he can consider protein shakes if needed. Regular meal timings are important.
-
-Rajesh's family is involved in his care, and Dr. Ahare emphasizes the importance of family support. They discuss household arrangements, including managing cooking, travel, and cleanliness. They recommend quitting smoking and alcohol completely and provide resources for support groups and nicotine replacement therapy.
-
-For home-based care, they suggest a structured meal plan including protein-rich foods, soft foods, fruits, and adequate hydration. If any discomfort occurs, Rajesh should contact the clinic immediately. MDT meetings occur every three months to review reports online and provide further care plans.
-
-To improve swallowing issues at home, they advise drinking small amounts of water, eating soft foods, and performing gentle exercises. For dry mouth, they recommend using mouth moisturizers and sipping water regularly. They will provide necessary medications as per the doctor's advice.
-
-They also discuss maintaining a routine and being prepared for any discomfort. They will assist with travel if needed and ensure clear understanding of the care plan. They will prepare a detailed care plan for the next visit, which will be online and clear. If any questions arise, they can be answered via tele-consultation or phone.
-
-The follow-up will continue for the long term, ensuring Rajesh's safety and well-being through regular check-ups. The next visit is scheduled in three months, and they will review online reports and clarify any doubts
+The parents should ensure proper hydration, maintain a balanced diet, and consider travel plans if needed. The CF team will provide guidance on travel arrangements and accommodations. If there are any changes in hydration status, they should contact the CF center. The sweat test results will determine if CF is confirmed or if other causes need to be investigated. The parents should keep the appointment for the sweat test and follow the plan accordingly. They should continue to monitor weight, diet, and bowel movements and update the doctor every 2-3 weeks. The next visit will include additional follow-up based on baseline data. The parents are advised to stay calm and the doctor is available for further consultation if needed.
