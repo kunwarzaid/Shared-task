@@ -1,20 +1,44 @@
-```markdown
-PATIENT_OVERVIEW:
-Ajay is a four-month-old infant presenting for evaluation of chronic respiratory symptoms and growth concerns. The main purpose of this visit is to investigate the possibility of cystic fibrosis (CF) and establish a diagnostic and management plan.
+import os
+import re
 
-CHIEF_COMPLAINT:
-Ajay presents with a persistent cough since birth, poor weight gain, and oily stools.
+INPUT_DIR = "input_files"     # folder with 100 .txt files
+OUTPUT_DIR = "cleaned_files"  # cleaned output (same filenames)
 
-HISTORY_OF_PRESENT_ILLNESS:
-Ajay has experienced a chronic cough since birth, along with poor weight gain despite adequate feeding and steatorrhea. His meconium history raises suspicion for cystic fibrosis, necessitating further investigation through a sweat test. The family is engaged in monitoring Ajay's symptoms and growth to guide further management.
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-INVESTIGATIONS_AND_PLAN:
-The primary diagnostic strategy involves performing a sweat test to confirm or rule out cystic fibrosis. If the sweat test is unavailable locally, symptom documentation and referral to a CF expert will guide further management. Plans include maintaining a home diary to track weight, feeding, stool characteristics, and respiratory symptoms. Follow-up is scheduled in two weeks to reassess Ajay's growth and respiratory status, with additional evaluations as needed based on the test results.
+def clean_text(text: str) -> str:
+    # Remove markdown code blocks (if any)
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
 
-RISK_FACTORS:
-Ajay's symptoms suggest a potential genetic predisposition to cystic fibrosis, warranting consideration of genetic counseling for the family. The family is actively involved in monitoring Ajay's health and is prepared to seek further support from CF specialists.
+    # Remove section headers like PATIENT_OVERVIEW:
+    text = re.sub(r"\b[A-Z_]{3,}:\s*", "", text)
 
-OVERALL_SUMMARY:
-The visit focused on evaluating Ajay for cystic fibrosis, with a plan to conduct a sweat test and maintain a comprehensive home diary for symptom tracking. Follow-up appointments are scheduled to reassess his condition and determine the next steps based on test outcomes. The family is encouraged to remain engaged in Ajay's care and to seek further assistance as needed.
-```
+    # Remove common markdown characters
+    text = re.sub(r"[#*_>`]", "", text)
 
+    # Normalize whitespace
+    text = re.sub(r"\n{2,}", "\n\n", text)
+    text = re.sub(r"[ \t]+", " ", text)
+
+    return text.strip()
+
+def process_files():
+    for filename in os.listdir(INPUT_DIR):
+        if not filename.lower().endswith(".txt"):
+            continue
+
+        input_path = os.path.join(INPUT_DIR, filename)
+        output_path = os.path.join(OUTPUT_DIR, filename)
+
+        with open(input_path, "r", encoding="utf-8") as f:
+            raw_text = f.read()
+
+        cleaned_text = clean_text(raw_text)
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(cleaned_text)
+
+        print(f"Processed: {filename}")
+
+if __name__ == "__main__":
+    process_files()
