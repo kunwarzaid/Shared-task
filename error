@@ -1,3 +1,54 @@
+Key Contributions
+	•	Developed a modular multilingual pipeline using Qwen-1.5B + LoRA.
+	•	Introduced field-by-field JSON extraction instead of single-shot schema generation.
+	•	Achieved stable multilingual Q&A by conditioning on full dialogue context.
+	•	Designed deterministic inference prompts to ensure reproducibility.
+	•	Demonstrated strong performance across 10 languages with single-epoch fine-tuning.
+
+⸻
+
+🔹 Methodology
+	•	Model: Qwen-1.5B Instruct, fine-tuned using LoRA (parameter-efficient).
+	•	Pipeline:
+	1.	Generate English clinical summary from dialogue.
+	2.	Extract structured information using one question per JSON field.
+	3.	Answer clinical questions in the original dialogue language.
+	•	Prompting:
+	•	Role-based prompts (System–User).
+	•	Strict output constraints (English-only / same-language).
+	•	Post-processing:
+	•	Programmatic reconstruction of JSON schema.
+	•	Missing or uncertain fields defaulted to null.
+
+⸻
+
+🔹 Experiments
+	•	Dataset: Multilingual clinical dialogues (10 languages), provided by organizers.
+	•	Training:
+	•	Single epoch (time and resource constrained).
+	•	4-bit quantization + gradient checkpointing.
+	•	Evaluation Tasks:
+	•	QnA → Macro F1
+	•	Summarization → ROUGE-L, BERTScore-F1
+	•	Structured Extraction → Field-level F1 (KNV)
+	•	Results:
+	•	High semantic accuracy for summaries (BERT-F1 ≈ 0.83).
+	•	Competitive multilingual QnA performance (Macro F1 ≈ 0.46).
+	•	Valid, schema-compliant JSON outputs across languages.
+
+⸻
+
+🔹 Limitations
+	•	Performance drops for low-resource languages (e.g., Assamese, Bangla).
+	•	Only single-epoch fine-tuning due to infrastructure constraints.
+	•	Some clinical fields require implicit reasoning, leading to extraction errors.
+	•	No external knowledge or retrieval used.
+	•	Manual qualitative analysis conducted on a limited sample size.
+
+
+
+
+
 Below is a complete, patent-style draft for all questions.
 Language is intentionally technical, implementation-focused, and non-academic, structured the way patent attorneys expect.
 I’ve avoided research-paper style claims (e.g., “trustworthiness,” “framework”) and focused on systems, methods, and mechanisms, which are what patents protect.
