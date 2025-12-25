@@ -1,62 +1,3 @@
-Error:
-sThe model weights are not tied. Please use the `tie_weights` method before using the `infer_auto_device` function.
-
-([17:32:40] Loading Qwen-2.5-7B-Instruct
-
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]
-Fetching 4 files:  25%|██▌       | 1/4 [01:57<05:53, 117.74s/it]
-Fetching 4 files: 100%|██████████| 4/4 [01:57<00:00, 29.43s/it] 
-
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:11,  3.85s/it]
-Loading checkpoint shards:  50%|█████     | 2/4 [00:08<00:08,  4.47s/it]
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:13<00:04,  4.58s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:16<00:00,  4.07s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:16<00:00,  4.19s/it]
-
-([17:35:00] Processing language: Marathi
-
-Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
-GKeyword arguments {'src_lang': 'mr', 'tgt_lang': 'en'} not recognized.
-
-Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
-
-hTraceback (most recent call last):
-  File "/workspace/multi_summ/indictrans2.py", line 340, in <module>
-
-\    run_pipeline()
-  File "/workspace/multi_summ/indictrans2.py", line 294, in run_pipeline
-
-y    dialogue_en = translate_to_english(
-  File "/workspace/multi_summ/indictrans2.py", line 141, in translate_to_english
-
-�    inputs = tok(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3073, in __call__
-
-�    encodings = self._call_one(text=text, text_pair=text_pair, **all_kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3183, in _call_one
-
-�    return self.encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3258, in encode_plus
-
-�    return self._encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 800, in _encode_plus
-
-�    first_ids = get_input_ids(text)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 767, in get_input_ids
-
-�    tokens = self.tokenize(text, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 697, in tokenize
-
-    tokenized_text.extend(self._tokenize(token))
-  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/tokenization_indictrans.py", line 201, in _src_tokenize
-
-�    assert src_lang in LANGUAGE_TAGS, f"Invalid source language tag: {src_lang}"
-AssertionError: Invalid source language tag: आपला
-
-removing /jobs/285355
-
-Code
 import os
 import json
 import time
@@ -75,14 +16,13 @@ from langdetect import DetectorFactory
 from huggingface_hub import login
 
 # ============================================================
-# LOGIN (OPTIONAL – REQUIRED ONLY FOR GATED MODELS)
+# LOGIN (OPTIONAL – ONLY IF MODEL IS GATED)
 # ============================================================
 
 def huggingface_login():
-    token = ""   # <-- put token here if required
+    token = ""   # add token only if required
     if token:
         login(token=token)
-        print("Successfully logged into Hugging Face!")
 
 huggingface_login()
 
@@ -100,44 +40,38 @@ print("CUDA:", torch.version.cuda)
 # CONFIGURATION
 # ============================================================
 
-# -------- IndicTrans2 --------
 INDICTRANS_MODEL = "ai4bharat/indictrans2-indic-en-1B"
-
-# -------- Summarizer --------
 QWEN_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+
 USE_4BIT = True
 
-# -------- Paths --------
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
 TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
 OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/IndicTrans2_Qwen_pipeline"
 
 TARGET_LANGS = ["Hindi", "Marathi", "Bangla"]
 
-# -------- IndicTrans2 language codes --------
 LANG_CODE_MAP = {
     "Hindi": "hi",
     "Marathi": "mr",
     "Bangla": "bn"
 }
 
-# -------- Zero-shot / Few-shot --------
-FEW_SHOT_K = 0   # 0 = zero-shot, >0 = few-shot
+# ========== ZERO vs FEW SHOT ==========
+FEW_SHOT_K = 0        # 0 = zero-shot, >0 = few-shot
 FEW_SHOT_SEED = 42
 
-# -------- Limits --------
+# ========== LIMITS ==========
 MAX_TEST_EXAMPLES = 100
-MAX_NATIVE_CHARS = 8000          # BEFORE translation (char-based)
-TARGET_DIALOGUE_TOKENS = 2048    # AFTER translation (token-based)
+MAX_NATIVE_CHARS = 8000
+TARGET_DIALOGUE_TOKENS = 2048
 EXAMPLE_DIALOGUE_TOKENS = 512
 MAX_NEW_TOKENS = 512
 
 SYSTEM_PROMPT = (
     "You are a clinical summarization assistant. "
-    "Read a doctor–patient dialogue and write a fluent English summary "
-    "focusing on symptoms, diagnosis, investigations, management, and follow-up. "
-    "Do not hallucinate information. "
-    "End the summary with <<END>>."
+    "Summarize the doctor–patient dialogue faithfully. "
+    "Do not hallucinate. End with <<END>>."
 )
 
 # ============================================================
@@ -178,7 +112,7 @@ def build_messages(system_prompt, user_prompt):
     ]
 
 # ============================================================
-# INDIC TRANS2 (Indic → English)
+# INDIC TRANS2 (FIXED)
 # ============================================================
 
 def load_indictrans():
@@ -197,13 +131,15 @@ def load_indictrans():
     return model, tok
 
 def translate_to_english(model, tok, text, src_lang):
+    # IMPORTANT FIX
+    tok.src_lang = src_lang
+    tok.tgt_lang = "en"
+
     inputs = tok(
         text,
         return_tensors="pt",
         truncation=True,
-        max_length=2048,
-        src_lang=src_lang,
-        tgt_lang="en"
+        max_length=2048
     ).to(model.device)
 
     with torch.no_grad():
@@ -217,7 +153,7 @@ def translate_to_english(model, tok, text, src_lang):
     return tok.decode(out[0], skip_special_tokens=True)
 
 # ============================================================
-# QWEN SUMMARIZER
+# QWEN SUMMARIZER (FIXED)
 # ============================================================
 
 def load_qwen():
@@ -240,7 +176,10 @@ def load_qwen():
         trust_remote_code=True
     )
 
+    # CRITICAL FIX
+    model.tie_weights()
     model.eval()
+
     return model, tok
 
 def summarize_qwen(model, tok, messages):
@@ -257,7 +196,6 @@ def summarize_qwen(model, tok, messages):
             **inputs,
             max_new_tokens=MAX_NEW_TOKENS,
             do_sample=False,
-            num_beams=1,
             pad_token_id=tok.eos_token_id
         )
 
@@ -265,7 +203,7 @@ def summarize_qwen(model, tok, messages):
     return tok.decode(gen, skip_special_tokens=True)
 
 # ============================================================
-# FEW-SHOT EXAMPLE COLLECTION
+# FEW-SHOT EXAMPLES
 # ============================================================
 
 def collect_few_shot(train_root, lang, k, seed):
@@ -291,14 +229,12 @@ def collect_few_shot(train_root, lang, k, seed):
         dialogue = " ".join(
             r.get("dialogue", "")
             for r in safe_read_jsonl(f)
-            if isinstance(r, dict)
         ).strip()
 
-        summary = sf.read_text(encoding="utf-8").strip()
+        summary = sf.read_text(encoding="utf-8").replace("<<END>>", "").strip()
+
         if dialogue and summary:
-            examples.append(
-                (dialogue, summary.replace("<<END>>", "").strip())
-            )
+            examples.append((dialogue, summary))
 
         if len(examples) == k:
             break
@@ -328,10 +264,7 @@ def run_pipeline():
         files = sorted(dlg_dir.glob("*.jsonl"))[:MAX_TEST_EXAMPLES]
 
         few_shot_examples = collect_few_shot(
-            TRAIN_SPLIT_DIR,
-            lang_dir.name,
-            FEW_SHOT_K,
-            FEW_SHOT_SEED
+            TRAIN_SPLIT_DIR, lang_dir.name, FEW_SHOT_K, FEW_SHOT_SEED
         )
 
         for f in tqdm(files, desc=lang_dir.name):
@@ -339,43 +272,29 @@ def run_pipeline():
             if out_file.exists():
                 continue
 
-            # ---- Load dialogue ----
             dialogue_native = " ".join(
                 r.get("dialogue", "")
                 for r in safe_read_jsonl(f)
-                if isinstance(r, dict)
             )
 
-            # ---- SAFE clipping (NO tokenizer) ----
             dialogue_native = clip_chars(dialogue_native, MAX_NATIVE_CHARS)
 
-            # ---- Translation ----
             dialogue_en = translate_to_english(
-                trans_model,
-                trans_tok,
-                dialogue_native,
-                src_lang
+                trans_model, trans_tok, dialogue_native, src_lang
             )
 
-            # ---- Token clipping for Qwen ----
             dialogue_en = clip_tokens(
-                qwen_tok,
-                dialogue_en,
-                TARGET_DIALOGUE_TOKENS
+                qwen_tok, dialogue_en, TARGET_DIALOGUE_TOKENS
             )
 
-            # ---- Few-shot prefix ----
             prefix = ""
             for i, (d, s) in enumerate(few_shot_examples, 1):
                 d = clip_tokens(qwen_tok, d, EXAMPLE_DIALOGUE_TOKENS)
-                prefix += (
-                    f"Example {i}:\nDialogue:\n{d}\n\n"
-                    f"English Summary:\n{s}\n---\n"
-                )
+                prefix += f"Example {i}:\nDialogue:\n{d}\n\nSummary:\n{s}\n---\n"
 
             user_prompt = (
                 f"{prefix}\nDialogue:\n{dialogue_en}\n\n"
-                "Write a detailed English clinical summary and end with <<END>>."
+                "Write a clinical English summary and end with <<END>>."
             )
 
             summary_raw = summarize_qwen(
