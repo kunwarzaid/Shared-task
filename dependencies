@@ -316,3 +316,40 @@ def run_pipeline():
 
 if __name__ == "__main__":
     run_pipeline()
+Error
+
+Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
+Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
+
+hTraceback (most recent call last):
+  File "/workspace/multi_summ/indictrans2.py", line 319, in <module>
+
+\    run_pipeline()
+  File "/workspace/multi_summ/indictrans2.py", line 283, in run_pipeline
+
+y    dialogue_en = translate_to_english(
+  File "/workspace/multi_summ/indictrans2.py", line 139, in translate_to_english
+
+�    inputs = tok(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3073, in __call__
+
+�    encodings = self._call_one(text=text, text_pair=text_pair, **all_kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3183, in _call_one
+
+�    return self.encode_plus(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3258, in encode_plus
+
+�    return self._encode_plus(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 800, in _encode_plus
+
+�    first_ids = get_input_ids(text)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 767, in get_input_ids
+
+�    tokens = self.tokenize(text, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 697, in tokenize
+
+    tokenized_text.extend(self._tokenize(token))
+  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/tokenization_indictrans.py", line 201, in _src_tokenize
+
+�    assert src_lang in LANGUAGE_TAGS, f"Invalid source language tag: {src_lang}"
+AssertionError: Invalid source language tag: आपला
