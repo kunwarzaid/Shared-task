@@ -1,5 +1,3 @@
-Code:
-
 import os
 import json
 import time
@@ -15,6 +13,23 @@ from transformers import (
     BitsAndBytesConfig
 )
 from langdetect import detect, DetectorFactory
+from huggingface_hub import login
+
+def huggingface_login():
+    """
+    Logs into the Hugging Face Hub using the user's token.
+    """
+    # print("Please enter your Hugging Face token. You can generate one at: https://huggingface.co/settings/tokens")
+    token = 
+    try:
+        # Log in to the Hugging Face Hub
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
+    except Exception as e:
+        print(f"Failed to log in: {e}")
+
+huggingface_login()
+
 
 # ============================================================
 # GLOBALS
@@ -31,7 +46,7 @@ print("CUDA:", torch.version.cuda)
 # ============================================================
 
 # -------- IndicTrans2 --------
-INDICTRANS_MODEL = "ai4bharat/indictrans2-en-indic-1B"
+INDICTRANS_MODEL = "ai4bharat/indictrans2-indic-en-1B"
 
 # -------- Summarizer --------
 QWEN_MODEL = "Qwen/Qwen2.5-7B-Instruct"
@@ -41,12 +56,12 @@ USE_4BIT = True
 # -------- Data --------
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
 TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/IndicTrans2_Qwen_pipeline"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/IndicTrans2_Qwen_pipeline/zero_shot"
 
 TARGET_LANGS = ["Hindi", "Marathi", "Bangla"]
 
 # -------- Few-shot --------
-FEW_SHOT_K = 2          # set to 0 for zero-shot
+FEW_SHOT_K = 0          # set to 0 for zero-shot
 FEW_SHOT_SEED = 42
 
 # -------- Safety limits --------
@@ -110,20 +125,20 @@ def build_messages(system_prompt, user_prompt):
 
 def load_indictrans():
     tprint("Loading IndicTrans2")
-    tok = AutoTokenizer.from_pretrained(INDICTRANS_MODEL)
+    tok = AutoTokenizer.from_pretrained(INDICTRANS_MODEL,trust_remote_code=True)
     model = AutoModelForSeq2SeqLM.from_pretrained(
         INDICTRANS_MODEL,
         device_map="auto",
-        torch_dtype=torch.float16,
-        trust_remote_code=True
+        trust_remote_code=True,
+        torch_dtype=torch.float16
     )
     model.eval()
     return model, tok
 
 def translate_to_english(model, tok, text):
-    inputs = tok(text, return_tensors="pt", truncation=True).to(model.device)
+    inputs = tok(text, return_tensors="pt", truncation=True,max_length=2048).to(model.device)
     with torch.no_grad():
-        out = model.generate(**inputs, max_new_tokens=2048)
+        out = model.generate(**inputs, max_new_tokens=1048)
     return tok.decode(out[0], skip_special_tokens=True)
 
 # ============================================================
@@ -289,57 +304,59 @@ def run_pipeline():
 if __name__ == "__main__":
     run_pipeline()
 
-
 Error:
-?ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
-cudf 23.6.0 requires protobuf<4.22,>=4.21.6, but you have protobuf 4.25.1 which is incompatible.
-torch-tensorrt 2.0.0.dev0 requires torch<2.2,>=2.1.dev, but you have torch 2.2.2 which is incompatible.
-torchdata 0.7.0a0 requires torch==2.1.0a0+29c30b1, but you have torch 2.2.2 which is incompatible.
-torchtext 0.16.0a0 requires torch==2.1.0a0+29c30b1, but you have torch 2.2.2 which is incompatible.
 
-�Successfully installed accelerate-0.34.0 bitsandbytes-0.43.3 colorama-0.4.6 datasets-2.19.0 dill-0.3.8 evaluate-0.4.3 hf-xet-1.2.1 huggingface_hub-0.36.0 langdetect-1.0.9 lxml-6.0.2 multiprocess-0.70.16 nltk-3.9.2 numpy-1.24.4 nvidia-cublas-cu12-12.1.3.1 nvidia-cuda-cupti-cu12-12.1.105 nvidia-cuda-nvrtc-cu12-12.1.105 nvidia-cuda-runtime-cu12-12.1.105 nvidia-cudnn-cu12-8.9.2.26 nvidia-cufft-cu12-11.0.2.54 nvidia-curand-cu12-10.3.2.106 nvidia-cusolver-cu12-11.4.5.107 nvidia-cusparse-cu12-12.1.0.106 nvidia-nccl-cu12-2.19.3 nvidia-nvjitlink-cu12-12.9.86 nvidia-nvtx-cu12-12.1.105 peft-0.10.0 portalocker-3.2.0 protobuf-4.25.1 pyarrow-22.0.0 pyarrow-hotfix-0.7 rouge-score-0.1.2 sacrebleu-2.5.1 safetensors-0.7.0 scikit-learn-1.3.2 scipy-1.10.1 sentencepiece-0.2.0 soxr-1.0.0 tokenizers-0.22.1 torch-2.2.2 torchaudio-2.2.2 torchvision-0.17.2 transformers-4.57.3 triton-2.2.0 typing-extensions-4.15.0 xxhash-3.6.0
+sThe model weights are not tied. Please use the `tie_weights` method before using the `infer_auto_device` function.
 
-�WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+([12:52:02] Loading Qwen-2.5-7B-Instruct
 
-y
-[notice] A new release of pip is available: 23.2.1 -> 25.3
-[notice] To update, run: python -m pip install --upgrade pip
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]
+Fetching 4 files:  25%|██▌       | 1/4 [01:55<05:46, 115.57s/it]
+Fetching 4 files: 100%|██████████| 4/4 [01:55<00:00, 28.89s/it] 
 
-dSuccessfully logged into Hugging Face!
-Torch: 2.2.2+cu121
-CUDA: 12.1
-[12:32:15] Loading IndicTrans2
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.14s/it]
+Loading checkpoint shards:  50%|█████     | 2/4 [00:07<00:07,  3.61s/it]
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:11<00:03,  3.87s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:14<00:00,  3.46s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:14<00:00,  3.52s/it]
 
-�The repository ai4bharat/indictrans2-indic-en-1B contains custom code which must be executed to correctly load the model. You can inspect the repository content at https://hf.co/ai4bharat/indictrans2-indic-en-1B .
- You can inspect the repository content at https://hf.co/ai4bharat/indictrans2-indic-en-1B.
-You can avoid this prompt in future by passing the argument `trust_remote_code=True`.
+[12:54:20] Language: Marathi
 
-Do you wish to run the custom code? [y/N] 
-�Traceback (most recent call last):
-  File "/usr/local/lib/python3.10/dist-packages/transformers/dynamic_module_utils.py", line 757, in resolve_trust_remote_code
+Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
+Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
 
-�    answer = input(
-EOFError: EOF when reading a line
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-
-E  File "/workspace/multi_summ/indictrans2.py", line 305, in <module>
+hTraceback (most recent call last):
+  File "/workspace/multi_summ/indictrans2.py", line 305, in <module>
 
 \    run_pipeline()
-  File "/workspace/multi_summ/indictrans2.py", line 232, in run_pipeline
+  File "/workspace/multi_summ/indictrans2.py", line 265, in run_pipeline
 
-{    trans_model, trans_tok = load_indictrans()
-  File "/workspace/multi_summ/indictrans2.py", line 128, in load_indictrans
+y    dialogue_en = translate_to_english(
+  File "/workspace/multi_summ/indictrans2.py", line 139, in translate_to_english
 
-�    tok = AutoTokenizer.from_pretrained(INDICTRANS_MODEL)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/models/auto/tokenization_auto.py", line 1133, in from_pretrained
+�    inputs = tok(text, return_tensors="pt", truncation=True,max_length=2048).to(model.device)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3073, in __call__
 
-�    trust_remote_code = resolve_trust_remote_code(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/dynamic_module_utils.py", line 769, in resolve_trust_remote_code
+�    encodings = self._call_one(text=text, text_pair=text_pair, **all_kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3183, in _call_one
 
-�    raise ValueError(
-ValueError: The repository ai4bharat/indictrans2-indic-en-1B contains custom code which must be executed to correctly load the model. You can inspect the repository content at https://hf.co/ai4bharat/indictrans2-indic-en-1B .
- You can inspect the repository content at https://hf.co/ai4bharat/indictrans2-indic-en-1B.
-Please pass the argument `trust_remote_code=True` to allow custom code to be run.
+�    return self.encode_plus(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3258, in encode_plus
+
+�    return self._encode_plus(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 800, in _encode_plus
+
+�    first_ids = get_input_ids(text)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 767, in get_input_ids
+
+�    tokens = self.tokenize(text, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 697, in tokenize
+
+    tokenized_text.extend(self._tokenize(token))
+  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/tokenization_indictrans.py", line 201, in _src_tokenize
+
+�    assert src_lang in LANGUAGE_TAGS, f"Invalid source language tag: {src_lang}"
+AssertionError: Invalid source language tag: आपला
+
+removing /jobs/285349
