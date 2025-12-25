@@ -12,18 +12,18 @@ from transformers import (
     AutoModelForSeq2SeqLM,
     BitsAndBytesConfig
 )
-from langdetect import DetectorFactory
 from huggingface_hub import login
+from langdetect import DetectorFactory
 
 # ============================================================
-# LOGIN (OPTIONAL – REQUIRED ONLY FOR GATED MODELS)
+# OPTIONAL HF LOGIN (ONLY IF REQUIRED)
 # ============================================================
 
 def huggingface_login():
-    token = ""   # <-- put token here if required
+    token = ""  # add token only if required
     if token:
         login(token=token)
-        print("Successfully logged into Hugging Face!")
+        print("Logged into Hugging Face")
 
 huggingface_login()
 
@@ -41,39 +41,38 @@ print("CUDA:", torch.version.cuda)
 # CONFIGURATION
 # ============================================================
 
-# -------- IndicTrans2 (Indic → English) --------
+# -------- IndicTrans2 --------
 INDICTRANS_MODEL = "ai4bharat/indictrans2-indic-en-1B"
 
 # -------- Summarizer --------
 QWEN_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 USE_4BIT = True
 
-# -------- Data --------
+# -------- Paths --------
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
 TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
 OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/IndicTrans2_Qwen_pipeline"
 
 TARGET_LANGS = ["Hindi", "Marathi", "Bangla"]
 
-# -------- Language codes for IndicTrans2 --------
+# -------- IndicTrans2 language codes --------
 LANG_CODE_MAP = {
     "Hindi": "hi",
     "Marathi": "mr",
     "Bangla": "bn"
 }
 
-# -------- Zero-shot / Few-shot switch --------
-FEW_SHOT_K = 2        # 0 = zero-shot, >0 = few-shot
+# -------- Zero-shot / Few-shot --------
+FEW_SHOT_K = 2   # 0 = zero-shot, >0 = few-shot
 FEW_SHOT_SEED = 42
 
-# -------- Token limits --------
+# -------- Limits --------
 MAX_TEST_EXAMPLES = 100
-MAX_TOTAL_INPUT_TOKENS = 8192
-TARGET_DIALOGUE_TOKENS = 2048
+MAX_NATIVE_CHARS = 8000          # BEFORE translation (char-based)
+TARGET_DIALOGUE_TOKENS = 2048    # AFTER translation (token-based)
 EXAMPLE_DIALOGUE_TOKENS = 512
 MAX_NEW_TOKENS = 512
 
-# -------- System prompt --------
 SYSTEM_PROMPT = (
     "You are a clinical summarization assistant. "
     "Read a doctor–patient dialogue and write a fluent English summary "
@@ -83,7 +82,7 @@ SYSTEM_PROMPT = (
 )
 
 # ============================================================
-# UTILITY FUNCTIONS
+# UTILS
 # ============================================================
 
 def tprint(msg):
@@ -104,6 +103,9 @@ def write_text(path, text):
     with open(path, "w", encoding="utf-8") as f:
         f.write(text.strip() + "\n")
 
+def clip_chars(text, max_chars):
+    return text if len(text) <= max_chars else text[-max_chars:]
+
 def clip_tokens(tok, text, max_tokens):
     ids = tok.encode(text, add_special_tokens=False)
     if len(ids) <= max_tokens:
@@ -117,7 +119,7 @@ def build_messages(system_prompt, user_prompt):
     ]
 
 # ============================================================
-# INDIC TRANS2
+# INDIC TRANS2 (Indic → English)
 # ============================================================
 
 def load_indictrans():
@@ -161,6 +163,7 @@ def translate_to_english(model, tok, text, src_lang):
 
 def load_qwen():
     tprint("Loading Qwen-2.5-7B-Instruct")
+
     tok = AutoTokenizer.from_pretrained(QWEN_MODEL, use_fast=True)
     tok.pad_token = tok.eos_token
 
@@ -203,7 +206,7 @@ def summarize_qwen(model, tok, messages):
     return tok.decode(gen, skip_special_tokens=True)
 
 # ============================================================
-# FEW-SHOT EXAMPLE COLLECTION (ENGLISH)
+# FEW-SHOT EXAMPLE COLLECTION
 # ============================================================
 
 def collect_few_shot(train_root, lang, k, seed):
@@ -234,7 +237,9 @@ def collect_few_shot(train_root, lang, k, seed):
 
         summary = sf.read_text(encoding="utf-8").strip()
         if dialogue and summary:
-            examples.append((dialogue, summary.replace("<<END>>", "").strip()))
+            examples.append(
+                (dialogue, summary.replace("<<END>>", "").strip())
+            )
 
         if len(examples) == k:
             break
@@ -254,7 +259,7 @@ def run_pipeline():
             continue
 
         tprint(f"Processing language: {lang_dir.name}")
-        src_lang_code = LANG_CODE_MAP[lang_dir.name]
+        src_lang = LANG_CODE_MAP[lang_dir.name]
 
         dlg_dir = lang_dir / "Dialogues"
         out_dir = Path(OUTPUT_DIR) / (
@@ -282,20 +287,22 @@ def run_pipeline():
                 if isinstance(r, dict)
             )
 
-            dialogue_native = clip_tokens(
-                trans_tok, dialogue_native, 2048
-            )
+            # ---- SAFE clipping (NO tokenizer) ----
+            dialogue_native = clip_chars(dialogue_native, MAX_NATIVE_CHARS)
 
-            # ---- Translate ----
+            # ---- Translation ----
             dialogue_en = translate_to_english(
                 trans_model,
                 trans_tok,
                 dialogue_native,
-                src_lang_code
+                src_lang
             )
 
+            # ---- Token clipping for Qwen ----
             dialogue_en = clip_tokens(
-                qwen_tok, dialogue_en, TARGET_DIALOGUE_TOKENS
+                qwen_tok,
+                dialogue_en,
+                TARGET_DIALOGUE_TOKENS
             )
 
             # ---- Few-shot prefix ----
@@ -326,97 +333,8 @@ def run_pipeline():
     tprint("Pipeline complete.")
 
 # ============================================================
-# ENTRY POINT
+# ENTRY
 # ============================================================
 
 if __name__ == "__main__":
     run_pipeline()
-Error:
-
-
-4      Successfully uninstalled torchvision-0.16.0a0
-
-?ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
-cudf 23.6.0 requires protobuf<4.22,>=4.21.6, but you have protobuf 4.25.1 which is incompatible.
-torch-tensorrt 2.0.0.dev0 requires torch<2.2,>=2.1.dev, but you have torch 2.2.2 which is incompatible.
-torchdata 0.7.0a0 requires torch==2.1.0a0+29c30b1, but you have torch 2.2.2 which is incompatible.
-torchtext 0.16.0a0 requires torch==2.1.0a0+29c30b1, but you have torch 2.2.2 which is incompatible.
-
-�Successfully installed accelerate-0.34.0 bitsandbytes-0.43.3 colorama-0.4.6 datasets-2.19.0 dill-0.3.8 evaluate-0.4.3 hf-xet-1.2.1 huggingface_hub-0.36.0 langdetect-1.0.9 lxml-6.0.2 multiprocess-0.70.16 nltk-3.9.2 numpy-1.24.4 nvidia-cublas-cu12-12.1.3.1 nvidia-cuda-cupti-cu12-12.1.105 nvidia-cuda-nvrtc-cu12-12.1.105 nvidia-cuda-runtime-cu12-12.1.105 nvidia-cudnn-cu12-8.9.2.26 nvidia-cufft-cu12-11.0.2.54 nvidia-curand-cu12-10.3.2.106 nvidia-cusolver-cu12-11.4.5.107 nvidia-cusparse-cu12-12.1.0.106 nvidia-nccl-cu12-2.19.3 nvidia-nvjitlink-cu12-12.9.86 nvidia-nvtx-cu12-12.1.105 peft-0.10.0 portalocker-3.2.0 protobuf-4.25.1 pyarrow-22.0.0 pyarrow-hotfix-0.7 rouge-score-0.1.2 sacrebleu-2.5.1 safetensors-0.7.0 scikit-learn-1.3.2 scipy-1.10.1 sentencepiece-0.2.0 soxr-1.0.0 tokenizers-0.22.1 torch-2.2.2 torchaudio-2.2.2 torchvision-0.17.2 transformers-4.57.3 triton-2.2.0 typing-extensions-4.15.0 xxhash-3.6.0
-
-�WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
-
-y
-[notice] A new release of pip is available: 23.2.1 -> 25.3
-[notice] To update, run: python -m pip install --upgrade pip
-
-dSuccessfully logged into Hugging Face!
-Torch: 2.2.2+cu121
-CUDA: 12.1
-[13:13:46] Loading IndicTrans2
-
-&A new version of the following files was downloaded from https://huggingface.co/ai4bharat/indictrans2-indic-en-1B:
-- tokenization_indictrans.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-
-'A new version of the following files was downloaded from https://huggingface.co/ai4bharat/indictrans2-indic-en-1B:
-- configuration_indictrans.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-
-2`torch_dtype` is deprecated! Use `dtype` instead!
-
-"A new version of the following files was downloaded from https://huggingface.co/ai4bharat/indictrans2-indic-en-1B:
-- modeling_indictrans.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-
-sThe model weights are not tied. Please use the `tie_weights` method before using the `infer_auto_device` function.
-
-([13:14:25] Loading Qwen-2.5-7B-Instruct
-
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]
-Fetching 4 files:  25%|██▌       | 1/4 [01:55<05:45, 115.05s/it]
-Fetching 4 files: 100%|██████████| 4/4 [01:55<00:00, 28.76s/it] 
-
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:11,  3.93s/it]
-Loading checkpoint shards:  50%|█████     | 2/4 [00:08<00:08,  4.48s/it]
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:13<00:04,  4.66s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:17<00:00,  4.14s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:17<00:00,  4.25s/it]
-
-([13:16:42] Processing language: Marathi
-
-Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
-Marathi:   0%|          | 0/100 [00:00<?, ?it/s]
-
-hTraceback (most recent call last):
-  File "/workspace/multi_summ/indictrans2.py", line 333, in <module>
-
-\    run_pipeline()
-  File "/workspace/multi_summ/indictrans2.py", line 285, in run_pipeline
-
-k    dialogue_native = clip_tokens(
-  File "/workspace/multi_summ/indictrans2.py", line 108, in clip_tokens
-
-�    ids = tok.encode(text, add_special_tokens=False)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 2867, in encode
-
-�    encoded_inputs = self.encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3258, in encode_plus
-
-�    return self._encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 800, in _encode_plus
-
-�    first_ids = get_input_ids(text)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 767, in get_input_ids
-
-�    tokens = self.tokenize(text, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 697, in tokenize
-
-    tokenized_text.extend(self._tokenize(token))
-  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/tokenization_indictrans.py", line 201, in _src_tokenize
-
-�    assert src_lang in LANGUAGE_TAGS, f"Invalid source language tag: {src_lang}"
-AssertionError: Invalid source language tag: आपला
-
-removing /jobs/285350
