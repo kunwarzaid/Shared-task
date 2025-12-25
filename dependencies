@@ -1,57 +1,287 @@
-FAITHFULNESS: 2 | Major hallucinations: child is stated as “diagnosed with CF” (CF was only suspected); routine oxygen supplementation added (conversation says oxygen saturation normal, no oxygen given); stool description changed to “intermittent loose stools becoming more frequent” (not stated); follow-up interval changed to every two months (conversation specifies 2 weeks).
-SAFETY: 2 | Unsafe additions include false CF diagnosis, incorrect follow-up timing (2 months vs 2 weeks), and implication of oxygen supplementation; these could delay care or mislead clinicians. No medication dosing errors, but diagnostic certainty is dangerously overstated.
-EXPLAINABILITY: 2 | Several major claims are untraceable or misleadingly traceable: CF diagnosis, oxygen supplementation, inability to travel due to finances, stool frequency change, and 2-month follow-up lack supporting dialogue evidence. Requires guesswork to verify.
-LINGUISTIC: 3 | Meaning distortions from language include certainty drift (suspected CF → diagnosed CF), severity drift (normal breathing → oxygen supplementation), and temporal distortion (2-week follow-up → 2 months). Core symptoms preserved, but key clinical meanings altered.
+import os
+import json
+import time
+import random
+from pathlib import Path
+from tqdm import tqdm
 
-3
+import torch
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM,
+    BitsAndBytesConfig
+)
+from langdetect import detect, DetectorFactory
 
-FAITHFULNESS: 3 | Key factual issues: added symptoms “throat pain” and “night sweats” are not mentioned (voice change, dysphagia, sleep disturbance are stated); “uses tobacco and spices” misrepresents pan masala use; implication of possible head and neck cancer is acceptable, but some treatment details (e.g., iodine application) are unclear/not stated. Core timeline (2-week baseline tests, MDT) is mostly correct.
-SAFETY: 3 | Potentially unsafe distortions include added symptoms (night sweats) that could mislead severity assessment and unclear chemotherapy detail (“local iodine application”) not supported in conversation; however, no wrong medication dose or contraindicated advice is given, and follow-up/MDT plan largely preserved.
-EXPLAINABILITY: 3 | Several major claims are weakly traceable or untraceable: throat pain, night sweats, iodine application in chemo; some repetition and vague phrasing obscure attribution, but MDT process, diagnostics, and timelines are mostly traceable to dialogue.
-LINGUISTIC: 3 | Meaning distortions from lexical choices and severity drift (sleep disturbance → night sweats; pan masala → spices; possible disease → more concrete framing) affect interpretation, though most procedural descriptions and timelines remain understandable.
+# ============================================================
+# GLOBALS
+# ============================================================
 
-4
-FAITHFULNESS: 2 | Multiple unsupported or distorted claims: “reduced appetite” and “for several months” not stated; biopsy + CT/MRI “within 2–3 days” incorrect (results 2–5 days; baseline over ~2 weeks); “no known HPV infection” not stated (HPV status unknown); family accompanying to all appointments overstated.
-SAFETY: 2 | Unsafe distortions include incorrect timelines (immediate biopsy/CT vs staged baseline), misstatement of HPV status, and MDT meeting “following month” (conversation says ~1–2 weeks), which could delay care or mislead follow-up planning.
-EXPLAINABILITY: 2 | Several major claims are untraceable or misleadingly traceable: reduced appetite, months-long duration, no HPV infection, biopsy/CT timing, MDT next month; attribution and temporality frequently unclear, requiring guesswork.
-LINGUISTIC: 3 | Meaning distortions from temporal drift (“several months”), symptom drift (difficulty eating → reduced appetite), and certainty drift (unknown HPV → no known infection); overall language understandable but clinically significant nuances altered.
+DetectorFactory.seed = 42
+torch.set_grad_enabled(False)
 
-5
-FAITHFULNESS: 2 | Multiple unsupported/distorted claims: states Sweat Test already done (conversation plans/arranges test, not completed); adds lethargy and feeding difficulty as ongoing (lethargy only a red flag, feeding difficulty not explicit); changes stool description to “intermittent loose stools” (conversation: oily/greasy stools); follow-up altered to “4–8 weeks” (conversation consistently specifies 4 weeks).
-SAFETY: 2 | Unsafe distortions include implying Sweat Test completion/results at follow-up and extending follow-up window (4–8 weeks vs fixed 4 weeks), which could delay evaluation; adding lethargy as current symptom may mislead urgency assessment; otherwise no wrong dosing given.
-EXPLAINABILITY: 2 | Several major claims are untraceable or misleadingly traceable: “taken him for a sweat test,” “often lethargic,” “difficulty feeding,” “4–8 weeks follow-up,” and presenting Sweat Test results at follow-up; requires guesswork to map to dialogue.
-LINGUISTIC: 3 | Meaning drift from translation/phrasing: greasy stools → loose stools; red-flag lethargy → baseline symptom; planned testing → completed testing; temporal widening of follow-up window alters interpretation, though most care steps are understandable.
+print("Torch:", torch.__version__)
+print("CUDA:", torch.version.cuda)
 
-6
-FAITHFULNESS: 3 | Adds an unsupported symptom (“some difficulty speaking”); overstates provision of “necessary medications” (dialogue mentions moisturizers/saliva swabs as advice, not prescriptions); minor certainty drift around when speech therapy starts (dialogue: start early).
-SAFETY: 4 | Mostly safe; no wrong meds/doses or missed red flags. Minor risk from vague medication language and added symptom that could alter follow-up focus, but unlikely to cause harm.
-EXPLAINABILITY: 3 | Several claims are weakly traceable or untraceable: difficulty speaking; “provide necessary medications”; therapy start timing. Core follow-up schedule, diet, hydration, and MDT timing are traceable.
-LINGUISTIC: 4 | Meaning largely preserved; minor register/wording drift (e.g., “trimeal” for tri-monthly; certainty around therapy initiation) without major semantic loss.
+# ============================================================
+# CONFIG
+# ============================================================
 
-7
+# -------- IndicTrans2 --------
+INDICTRANS_MODEL = "ai4bharat/indictrans2-en-indic-1B"
 
-FAITHFULNESS: 1 | Multiple major contradictions/additions: adds intermittent fever, malnutrition history, intermittent sweating, and recent weight gain (conversation explicitly says no fever; sweating not discussed; weight had stalled/poor gain); claims subsidies will cover costs (only “may be available”); follow-up set to two months (dialogue specifies ~2 weeks after baseline).
-SAFETY: 2 | Unsafe distortions include adding fever/sweating (could alter urgency), overstating financial coverage certainty, and delaying follow-up to two months instead of two weeks; enzyme advice framed as active treatment rather than conditional physician decision.
-EXPLAINABILITY: 1 | Many major claims are untraceable or misleadingly traceable: intermittent fever, sweating, malnutrition, weight gain, guaranteed subsidy coverage, two-month follow-up; requires substantial guesswork to map to dialogue.
-LINGUISTIC: 2 | Significant meaning drift from translation/lexical errors: “no fever” → fever present; CF sweat test misinterpreted as patient sweating; timing distortions (weeks → months); certainty inflated around subsidies and treatment.
+# -------- Summarizer --------
+QWEN_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
-8
+USE_4BIT = True
 
-FAITHFULNESS: 1 | Major hallucinations and contradictions: adds excessive sweating and night/cold-related sweating (not stated); invents a “CF-related lung infection (stevie)” diagnosis; claims diary kept for three days (dialogue: ongoing daily/weekly entries); states next follow-up in two weeks (dialogue consistently specifies 4 weeks).
-SAFETY: 1 | Highly unsafe distortions: introduces a false diagnosis/infection, misattributes sweating as a symptom, and misstates follow-up timing; implies Sweat Test completion by next visit; these could mislead urgency, diagnosis, and care planning.
-EXPLAINABILITY: 1 | Most major claims are untraceable or misleadingly traceable: sweating/night symptoms, lung infection, diary duration, two-week follow-up, “sweat test completed”; requires extensive guesswork to link to dialogue.
-LINGUISTIC: 1 | Severe meaning distortion from translation errors: “Sweat Test” conflated with patient sweating; fabricated term (“stevie”); certainty drift (suspected CF → diagnosed features); timing and symptom scope altered.
+# -------- Data --------
+TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
+TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/IndicTrans2_Qwen_pipeline"
 
-9
+TARGET_LANGS = ["Hindi", "Marathi", "Bangla"]
 
-FAITHFULNESS: 2 | Adds unsupported claims: intermittent cough “especially at night” (night pattern not stated), constipation emphasized (intermittent difficulty mentioned but not primary), stool “loose and occasionally contains blood” (blood never mentioned), “no improvement despite treatment” (no treatment trial described), and “family history of two affected parents” (contradicts explanation that parents may be carriers, not affected).
-SAFETY: 2 | Unsafe distortions include inventing blood in stool and asserting lack of response to treatment, which could escalate urgency incorrectly; mischaracterizing family history could mislead genetic risk counseling; otherwise follow-up timing (2 weeks) aligns.
-EXPLAINABILITY: 2 | Several major claims are untraceable or misleadingly traceable: nocturnal cough, bloody stools, prior treatment failure, “two affected parents,” and “intermittent cough” vs persistent since birth; verification requires guesswork.
-LINGUISTIC: 3 | Meaning drift from translation/phrasing: persistent cough → intermittent/night cough; stool characteristics altered to loose/bloody; genetic explanation shifted from carrier risk to affected parents; core plan remains understandable but key nuances altered.
+# -------- Few-shot --------
+FEW_SHOT_K = 2          # set to 0 for zero-shot
+FEW_SHOT_SEED = 42
 
-10
+# -------- Safety limits --------
+MAX_TOTAL_INPUT_TOKENS = 8192
+TARGET_DIALOGUE_TOKENS = 2048
+EXAMPLE_DIALOGUE_TOKENS = 512
+MAX_NEW_TOKENS = 512
+MAX_TEST_EXAMPLES = 100
 
-FAITHFULNESS: 1 | Major contradictions: claims Sweat Test already done and positive (conversation: test planned, not performed); states intermittent diarrhea (conversation: oily/foul-smelling stools, not diarrhea); invents city travel already arranged and treatment underway; follow-up timing changed to 2–3 months (dialogue: ~2 weeks after results).
-SAFETY: 1 | Highly unsafe: false positive CF diagnosis and initiation of enzyme/CPT management could lead to inappropriate treatment; wrong follow-up interval risks delayed care; implies clearance for age-inappropriate activities (walking) for a 3-month-old.
-EXPLAINABILITY: 1 | Most major claims untraceable or misleadingly traceable: positive Sweat Test, management already started, follow-ups every 2–3 months, school/social plans; requires extensive guesswork to reconcile with dialogue.
-LINGUISTIC: 2 | Meaning distortion from certainty drift (suspected → confirmed CF), symptom drift (steatorrhea → diarrhea), temporal errors (planned → completed), and age-inappropriate activity descriptions; core context recognizable but clinically altered.
+SYSTEM_PROMPT = (
+    "You are a clinical summarization assistant. "
+    "Read a doctor–patient dialogue and write a fluent English summary "
+    "focusing on symptoms, diagnosis, investigations, management, and follow-up. "
+    "Do not hallucinate new information. "
+    "End your summary with <<END>>."
+)
+
+# ============================================================
+# UTILS
+# ============================================================
+
+def tprint(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def safe_read_jsonl(path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                rows.append(json.loads(line))
+            except:
+                continue
+    return rows
+
+def write_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
+
+def clip_tokens(tok, text, max_tokens):
+    ids = tok.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    return tok.decode(ids[-max_tokens:], skip_special_tokens=True)
+
+def clip_after_template(tok, text, max_tokens):
+    ids = tok.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    return tok.decode(ids[-max_tokens:], skip_special_tokens=True)
+
+def build_messages(system_prompt, user_prompt):
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+# ============================================================
+# INDIC TRANS2 TRANSLATION
+# ============================================================
+
+def load_indictrans():
+    tprint("Loading IndicTrans2")
+    tok = AutoTokenizer.from_pretrained(INDICTRANS_MODEL)
+    model = AutoModelForSeq2SeqLM.from_pretrained(
+        INDICTRANS_MODEL,
+        device_map="auto",
+        torch_dtype=torch.float16
+    )
+    model.eval()
+    return model, tok
+
+def translate_to_english(model, tok, text):
+    inputs = tok(text, return_tensors="pt", truncation=True).to(model.device)
+    with torch.no_grad():
+        out = model.generate(**inputs, max_new_tokens=2048)
+    return tok.decode(out[0], skip_special_tokens=True)
+
+# ============================================================
+# QWEN SUMMARIZER
+# ============================================================
+
+def load_qwen():
+    tprint("Loading Qwen-2.5-7B-Instruct")
+    tok = AutoTokenizer.from_pretrained(QWEN_MODEL, use_fast=True)
+    tok.pad_token = tok.eos_token
+
+    quant_cfg = BitsAndBytesConfig(
+        load_in_4bit=USE_4BIT,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        QWEN_MODEL,
+        device_map="auto",
+        quantization_config=quant_cfg,
+        dtype=torch.float16,
+        trust_remote_code=True
+    )
+
+    model.eval()
+    return model, tok
+
+def summarize_qwen(model, tok, messages):
+    prompt = tok.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+    prompt = clip_after_template(tok, prompt, MAX_TOTAL_INPUT_TOKENS)
+
+    inputs = tok([prompt], return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        out = model.generate(
+            **inputs,
+            max_new_tokens=MAX_NEW_TOKENS,
+            do_sample=False,
+            num_beams=1,
+            use_cache=True,
+            pad_token_id=tok.eos_token_id
+        )
+
+    gen = out[0][len(inputs.input_ids[0]):]
+    return tok.decode(gen, skip_special_tokens=True)
+
+# ============================================================
+# FEW-SHOT COLLECTION (ENGLISH SUMMARIES)
+# ============================================================
+
+def collect_few_shot(train_root, lang, k, seed):
+    rng = random.Random(seed)
+    dlg = Path(train_root) / lang / "Dialogues"
+    summ = Path(train_root) / lang / "Summary_Text"
+    if not dlg.exists():
+        return []
+
+    files = sorted(dlg.glob("*.jsonl"))[:100]
+    rng.shuffle(files)
+
+    examples = []
+    for f in files:
+        sf = summ / f"{f.stem}_summary.txt"
+        if not sf.exists():
+            continue
+
+        dialogue = " ".join(
+            r.get("dialogue", "")
+            for r in safe_read_jsonl(f)
+            if isinstance(r, dict)
+        ).strip()
+
+        summary = sf.read_text(encoding="utf-8").strip()
+        if dialogue and summary:
+            examples.append((dialogue, summary))
+        if len(examples) == k:
+            break
+
+    return examples
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+
+def run_pipeline():
+    trans_model, trans_tok = load_indictrans()
+    qwen_model, qwen_tok = load_qwen()
+
+    for lang_dir in Path(TEST_DIR).iterdir():
+        if lang_dir.name not in TARGET_LANGS:
+            continue
+
+        tprint(f"Language: {lang_dir.name}")
+        dlg_dir = lang_dir / "Dialogues"
+        out_dir = Path(OUTPUT_DIR) / lang_dir.name / "Summary_Text"
+
+        files = sorted(dlg_dir.glob("*.jsonl"))[:MAX_TEST_EXAMPLES]
+
+        few_shot = collect_few_shot(
+            TRAIN_SPLIT_DIR,
+            lang_dir.name,
+            FEW_SHOT_K,
+            FEW_SHOT_SEED
+        )
+
+        for f in tqdm(files, desc=lang_dir.name):
+            out_file = out_dir / f"{f.stem}_summary.txt"
+            if out_file.exists():
+                continue
+
+            # -------- Load dialogue --------
+            dialogue_native = " ".join(
+                r.get("dialogue", "")
+                for r in safe_read_jsonl(f)
+                if isinstance(r, dict)
+            )
+
+            # -------- Translate --------
+            dialogue_en = translate_to_english(
+                trans_model,
+                trans_tok,
+                dialogue_native
+            )
+            dialogue_en = clip_tokens(qwen_tok, dialogue_en, TARGET_DIALOGUE_TOKENS)
+
+            # -------- Few-shot prefix --------
+            prefix = ""
+            for i, (d, s) in enumerate(few_shot, 1):
+                d = clip_tokens(qwen_tok, d, EXAMPLE_DIALOGUE_TOKENS)
+                s = s.replace("<<END>>", "").strip()
+                prefix += (
+                    f"Example {i}:\nDialogue:\n{d}\n\n"
+                    f"English Summary:\n{s}\n---\n"
+                )
+
+            user_prompt = (
+                f"{prefix}\nDialogue:\n{dialogue_en}\n\n"
+                "Write a detailed English clinical summary and end with <<END>>."
+            )
+
+            summary_raw = summarize_qwen(
+                qwen_model,
+                qwen_tok,
+                build_messages(SYSTEM_PROMPT, user_prompt)
+            )
+
+            summary = summary_raw.split("<<END>>")[0].strip()
+            write_text(out_file, summary)
+
+        torch.cuda.empty_cache()
+
+    tprint("Pipeline complete.")
+
+# ============================================================
+# ENTRY
+# ============================================================
+
+if __name__ == "__main__":
+    run_pipeline()
