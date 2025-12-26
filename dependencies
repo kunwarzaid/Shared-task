@@ -1,69 +1,3 @@
-&A new version of the following files was downloaded from https://huggingface.co/ai4bharat/indictrans2-indic-en-1B:
-- tokenization_indictrans.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-
-'A new version of the following files was downloaded from https://huggingface.co/ai4bharat/indictrans2-indic-en-1B:
-- configuration_indictrans.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-
-2`torch_dtype` is deprecated! Use `dtype` instead!
-
-"A new version of the following files was downloaded from https://huggingface.co/ai4bharat/indictrans2-indic-en-1B:
-- modeling_indictrans.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-
-sThe model weights are not tied. Please use the `tie_weights` method before using the `infer_auto_device` function.
-
-([18:49:11] Loading Qwen-2.5-7B-Instruct
-
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]
-Fetching 4 files:  25%|██▌       | 1/4 [02:00<06:01, 120.55s/it]
-Fetching 4 files: 100%|██████████| 4/4 [02:00<00:00, 30.14s/it] 
-
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.01s/it]
-Loading checkpoint shards:  50%|█████     | 2/4 [00:06<00:07,  3.55s/it]
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:10<00:03,  3.76s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:13<00:00,  3.38s/it]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:13<00:00,  3.44s/it]
-
-hTraceback (most recent call last):
-  File "/workspace/multi_summ/indictrans2.py", line 333, in <module>
-
-\    run_pipeline()
-  File "/workspace/multi_summ/indictrans2.py", line 261, in run_pipeline
-
-q    print(translate_to_english(
-  File "/workspace/multi_summ/indictrans2.py", line 145, in translate_to_english
-
-�    inputs = tok(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3073, in __call__
-
-�    encodings = self._call_one(text=text, text_pair=text_pair, **all_kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3183, in _call_one
-
-�    return self.encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3258, in encode_plus
-
-�    return self._encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 800, in _encode_plus
-
-�    first_ids = get_input_ids(text)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 767, in get_input_ids
-
-�    tokens = self.tokenize(text, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 697, in tokenize
-
-    tokenized_text.extend(self._tokenize(token))
-  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/tokenization_indictrans.py", line 201, in _src_tokenize
-
-�    assert src_lang in LANGUAGE_TAGS, f"Invalid source language tag: {src_lang}"
-AssertionError: Invalid source language tag: <mr>
-
-removing /jobs/285371
-
-
-Code
 import os
 import json
 import time
@@ -74,22 +8,21 @@ from tqdm import tqdm
 import torch
 from transformers import (
     AutoTokenizer,
-    AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
+    AutoModelForCausalLM,
     BitsAndBytesConfig
 )
-from langdetect import DetectorFactory
 from huggingface_hub import login
+from IndicTransToolkit.processor import IndicProcessor
 
 # ============================================================
-# LOGIN (OPTIONAL – REQUIRED ONLY FOR GATED MODELS)
+# LOGIN (ONLY IF REQUIRED)
 # ============================================================
 
 def huggingface_login():
-    token = ""   # <-- put token here if required
+    token = ""  # add if needed
     if token:
         login(token=token)
-        print("Successfully logged into Hugging Face!")
 
 huggingface_login()
 
@@ -97,11 +30,12 @@ huggingface_login()
 # GLOBAL SETTINGS
 # ============================================================
 
-DetectorFactory.seed = 42
 torch.set_grad_enabled(False)
 
 print("Torch:", torch.__version__)
 print("CUDA:", torch.version.cuda)
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ============================================================
 # CONFIGURATION
@@ -118,10 +52,11 @@ OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/IndicTrans2_Qwen_pipeline"
 
 TARGET_LANGS = ["Hindi", "Marathi", "Bangla"]
 
+# ✅ OFFICIAL IndicTrans2 language codes
 LANG_CODE_MAP = {
-    "Hindi": "hi",
-    "Marathi": "mr",
-    "Bangla": "bn"
+    "Hindi": "hin_Deva",
+    "Marathi": "mar_Deva",
+    "Bangla": "ben_Beng"
 }
 
 # ========== ZERO vs FEW SHOT ==========
@@ -179,54 +114,68 @@ def build_messages(system_prompt, user_prompt):
     ]
 
 # ============================================================
-# INDIC TRANS2 (FIXED)
+# INDIC TRANS2 (CORRECT – OFFICIAL WAY)
 # ============================================================
 
 def load_indictrans():
     tprint("Loading IndicTrans2")
-    tok = AutoTokenizer.from_pretrained(
+
+    tokenizer = AutoTokenizer.from_pretrained(
         INDICTRANS_MODEL,
         trust_remote_code=True
     )
+
     model = AutoModelForSeq2SeqLM.from_pretrained(
         INDICTRANS_MODEL,
-        device_map="auto",
+        trust_remote_code=True,
         torch_dtype=torch.float16,
-        trust_remote_code=True
+        device_map="auto"
     )
+
+    processor = IndicProcessor(inference=True)
+
     model.eval()
-    return model, tok
+    return model, tokenizer, processor
 
-def translate_to_english(model, tok, text, src_lang):
-    """
-    IndicTrans2 REQUIRES explicit language token in the text.
-    """
+def translate_to_english(model, tok, ip, text, src_lang):
+    if not text.strip():
+        return ""
 
-    # 🔴 CRITICAL: prepend language tag
-    text = f"<{src_lang}> {text}"
-
-    tok.src_lang = src_lang
-    tok.tgt_lang = "en"
+    batch = ip.preprocess_batch(
+        [text],
+        src_lang=src_lang,
+        tgt_lang="eng_Latn"
+    )
 
     inputs = tok(
-        text,
-        return_tensors="pt",
+        batch,
         truncation=True,
-        max_length=2048
+        padding=True,
+        return_tensors="pt"
     ).to(model.device)
 
     with torch.no_grad():
-        out = model.generate(
+        outputs = model.generate(
             **inputs,
-            max_new_tokens=512,
-            num_beams=4,
-            early_stopping=True
+            max_length=256,
+            num_beams=5
         )
 
-    return tok.decode(out[0], skip_special_tokens=True)
+    decoded = tok.batch_decode(
+        outputs,
+        skip_special_tokens=True,
+        clean_up_tokenization_spaces=True
+    )
+
+    translations = ip.postprocess_batch(
+        decoded,
+        lang="eng_Latn"
+    )
+
+    return translations[0]
 
 # ============================================================
-# QWEN SUMMARIZER (FIXED)
+# QWEN SUMMARIZER
 # ============================================================
 
 def load_qwen():
@@ -249,7 +198,6 @@ def load_qwen():
         trust_remote_code=True
     )
 
-    # CRITICAL FIX
     model.tie_weights()
     model.eval()
 
@@ -318,18 +266,21 @@ def collect_few_shot(train_root, lang, k, seed):
 # MAIN PIPELINE
 # ============================================================
 
-
-    
 def run_pipeline():
-    trans_model, trans_tok = load_indictrans()
+    trans_model, trans_tok, trans_ip = load_indictrans()
     qwen_model, qwen_tok = load_qwen()
 
-    print(translate_to_english(
-    trans_model,
-    trans_tok,
-    "आपला घसा दुखतो आहे",
-    "mr"))
-    
+    # 🔍 sanity test
+    print(
+        translate_to_english(
+            trans_model,
+            trans_tok,
+            trans_ip,
+            "आपला घसा दुखतो आहे",
+            "mar_Deva"
+        )
+    )
+
     for lang_dir in Path(TEST_DIR).iterdir():
         if lang_dir.name not in TARGET_LANGS:
             continue
@@ -345,7 +296,10 @@ def run_pipeline():
         files = sorted(dlg_dir.glob("*.jsonl"))[:MAX_TEST_EXAMPLES]
 
         few_shot_examples = collect_few_shot(
-            TRAIN_SPLIT_DIR, lang_dir.name, FEW_SHOT_K, FEW_SHOT_SEED
+            TRAIN_SPLIT_DIR,
+            lang_dir.name,
+            FEW_SHOT_K,
+            FEW_SHOT_SEED
         )
 
         for f in tqdm(files, desc=lang_dir.name):
@@ -359,13 +313,21 @@ def run_pipeline():
             )
 
             dialogue_native = clip_chars(dialogue_native, MAX_NATIVE_CHARS)
+            if not dialogue_native.strip():
+                continue
 
             dialogue_en = translate_to_english(
-                trans_model, trans_tok, dialogue_native, src_lang
+                trans_model,
+                trans_tok,
+                trans_ip,
+                dialogue_native,
+                src_lang
             )
 
             dialogue_en = clip_tokens(
-                qwen_tok, dialogue_en, TARGET_DIALOGUE_TOKENS
+                qwen_tok,
+                dialogue_en,
+                TARGET_DIALOGUE_TOKENS
             )
 
             prefix = ""
@@ -397,73 +359,3 @@ def run_pipeline():
 
 if __name__ == "__main__":
     run_pipeline()
-
-
-Example from hugging face
-import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from IndicTransToolkit.processor import IndicProcessor
-# recommended to run this on a gpu with flash_attn installed
-# don't set attn_implemetation if you don't have flash_attn
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-src_lang, tgt_lang = "hin_Deva", "eng_Latn"
-model_name = "ai4bharat/indictrans2-indic-en-1B"
-tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-
-model = AutoModelForSeq2SeqLM.from_pretrained(
-    model_name, 
-    trust_remote_code=True, 
-    torch_dtype=torch.float16, # performance might slightly vary for bfloat16
-    attn_implementation="flash_attention_2"
-).to(DEVICE)
-
-ip = IndicProcessor(inference=True)
-
-input_sentences = [
-    "जब मैं छोटा था, मैं हर रोज़ पार्क जाता था।",
-    "हमने पिछले सप्ताह एक नई फिल्म देखी जो कि बहुत प्रेरणादायक थी।",
-    "अगर तुम मुझे उस समय पास मिलते, तो हम बाहर खाना खाने चलते।",
-    "मेरे मित्र ने मुझे उसके जन्मदिन की पार्टी में बुलाया है, और मैं उसे एक तोहफा दूंगा।",
-]
-
-batch = ip.preprocess_batch(
-    input_sentences,
-    src_lang=src_lang,
-    tgt_lang=tgt_lang,
-)
-
-# Tokenize the sentences and generate input encodings
-inputs = tokenizer(
-    batch,
-    truncation=True,
-    padding="longest",
-    return_tensors="pt",
-    return_attention_mask=True,
-).to(DEVICE)
-
-# Generate translations using the model
-with torch.no_grad():
-    generated_tokens = model.generate(
-        **inputs,
-        use_cache=True,
-        min_length=0,
-        max_length=256,
-        num_beams=5,
-        num_return_sequences=1,
-    )
-
-# Decode the generated tokens into text
-generated_tokens = tokenizer.batch_decode(
-    generated_tokens,
-    skip_special_tokens=True,
-    clean_up_tokenization_spaces=True,
-)
-
-# Postprocess the translations, including entity replacement
-translations = ip.postprocess_batch(generated_tokens, lang=tgt_lang)
-
-for input_sentence, translation in zip(input_sentences, translations):
-    print(f"{src_lang}: {input_sentence}")
-    print(f"{tgt_lang}: {translation}")
-
