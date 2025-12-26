@@ -1,361 +1,50 @@
-import os
-import json
-import time
-import random
-from pathlib import Path
-from tqdm import tqdm
-
-import torch
-from transformers import (
-    AutoTokenizer,
-    AutoModelForSeq2SeqLM,
-    AutoModelForCausalLM,
-    BitsAndBytesConfig
-)
-from huggingface_hub import login
-from IndicTransToolkit.processor import IndicProcessor
-
-# ============================================================
-# LOGIN (ONLY IF REQUIRED)
-# ============================================================
-
-def huggingface_login():
-    token = ""  # add if needed
-    if token:
-        login(token=token)
-
-huggingface_login()
-
-# ============================================================
-# GLOBAL SETTINGS
-# ============================================================
-
-torch.set_grad_enabled(False)
-
-print("Torch:", torch.__version__)
-print("CUDA:", torch.version.cuda)
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
-INDICTRANS_MODEL = "ai4bharat/indictrans2-indic-en-1B"
-QWEN_MODEL = "Qwen/Qwen2.5-7B-Instruct"
-
-USE_4BIT = True
-
-TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
-TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/IndicTrans2_Qwen_pipeline"
-
-TARGET_LANGS = ["Hindi", "Marathi", "Bangla"]
-
-# ✅ OFFICIAL IndicTrans2 language codes
-LANG_CODE_MAP = {
-    "Hindi": "hin_Deva",
-    "Marathi": "mar_Deva",
-    "Bangla": "ben_Beng"
-}
-
-# ========== ZERO vs FEW SHOT ==========
-FEW_SHOT_K = 0        # 0 = zero-shot, >0 = few-shot
-FEW_SHOT_SEED = 42
-
-# ========== LIMITS ==========
-MAX_TEST_EXAMPLES = 100
-MAX_NATIVE_CHARS = 8000
-TARGET_DIALOGUE_TOKENS = 2048
-EXAMPLE_DIALOGUE_TOKENS = 512
-MAX_NEW_TOKENS = 512
-
-SYSTEM_PROMPT = (
-    "You are a clinical summarization assistant. "
-    "Summarize the doctor–patient dialogue faithfully. "
-    "Do not hallucinate. End with <<END>>."
-)
-
-# ============================================================
-# UTILS
-# ============================================================
-
-def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path):
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            try:
-                rows.append(json.loads(line))
-            except:
-                continue
-    return rows
-
-def write_text(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
-
-def clip_chars(text, max_chars):
-    return text if len(text) <= max_chars else text[-max_chars:]
-
-def clip_tokens(tok, text, max_tokens):
-    ids = tok.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    return tok.decode(ids[-max_tokens:], skip_special_tokens=True)
-
-def build_messages(system_prompt, user_prompt):
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-# ============================================================
-# INDIC TRANS2 (CORRECT – OFFICIAL WAY)
-# ============================================================
-
-def load_indictrans():
-    tprint("Loading IndicTrans2")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        INDICTRANS_MODEL,
-        trust_remote_code=True
-    )
-
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-        INDICTRANS_MODEL,
-        trust_remote_code=True,
-        torch_dtype=torch.float16,
-        device_map="auto"
-    )
-
-    processor = IndicProcessor(inference=True)
-
-    model.eval()
-    return model, tokenizer, processor
-
-def translate_to_english(model, tok, ip, text, src_lang):
-    if not text.strip():
-        return ""
-
-    batch = ip.preprocess_batch(
-        [text],
-        src_lang=src_lang,
-        tgt_lang="eng_Latn"
-    )
-
-    inputs = tok(
-        batch,
-        truncation=True,
-        padding=True,
-        return_tensors="pt"
-    ).to(model.device)
-
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_length=256,
-            num_beams=5
-        )
-
-    decoded = tok.batch_decode(
-        outputs,
-        skip_special_tokens=True,
-        clean_up_tokenization_spaces=True
-    )
-
-    translations = ip.postprocess_batch(
-        decoded,
-        lang="eng_Latn"
-    )
-
-    return translations[0]
-
-# ============================================================
-# QWEN SUMMARIZER
-# ============================================================
-
-def load_qwen():
-    tprint("Loading Qwen-2.5-7B-Instruct")
-
-    tok = AutoTokenizer.from_pretrained(QWEN_MODEL, use_fast=True)
-    tok.pad_token = tok.eos_token
-
-    quant_cfg = BitsAndBytesConfig(
-        load_in_4bit=USE_4BIT,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        QWEN_MODEL,
-        device_map="auto",
-        quantization_config=quant_cfg,
-        torch_dtype=torch.float16,
-        trust_remote_code=True
-    )
-
-    model.tie_weights()
-    model.eval()
-
-    return model, tok
-
-def summarize_qwen(model, tok, messages):
-    prompt = tok.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-
-    inputs = tok([prompt], return_tensors="pt").to(model.device)
-
-    with torch.no_grad():
-        out = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS,
-            do_sample=False,
-            pad_token_id=tok.eos_token_id
-        )
-
-    gen = out[0][len(inputs.input_ids[0]):]
-    return tok.decode(gen, skip_special_tokens=True)
-
-# ============================================================
-# FEW-SHOT EXAMPLES
-# ============================================================
-
-def collect_few_shot(train_root, lang, k, seed):
-    if k == 0:
-        return []
-
-    rng = random.Random(seed)
-    dlg_dir = Path(train_root) / lang / "Dialogues"
-    sum_dir = Path(train_root) / lang / "Summary_Text"
-
-    if not dlg_dir.exists():
-        return []
-
-    files = list(dlg_dir.glob("*.jsonl"))
-    rng.shuffle(files)
-
-    examples = []
-    for f in files:
-        sf = sum_dir / f"{f.stem}_summary.txt"
-        if not sf.exists():
-            continue
-
-        dialogue = " ".join(
-            r.get("dialogue", "")
-            for r in safe_read_jsonl(f)
-        ).strip()
-
-        summary = sf.read_text(encoding="utf-8").replace("<<END>>", "").strip()
-
-        if dialogue and summary:
-            examples.append((dialogue, summary))
-
-        if len(examples) == k:
-            break
-
-    return examples
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
-
-def run_pipeline():
-    trans_model, trans_tok, trans_ip = load_indictrans()
-    qwen_model, qwen_tok = load_qwen()
-
-    # 🔍 sanity test
-    print(
-        translate_to_english(
-            trans_model,
-            trans_tok,
-            trans_ip,
-            "आपला घसा दुखतो आहे",
-            "mar_Deva"
-        )
-    )
-
-    for lang_dir in Path(TEST_DIR).iterdir():
-        if lang_dir.name not in TARGET_LANGS:
-            continue
-
-        tprint(f"Processing language: {lang_dir.name}")
-        src_lang = LANG_CODE_MAP[lang_dir.name]
-
-        dlg_dir = lang_dir / "Dialogues"
-        out_dir = Path(OUTPUT_DIR) / (
-            "few_shot" if FEW_SHOT_K > 0 else "zero_shot"
-        ) / lang_dir.name / "Summary_Text"
-
-        files = sorted(dlg_dir.glob("*.jsonl"))[:MAX_TEST_EXAMPLES]
-
-        few_shot_examples = collect_few_shot(
-            TRAIN_SPLIT_DIR,
-            lang_dir.name,
-            FEW_SHOT_K,
-            FEW_SHOT_SEED
-        )
-
-        for f in tqdm(files, desc=lang_dir.name):
-            out_file = out_dir / f"{f.stem}_summary.txt"
-            if out_file.exists():
-                continue
-
-            dialogue_native = " ".join(
-                r.get("dialogue", "")
-                for r in safe_read_jsonl(f)
-            )
-
-            dialogue_native = clip_chars(dialogue_native, MAX_NATIVE_CHARS)
-            if not dialogue_native.strip():
-                continue
-
-            dialogue_en = translate_to_english(
-                trans_model,
-                trans_tok,
-                trans_ip,
-                dialogue_native,
-                src_lang
-            )
-
-            dialogue_en = clip_tokens(
-                qwen_tok,
-                dialogue_en,
-                TARGET_DIALOGUE_TOKENS
-            )
-
-            prefix = ""
-            for i, (d, s) in enumerate(few_shot_examples, 1):
-                d = clip_tokens(qwen_tok, d, EXAMPLE_DIALOGUE_TOKENS)
-                prefix += f"Example {i}:\nDialogue:\n{d}\n\nSummary:\n{s}\n---\n"
-
-            user_prompt = (
-                f"{prefix}\nDialogue:\n{dialogue_en}\n\n"
-                "Write a clinical English summary and end with <<END>>."
-            )
-
-            summary_raw = summarize_qwen(
-                qwen_model,
-                qwen_tok,
-                build_messages(SYSTEM_PROMPT, user_prompt)
-            )
-
-            summary = summary_raw.split("<<END>>")[0].strip()
-            write_text(out_file, summary)
-
-        torch.cuda.empty_cache()
-
-    tprint("Pipeline complete.")
-
-# ============================================================
-# ENTRY
-# ============================================================
-
-if __name__ == "__main__":
-    run_pipeline()
+hTraceback (most recent call last):
+  File "/workspace/multi_summ/indictrans2.py", line 362, in <module>
+
+\    run_pipeline()
+  File "/workspace/multi_summ/indictrans2.py", line 276, in run_pipeline
+
+k    translate_to_english(
+  File "/workspace/multi_summ/indictrans2.py", line 159, in translate_to_english
+
+�    outputs = model.generate(
+  File "/usr/local/lib/python3.10/dist-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+
+�    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/generation/utils.py", line 2564, in generate
+
+�    result = decoding_method(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/generation/utils.py", line 3265, in _beam_search
+
+�    model_outputs = self(**model_inputs, return_dict=True)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+
+�    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+
+�    return forward_call(*args, **kwargs)
+  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/modeling_indictrans.py", line 1718, in forward
+
+�    outputs = self.model(
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+
+�    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+
+�    return forward_call(*args, **kwargs)
+  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/modeling_indictrans.py", line 1614, in forward
+
+�    decoder_outputs = self.decoder(
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1511, in _wrapped_call_impl
+
+�    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1520, in _call_impl
+
+�    return forward_call(*args, **kwargs)
+  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2_hyphen_indic_hyphen_en_hyphen_1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/modeling_indictrans.py", line 1361, in forward
+
+I    past_key_values[0][0].shape[2] if past_key_values is not None else 0
+
+;AttributeError: 'NoneType' object has no attribute 'shape'
+
+removing /jobs/285404
