@@ -59,7 +59,7 @@ LANG_CODE_MAP = {
 }
 
 # ========= ZERO vs FEW SHOT =========
-FEW_SHOT_K = 0     # 0 = zero-shot, >0 = few-shot
+FEW_SHOT_K = 0      # 0 = zero-shot, >0 = few-shot
 FEW_SHOT_SEED = 42
 
 # ========= LIMITS =========
@@ -67,12 +67,25 @@ MAX_TEST_EXAMPLES = 100
 MAX_NATIVE_CHARS = 8000
 TARGET_DIALOGUE_TOKENS = 2048
 EXAMPLE_DIALOGUE_TOKENS = 512
-MAX_NEW_TOKENS = 512
+
+# generation controls (IMPORTANT FOR LENGTH)
+MAX_NEW_TOKENS = 600
+MIN_NEW_TOKENS = 200
 
 SYSTEM_PROMPT = (
-    "You are a clinical summarization assistant. "
-    "Summarize the doctor–patient dialogue faithfully. "
-    "Do not hallucinate. End with <<END>>."
+    "You are a clinical summarization assistant.\n\n"
+    "Write a detailed, structured English summary of the doctor–patient dialogue.\n"
+    "Cover ALL of the following if present:\n"
+    "- presenting complaints\n"
+    "- symptom duration and severity\n"
+    "- relevant medical, personal, and social history\n"
+    "- risk factors and red flags\n"
+    "- examinations and investigations discussed or planned\n"
+    "- assessment or provisional diagnosis\n"
+    "- management plan, medications, advice, and follow-up\n\n"
+    "Write in complete sentences and multiple paragraphs.\n"
+    "Do NOT be brief.\n"
+    "End the summary with <<END>>."
 )
 
 # ============================================================
@@ -113,7 +126,7 @@ def build_messages(system_prompt, user_prompt):
     ]
 
 # ============================================================
-# INDIC TRANS2 (OFFICIAL + BUG-FIXED)
+# INDIC TRANS2 (CORRECT + STABLE)
 # ============================================================
 
 def load_indictrans():
@@ -137,13 +150,6 @@ def load_indictrans():
     return model, tokenizer, processor
 
 def translate_to_english(model, tok, ip, text, src_lang):
-    """
-    Correct IndicTrans2 inference:
-    - Uses IndicProcessor
-    - Uses script-aware language codes
-    - Disables cache to avoid past_key_values crash
-    """
-
     if not text.strip():
         return ""
 
@@ -165,7 +171,7 @@ def translate_to_english(model, tok, ip, text, src_lang):
             **inputs,
             max_length=256,
             num_beams=5,
-            use_cache=False   # 🔴 CRITICAL FIX
+            use_cache=False   # 🔴 critical fix
         )
 
     decoded = tok.batch_decode(
@@ -182,7 +188,7 @@ def translate_to_english(model, tok, ip, text, src_lang):
     return translations[0]
 
 # ============================================================
-# QWEN SUMMARIZER
+# QWEN SUMMARIZER (LENGTH-AWARE)
 # ============================================================
 
 def load_qwen():
@@ -222,8 +228,12 @@ def summarize_qwen(model, tok, messages):
     with torch.no_grad():
         out = model.generate(
             **inputs,
+            min_new_tokens=MIN_NEW_TOKENS,
             max_new_tokens=MAX_NEW_TOKENS,
-            do_sample=False,
+            do_sample=True,
+            temperature=0.3,
+            top_p=0.9,
+            repetition_penalty=1.1,
             pad_token_id=tok.eos_token_id
         )
 
@@ -277,7 +287,7 @@ def run_pipeline():
     trans_model, trans_tok, trans_ip = load_indictrans()
     qwen_model, qwen_tok = load_qwen()
 
-    # 🔍 sanity test
+    # sanity test
     print(
         translate_to_english(
             trans_model,
@@ -344,7 +354,7 @@ def run_pipeline():
 
             user_prompt = (
                 f"{prefix}\nDialogue:\n{dialogue_en}\n\n"
-                "Write a clinical English summary and end with <<END>>."
+                "Write a detailed English clinical summary and end with <<END>>."
             )
 
             summary_raw = summarize_qwen(
