@@ -1,155 +1,23 @@
-Great, this is a strong prior art and the examiner’s concern is reasonable.
-Below are clear, defensible differentiators you can use directly in the patent response.
-I’ve written them in patent-appropriate language, mapped explicitly against CN117932042A, and focused on non-obvious technical gaps.
+	2.  Lessons Learned from Evaluation of LLM based
+BIBLIOGRAPHIC INFORMATION
+Title	Lessons Learned from Evaluation of LLM based Multi-agents in Safer Therapy Recommendation
+Author	Yicong Wu, Ting Chen, Irit Hochberg, Zhoujian Sun, Ruth Edry, Zhengxing Huang, Mor Peleg
+Publication Date	15 Jul 2025
+Abstract
+Therapy recommendation for chronic patients with multimorbidity is challenging due to risks of treatment conflicts. Existing decision support systems face scalability limitations. Inspired by the way in which general practitioners (GP) manage multimorbidity patients, occasionally convening multidisciplinary team (MDT) collaboration, this study investigated the feasibility and value of using a Large Language Model (LLM)-based multi-agent system (MAS) for safer therapy recommendations. We designed a single agent and a MAS framework simulating MDT decision-making by enabling discussion among LLM agents to resolve medical conflicts. The systems were evaluated on therapy planning tasks for multimorbidity patients using benchmark cases. We compared MAS’s performance with single-agent approaches and realworld benchmarks. An important contribution of our study is the definition of evaluation metrics that go beyond the technical precision and recall and allow the inspection of clinical goals met and medication burden of the proposed advices to a gold standard benchmark. Our results show that with current LLMs, a single agent GP performs as well as MDTs. The best-scoring models provide correct recommendations that address all clinical goals, yet the advices are incomplete. Some models also present unnecessary medications, resulting in unnecessary conflicts between medication and conditions or drug-drug interactions.
+Relevant Text
+We propose a dynamically generated multi-agent framework that simulates real-world multidisciplinary expert consultations. The MAS replicates the multi-step workflow of MDTs as performed by clinicians in real-world settings, allowing LLMs to propose improved treatment plans by detecting and resolving conflicts. 
+2. We apply the proposed MAS to clinical benchmark cases to assess its completeness and correctness using detailed qualitative research. Results demonstrated that, compared to single-agent systems, the MAS showed promise in reducing conflicts while maintaining an appropriate medication count, and it is more closely aligning with real-world expert judgment for multimorbidity patients.
+ 3. This study develop a new interpretable evaluation strategy. Unlike traditional aggregate metrics, we introduce specific improvement ratio that compares LLM-proposed treatment plans with original plans, focusing on conflict reduction and medication burden, similar to a hazard ratio.
+ 
+To bridge this gap, we explore a novel application of LLM-based MAS collaboration in the domain of therapy recommendation. Unlike prior systems, our framework focuses on the resolution of conflicts, providing an interpretable, traceable workflow and validating final decisions using safety metrics. This design aims to enhance both the clinical transparency and the real-world utility of AIassisted medication planning, particularly in scenarios requiring multidisciplinary reasoning.
+III. METHODS
+A.	Core Conflict Resolution Workflow
+Core Conflict Resolution Workflow Fig. 1a illustrates the conflict resolution workflow for a chronic patient with multimorbidity. Through prompt engineering, the LLM is assigned distinct roles to simulate interactions among multiple agents. The system operates with a primary role, the General Practitioner (GP), who oversees and coordinates the entire workflow. The process begins with the GP reviewing the patient’s clinical condition, including the chief complaint, medical history, physical findings, laboratory data, and initial prescription. Then the GP is asked to set clinical goals to manage the conditions and complaint, identify existing medications for the goals, and identify potential treatment conflicts, including DDIs and condition-specific contraindications that may increase patient risk: Where 𝐶 represents the detected conflict set, 𝑃! is the patient’s clinical condition. Any identified conflicts are reported back to the GP, who evaluates the information and convenes a MDT when he thinks that some aspects of the patient's condition are outside his expertise, selecting specialists relevant to each conflict for resolution. During the conflict resolution phase, each specialist is assigned a subset of discussion points based on the identified conflicts. Some conflicts require input from multiple specialists, while others may be addressed by a single expert. For multi-expert conflicts, a collaborative forum is set up where each specialist presents their perspective, followed by rounds of peer evaluation. If disagreements arise, new arguments are proposed until a consensus is reached (please refer to Github for more details). The discussion proceeds in rounds 𝑗 ∈ [1, 𝑚]. The maximal number of rounds m was set empirically to 5, based on observations that most meaningful disagreements or suggestions occur within the first few exchanges. Beyond this round, agents tend to repeat previously stated positions. Additionally, longer discussions have risk in exceeding the model’s token limit. If a consensus is not reached within m rounds, a mediator agent is invoked to summarize the arguments and propose a consensus recommendation. In cases where only one expert is needed, the assigned specialist directly provides a recommendation. Upon resolution of all conflicts, the GP synthesizes the recommendations and finalizes the treatment plan, resulting in a revised prescription.
+ 
 
-⸻
-
-Differentiation of Trust-X vs CN117932042A
-
-High-level distinction (one-paragraph summary)
-
-CN117932042A discloses a dialogue-based evaluation pipeline for assessing whether a single large language model acting as a doctor can retrieve predefined patient information, ask appropriate questions, and match diagnoses or treatments against standardized answers.
-In contrast, Trust-X introduces a trustworthiness measurement framework that evaluates how models reason and act under uncertainty and safety constraints, using multi-agent consensus, explicit epistemic uncertainty modeling, reasoning–diagnosis consistency, and real-time safety supervision of actions (tests and prescriptions). Trust-X measures process-level reliability, not merely outcome correctness or dialogue completeness.
-
-⸻
-
-Point-by-point technical differentiators
-
-1. Single-agent evaluation vs multi-agent epistemic uncertainty modeling
-
-CN117932042A
-	•	Evaluates one doctor agent interacting with a patient agent.
-	•	No notion of epistemic uncertainty.
-	•	Assumes correctness is measured by matching against standardized patient information.
-	•	Disagreement or uncertainty is not modeled.
-
-Trust-X (Inventive Step)
-	•	Introduces multiple independent Doctor Agents (K ≥ 3) reasoning in parallel on the same case.
-	•	Defines Consensus Disagreement Rate (CDR) as a quantitative epistemic uncertainty signal:
-\mathrm{CDR} = 1 - \frac{\max_d f(d)}{K}
-	•	Uses disagreement itself as a behavioral signal of uncertainty, not an error.
-	•	This transforms evaluation from single-path correctness to population-level reasoning stability.
-
-➡ Not disclosed or suggested in CN117932042A.
-
-⸻
-
-2. Outcome scoring vs reasoning-process trustworthiness
-
-CN117932042A
-	•	Evaluation indices are based on:
-	•	Keyword matching
-	•	Diagnostic correctness
-	•	Treatment plan correctness
-	•	Dialogue completeness
-	•	Focus is on what answer was produced.
-
-Trust-X
-	•	Introduces Epistemic Trust Index (ETI) that combines:
-	•	Accuracy
-	•	Consensus stability (1 − CDR)
-	•	Reasoning–Diagnosis Consistency (RDC)
-	•	Explicitly separates:
-	•	Epistemic reliability (quality of reasoning)
-	•	Operational safety (quality of actions)
-	•	Evaluates how the diagnosis was reasoned, not just correctness.
-
-➡ CN117932042A has no notion of reasoning trust as a measurable construct.
-
-⸻
-
-3. No reasoning validation vs Reasoning–Diagnosis Consistency (RDC)
-
-CN117932042A
-	•	Does not analyze internal reasoning traces.
-	•	Uses keyword overlap and logical sequence comparison against predefined rules.
-	•	Does not assess alignment between explanation and final decision.
-
-Trust-X
-	•	Introduces RDC, computed as semantic similarity between:
-	•	The model’s reasoning trace
-	•	The model’s final diagnosis
-	•	Uses embedding-based consistency, not rule matching.
-	•	Detects plausible-sounding but logically disconnected reasoning.
-
-➡ This is a new metric category absent from the prior art.
-
-⸻
-
-4. Passive hallucination detection vs active safety supervision
-
-CN117932042A
-	•	Detects hallucination after the fact:
-	•	If value cannot be retrieved
-	•	If diagnosis mismatches standard answer
-	•	Safety is treated as a binary evaluation label.
-
-Trust-X
-	•	Introduces real-time Safety Agents that:
-	•	Intercept unsafe tests before execution
-	•	Flag unsafe prescriptions using external medical knowledge (e.g., DrugBank)
-	•	Measures:
-	•	UnsafeRx%
-	•	TestAlert%
-	•	Safety actively shapes the reasoning trajectory.
-
-➡ CN117932042A does not supervise actions, only evaluates outputs.
-
-⸻
-
-5. Dialogue completeness metrics vs Operational Safety Index (OSI)
-
-CN117932042A
-	•	Penalizes or rewards based on:
-	•	Number of dialogue rounds
-	•	Coverage of predefined patient attributes
-	•	More dialogue ≈ better evaluation.
-
-Trust-X
-	•	Introduces Operational Safety Index (OSI):
-	•	Explicitly set to 0 when safety supervision is disabled
-	•	Penalizes unsafe behavior rather than rewarding silence
-	•	Prevents “safe-by-omission” scoring.
-
-➡ This resolves a known evaluation loophole not addressed in CN117932042A.
-
-⸻
-
-6. Evaluation of correctness vs evaluation of trustworthiness
-
-CN117932042A
-	•	Core objective: “evaluate ability of LLM in diagnosis and treatment”
-	•	Measures correctness, coverage, and dialogue logic.
-
-Trust-X
-	•	Core objective: measure trustworthiness under realistic deployment constraints
-	•	Explicitly distinguishes:
-	•	Accuracy ≠ Reliability
-	•	Coherence ≠ Safety
-	•	Provides FTI as a synthesis of epistemic and operational trust.
-
-➡ Trust-X addresses a different technical problem.
-
-⸻
-
-Key legal framing for the patent response
-
-You can safely state:
-
-Although CN117932042A evaluates diagnostic correctness and dialogue quality of a single large language model, it does not disclose or suggest a system for measuring trustworthiness through multi-agent consensus, epistemic uncertainty quantification, reasoning–diagnosis consistency, or real-time safety supervision of clinical actions. Trust-X therefore introduces a distinct technical solution to a different technical problem: evaluating process-level reliability rather than outcome-level correctness.
-
-⸻
-
-One-line differentiator (for examiner summary)
-
-CN117932042A evaluates whether a model gives the right answer; Trust-X evaluates whether the model reasons reliably, safely, and transparently under uncertainty.
-
-⸻
-
-If you want, next I can:
-	•	Convert this into claim-friendly language
-	•	Map differentiators directly to independent claims
-	•	Produce a novelty table (Prior Art vs Trust-X)
-	•	Prepare a non-obviousness argument tailored to patent examiners
-
-Send the next prior art when ready.
+Searcher’s Comment
+The cited non patent literature details a method for LLMs to detect medication conflicts and propose improved plan. This is similar to the use of LLM for monitoring test and prescription and maps with the Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions) of the proposed invention.  The cited prior art also computes DDI Ratio, Contraindication Ratio, and Medication Ratio,  to assess the size and direction of changes to DDI and medication number introduced by LLM-generated medication plans. However the method is different.
+Inventor’s differentiating points / additional information is important to conclude relevance of the subject prior art to the proposed invention.
+Inventor’s Comment
+Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions): 
