@@ -1,19 +1,172 @@
-	3.  Reasoning Aware Self-Consistency: Leveraging Reasoning Paths for Efficient LLM Sampling
-BIBLIOGRAPHIC INFORMATION
-Title	Reasoning Aware Self-Consistency: Leveraging Reasoning Paths for Efficient LLM Sampling 
-Author	Guangya Wan, Yuqi Wu, Jie Chen, Sheng Li
-Publication Date	4 Feb 2025
-Abstract
-Self-Consistency mitigates hallucinations in Large Language Models (LLMs) by sampling multiple reasoning paths,but it lacks a systematic approach to determine the optimal number of samples or select the most faithful rationale. To address this limitation, we introduce Reasoning-Aware Self-Consistency (RASC), a novel framework that enhances sampling efficiency and reasoning faithfulness by dynamically evaluating both outputs and rationales. RASC assesses the quality of reasoning and the consistency of answers for each generated sample, using these assessments to guide early stopping decisions and rationale selection. The framework employs criteria-based stopping and weighted majority voting, enabling more informed choices on when to halt sampling and which rationale to select. Our comprehensive experiments across diverse question-answering datasets demonstrate that RASC outperforms existing methods, reducing sample usage by approximately 70% while maintaining accuracy. Moreover, RASC facilitates the selection of high-fidelity rationales, thereby improving the faithfulness of LLM outputs. Our approach effectively addresses the efficiency-accuracy trade-off in LLM reasoning tasks, offering a new perspective for more nuanced, faithful, and effective utilization of LLMs in resource-constrained environments.
-Relevant Text
-We propose ReasoningAware Self-Consistency (RASC), a framework that optimizes sampling efficiency while maintaining accuracy by evaluating both reasoning paths and answers. RASC introduces a sufficiency scoring function that combines reasoning quality and answer consistency features, mapped to a continuous score via an optimized classifier. The framework employs a dynamic sampling process with a buffer of high-quality samples, stopping when a predefined capacity is reached. Finally, RASC uses weighted majority voting based on the scores to select the final answer and most faithful reasoning path. This approach integrates reasoning evaluation into the self-consistency process, offering a more faithful and computationally efficient method for complex question-answering tasks in LLMs.
- 
- 
- 
+Below is a patent-ready differentiation between Trust-X and prior art RASC (Reasoning-Aware Self-Consistency), written in a style suitable for an Inventor’s Comment / Response to Searcher. I’ve also implicitly incorporated what is known from the paper (no need to over-cite web details in patent response).
 
-Searcher’s Comment
-The cited NPL optimizes sampling efficiency by evaluating both reasoning paths and answers which is similar to the Reasoning–Diagnosis Consistency of the proposed invention.
-Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions):  The evaluation of reasoning path and answers map with the Reasoning–Diagnosis Consistency which   measure how well an agent’s explanation aligns with its final answer. However the prior art does not measures Operational Safety Index (OSI) or Consensus Disagreement Rate(CDR).
-Inventor’s differentiating points / additional information is important to conclude relevance of the subject prior art to the proposed invention.
-Inventor’s Comment
-Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions): 
+⸻
+
+Differentiation of Trust-X vs
+
+Reasoning-Aware Self-Consistency (RASC)
+(Wan et al., 2025)
+
+⸻
+
+High-level distinction (core inventive boundary)
+
+The cited prior art RASC proposes a mechanism to optimize LLM sampling efficiency and answer faithfulness by scoring reasoning paths during inference and selecting the best rationale to improve accuracy and reduce hallucinations.
+
+In contrast, Trust-X is not a sampling, decoding, or answer-selection technique.
+Trust-X introduces a system and method for measuring the trustworthiness of medical LLM behavior, integrating epistemic uncertainty, reasoning–decision alignment, and operational safety supervision into explicit trust indices.
+
+Thus, RASC operates at the inference optimization layer, while Trust-X operates at the post-reasoning evaluation and accountability layer.
+
+⸻
+
+Point-by-point technical differentiators
+
+1. Inference optimization vs trust measurement
+
+RASC
+	•	Objective: improve efficiency and faithfulness of inference.
+	•	Uses reasoning evaluation to:
+	•	stop sampling early,
+	•	select the “best” rationale,
+	•	produce a single final answer.
+	•	Reasoning quality is a means to improve output accuracy.
+
+Trust-X (Inventive Step)
+	•	Objective: measure trustworthiness, not improve inference.
+	•	Does not alter sampling, decoding, or answer selection.
+	•	Uses reasoning evaluation to:
+	•	quantify epistemic uncertainty,
+	•	detect reasoning instability,
+	•	expose unsafe behavior.
+	•	Trust is treated as an observable, measurable system property, not an optimization objective.
+
+➡ Trust-X solves a different technical problem than RASC.
+
+⸻
+
+2. Reasoning–answer scoring vs Reasoning–Diagnosis Consistency (RDC)
+
+RASC
+	•	Scores reasoning paths to choose the most faithful rationale.
+	•	Scoring is used internally to guide weighted majority voting.
+	•	The selected rationale replaces others.
+
+Trust-X
+	•	Introduces Reasoning–Diagnosis Consistency (RDC) as an evaluation metric, not a selection criterion.
+	•	RDC measures semantic alignment between:
+	•	the reasoning trace,
+	•	the final diagnosis.
+	•	RDC is reported and logged, not used to select or modify outputs.
+	•	Multiple inconsistent but fluent reasonings are explicitly preserved for analysis.
+
+➡ RDC is used to evaluate coherence, not to enforce it.
+
+⸻
+
+3. Single-model self-consistency vs multi-agent epistemic disagreement
+
+RASC
+	•	Operates on multiple samples from the same model.
+	•	Self-consistency is used to converge on one answer.
+	•	Disagreement is transient and discarded once a rationale is selected.
+
+Trust-X
+	•	Uses multiple independent Doctor Agents with separate reasoning trajectories.
+	•	Introduces Consensus Disagreement Rate (CDR):
+	•	disagreement is explicitly measured,
+	•	disagreement is treated as epistemic uncertainty.
+	•	No attempt is made to eliminate disagreement.
+
+➡ Using disagreement as a trust signal (CDR) is not taught or suggested in RASC.
+
+⸻
+
+4. Answer faithfulness vs operational safety monitoring
+
+RASC
+	•	Focuses entirely on reasoning faithfulness and efficiency.
+	•	No concept of:
+	•	test safety,
+	•	prescription safety,
+	•	real-time safety supervision.
+	•	No notion of unsafe actions.
+
+Trust-X
+	•	Introduces Operational Safety Index (OSI).
+	•	Monitors:
+	•	unsafe prescriptions,
+	•	unsafe diagnostic tests,
+	•	DDIs and contraindications.
+	•	OSI is explicitly defined as zero when safety supervision is absent, preventing score inflation.
+
+➡ Operational safety as a quantified trust dimension is absent from RASC.
+
+⸻
+
+5. Efficiency–accuracy trade-off vs accountability and auditability
+
+RASC
+	•	Goal: reduce number of samples while maintaining accuracy.
+	•	No logging or traceability guarantees.
+	•	No audit trail for how reasoning evolved.
+
+Trust-X
+	•	Provides:
+	•	end-to-end reasoning logs,
+	•	agent-level traces,
+	•	replayable diagnostic timelines.
+	•	Designed for auditing, accountability, and regulatory inspection, not speed.
+
+➡ Trust-X addresses regulatory trust requirements, not computational efficiency.
+
+⸻
+
+6. General QA setting vs safety-critical medical reasoning
+
+RASC
+	•	Evaluated on general QA datasets.
+	•	No domain-specific safety implications.
+
+Trust-X
+	•	Designed specifically for safety-critical medical reasoning.
+	•	Trust metrics explicitly distinguish:
+	•	“correct but unsafe”,
+	•	“coherent but negligent”,
+	•	“safe and accountable” behavior.
+
+➡ Trust-X operates under constraints absent in RASC.
+
+⸻
+
+Examiner-facing concise differentiation (recommended text)
+
+The cited RASC framework evaluates reasoning paths to optimize sampling efficiency and select a single faithful rationale during inference. In contrast, the present invention does not modify inference or select among reasoning paths. Instead, it introduces a system and method for measuring the trustworthiness of medical large language model behavior, using multi-agent diagnostic disagreement as a signal of epistemic uncertainty, reasoning–diagnosis consistency as an evaluative metric, and real-time safety supervision as an operational trust dimension. Disagreement and unsafe behavior are preserved, logged, and quantified rather than eliminated. These aspects are neither disclosed nor suggested by RASC, which focuses on efficiency and accuracy rather than trust, accountability, or safety measurement.
+
+⸻
+
+One-line differentiator (for claim mapping)
+
+RASC selects the best reasoning to answer a question; Trust-X measures whether any reasoning can be trusted to act safely.
+
+⸻
+
+Key novelty summary (bullet-ready)
+	•	RASC: inference-time optimization
+	•	Trust-X: post-reasoning trust quantification
+	•	RASC: removes disagreement
+	•	Trust-X: measures disagreement (CDR)
+	•	RASC: no safety dimension
+	•	Trust-X: explicit OSI with zero-safety penalty
+	•	RASC: single answer focus
+	•	Trust-X: system-level accountability framework
+
+⸻
+
+If you want, next I can:
+	•	Map this directly to independent claim language
+	•	Draft claim amendments to further distance from RASC
+	•	Prepare a novelty matrix across all three prior arts
+	•	Help you phrase a strong inventive step argument
+
+Share prior art 4 when ready.
