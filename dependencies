@@ -1,23 +1,167 @@
-	2.  Lessons Learned from Evaluation of LLM based
-BIBLIOGRAPHIC INFORMATION
-Title	Lessons Learned from Evaluation of LLM based Multi-agents in Safer Therapy Recommendation
-Author	Yicong Wu, Ting Chen, Irit Hochberg, Zhoujian Sun, Ruth Edry, Zhengxing Huang, Mor Peleg
-Publication Date	15 Jul 2025
-Abstract
-Therapy recommendation for chronic patients with multimorbidity is challenging due to risks of treatment conflicts. Existing decision support systems face scalability limitations. Inspired by the way in which general practitioners (GP) manage multimorbidity patients, occasionally convening multidisciplinary team (MDT) collaboration, this study investigated the feasibility and value of using a Large Language Model (LLM)-based multi-agent system (MAS) for safer therapy recommendations. We designed a single agent and a MAS framework simulating MDT decision-making by enabling discussion among LLM agents to resolve medical conflicts. The systems were evaluated on therapy planning tasks for multimorbidity patients using benchmark cases. We compared MAS’s performance with single-agent approaches and realworld benchmarks. An important contribution of our study is the definition of evaluation metrics that go beyond the technical precision and recall and allow the inspection of clinical goals met and medication burden of the proposed advices to a gold standard benchmark. Our results show that with current LLMs, a single agent GP performs as well as MDTs. The best-scoring models provide correct recommendations that address all clinical goals, yet the advices are incomplete. Some models also present unnecessary medications, resulting in unnecessary conflicts between medication and conditions or drug-drug interactions.
-Relevant Text
-We propose a dynamically generated multi-agent framework that simulates real-world multidisciplinary expert consultations. The MAS replicates the multi-step workflow of MDTs as performed by clinicians in real-world settings, allowing LLMs to propose improved treatment plans by detecting and resolving conflicts. 
-2. We apply the proposed MAS to clinical benchmark cases to assess its completeness and correctness using detailed qualitative research. Results demonstrated that, compared to single-agent systems, the MAS showed promise in reducing conflicts while maintaining an appropriate medication count, and it is more closely aligning with real-world expert judgment for multimorbidity patients.
- 3. This study develop a new interpretable evaluation strategy. Unlike traditional aggregate metrics, we introduce specific improvement ratio that compares LLM-proposed treatment plans with original plans, focusing on conflict reduction and medication burden, similar to a hazard ratio.
- 
-To bridge this gap, we explore a novel application of LLM-based MAS collaboration in the domain of therapy recommendation. Unlike prior systems, our framework focuses on the resolution of conflicts, providing an interpretable, traceable workflow and validating final decisions using safety metrics. This design aims to enhance both the clinical transparency and the real-world utility of AIassisted medication planning, particularly in scenarios requiring multidisciplinary reasoning.
-III. METHODS
-A.	Core Conflict Resolution Workflow
-Core Conflict Resolution Workflow Fig. 1a illustrates the conflict resolution workflow for a chronic patient with multimorbidity. Through prompt engineering, the LLM is assigned distinct roles to simulate interactions among multiple agents. The system operates with a primary role, the General Practitioner (GP), who oversees and coordinates the entire workflow. The process begins with the GP reviewing the patient’s clinical condition, including the chief complaint, medical history, physical findings, laboratory data, and initial prescription. Then the GP is asked to set clinical goals to manage the conditions and complaint, identify existing medications for the goals, and identify potential treatment conflicts, including DDIs and condition-specific contraindications that may increase patient risk: Where 𝐶 represents the detected conflict set, 𝑃! is the patient’s clinical condition. Any identified conflicts are reported back to the GP, who evaluates the information and convenes a MDT when he thinks that some aspects of the patient's condition are outside his expertise, selecting specialists relevant to each conflict for resolution. During the conflict resolution phase, each specialist is assigned a subset of discussion points based on the identified conflicts. Some conflicts require input from multiple specialists, while others may be addressed by a single expert. For multi-expert conflicts, a collaborative forum is set up where each specialist presents their perspective, followed by rounds of peer evaluation. If disagreements arise, new arguments are proposed until a consensus is reached (please refer to Github for more details). The discussion proceeds in rounds 𝑗 ∈ [1, 𝑚]. The maximal number of rounds m was set empirically to 5, based on observations that most meaningful disagreements or suggestions occur within the first few exchanges. Beyond this round, agents tend to repeat previously stated positions. Additionally, longer discussions have risk in exceeding the model’s token limit. If a consensus is not reached within m rounds, a mediator agent is invoked to summarize the arguments and propose a consensus recommendation. In cases where only one expert is needed, the assigned specialist directly provides a recommendation. Upon resolution of all conflicts, the GP synthesizes the recommendations and finalizes the treatment plan, resulting in a revised prescription.
- 
+Below is a clean, examiner-facing differentiation between Trust-X and the cited non-patent literature
+“Lessons Learned from Evaluation of LLM based Multi-agents in Safer Therapy Recommendation” (Wu et al., 2025).
+I’ve structured it so you can directly paste it into the “Inventor’s Comment / Differentiating Points” section.
 
-Searcher’s Comment
-The cited non patent literature details a method for LLMs to detect medication conflicts and propose improved plan. This is similar to the use of LLM for monitoring test and prescription and maps with the Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions) of the proposed invention.  The cited prior art also computes DDI Ratio, Contraindication Ratio, and Medication Ratio,  to assess the size and direction of changes to DDI and medication number introduced by LLM-generated medication plans. However the method is different.
-Inventor’s differentiating points / additional information is important to conclude relevance of the subject prior art to the proposed invention.
-Inventor’s Comment
-Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions): 
+⸻
+
+Differentiation of Trust-X vs
+
+“Lessons Learned from Evaluation of LLM based Multi-agents in Safer Therapy Recommendation” (Wu et al., 2025)
+
+High-level distinction (core inventive boundary)
+
+The cited work by Wu et al. investigates the use of LLM-based multi-agent collaboration to improve therapy recommendations, particularly for multimorbidity, with an emphasis on conflict resolution and medication optimization.
+
+In contrast, Trust-X is not a therapy-planning or recommendation system.
+It is a framework for measuring and quantifying trustworthiness of LLM reasoning, focusing on:
+	•	epistemic uncertainty,
+	•	reasoning transparency,
+	•	reasoning–decision consistency, and
+	•	operational safety behavior.
+
+Trust-X evaluates how reliably an LLM reasons and acts, not how well it optimizes a treatment plan.
+
+⸻
+
+Point-by-point technical differentiators
+
+1. Decision-support system vs trust-evaluation framework
+
+Wu et al.
+	•	Primary goal: improve therapy recommendations.
+	•	Multi-agent discussion is used to:
+	•	resolve DDIs,
+	•	reduce medication burden,
+	•	converge on a better prescription.
+	•	Evaluation focuses on quality of final treatment plans.
+
+Trust-X (Inventive Step)
+	•	Primary goal: measure trustworthiness of LLM behavior.
+	•	Does not attempt to improve or optimize treatment plans.
+	•	Evaluates:
+	•	epistemic stability of diagnoses,
+	•	transparency of reasoning,
+	•	safety supervision behavior.
+	•	Trust is treated as a measurable system property, not an outcome improvement.
+
+➡ Trust-X addresses a different technical problem than Wu et al.
+
+⸻
+
+2. Conflict-resolution consensus vs epistemic uncertainty quantification
+
+Wu et al.
+	•	Consensus is used as a mechanism to resolve conflicts.
+	•	Goal of consensus: produce a single, improved prescription.
+	•	Disagreement is treated as something to be eliminated.
+
+Trust-X
+	•	Consensus is used as a measurement signal, not a resolution mechanism.
+	•	Introduces Consensus Disagreement Rate (CDR) to quantify epistemic uncertainty.
+	•	Disagreement is preserved and measured, not resolved away.
+	•	Higher disagreement = higher uncertainty, not lower performance.
+
+➡ Using disagreement as a trust signal is not disclosed or suggested by Wu et al.
+
+⸻
+
+3. Treatment-focused metrics vs reasoning trust indices
+
+Wu et al.
+	•	Metrics include:
+	•	DDI ratio,
+	•	Contraindication ratio,
+	•	Medication count,
+	•	Improvement ratio vs baseline plan.
+	•	All metrics are treatment-outcome-centric.
+
+Trust-X
+	•	Introduces new trust indices:
+	•	Epistemic Trust Index (ETI),
+	•	Operational Safety Index (OSI),
+	•	Final Trust Index (FTI).
+	•	Metrics combine:
+	•	accuracy,
+	•	reasoning stability,
+	•	reasoning–diagnosis consistency,
+	•	safety behavior under supervision.
+
+➡ Wu et al. does not define or suggest trust as a composite measurable index.
+
+⸻
+
+4. Action optimization vs safety supervision as an evaluation signal
+
+Wu et al.
+	•	Safety checks are part of treatment optimization.
+	•	Conflicts are resolved to generate a better prescription.
+	•	Safety is an objective to improve.
+
+Trust-X
+	•	Safety agents act as independent monitors, not optimizers.
+	•	Unsafe prescriptions and tests are logged and penalized, not corrected.
+	•	OSI explicitly drops to zero when safety supervision is absent.
+	•	Safety is used as a trustworthiness discriminator, not a planning goal.
+
+➡ This distinction prevents “safe-by-omission” scoring and is absent in Wu et al.
+
+⸻
+
+5. No reasoning–decision alignment metric vs RDC
+
+Wu et al.
+	•	Evaluates completeness and correctness of treatment plans.
+	•	Does not assess whether explanations align with decisions.
+
+Trust-X
+	•	Introduces Reasoning–Diagnosis Consistency (RDC).
+	•	Measures semantic alignment between:
+	•	reasoning trace,
+	•	final decision.
+	•	Detects coherent-but-unjustified reasoning.
+
+➡ RDC addresses reasoning faithfulness, not present in Wu et al.
+
+⸻
+
+6. Domain-specific therapy planning vs domain-agnostic trust framework
+
+Wu et al.
+	•	Focused specifically on:
+	•	multimorbidity,
+	•	therapy planning,
+	•	MDT simulation.
+	•	Domain-dependent.
+
+Trust-X
+	•	Domain-agnostic framework.
+	•	Applicable to:
+	•	diagnosis,
+	•	test ordering,
+	•	prescription,
+	•	any safety-critical reasoning task.
+	•	Trust metrics are model- and domain-independent.
+
+➡ Trust-X generalizes beyond therapy recommendation.
+
+⸻
+
+Examiner-facing concise differentiation (recommended paragraph)
+
+The cited work by Wu et al. employs LLM-based multi-agent collaboration to improve therapy recommendations by resolving medication conflicts and optimizing prescriptions. In contrast, the present invention does not seek to improve or generate treatment plans. Instead, it introduces a system and method for measuring the trustworthiness of large language model reasoning, using epistemic uncertainty derived from multi-agent disagreement, reasoning–decision consistency, and real-time safety supervision as evaluation signals. Disagreement among agents is explicitly preserved and quantified as uncertainty, rather than resolved, and safety supervision is used to penalize unsafe behavior rather than optimize outcomes. These aspects are neither disclosed nor suggested in the cited work, which focuses on decision quality rather than trust measurement.
+
+⸻
+
+One-line differentiator (for claim mapping)
+
+Wu et al. uses multi-agent systems to decide better, whereas Trust-X uses multi-agent systems to measure whether decisions can be trusted.
+
+⸻
+
+If you want, next I can:
+	•	Convert this into claim-level novelty arguments
+	•	Align differentiators to independent claim elements
+	•	Prepare a tabular novelty comparison
+	•	Help you draft dependent claims that clearly avoid this prior art
+
+Send the next prior art when ready.
