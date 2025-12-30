@@ -1,167 +1,19 @@
-Below is a clean, examiner-facing differentiation between Trust-X and the cited non-patent literature
-“Lessons Learned from Evaluation of LLM based Multi-agents in Safer Therapy Recommendation” (Wu et al., 2025).
-I’ve structured it so you can directly paste it into the “Inventor’s Comment / Differentiating Points” section.
+	3.  Reasoning Aware Self-Consistency: Leveraging Reasoning Paths for Efficient LLM Sampling
+BIBLIOGRAPHIC INFORMATION
+Title	Reasoning Aware Self-Consistency: Leveraging Reasoning Paths for Efficient LLM Sampling 
+Author	Guangya Wan, Yuqi Wu, Jie Chen, Sheng Li
+Publication Date	4 Feb 2025
+Abstract
+Self-Consistency mitigates hallucinations in Large Language Models (LLMs) by sampling multiple reasoning paths,but it lacks a systematic approach to determine the optimal number of samples or select the most faithful rationale. To address this limitation, we introduce Reasoning-Aware Self-Consistency (RASC), a novel framework that enhances sampling efficiency and reasoning faithfulness by dynamically evaluating both outputs and rationales. RASC assesses the quality of reasoning and the consistency of answers for each generated sample, using these assessments to guide early stopping decisions and rationale selection. The framework employs criteria-based stopping and weighted majority voting, enabling more informed choices on when to halt sampling and which rationale to select. Our comprehensive experiments across diverse question-answering datasets demonstrate that RASC outperforms existing methods, reducing sample usage by approximately 70% while maintaining accuracy. Moreover, RASC facilitates the selection of high-fidelity rationales, thereby improving the faithfulness of LLM outputs. Our approach effectively addresses the efficiency-accuracy trade-off in LLM reasoning tasks, offering a new perspective for more nuanced, faithful, and effective utilization of LLMs in resource-constrained environments.
+Relevant Text
+We propose ReasoningAware Self-Consistency (RASC), a framework that optimizes sampling efficiency while maintaining accuracy by evaluating both reasoning paths and answers. RASC introduces a sufficiency scoring function that combines reasoning quality and answer consistency features, mapped to a continuous score via an optimized classifier. The framework employs a dynamic sampling process with a buffer of high-quality samples, stopping when a predefined capacity is reached. Finally, RASC uses weighted majority voting based on the scores to select the final answer and most faithful reasoning path. This approach integrates reasoning evaluation into the self-consistency process, offering a more faithful and computationally efficient method for complex question-answering tasks in LLMs.
+ 
+ 
+ 
 
-⸻
-
-Differentiation of Trust-X vs
-
-“Lessons Learned from Evaluation of LLM based Multi-agents in Safer Therapy Recommendation” (Wu et al., 2025)
-
-High-level distinction (core inventive boundary)
-
-The cited work by Wu et al. investigates the use of LLM-based multi-agent collaboration to improve therapy recommendations, particularly for multimorbidity, with an emphasis on conflict resolution and medication optimization.
-
-In contrast, Trust-X is not a therapy-planning or recommendation system.
-It is a framework for measuring and quantifying trustworthiness of LLM reasoning, focusing on:
-	•	epistemic uncertainty,
-	•	reasoning transparency,
-	•	reasoning–decision consistency, and
-	•	operational safety behavior.
-
-Trust-X evaluates how reliably an LLM reasons and acts, not how well it optimizes a treatment plan.
-
-⸻
-
-Point-by-point technical differentiators
-
-1. Decision-support system vs trust-evaluation framework
-
-Wu et al.
-	•	Primary goal: improve therapy recommendations.
-	•	Multi-agent discussion is used to:
-	•	resolve DDIs,
-	•	reduce medication burden,
-	•	converge on a better prescription.
-	•	Evaluation focuses on quality of final treatment plans.
-
-Trust-X (Inventive Step)
-	•	Primary goal: measure trustworthiness of LLM behavior.
-	•	Does not attempt to improve or optimize treatment plans.
-	•	Evaluates:
-	•	epistemic stability of diagnoses,
-	•	transparency of reasoning,
-	•	safety supervision behavior.
-	•	Trust is treated as a measurable system property, not an outcome improvement.
-
-➡ Trust-X addresses a different technical problem than Wu et al.
-
-⸻
-
-2. Conflict-resolution consensus vs epistemic uncertainty quantification
-
-Wu et al.
-	•	Consensus is used as a mechanism to resolve conflicts.
-	•	Goal of consensus: produce a single, improved prescription.
-	•	Disagreement is treated as something to be eliminated.
-
-Trust-X
-	•	Consensus is used as a measurement signal, not a resolution mechanism.
-	•	Introduces Consensus Disagreement Rate (CDR) to quantify epistemic uncertainty.
-	•	Disagreement is preserved and measured, not resolved away.
-	•	Higher disagreement = higher uncertainty, not lower performance.
-
-➡ Using disagreement as a trust signal is not disclosed or suggested by Wu et al.
-
-⸻
-
-3. Treatment-focused metrics vs reasoning trust indices
-
-Wu et al.
-	•	Metrics include:
-	•	DDI ratio,
-	•	Contraindication ratio,
-	•	Medication count,
-	•	Improvement ratio vs baseline plan.
-	•	All metrics are treatment-outcome-centric.
-
-Trust-X
-	•	Introduces new trust indices:
-	•	Epistemic Trust Index (ETI),
-	•	Operational Safety Index (OSI),
-	•	Final Trust Index (FTI).
-	•	Metrics combine:
-	•	accuracy,
-	•	reasoning stability,
-	•	reasoning–diagnosis consistency,
-	•	safety behavior under supervision.
-
-➡ Wu et al. does not define or suggest trust as a composite measurable index.
-
-⸻
-
-4. Action optimization vs safety supervision as an evaluation signal
-
-Wu et al.
-	•	Safety checks are part of treatment optimization.
-	•	Conflicts are resolved to generate a better prescription.
-	•	Safety is an objective to improve.
-
-Trust-X
-	•	Safety agents act as independent monitors, not optimizers.
-	•	Unsafe prescriptions and tests are logged and penalized, not corrected.
-	•	OSI explicitly drops to zero when safety supervision is absent.
-	•	Safety is used as a trustworthiness discriminator, not a planning goal.
-
-➡ This distinction prevents “safe-by-omission” scoring and is absent in Wu et al.
-
-⸻
-
-5. No reasoning–decision alignment metric vs RDC
-
-Wu et al.
-	•	Evaluates completeness and correctness of treatment plans.
-	•	Does not assess whether explanations align with decisions.
-
-Trust-X
-	•	Introduces Reasoning–Diagnosis Consistency (RDC).
-	•	Measures semantic alignment between:
-	•	reasoning trace,
-	•	final decision.
-	•	Detects coherent-but-unjustified reasoning.
-
-➡ RDC addresses reasoning faithfulness, not present in Wu et al.
-
-⸻
-
-6. Domain-specific therapy planning vs domain-agnostic trust framework
-
-Wu et al.
-	•	Focused specifically on:
-	•	multimorbidity,
-	•	therapy planning,
-	•	MDT simulation.
-	•	Domain-dependent.
-
-Trust-X
-	•	Domain-agnostic framework.
-	•	Applicable to:
-	•	diagnosis,
-	•	test ordering,
-	•	prescription,
-	•	any safety-critical reasoning task.
-	•	Trust metrics are model- and domain-independent.
-
-➡ Trust-X generalizes beyond therapy recommendation.
-
-⸻
-
-Examiner-facing concise differentiation (recommended paragraph)
-
-The cited work by Wu et al. employs LLM-based multi-agent collaboration to improve therapy recommendations by resolving medication conflicts and optimizing prescriptions. In contrast, the present invention does not seek to improve or generate treatment plans. Instead, it introduces a system and method for measuring the trustworthiness of large language model reasoning, using epistemic uncertainty derived from multi-agent disagreement, reasoning–decision consistency, and real-time safety supervision as evaluation signals. Disagreement among agents is explicitly preserved and quantified as uncertainty, rather than resolved, and safety supervision is used to penalize unsafe behavior rather than optimize outcomes. These aspects are neither disclosed nor suggested in the cited work, which focuses on decision quality rather than trust measurement.
-
-⸻
-
-One-line differentiator (for claim mapping)
-
-Wu et al. uses multi-agent systems to decide better, whereas Trust-X uses multi-agent systems to measure whether decisions can be trusted.
-
-⸻
-
-If you want, next I can:
-	•	Convert this into claim-level novelty arguments
-	•	Align differentiators to independent claim elements
-	•	Prepare a tabular novelty comparison
-	•	Help you draft dependent claims that clearly avoid this prior art
-
-Send the next prior art when ready.
+Searcher’s Comment
+The cited NPL optimizes sampling efficiency by evaluating both reasoning paths and answers which is similar to the Reasoning–Diagnosis Consistency of the proposed invention.
+Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions):  The evaluation of reasoning path and answers map with the Reasoning–Diagnosis Consistency which   measure how well an agent’s explanation aligns with its final answer. However the prior art does not measures Operational Safety Index (OSI) or Consensus Disagreement Rate(CDR).
+Inventor’s differentiating points / additional information is important to conclude relevance of the subject prior art to the proposed invention.
+Inventor’s Comment
+Feature 1 (System and method for measuring the overall trustworthiness of medical large language models based on Consensus Reasoning and Epistemic Uncertainty, consistency between the reasoning and diagnosis of LLM, and monitoring of tests and prescriptions): 
