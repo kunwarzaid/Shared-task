@@ -1,3 +1,22 @@
-The Trust-X framework was designed based on the Google Gemini LLMs. Using 50 diagnostic cases from the MedQA benchmark, the authors evaluated Trust-X regarding its accuracy, reasoning quality, safety and explainability, etc.. Experimental results show that accuracy alone cannot represent the performance of clinical LLMs, reliability of the models must be evaluated through transparency and accountability. The topic fits the scope of SECURE-AI4H. The findings may potentially contribute to the safe deployment of LLMs for medical diagnosis.
+\subsection{Model Configuration}
 
-More explanation should be given about the model configuration. For example, what is the difference between the three doctor agents? Also, space issues exist between the paragraphs in page 4
+All agents in Trust-X were instantiated using Google Gemini models, selected for their strong medical reasoning performance and instruction-following reliability. 
+Doctor Agents were implemented using \textit{Gemini 2.5 Pro}, while Patient, Measurement, and Safety Agents used \textit{Gemini 2.5 Flash} for efficiency and controlled responses.
+
+\paragraph{Doctor Agent Replicas.}
+The $K$ Doctor Agents are \emph{architecturally identical} and share the same underlying model weights. 
+They are not role-specialized or trained differently. 
+Epistemic diversity arises solely from independent stochastic decoding (controlled temperature sampling) and independent interaction trajectories with the Patient and Measurement agents.
+
+Each Doctor Agent:
+(i) receives the same initial case description,
+(ii) reasons independently without access to other agents’ intermediate states, and
+(iii) produces a complete diagnostic reasoning trace and final diagnosis.
+This design mirrors clinical practice, where multiple physicians independently assess the same patient before consensus.
+
+\paragraph{Consensus Diversity.}
+Differences among Doctor Agents therefore reflect \emph{model uncertainty} rather than engineered specialization.
+This allows diagnostic disagreement to serve as a direct, behavior-based proxy for epistemic uncertainty, quantified through the Consensus Disagreement Rate (CDR).
+
+\paragraph{Embedding Configuration.}
+Reasoning–diagnosis consistency was computed using sentence embeddings from \texttt{SentenceTransformer(all-MiniLM-L6-v2)}, selected for its strong semantic alignment performance and low variance across medical text.
