@@ -1,6 +1,10 @@
-• Medical LLMs achieve near-clinician accuracy, but their reasoning is opaque and unverifiable  
-• Clinicians must trust *how* a diagnosis was reached, not just the final answer  
-• LLMs often show unjustified confidence, inconsistent explanations, and hallucinated certainty  
-• Small prompt changes can yield different diagnoses, revealing unstable reasoning  
-• Existing safety systems moderate outputs but do not expose the internal reasoning process  
-• In medicine, hidden errors are more dangerous than visible uncertainty  
+Trust-X is a transparent, safety-aware multi-agent framework for clinical reasoning.
+
+It combines:
+• Independent Doctor Agents to capture epistemic uncertainty  
+• Consensus reasoning to measure diagnostic disagreement (CDR)  
+• Real-time safety agents to monitor tests and prescriptions  
+• Continuous reasoning logs for auditability and traceability  
+• Quantitative trust scores (ETI, OSI, FTI) linking reasoning to safety  
+
+Trust-X does not just predict — it exposes, verifies, and measures how decisions are made.
