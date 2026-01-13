@@ -1,22 +1,63 @@
-Trust-X models clinical diagnosis as an interaction between multiple specialized agents:
+WE CLAIM
 
-• Patient Agent  
-  Provides consistent symptoms and history  
+1. A processor-implemented method comprising:
 
-• K Doctor Agents  
-  Independently reason, form hypotheses, and propose diagnoses  
+receiving, via an input/output (I/O) interface, a plurality of medical predictions (d) from one or more doctor agents, a ground truth and a structured reasoning (t) of the plurality of medical predictions;
 
-• Consensus Module  
-  Aggregates diagnoses and computes diagnostic disagreement (CDR)  
+processing, via one or more hardware processors, the received plurality of medical predictions (d) using a pretrained test safety agent to analyze at least one of (i) a redundant diagnostic test, and (ii) a high-risk diagnostic test to determine test safety alert;
 
-• Test Safety Agent  
-  Reviews each diagnostic test for redundancy or risk  
+analyzing, via the one or more hardware processors, the received plurality of medical predictions (d) using a pretrained prescription safety agent to determine one or more unsafe prescriptions, wherein the pretrained prescription safety agent verifies violation of at least one of (i) contraindication, and (ii) drug-drug interaction (DDI) rules;
 
-• Prescription Safety Agent  
-  Flags unsafe or contraindicated medications  
+computing, via the one or more hardware processors, an Operational Safety Index (OSI) based on the determined test safety alert and the determined one or more unsafe prescriptions;
 
-• Explainability & Logging Layer  
-  Records every reasoning step, safety alert, and decision  
+measuring, via the one or more hardware processors, an epistemic uncertainty by analyzing each of the plurality of medical predictions independently by each of the one or more doctor agent to compute a consensus disagreement rate (CDR), wherein the CDR is computed as:
 
-• Trust Metric Engine  
-  Computes ETI (reasoning), OSI (safety), and FTI (overall trust)
+CDR =1−𝑚𝑎𝑥𝑑∈𝐷 𝑓(𝑑)𝐾;
+
+wherein 𝑓(𝑑) represents one or more doctor agents predicting diagnosis (d) for case (i) and 𝐾 is the total number of doctor agents;
+
+analyzing, via the one or more hardware processors, the received structured reasoning (t) of the plurality of medical predictions to compute a Reasoning-Diagnosis Consistency (RDC) based on a cosine similarity, wherein the cosine similarity is calculated between sentence embeddings of the structured reasoning (t) and a final diagnosis;
+
+computing, via the one or more hardware processors, an Epistemic Trust Index (ETI) based on the computed CDR, RDC, and an accuracy, wherein the ETI is represented as:
+
+determining, via the one or more hardware processors, a Final Trust Index (FTI) by integrating the computed ETI and the computed OSI, wherein the FTI is represented as:
+
+FTI=0.5×ETI+0.5×OSI
+
+2. The processor-implemented method of claim 1, wherein the plurality of medical predictions (d) comprising a set of prescriptions for medication and diagnostic test.
+
+3. The processor-implemented method of claim 1, wherein the structured reasoning (t) comprising at least one of (i) intermediate hypotheses and their supporting evidence, (ii) motivations for diagnostic test orders, and (iii) discarded hypotheses with rationales from one or more doctor agents.
+
+4. A system (100) comprising:
+
+a memory (110) storing instructions;
+
+one or more Input/Output (I/O) interfaces (104); and
+
+one or more hardware processors (108) coupled to the memory (110) via the one or more I/O interfaces (104), wherein the one or more hardware processors (108) are configured by the instructions to:
+
+receive a plurality of medical predictions (d) from one or more doctor agents, a ground truth and a structured reasoning (t) of the plurality of medical predictions;
+
+process the received plurality of medical predictions (d) using a pretrained test safety agent to analyze at least one of (i) a redundant diagnostic test, and (ii) a high-risk diagnostic test to determine test safety alert;
+
+analyze the received plurality of medical predictions (d) using a pretrained prescription safety agent to determine one or more unsafe prescriptions, wherein the pretrained prescription safety agent verifies violation of at least one of (i) contraindication, and (ii) drug-drug interaction (DDI) rules;
+
+compute an Operational Safety Index (OSI) based on the determined test safety alert and the determined one or more unsafe prescriptions;
+
+measure an epistemic uncertainty by analyzing each of the plurality of medical predictions independently by each of the one or more doctor agent to compute a consensus disagreement rate (CDR), wherein the CDR is computed as:
+
+CDR =1−𝑚𝑎𝑥𝑑∈𝐷 𝑓(𝑑)𝐾;
+
+wherein 𝑓(𝑑) represents one or more doctor agents predicting diagnosis (d) for case (i) and 𝐾 is the total number of doctor agents;
+
+analyze the received structured reasoning (t) of the plurality of medical predictions to compute a Reasoning-Diagnosis Consistency (RDC) based on a cosine similarity, wherein the cosine similarity is calculated between sentence embeddings of the structured reasoning (t) and a final diagnosis;
+
+compute an Epistemic Trust Index (ETI) based on the computed CDR, RDC, and an accuracy, wherein the ETI is represented as:
+
+determine a Final Trust Index (FTI) by integrating the computed ETI and the computed OSI, wherein the FTI is represented as:
+
+FTI=0.5×ETI+0.5×OSI
+
+5. The system of claim 4, wherein the plurality of medical predictions (d) comprising a set of prescriptions for medication and diagnostic test.
+
+6. The system of claim 4, wherein the structured reasoning (t) comprising at least one of (i) intermediate hypotheses and their supporting evidence, (ii) motivations for diagnostic test orders, and (iii) discarded hypotheses with rationales from one or more doctor agents.
