@@ -1,15 +1,17 @@
-• Dataset: 50 cases from AgentClinic–MedQA (MedQA test split)  
+Trust-X quantifies trust using three complementary indices:
 
-• Task: Interactive clinical diagnosis with test ordering and prescribing  
+• Epistemic Trust Index (ETI)  
+  Measures how reliably the system reasons  
+  Combines accuracy, consensus stability, and reasoning coherence  
 
-• Models:
-  – Doctor & Prescription Agents: Gemini 2.5 Pro  
-  – Patient, Measurement & Safety Agents: Gemini Flash  
+• Operational Safety Index (OSI)  
+  Measures how safely the system behaves  
+  Penalizes unsafe prescriptions and risky diagnostic tests  
 
-• Multi-agent design:
-  – K = 3 independent Doctor Agents  
-  – Diversity from stochastic decoding  
+• Final Trust Index (FTI)  
+  Overall trust score combining ETI and OSI  
+  High only when both reasoning and safety are strong  
 
-• Dialogue length: max 20 turns per case  
-
-• Embeddings: all-MiniLM-L6-v2 for reasoning–diagnosis consistency  
+Supporting signals:
+• CDR – how much the Doctor Agents disagree  
+• RDC – how well reasoning matches the final diagnosis  
