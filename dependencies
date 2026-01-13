@@ -1,10 +1,22 @@
-Trust-X is a transparent, safety-aware multi-agent framework for clinical reasoning.
+Trust-X models clinical diagnosis as an interaction between multiple specialized agents:
 
-It combines:
-• Independent Doctor Agents to capture epistemic uncertainty  
-• Consensus reasoning to measure diagnostic disagreement (CDR)  
-• Real-time safety agents to monitor tests and prescriptions  
-• Continuous reasoning logs for auditability and traceability  
-• Quantitative trust scores (ETI, OSI, FTI) linking reasoning to safety  
+• Patient Agent  
+  Provides consistent symptoms and history  
 
-Trust-X does not just predict — it exposes, verifies, and measures how decisions are made.
+• K Doctor Agents  
+  Independently reason, form hypotheses, and propose diagnoses  
+
+• Consensus Module  
+  Aggregates diagnoses and computes diagnostic disagreement (CDR)  
+
+• Test Safety Agent  
+  Reviews each diagnostic test for redundancy or risk  
+
+• Prescription Safety Agent  
+  Flags unsafe or contraindicated medications  
+
+• Explainability & Logging Layer  
+  Records every reasoning step, safety alert, and decision  
+
+• Trust Metric Engine  
+  Computes ETI (reasoning), OSI (safety), and FTI (overall trust)
