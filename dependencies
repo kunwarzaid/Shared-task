@@ -1,17 +1,16 @@
-Trust-X quantifies trust using three complementary indices:
+Key findings across four system configurations:
 
-• Epistemic Trust Index (ETI)  
-  Measures how reliably the system reasons  
-  Combines accuracy, consensus stability, and reasoning coherence  
+• Diagnostic accuracy remains stable across all systems (~68–69%)  
 
-• Operational Safety Index (OSI)  
-  Measures how safely the system behaves  
-  Penalizes unsafe prescriptions and risky diagnostic tests  
+• Systems without safety agents (Baseline, Consensus) receive OSI = 0  
+  → they appear accurate but are not operationally trustworthy  
 
-• Final Trust Index (FTI)  
-  Overall trust score combining ETI and OSI  
-  High only when both reasoning and safety are strong  
+• Safety and Trust modes achieve high Final Trust Index (≈ 75)  
+  → due to active detection of unsafe tests and prescriptions  
 
-Supporting signals:
-• CDR – how much the Doctor Agents disagree  
-• RDC – how well reasoning matches the final diagnosis  
+• Trust-X achieves the best balance of:
+  – reasoning coherence  
+  – uncertainty awareness  
+  – and clinical safety  
+
+• Trust is driven by behavior and transparency, not raw accuracy
