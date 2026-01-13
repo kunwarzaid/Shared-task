@@ -1,16 +1,11 @@
-Key findings across four system configurations:
+• Diagnostic accuracy alone does not guarantee trustworthy medical AI  
 
-• Diagnostic accuracy remains stable across all systems (~68–69%)  
+• Trust emerges when reasoning, uncertainty, and safety are made visible  
 
-• Systems without safety agents (Baseline, Consensus) receive OSI = 0  
-  → they appear accurate but are not operationally trustworthy  
+• Multi-agent consensus exposes epistemic uncertainty  
 
-• Safety and Trust modes achieve high Final Trust Index (≈ 75)  
-  → due to active detection of unsafe tests and prescriptions  
+• Real-time safety agents prevent silent clinical failures  
 
-• Trust-X achieves the best balance of:
-  – reasoning coherence  
-  – uncertainty awareness  
-  – and clinical safety  
+• Trust-X transforms opaque predictions into auditable, accountable reasoning  
 
-• Trust is driven by behavior and transparency, not raw accuracy
+• Trustworthy AI must be measured by how it reasons, not just what it predicts  
