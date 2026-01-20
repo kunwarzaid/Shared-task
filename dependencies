@@ -46,7 +46,7 @@ TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/tes
 TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
 
 # Output root directory
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/fewshot"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/zeroshot"
 
 # Use 4-bit quantization (recommended for 32GB GPU)
 USE_4BIT = True
@@ -55,7 +55,7 @@ USE_4BIT = True
 TARGET_LANGS = ["Bangla","English","Hindi","Marathi"]
 #TARGET_LANGS = ["Bangla"]
 # number of few-shot examples per target language (k-shot)
-FEW_SHOT_K = 2
+FEW_SHOT_K = 0
 
 # seed for deterministic sampling of few-shot examples
 FEW_SHOT_SEED = 42
