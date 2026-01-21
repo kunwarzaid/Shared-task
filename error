@@ -1,49 +1,80 @@
-Got it 👍
-Here’s the final, simple-language self-evaluation, updated to clearly state that this was your second major work in 2025. This version fits very well in annual appraisal forms.
+Great point — that strengthens the practical validation angle a lot 👍
+Here is the updated version, with that point added cleanly and simply, without sounding like marketing.
 
 ⸻
 
-Self-Evaluation (Second Major Work in 2025)
+Self-Evaluation (Third Major Work of 2025)
 
-This was my second major research and system development work in the year 2025. The project focused on building a safe and reliable LLM-based medical system using a multi-agent architecture.
+This was my third major research and system development work in 2025. The work was submitted and accepted at an AAAI workshop, and the patent filing for this work is currently in progress.
 
-Research Work and Industry Conference
+Research Contribution and Novelty
 
-This work was submitted and accepted in the Industry Track of an AI-ML Systems conference, highlighting its practical and industry relevance. I travelled to the conference and presented the work, explaining the system design, safety mechanisms, and results to an international audience. This helped showcase our work and organization in a real-world, industry-focused research forum.
+This work addresses an important gap in healthcare AI: accuracy alone is not enough to trust an AI system. For real-world use, systems must also be explainable, safe, and accountable.
 
-My Role and Contributions
+A key contribution of this work is that we proposed novel metrics to quantitatively measure trustworthiness, explainability, and safety in LLM-based systems. Instead of relying only on accuracy, we introduced:
+	•	Metrics to measure reasoning reliability and consistency
+	•	Metrics to check whether the reasoning aligns with the final decision
+	•	Metrics to measure safe system behavior, such as detection of unsafe tests and prescriptions
+	•	A combined trust score that captures both reasoning quality and safety behavior
 
-My main contributions in this project were:
-	•	Designing the overall system architecture
-	•	Building the multi-agent workflow and controller
-	•	Implementing safety guardrails, including:
-	•	Test safety checks
-	•	Prescription safety checks using drug–drug interaction data
-	•	Developing logging and traceability to ensure transparency and auditability
-	•	Supporting experiments, analysis, and paper writing
-	•	Preparing and delivering the conference presentation
+This is a theoretical and conceptual contribution, as it defines trust as a measurable property of the system, rather than a subjective or manual assessment.
 
-The differential diagnosis component of the system was developed by my colleague as part of our collaborative effort. My work mainly focused on system design, safety, integration, and evaluation.
+System and Application Development
 
-Impact and Results
+Along with the research, I built a complete web-based application using Streamlit that demonstrates and validates the proposed ideas.
 
-The system showed improved diagnostic accuracy and significantly better detection of unsafe prescriptions compared to baseline approaches. It demonstrates how LLMs can be safely used in healthcare by enforcing structured workflows and safety checks at the system level.
+The application includes multiple interacting agents:
+	•	Doctor agent
+	•	Measurement agent
+	•	Test safety agent
+	•	Prescription writer agent
+	•	Prescription safety agent
+	•	Dietary advisor agent
 
-Overall Impact
+Key features of the system:
+	•	Drug–drug interaction checks using an external medical database
+	•	PDF and image upload support for medical reports
+	•	Generation of a final structured doctor report
+	•	Agent-to-agent interaction, not just linear execution
 
-This second work of 2025 demonstrates my ability to:
-	•	Deliver multiple high-impact projects in a single year
-	•	Balance research quality with practical system building
-	•	Collaborate effectively while owning critical components
-	•	Represent the organization at international industry conferences
+For example:
+	•	If the doctor agent recommends a test that is unsafe, the test safety agent flags it
+	•	The doctor and safety agents then discuss and recommend a safer alternative
+	•	Similar safety checks are applied during prescription generation
 
-Overall, this project added strong research visibility and practical value, and further strengthened my skills in LLM systems, agent-based architectures, and AI safety in healthcare.
+Explainability, Traceability, and Transparency
+
+The system is designed so that every decision is explainable and traceable:
+	•	Every agent action is logged
+	•	Each decision can be traced back to the input, agent, and reasoning step
+	•	The thinking process of the LLMs is explicitly captured
+	•	This makes the system suitable for regulated and high-risk domains
+
+Internal Validation and Testing
+
+To validate the system beyond experiments, the application was tested with associates in the Delhi Lab. Their usage and feedback helped verify:
+	•	System usability
+	•	Clarity of explanations and logs
+	•	Practical usefulness of safety alerts and traceability
+
+This internal testing strengthened confidence in the system’s real-world applicability, not just its research value.
+
+Overall Contribution and Impact
+
+This third work of 2025 demonstrates my ability to:
+	•	Propose novel evaluation metrics and theoretical frameworks
+	•	Build end-to-end, production-like applications
+	•	Combine research innovation with practical validation
+	•	Work on trustworthy, explainable, and safe AI systems
+	•	Deliver multiple high-impact research contributions in a single year
+
+Overall, this project adds strong value to the organization in the area of trustworthy AI, and highlights my ability to translate advanced research ideas into usable and validated systems.
 
 ⸻
 
 If you want, I can now:
-	•	Combine both 2025 works into a single powerful appraisal summary
-	•	Rewrite this in a promotion-oriented tone
-	•	Convert it into a one-paragraph executive summary
+	•	Merge all three 2025 works into one strong annual summary
+	•	Reduce this to a very short HR form version
+	•	Rewrite everything in a promotion-oriented tone
 
-Just say the word.
+Just tell me what you need next 🙂
