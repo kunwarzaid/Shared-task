@@ -1,67 +1,57 @@
-Great — here is a simple-language, appraisal-ready self-evaluation for your fourth work of 2025, written to clearly highlight task acceptance, virtual presentation, technical contribution, and practical constraints, without heavy jargon.
+Got it — this needs to be framed cleanly and safely for appraisal: acknowledging client inspiration without claiming direct delivery, and highlighting deployability. Here’s a simple, professional, appraisal-ready section you can drop under “Client Projects / Client Impact”.
 
 ⸻
 
-Self-Evaluation (Fourth Major Work of 2025)
+Client-Inspired Projects and Practical Impact
 
-This was my fourth major research contribution in 2025. The work was submitted and accepted to the IJCNLP 2025 Shared Task (NLP-AI4Health), and I presented this work virtually as part of the shared task proceedings  ￼.
+Although my role does not involve working directly on client delivery projects, several of my research and system development works were inspired by real client requirements, ensuring strong practical relevance and deployability.
 
-Research Task and Contribution
+CSR Summarization – Client-Inspired Idea
 
-This work focused on multilingual clinical dialogue summarization and structured information extraction. The shared task required systems to process doctor–patient conversations in multiple languages and generate:
-	•	A concise English clinical summary
-	•	A structured JSON medical record
-	•	Question–answer responses in the original language
+The idea for the CSR (Clinical Study Report) table summarization work originated from a requirement discussion with Bayer. The client requirement highlighted the difficulty of manually summarizing large, complex clinical tables and the need for accurate, focused summaries.
 
-Handling all three tasks reliably across ten languages, including low-resource Indic languages, was the main challenge.
+This real-world requirement directly shaped the research direction and system design. The resulting solution:
+	•	Addresses actual industry pain points
+	•	Produces deployable, end-to-end pipelines
+	•	Can be integrated into clinical writing and review workflows
 
-System Design and My Contributions
+The work progressed from a client-inspired problem to a research publication, patent filing, and working application, demonstrating clear value beyond academic contribution.
 
-I contributed to the design and implementation of a lightweight but effective pipeline using Qwen-1.5B, fine-tuned with LoRA adapters for parameter-efficient training.
+Alchemist-Inspired Research and Systems
 
-Key contributions include:
-	•	Designing a modular inference pipeline that separates:
-	•	Summary generation
-	•	Structured information extraction
-	•	Multilingual Q&A
-	•	Implementing a field-by-field JSON extraction strategy, instead of generating the full schema in one shot
-	•	This significantly improved schema correctness and completeness
-	•	Ensured valid and usable JSON outputs
-	•	Creating role-based prompt templates for each task to ensure consistent and controlled outputs
-	•	Optimizing the system to work under strict hardware and time constraints, including:
-	•	Single-epoch fine-tuning
-	•	Quantized 4-bit inference
-	•	Efficient checkpoint handling
+The second and third works of 2025 were inspired by ideas and discussions originating from the Alchemist project. These works extend the core vision of Alchemist by focusing on:
+	•	Multi-agent medical reasoning
+	•	Safety-aware decision making
+	•	Explainability and trust in LLM systems
 
-Evaluation and Results
+While these were research-driven efforts, the systems were designed with deployment in mind, not as theoretical prototypes.
 
-The system was evaluated using official shared task metrics, and achieved:
-	•	Strong semantic quality in summarization (high BERT-based scores)
-	•	Competitive question-answering performance across languages
-	•	Reliable structured extraction, producing schema-compliant JSON records even in low-resource languages
+Deployability and Engineering Focus
 
-Despite limited training time and resources, the system showed stable multilingual behavior and factual consistency, demonstrating the effectiveness of the design choices.
+Across these client-inspired works, I ensured that:
+	•	All systems are end-to-end and runnable
+	•	Web-based applications were built using Streamlit
+	•	Pipelines support real inputs such as tables, PDFs, and images
+	•	Safety, logging, and traceability are built-in, making them suitable for regulated environments
+	•	The architectures can be scaled or integrated into larger enterprise platforms
 
-Presentation and Visibility
+These projects demonstrate my ability to:
+	•	Translate client needs into research problems
+	•	Convert research ideas into deployable systems
+	•	Build solutions that are industry-ready, not just experimental
 
-I presented this work virtually at IJCNLP 2025, explaining the system design, challenges, and results to the shared task and research community. This contributed to the visibility of our work and organization in the area of multilingual healthcare NLP.
+Overall Client Impact
 
-Overall Impact
-
-This fourth work of 2025 demonstrates my ability to:
-	•	Deliver multiple research outputs in a single year
-	•	Work on multilingual and low-resource NLP challenges
-	•	Design robust systems under tight compute constraints
-	•	Balance research goals with practical system engineering
-	•	Contribute to international shared tasks and community benchmarks
-
-Overall, this project strengthened my skills in multilingual NLP, efficient fine-tuning, structured information extraction, and applied healthcare AI, and added further research visibility to the organization.
+Even without direct client delivery, this work shows:
+	•	Strong alignment with real client requirements
+	•	Ability to build practical, deployable AI solutions
+	•	Contribution to future-ready offerings that can be taken to clients when required
 
 ⸻
 
-If you want, next I can:
-	•	Merge all four 2025 works into one powerful annual summary
-	•	Create a 1-page “2025 Research Highlights” section
-	•	Rewrite everything in a promotion-oriented or leadership tone
+If you want, I can:
+	•	Make this more conservative (extra-safe wording for client names)
+	•	Merge this with your overall appraisal summary
+	•	Rewrite it in a leadership / business impact tone
 
-Just tell me what you want next 👍
+Just tell me 👍
