@@ -1,80 +1,67 @@
-Great point — that strengthens the practical validation angle a lot 👍
-Here is the updated version, with that point added cleanly and simply, without sounding like marketing.
+Great — here is a simple-language, appraisal-ready self-evaluation for your fourth work of 2025, written to clearly highlight task acceptance, virtual presentation, technical contribution, and practical constraints, without heavy jargon.
 
 ⸻
 
-Self-Evaluation (Third Major Work of 2025)
+Self-Evaluation (Fourth Major Work of 2025)
 
-This was my third major research and system development work in 2025. The work was submitted and accepted at an AAAI workshop, and the patent filing for this work is currently in progress.
+This was my fourth major research contribution in 2025. The work was submitted and accepted to the IJCNLP 2025 Shared Task (NLP-AI4Health), and I presented this work virtually as part of the shared task proceedings  ￼.
 
-Research Contribution and Novelty
+Research Task and Contribution
 
-This work addresses an important gap in healthcare AI: accuracy alone is not enough to trust an AI system. For real-world use, systems must also be explainable, safe, and accountable.
+This work focused on multilingual clinical dialogue summarization and structured information extraction. The shared task required systems to process doctor–patient conversations in multiple languages and generate:
+	•	A concise English clinical summary
+	•	A structured JSON medical record
+	•	Question–answer responses in the original language
 
-A key contribution of this work is that we proposed novel metrics to quantitatively measure trustworthiness, explainability, and safety in LLM-based systems. Instead of relying only on accuracy, we introduced:
-	•	Metrics to measure reasoning reliability and consistency
-	•	Metrics to check whether the reasoning aligns with the final decision
-	•	Metrics to measure safe system behavior, such as detection of unsafe tests and prescriptions
-	•	A combined trust score that captures both reasoning quality and safety behavior
+Handling all three tasks reliably across ten languages, including low-resource Indic languages, was the main challenge.
 
-This is a theoretical and conceptual contribution, as it defines trust as a measurable property of the system, rather than a subjective or manual assessment.
+System Design and My Contributions
 
-System and Application Development
+I contributed to the design and implementation of a lightweight but effective pipeline using Qwen-1.5B, fine-tuned with LoRA adapters for parameter-efficient training.
 
-Along with the research, I built a complete web-based application using Streamlit that demonstrates and validates the proposed ideas.
+Key contributions include:
+	•	Designing a modular inference pipeline that separates:
+	•	Summary generation
+	•	Structured information extraction
+	•	Multilingual Q&A
+	•	Implementing a field-by-field JSON extraction strategy, instead of generating the full schema in one shot
+	•	This significantly improved schema correctness and completeness
+	•	Ensured valid and usable JSON outputs
+	•	Creating role-based prompt templates for each task to ensure consistent and controlled outputs
+	•	Optimizing the system to work under strict hardware and time constraints, including:
+	•	Single-epoch fine-tuning
+	•	Quantized 4-bit inference
+	•	Efficient checkpoint handling
 
-The application includes multiple interacting agents:
-	•	Doctor agent
-	•	Measurement agent
-	•	Test safety agent
-	•	Prescription writer agent
-	•	Prescription safety agent
-	•	Dietary advisor agent
+Evaluation and Results
 
-Key features of the system:
-	•	Drug–drug interaction checks using an external medical database
-	•	PDF and image upload support for medical reports
-	•	Generation of a final structured doctor report
-	•	Agent-to-agent interaction, not just linear execution
+The system was evaluated using official shared task metrics, and achieved:
+	•	Strong semantic quality in summarization (high BERT-based scores)
+	•	Competitive question-answering performance across languages
+	•	Reliable structured extraction, producing schema-compliant JSON records even in low-resource languages
 
-For example:
-	•	If the doctor agent recommends a test that is unsafe, the test safety agent flags it
-	•	The doctor and safety agents then discuss and recommend a safer alternative
-	•	Similar safety checks are applied during prescription generation
+Despite limited training time and resources, the system showed stable multilingual behavior and factual consistency, demonstrating the effectiveness of the design choices.
 
-Explainability, Traceability, and Transparency
+Presentation and Visibility
 
-The system is designed so that every decision is explainable and traceable:
-	•	Every agent action is logged
-	•	Each decision can be traced back to the input, agent, and reasoning step
-	•	The thinking process of the LLMs is explicitly captured
-	•	This makes the system suitable for regulated and high-risk domains
+I presented this work virtually at IJCNLP 2025, explaining the system design, challenges, and results to the shared task and research community. This contributed to the visibility of our work and organization in the area of multilingual healthcare NLP.
 
-Internal Validation and Testing
+Overall Impact
 
-To validate the system beyond experiments, the application was tested with associates in the Delhi Lab. Their usage and feedback helped verify:
-	•	System usability
-	•	Clarity of explanations and logs
-	•	Practical usefulness of safety alerts and traceability
+This fourth work of 2025 demonstrates my ability to:
+	•	Deliver multiple research outputs in a single year
+	•	Work on multilingual and low-resource NLP challenges
+	•	Design robust systems under tight compute constraints
+	•	Balance research goals with practical system engineering
+	•	Contribute to international shared tasks and community benchmarks
 
-This internal testing strengthened confidence in the system’s real-world applicability, not just its research value.
-
-Overall Contribution and Impact
-
-This third work of 2025 demonstrates my ability to:
-	•	Propose novel evaluation metrics and theoretical frameworks
-	•	Build end-to-end, production-like applications
-	•	Combine research innovation with practical validation
-	•	Work on trustworthy, explainable, and safe AI systems
-	•	Deliver multiple high-impact research contributions in a single year
-
-Overall, this project adds strong value to the organization in the area of trustworthy AI, and highlights my ability to translate advanced research ideas into usable and validated systems.
+Overall, this project strengthened my skills in multilingual NLP, efficient fine-tuning, structured information extraction, and applied healthcare AI, and added further research visibility to the organization.
 
 ⸻
 
-If you want, I can now:
-	•	Merge all three 2025 works into one strong annual summary
-	•	Reduce this to a very short HR form version
-	•	Rewrite everything in a promotion-oriented tone
+If you want, next I can:
+	•	Merge all four 2025 works into one powerful annual summary
+	•	Create a 1-page “2025 Research Highlights” section
+	•	Rewrite everything in a promotion-oriented or leadership tone
 
-Just tell me what you need next 🙂
+Just tell me what you want next 👍
