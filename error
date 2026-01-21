@@ -1,302 +1,36 @@
-https://forms.gle/DFmBwtMBZwzv4PSC8
+During this year, I worked on a research and development project focused on using Large Language Models (LLMs) to summarize large and complex clinical tables. This work resulted in three major outcomes: a top-tier research publication, a filed patent, and a working end-to-end system.
 
+Research Work and Publication
 
+I worked on a research problem where existing LLMs fail to handle very large clinical tables and often miss important facts or generate incorrect summaries. To solve this, I designed a method that selects only the most important facts from tables before giving them to the LLM.
 
-Below is a complete, patent-style draft for all questions.
-Language is intentionally technical, implementation-focused, and non-academic, structured the way patent attorneys expect.
-I’ve avoided research-paper style claims (e.g., “trustworthiness,” “framework”) and focused on systems, methods, and mechanisms, which are what patents protect.
+This work was accepted at NAACL 2025 (CL4Health Workshop), which is a well-known international NLP conference. The acceptance shows that the problem and solution are relevant and novel. The paper clearly demonstrates improvements in accuracy, completeness, and reliability of generated summaries compared to existing approaches.
 
-⸻
+Patent Filing
 
-1. Field of the Invention
+Based on the novelty of the fact-selection approach and the overall system design, a patent has been filed for this work. This helps protect the idea and adds long-term value to the organization’s intellectual property portfolio.
 
-The invention relates to computational systems for automated reasoning, specifically:
-	•	multi-agent large language model (LLM) systems,
-	•	real-time safety supervision of AI-generated actions,
-	•	automated generation and logging of machine reasoning traces, and
-	•	quantitative assessment of AI decision reliability.
+End-to-End System Development
 
-The invention lies at the intersection of artificial intelligence, diagnostic decision support, and safety-critical automated reasoning systems.
+In addition to research, I built a complete working pipeline using Streamlit. The system:
+	•	Takes large clinical tables as input
+	•	Automatically identifies table types
+	•	Selects only important facts using a configurable threshold
+	•	Allows users to control how much information is included
+	•	Outputs a clean, focused table containing only relevant facts
 
-⸻
+This system reduces manual effort and can be directly used by medical writers or reviewers.
 
-2. Business Problem Addressed
+Collaboration and Practical Focus
 
-Current AI systems—especially LLMs—are:
-	•	opaque (no explanation of why outputs were generated),
-	•	unsafe in high-risk environments (e.g., healthcare, finance, legal),
-	•	unreliable (answers change with small prompt variations), and
-	•	impossible to audit after deployment.
+I worked closely with domain experts (medical writers) to ensure that the outputs are correct, meaningful, and follow expected formats. Their feedback was used to improve both the fact-selection logic and the final outputs.
 
-Businesses cannot deploy LLMs in regulated industries because they cannot demonstrate:
-	•	how the model arrived at a decision,
-	•	whether the model considered safety constraints,
-	•	whether the output is internally consistent, and
-	•	whether the model’s reasoning changed over time.
+Overall Impact
 
-This creates legal, regulatory, and operational risk and prevents adoption of AI-assisted decision pipelines.
+This work shows my ability to:
+	•	Take ownership from idea to research to implementation
+	•	Convert research ideas into practical, usable systems
+	•	Contribute to publications, patents, and real products
+	•	Work on complex problems in the healthcare and AI domain
 
-⸻
-
-3. Technology Gap in Existing Systems
-
-Existing systems fail to provide:
-
-a. Real-time reasoning transparency
-
-LLMs produce only final answers, not a verifiable trace of intermediate reasoning steps.
-
-b. Structured multi-agent deliberation
-
-There is no system where multiple AI agents independently reason, compare results, and automatically quantify their epistemic disagreement.
-
-c. Embedded safety supervision
-
-Current AI frameworks either apply post-hoc content filters or rule-based checks. None provide:
-	•	real-time test validation,
-	•	real-time prescription/action validation,
-	•	real-time risk classification,
-	•	with explicit logs showing how safety influenced the decision.
-
-d. Quantitative trust scoring
-
-Current tools lack a measurable index of:
-	•	reasoning consistency,
-	•	agent disagreement,
-	•	safety risk,
-	•	operational prudence.
-
-e. Forensic auditability
-
-Existing LLM systems do not keep complete, structured logs for:
-	•	reasoning evolution,
-	•	inter-agent communication,
-	•	rejected unsafe steps,
-	•	decisions made under uncertainty.
-
-⸻
-
-4. Technical Solution (High-Level Explanation)
-
-The invention introduces a multi-agent AI decision system with:
-
-A. Independent Agent Reasoning
-
-Multiple “reasoning agents” analyze the same case in parallel, each generating:
-	•	structured reasoning traces,
-	•	test orders,
-	•	diagnostic hypotheses.
-
-B. Consensus Disagreement Module
-
-A dedicated module computes a Consensus Disagreement Rate (CDR) using:
-
-CDR = 1 − (max votes for a diagnosis) / K
-
-This quantifies epistemic uncertainty.
-
-C. Embedded Safety Supervisor Agents
-
-A “Safety Agent Layer” intercepts:
-	•	diagnostic test actions,
-	•	prescriptions or interventions.
-
-It classifies each as SAFE, CAUTION, or UNSAFE, using:
-	•	drug–drug interaction databases,
-	•	rule-based validators,
-	•	LLM-based classifiers.
-
-Unsafe actions are rejected and logged.
-
-D. Reasoning Trace Generator
-
-Each reasoning step is stored in structured form inside <thinking_process> tags, including:
-	•	intermediate hypotheses,
-	•	evidence considered,
-	•	eliminated hypotheses,
-	•	safety feedback received.
-
-E. Causal Logging and Traceability Engine
-
-All agent exchanges are stored as structured records:
-
-⟨timestamp, agent_id, action, reasoning_state, safety_flag, consensus_state⟩
-
-This enables forensic replay.
-
-F. Trust Scoring Engine
-
-Computes three indices:
-	1.	ETI — Epistemic Trust Index
-Combines accuracy, CDR, and reasoning–diagnosis consistency.
-	2.	OSI — Operational Safety Index
-Computes a penalty-based measure of unsafe actions and alerts.
-If safety is OFF → OSI = 0.
-	3.	FTI — Final Trust Index
-A composite of ETI and OSI.
-
-This produces a quantitative trust score for any AI decision pipeline.
-
-⸻
-
-5. Steps / Components Required (Implementation Details)
-
-Your patent should list all components clearly:
-
-1. Reasoning Agent Module
-	•	Runs multiple LLM instances
-	•	Generates diagnosis/action + structured reasoning
-
-2. Safety Supervisor Module
-	•	Test safety checker
-	•	Prescription safety checker
-	•	External rule database
-	•	LLM-based classifier for edge cases
-	•	Generates safety flags
-
-3. Consensus Engine
-	•	Collects predictions
-	•	Computes inter-agent agreement
-	•	Handles tie-breaking using semantic similarity
-	•	Outputs final voted diagnosis
-
-4. Reasoning Trace Processor
-	•	Normalizes thought sequences
-	•	Tags steps: hypothesis, evidence, update, elimination
-	•	Produces DDx lifecycle graph
-
-5. Logging and Audit Module
-	•	Timestamping
-	•	State serialization
-	•	Safety event log
-	•	Decision rollback & replay
-	•	Export in JSONL or SQL
-
-6. Trust Scoring Engine
-	•	ETI calculator
-	•	Safety-aware OSI calculator
-	•	Composite FTI generator
-	•	Configurable weight sets or learned weights
-
-7. Frontend / API Interface
-	•	Endpoint for submitting cases
-	•	Endpoint for retrieving logs
-	•	Dashboard for trust metrics visualization
-
-⸻
-
-6. Technological Advancement (Non-Obviousness)
-
-A. Multi-agent parallel reasoning with quantitative uncertainty
-
-Prior systems do not combine parallel independent LLM reasoning with a mathematically grounded disagreement metric.
-
-B. Real-time safety constraints that modify reasoning
-
-Unlike post-hoc filters, the invention’s safety agents operate inside the reasoning loop, dynamically shaping the model’s decisions.
-
-C. Full causal traceability
-
-Current LLM systems cannot reconstruct “why” an AI made a decision.
-This invention logs:
-	•	full reasoning sequence,
-	•	rejected unsafe choices,
-	•	consensus voting behavior.
-
-This level of traceability is not present in any commercial LLM product.
-
-D. Quantitative trust indices
-
-The invention introduces computable trust metrics, enabling:
-	•	regulatory compliance,
-	•	audit trails,
-	•	safety certifications.
-
-E. Integration of all components
-
-The system is novel in integrating:
-	•	multi-agent reasoning
-	•	embedded safety
-	•	causal logging
-	•	trust scoring
-
-into a single unified architecture.
-
-This combination is non-obvious because existing systems treat these components as separate research problems.
-
-⸻
-
-7. Industrial Applications
-
-This invention has industrial applicability in any domain requiring high-stakes AI decisions, including:
-
-Healthcare
-	•	diagnostic reasoning assistants
-	•	safety-aware clinical decision support
-	•	double-check systems for prescriptions and tests
-	•	regulatory audit support (FDA/EMA)
-
-Finance
-	•	multi-agent risk assessment
-	•	fraud detection with reasoning logs
-	•	traceable loan approval systems
-
-Legal / Compliance
-	•	transparent contract review
-	•	explainable evidence evaluation
-
-Aviation & Transportation
-	•	safety-aware decision assistants
-	•	failure-mode monitoring
-
-Enterprise AI Governance
-	•	AI auditing tools
-	•	automated compliance systems
-	•	explainable enterprise chatbots
-
-⸻
-
-8. Working Examples / Use Cases
-
-Provide two types: a success case and a failure case with safety intervention.
-
-⸻
-
-Example 1 — Correct Diagnostic Reasoning with Safety Checks (from your dataset)
-
-Input:
-Patient with diplopia, ptosis, weakness worsening with exertion; positive antibody tests; abnormal EMG.
-
-System behavior:
-	•	All 3 reasoning agents independently diagnose Myasthenia Gravis
-	•	Consensus disagreement CDR = 0
-	•	Safety agent approves test orders
-	•	Prescription: Edrophonium test flagged SAFE WITH CAUTION
-	•	Trace logs show hypothesis evolution and evidence integration
-
-Outcome:
-Final diagnosis correct.
-ETI high, OSI high, FTI high.
-
-⸻
-
-Example 2 — Misdiagnosis with Correct Safety Intervention (failure case)
-
-Input:
-Infant with abdominal distension, decreased feeding, transition zone on barium enema (Hirschsprung disease).
-
-System behavior:
-	•	Reasoning agent incorrectly suggests Intussusception
-	•	CDR = 0 (all agents wrong in same direction)
-	•	Prescription agent proposes “no medication”
-	•	Safety agent flags this as UNSAFE (requires medical evaluation before withholding treatment)
-	•	Logs show the exact reasoning paths and safety override
-
-Outcome:
-Diagnosis incorrect → low ETI.
-Safety prevented inappropriate progression → OSI remains meaningful.
-FTI reflects the risk despite accuracy failure.
-
-⸻
-
-If you’d like, I can convert these answers into the exact formal language preferred by patent attorneys (e.g., “In one embodiment…”, “The system comprises…”).
+Overall, this project had strong research impact, business value, and practical usability, and it helped strengthen my skills in LLMs, structured data processing, and applied AI systems.
