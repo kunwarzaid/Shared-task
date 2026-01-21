@@ -1,36 +1,49 @@
-During this year, I worked on a research and development project focused on using Large Language Models (LLMs) to summarize large and complex clinical tables. This work resulted in three major outcomes: a top-tier research publication, a filed patent, and a working end-to-end system.
+Got it 👍
+Here’s the final, simple-language self-evaluation, updated to clearly state that this was your second major work in 2025. This version fits very well in annual appraisal forms.
 
-Research Work and Publication
+⸻
 
-I worked on a research problem where existing LLMs fail to handle very large clinical tables and often miss important facts or generate incorrect summaries. To solve this, I designed a method that selects only the most important facts from tables before giving them to the LLM.
+Self-Evaluation (Second Major Work in 2025)
 
-This work was accepted at NAACL 2025 (CL4Health Workshop), which is a well-known international NLP conference. The acceptance shows that the problem and solution are relevant and novel. The paper clearly demonstrates improvements in accuracy, completeness, and reliability of generated summaries compared to existing approaches.
+This was my second major research and system development work in the year 2025. The project focused on building a safe and reliable LLM-based medical system using a multi-agent architecture.
 
-Patent Filing
+Research Work and Industry Conference
 
-Based on the novelty of the fact-selection approach and the overall system design, a patent has been filed for this work. This helps protect the idea and adds long-term value to the organization’s intellectual property portfolio.
+This work was submitted and accepted in the Industry Track of an AI-ML Systems conference, highlighting its practical and industry relevance. I travelled to the conference and presented the work, explaining the system design, safety mechanisms, and results to an international audience. This helped showcase our work and organization in a real-world, industry-focused research forum.
 
-End-to-End System Development
+My Role and Contributions
 
-In addition to research, I built a complete working pipeline using Streamlit. The system:
-	•	Takes large clinical tables as input
-	•	Automatically identifies table types
-	•	Selects only important facts using a configurable threshold
-	•	Allows users to control how much information is included
-	•	Outputs a clean, focused table containing only relevant facts
+My main contributions in this project were:
+	•	Designing the overall system architecture
+	•	Building the multi-agent workflow and controller
+	•	Implementing safety guardrails, including:
+	•	Test safety checks
+	•	Prescription safety checks using drug–drug interaction data
+	•	Developing logging and traceability to ensure transparency and auditability
+	•	Supporting experiments, analysis, and paper writing
+	•	Preparing and delivering the conference presentation
 
-This system reduces manual effort and can be directly used by medical writers or reviewers.
+The differential diagnosis component of the system was developed by my colleague as part of our collaborative effort. My work mainly focused on system design, safety, integration, and evaluation.
 
-Collaboration and Practical Focus
+Impact and Results
 
-I worked closely with domain experts (medical writers) to ensure that the outputs are correct, meaningful, and follow expected formats. Their feedback was used to improve both the fact-selection logic and the final outputs.
+The system showed improved diagnostic accuracy and significantly better detection of unsafe prescriptions compared to baseline approaches. It demonstrates how LLMs can be safely used in healthcare by enforcing structured workflows and safety checks at the system level.
 
 Overall Impact
 
-This work shows my ability to:
-	•	Take ownership from idea to research to implementation
-	•	Convert research ideas into practical, usable systems
-	•	Contribute to publications, patents, and real products
-	•	Work on complex problems in the healthcare and AI domain
+This second work of 2025 demonstrates my ability to:
+	•	Deliver multiple high-impact projects in a single year
+	•	Balance research quality with practical system building
+	•	Collaborate effectively while owning critical components
+	•	Represent the organization at international industry conferences
 
-Overall, this project had strong research impact, business value, and practical usability, and it helped strengthen my skills in LLMs, structured data processing, and applied AI systems.
+Overall, this project added strong research visibility and practical value, and further strengthened my skills in LLM systems, agent-based architectures, and AI safety in healthcare.
+
+⸻
+
+If you want, I can now:
+	•	Combine both 2025 works into a single powerful appraisal summary
+	•	Rewrite this in a promotion-oriented tone
+	•	Convert it into a one-paragraph executive summary
+
+Just say the word.
