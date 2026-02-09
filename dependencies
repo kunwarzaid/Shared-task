@@ -1,269 +1,171 @@
-import os, json, time, random
-from pathlib import Path
-from tqdm import tqdm
+Dialouges:
+{"speaker": "Health Worker", "date":"2025-09-28", "dialogue": "We’re seeing Aarav, a 4‑month‑old baby boy from Mumbai, with a wet cough after feeds, louder at night, slow weight gain, and oily stools. Travel costs and vaccines matter for ongoing care."}
+{"speaker": "Patient's Relative", "date":"2025-09-28", "dialogue": "Yes doctor, Aarav is 4 months, lives with us in Mumbai, meals at home mostly; cough started a few weeks ago after feeds; he breathes a bit hard sometimes."}
+{"speaker": "Patient", "date":"2025-09-28", "dialogue": "Aarav makes little noises during feeding, then settles, eyes closing slowly as the room hums; his tiny hands relax and he drifts toward a soft nap."}
+{"speaker": "Health Worker", "date":"2025-09-28", "dialogue": "Describe the cough more: is it wet, does it sound crackly, any fever, does it wake him from sleep, or improve after chest physiotherapy?"}
+{"speaker": "Patient's Relative", "date":"2025-09-28", "dialogue": "Cough is wet sometimes after feeds, sometimes louder at night, but no fever I think; not sure about chest physiotherapy yet."}
+{"speaker": "Health Worker", "date":"2025-09-28", "dialogue": "From what you describe, we’ll arrange local sweat chloride testing to check CF, plus baseline labs for vitamin D and iron, and start a growth diary."}
+{"speaker": "Patient's Relative", "date":"2025-09-28", "dialogue": "We’ll do the tests locally, doctor. What about travel costs and subsidies; should we bring Aarav’s birth certificate and hospital ID?"}
+{"speaker": "Health Worker", "date":"2025-09-28", "dialogue": "Yes, bring Aarav’s birth certificate, hospital ID, current medications. We’ll explore cost-support options and consider Indian generic pancreatic enzymes if affordable."}
+{"speaker": "Patient", "date":"2025-09-28", "dialogue": "Aarav smiles, then gazes at the ceiling fan, listening to the clinic’s soft hum; his eyes track the nurse’s movements, curious but calm."}
+{"speaker": "Patient's Relative", "date":"2025-09-28", "dialogue": "We’ll collect the documents, and yes, vaccines are up to date, doctor; is there anything else we should bring to make the tests smoother?"}
+{"speaker": "Health Worker", "date":"2025-09-28", "dialogue": "Just bring the documents, and a stool sample if you can; we’ll schedule a two‑week tele‑visit to adjust plans."}
+{"speaker": "Patient's Relative", "date":"2025-09-28", "dialogue": "Okay, we’ll plan for two weeks and stay in touch; if Aarav’s condition changes, we’ll message you immediately."}
+{"speaker": "Health Worker", "date":"2025-10-15", "dialogue": "Good news: local sweat chloride test is positive for CF. We’ll start weight‑based pancreatic enzyme replacement after confirming weight and tolerance."}
+{"speaker": "Patient's Relative", "date":"2025-10-15", "dialogue": "Oh, we hoped for this, but it’s scary too; can you explain what starting pancreatic enzymes involves for Aarav practically?"}
+{"speaker": "Health Worker", "date":"2025-10-15", "dialogue": "We’ll tailor enzymes to Aarav’s weight, give with meals, monitor stools, hydration, and vitamin labs. Two‑week tele‑visit to adjust dosing."}
+{"speaker": "Patient's Relative", "date":"2025-10-15", "dialogue": "Which brands are available here in Mumbai, and are generic options acceptable if subsidies kick in?"}
+{"speaker": "Health Worker", "date":"2025-10-15", "dialogue": "Generic Panlipase or Enzar Forte are options if subsidized; we’ll check with local pharmacies, hospitals, and available support programs."}
+{"speaker": "Patient's Relative", "date":"2025-10-15", "dialogue": "We’ll look into subsidies and keep Aarav on a growth diary to track weight and stool changes."}
+{"speaker": "Health Worker", "date":"2025-10-15", "dialogue": "Yes, growth diary helps; also we’ll provide pre‑enzyme dietary guidance and avoid very high‑fat meals until enzymes are optimized."}
+{"speaker": "Patient's Relative", "date":"2025-10-15", "dialogue": "Okay, we’ll avoid very heavy fatty meals initially; should we keep feeding every 2–3 hours, or is more frequent better?"}
+{"speaker": "Health Worker", "date":"2025-10-15", "dialogue": "Feed more often in small portions, aim for energy‑dense foods, review stool quality weekly, and adjust dosing and calories based on Aarav’s weight gain."}
+{"speaker": "Patient", "date":"2025-10-15", "dialogue": "Aarav munches on his fingers, a bit fussy at first, then smiles; feeding seems easier today and he doesn’t reject his milk as strongly."}
+{"speaker": "Patient's Relative", "date":"2025-10-15", "dialogue": "We’re rowing through the day with therapies and feedings; it’s a bit overwhelming, but we will manage step by step."}
+{"speaker": "Health Worker", "date":"2025-10-15", "dialogue": "We’ll start with clear instructions for chest physiotherapy and humidified air at home; plan a two‑week tele‑visit to check dosing, hydration, and stool response."}
+{"speaker": "Patient", "date":"2025-10-15", "dialogue": "CPT sounds complicated; will we need special equipment, or can we manage with simple, manual techniques at home?"}
+{"speaker": "Health Worker", "date":"2025-10-15", "dialogue": "Yes, there is a caregiver‑friendly CPT approach, and a home nebulizer with boiled water; we’ll train you in two sessions and provide simple instructional videos."}
+{"speaker": "Patient", "date":"2025-10-15", "dialogue": "Aarav sighs contentedly after a short nap, his tummy settled, and his breathing feels calmer; he babbles softly."}
+{"speaker": "Patient's Relative", "date":"2025-10-15", "dialogue": "We’ll arrange the CPT training and begin the growth and stool diary so we can track progress accurately."}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "Two weeks in, how is Aarav tolerating the enzymes? Any greasy stools, discomfort after feeds, or coughing changes; have you noticed his energy levels or appetite improving?"}
+{"speaker": "Patient's Relative", "date":"2025-10-31", "dialogue": "Stools are less greasy, feeding feels smoother, and Aarav seems happier after feeds; he naps more easily and seems less fussy between meals."}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "Great to hear. We’ll adjust the dose based on weight gain and stool quality, and maintain the two‑week tele‑visit cadence to fine‑tune."}
+{"speaker": "Patient", "date":"2025-10-31", "dialogue": "Aarav smiles after feeding, then quickly settles and sleeps softly, content with how things are going today."}
+{"speaker": "Patient's Relative", "date":"2025-10-31", "dialogue": "Should we push calories a bit higher now, while watching digestion and stool quality?"}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "Yes, focus on energy‑dense options like ghee, paneer, nuts; keep fat intake reasonable until enzymes are optimized, and avoid overfeeding at one sitting."}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "We’ll also reinforce salt supplementation during hot weather, ensure proper hydration, and monitor urine output for early signs of dehydration."}
+{"speaker": "Patient", "date":"2025-10-31", "dialogue": "Okay, so adding a pinch of salt to drinks or using an electrolyte solution during hot summers sounds good?"}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "Exactly; add a pinch of salt or an electrolyte mix to fluids, and offer ORS if signs of dehydration appear, especially on hot days."}
+{"speaker": "Patient", "date":"2025-10-31", "dialogue": "Aarav drinks a little water with a gentle sip, then looks around, curious about everything, and settles back into comfort."}
+{"speaker": "Patient's Relative", "date":"2025-10-31", "dialogue": "We’ll keep the diary and monitor progress week by week, noting any changes in stools, appetite, or cough."}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "Next tele‑visit in two weeks to review; if growth stalls, we’ll consider repeating vitamin D and iron labs locally."}
+{"speaker": "Mumbai Weather", "date":"2025-10-31", "dialogue": "Mumbai weather is humid and rainy today; a good day for indoor routines and practice."}
+{"speaker": "Patient's Relative", "date":"2025-10-31", "dialogue": "Rainy days make travel to hospital tricky, and the tele‑visit option really helps us avoid tiring journeys."}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "Yes, tele‑visits help reduce travel costs; we’ll plan for an in‑person check if needed."}
+{"speaker": "Patient's Relative", "date":"2025-10-31", "dialogue": "We’ll try to stick to tele‑visits for now, unless something changes."}
+{"speaker": "Health Worker", "date":"2025-10-31", "dialogue": "Remember, if Aarav has a persistent cough, weight stall, or breathing difficulty, escalate to hospital promptly and call us for guidance."}
+{"speaker": "Health Worker", "date":"2025-11-15", "dialogue": "We’ve trained you on chest physiotherapy; your elder sibling can help too; ensure nebulizer hygiene with boiled water; CPT at least twice daily."}
+{"speaker": "Patient's Relative", "date":"2025-11-15", "dialogue": "Yes, my elder sister will help; we will rinse, boil, and air‑dry the nebulizer bottles to keep them clean."}
+{"speaker": "Health Worker", "date":"2025-11-15", "dialogue": "Great; also keep the home environment smoke‑free, and monitor the humidified air quality to avoid irritants."}
+{"speaker": "Patient", "date":"2025-11-15", "dialogue": "Aarav sits with a toy, listening, eyes bright, absorbing the new routines we’ve learned today."}
+{"speaker": "Patient's Relative", "date":"2025-11-15", "dialogue": "We use a small humidifier at night; is that enough to support his breathing?"}
+{"speaker": "Health Worker", "date":"2025-11-15", "dialogue": "Humidifier helps, but avoid direct steam near the baby; place it safely away from his reach and maintain clean water."}
+{"speaker": "Health Worker", "date":"2025-11-15", "dialogue": "We’ll discuss growth diaries weekly, and adjust enzyme dosing and calories as needed based on Aarav’s growth trajectory."}
+{"speaker": "Patient", "date":"2025-11-15", "dialogue": "Aarav makes a cheerful gurgle and stays very alert; he watches everyone intently."}
+{"speaker": "Patient's Relative", "date":"2025-11-15", "dialogue": "We worry about costs; are there more subsidies or regional programs we can apply to for enzymes?"}
+{"speaker": "Health Worker", "date":"2025-11-15", "dialogue": "Yes, we’ll reassess eligibility for Indian generic enzymes and other local support programs; tele‑visit continues to guide dosing."}
+{"speaker": "Patient's Relative", "date":"2025-11-15", "dialogue": "We’ll actively apply for subsidies and regional support; we’ll keep you posted with any updates."}
+{"speaker": "Health Worker", "date":"2025-11-15", "dialogue": "Remember vaccines, keep up to date, and monitor growth and nutrient status through periodic tests."}
+{"speaker": "Patient", "date":"2025-11-15", "dialogue": "Aarav babbles, shows curiosity, and we’ll trust the plan we’ve put in place today."}
+{"speaker": "Health Worker", "date":"2025-11-15", "dialogue": "Nice; if Aarav’s stools become very loose or foul, contact us immediately so we can adjust."}
+{"speaker": "Patient", "date":"2025-11-15", "dialogue": "Okay doctor, we will monitor closely and reach out if anything changes."}
+{"speaker": "Health Worker", "date":"2025-12-15", "dialogue": "One month in, growth seems steady; weight gain up, stool changes improving, coughing reduced; we’ll continue with current enzyme dose."}
+{"speaker": "Patient", "date":"2025-12-15", "dialogue": "Aarav seems more energetic after feeds; he smiles more, wakes less during night feeds, and seems more content overall."}
+{"speaker": "Health Worker", "date":"2025-12-15", "dialogue": "Excellent; we’ll reinforce nutrition with energy‑dense foods, controlled fats, and small, frequent meals to support growth."}
+{"speaker": "Patient's Relative", "date":"2025-12-15", "dialogue": "Paneer and ghee are common here; is using them daily acceptable while we manage fat intake?"}
+{"speaker": "Health Worker", "date":"2025-12-15", "dialogue": "Yes, within reasonable limits; we want calories and enzymes aligned, and we’ll monitor stool quality weekly."}
+{"speaker": "Patient", "date":"2025-12-15", "dialogue": "Aarav’s stools still oily sometimes, especially after larger feeds; we’ll note any patterns in the diary."}
+{"speaker": "Health Worker", "date":"2025-12-15", "dialogue": "That’s common early on; we’ll review again in two weeks, and vitamin D and iron labs may be repeated soon."}
+{"speaker": "Patient's Relative", "date":"2025-12-15", "dialogue": "We’ll arrange the labs again; any signs of dehydration we should watch for, like dry lips or reduced urination?"}
+{"speaker": "Health Worker", "date":"2025-12-15", "dialogue": "Watch for dry lips, reduced urination, lethargy; ensure regular salt intake in hot weather and hydrate often."}
+{"speaker": "Patient", "date":"2025-12-15", "dialogue": "Aarav sweats a lot in the afternoon sun; we push fluids and give oral rehydration when needed."}
+{"speaker": "Health Worker", "date":"2025-12-15", "dialogue": "Then increase hydration and salt intake; bring Aarav to a tele‑visit if dehydration signs appear or if feeding decreases."}
+{"speaker": "Patient's Relative", "date":"2025-12-15", "dialogue": "We’ll keep to the tele‑visit schedule since travel remains tough, and we’ll coordinate if local tests become available."}
+{"speaker": "Health Worker", "date":"2026-01-15", "dialogue": "If Aarav’s cough worsens or he loses weight, we need to act fast; warning signs include green sputum and rapid breathing."}
+{"speaker": "Patient", "date":"2026-01-15", "dialogue": "If he coughs more or his breathing seems faster, should we go to hospital right away or wait for tele‑visits?"}
+{"speaker": "Health Worker", "date":"2026-01-15", "dialogue": "Yes, go to hospital early; we’ll escalate chest physiotherapy as needed and ensure proper hydration with ORS during the illness."}
+{"speaker": "Patient's Relative", "date":"2026-01-15", "dialogue": "We’ll carry his test results to avoid misinterpretations and unnecessary TB treatment; we’ll share copies with the hospital."}
+{"speaker": "Health Worker", "date":"2026-01-15", "dialogue": "Good plan. If antibiotics are prescribed, complete the full course and don’t stop early, even if symptoms improve."}
+{"speaker": "Patient", "date":"2026-01-15", "dialogue": "Aarav snorts softly, listening, his eyes following your movements."}
+{"speaker": "Patient's Relative", "date":"2026-01-15", "dialogue": "What if he develops fever; should we bring him to the hospital immediately or call you first?"}
+{"speaker": "Health Worker", "date":"2026-01-15", "dialogue": "Measure temperature, assess breathing; if fever persists beyond 48 hours, seek urgent care; also bring his previous tests."}
+{"speaker": "Health Worker", "date":"2026-01-15", "dialogue": "We may adjust enzyme dosing if appetite drops or stool changes; your tele‑visit will help us fine‑tune."}
+{"speaker": "Patient", "date":"2026-01-15", "dialogue": "Aarav yawns and looks tired when sick; we’ll keep him comfortable and hydrated."}
+{"speaker": "Patient's Relative", "date":"2026-01-15", "dialogue": "We’ll try to stay calm, and we’ll call you immediately if symptoms worsen or if we notice any alarming signs."}
+{"speaker": "Health Worker", "date":"2026-01-15", "dialogue": "Also keep the home air clean, avoid smoke and strong fragrances during illness, and maintain a comfortable, quiet environment."}
+{"speaker": "Patient", "date":"2026-01-15", "dialogue": "Aarav looks around the room, calm and curious, as city noises drift in from outside."}
+{"speaker": "Health Worker", "date":"2026-01-15", "dialogue": "Today your father is with us; we’ll discuss feeding routine and CPT together; any changes at home?"}
+{"speaker": "Patient's Relative", "date":"2026-02-15", "dialogue": "Dad helped last month; we’ll share responsibilities between us, and Aarav seems more settled now with the routine."}
+{"speaker": "Health Worker", "date":"2026-02-15", "dialogue": "We’ll review Aarav’s growth diary with both of you and adjust enzyme dosing according to weight gain and stool response."}
+{"speaker": "Patient", "date":"2026-02-15", "dialogue": "Aarav coos and studies the new nebulizer gadget on the table, clearly curious about the sounds."}
+{"speaker": "Health Worker", "date":"2026-02-15", "dialogue": "This is the spacer for the nebulizer; it's safe for him, and I’ll give you simple cleaning tips and demonstration steps."}
+{"speaker": "Patient's Relative", "date":"2026-02-15", "dialogue": "We’ll assign CPT duties to dad and grandma too; they both want to help and learn."}
+{"speaker": "Health Worker", "date":"2026-02-15", "dialogue": "Nice approach; involving more family reduces caregiver stress and helps ensure consistent adherence to the plan."}
+{"speaker": "Patient", "date":"2026-02-15", "dialogue": "Aarav looks sleepy after the session; we just woke him and he’s blinking slowly at the bright lights."}
+{"speaker": "Health Worker", "date":"2026-02-15", "dialogue": "Two more sessions, and if growth plateaus, we’ll consider an in‑person review at a regional center."}
+{"speaker": "Patient's Relative", "date":"2026-02-15", "dialogue": "Costs remain a concern; are there regional centers that offer subsidized tests or travel support?"}
+{"speaker": "Health Worker", "date":"2026-02-15", "dialogue": "We’ll provide a regional center list, connect you with patient support groups, and help you navigate insurance or subsidy options."}
+{"speaker": "Patient", "date":"2026-02-15", "dialogue": "Aarav smiles shyly at the helper who is demonstrating a toy tip; his curiosity shines through."}
+{"speaker": "Health Worker", "date":"2026-02-15", "dialogue": "Also, vaccines continue on schedule; we’ll update you after the next vitamin D and iron lab results."}
+{"speaker": "Patient's Relative", "date":"2026-02-15", "dialogue": "Okay, we’ll wait for your next tele‑visit and keep collecting Aarav’s diary data."}
+{"speaker": "Health Worker", "date":"2026-02-15", "dialogue": "Remember to track stool changes carefully and report any persistent oily stools or pale stools during this period."}
+{"speaker": "Patient", "date":"2026-02-15", "dialogue": "Aarav nods and drifts off to sleep, lulled by the calm surroundings."}
+{"speaker": "Health Worker", "date":"2026-03-15", "dialogue": "As Aarav grows, we shift toward monthly tele‑visits; we’ll refine enzyme dosing by weight gain and stool quality."}
+{"speaker": "Patient's Relative", "date":"2026-03-15", "dialogue": "That sounds better; monthly visits will make travel easier and help us stay consistent despite distances."}
+{"speaker": "Health Worker", "date":"2026-03-15", "dialogue": "We’ll keep vitamin D and iron labs as needed, and growth diaries continue to guide dosing decisions."}
+{"speaker": "Patient", "date":"2026-03-15", "dialogue": "Aarav plays with a rattle, making more sounds, and his eyes spark with curiosity as he explores the table."}
+{"speaker": "Health Worker", "date":"2026-03-15", "dialogue": "CPT remains recommended twice daily; we’ll training more family members to help with consistency when some caregivers are away."}
+{"speaker": "Patient's Relative", "date":"2026-03-15", "dialogue": "We’ll assign CPT duties to dad and grandma too; they both want to help and learn."}
+{"speaker": "Health Worker", "date":"2026-03-15", "dialogue": "Nice approach; also prepare for possible local testing disruptions and plan remote contingencies to keep Aarav covered."}
+{"speaker": "Patient", "date":"2026-03-15", "dialogue": "Aarav stares at the ceiling fan, calm and observant, as the discussion continues about routines."}
+{"speaker": "Health Worker", "date":"2026-03-15", "dialogue": "If there’s a sudden flare or change, call immediately; we’ll escalate care and coordinate urgent visits if needed."}
+{"speaker": "Patient's Relative", "date":"2026-03-15", "dialogue": "We’ll also review the home environment for irritants and ensure a smoke‑free home to support his lungs."}
+{"speaker": "Health Worker", "date":"2026-03-15", "dialogue": "Great; we’ll also discuss travel plans and budget strategies so you can access local testing when needed."}
+{"speaker": "Patient", "date":"2026-03-15", "dialogue": "Excellent. Let us know if you plan travel or holidays; we’ll coordinate local testing at nearby centers if needed."}
+{"speaker": "Patient's Relative", "date":"2026-03-15", "dialogue": "We’ll plan for a small trip to the regional centre if necessary, and we’ll try to bundle tests to reduce trips."}
+{"speaker": "Health Worker", "date":"2026-04-15", "dialogue": "Over the next months, Aarav’s growth should stabilize; enzyme dosing will be refined with weight gain and stool quality."}
+{"speaker": "Patient", "date":"2026-04-15", "dialogue": "We’re hoping for steady growth and less coughing; with the plan in place, we feel more hopeful."}
+{"speaker": "Health Worker", "date":"2026-04-15", "dialogue": "That’s the goal; nutrition remains energy-dense, CPT continues, and hydration is a daily focus for Aarav’s well‑being."}
+{"speaker": "Patient's Relative", "date":"2026-04-15", "dialogue": "We’ll keep up with vaccines, and maintain the monthly tele‑visits to monitor progress."}
+{"speaker": "Health Worker", "date":"2026-04-15", "dialogue": "We’ll monitor for any new symptoms; please report promptly and bring any questions during your next tele‑visit."}
+{"speaker": "Patient", "date":"2026-04-15", "dialogue": "Aarav yawns and drifts off to sleep; he’s a good sleeper overall."}
+{"speaker": "Health Worker", "date":"2026-04-15", "dialogue": "Sleep really helps growth; we’ll keep to the plan and adjust dosing and nutrition as needed based on his growth."}
+{"speaker": "Patient's Relative", "date":"2026-04-15", "dialogue": "Thank you, Doctor; it’s comforting to have a clear plan and ongoing support for Aarav."}
+{"speaker": "Health Worker", "date":"2026-04-15", "dialogue": "You’re doing well, and we’ll stay in touch, adapting the plan as Aarav grows and circumstances change."}
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from langdetect import detect, DetectorFactory
+Summary:
+Summary of Aarav’s CF evaluation and management (4 months old, Mumbai) from Sep 2025 through early 2026
 
-# ============================================================
-# SETUP
-# ============================================================
+- Presentation and initial concerns
+  - Symptoms: wet cough after feeds (sometimes louder at night), occasional breathlessness, slow weight gain, oily greasy stools.
+  - Practical considerations: travel costs and access to care important; vaccines up to date; home care and caregiver training planned.
 
-DetectorFactory.seed = 42
-torch.set_grad_enabled(False)
+- Local testing plan and early management steps
+  - Working diagnosis: suspected cystic fibrosis (CF) due to growth/absorption concerns.
+  - Local testing approach: arrange sweat chloride testing locally to minimize travel; baseline labs ordered for vitamin D and iron; begin a growth diary; pre-enzyme dietary guidance to avoid very high-fat meals; ensure documents (birth certificate, hospital ID) and current meds are available; explore cost-support options and local access to generic Indian pancreatic enzymes if affordable.
+  - Care coordination: two-week tele-visit cadence with in-person follow-ups as needed.
 
-# ============================================================
-# CONFIG
-# ============================================================
+- Diagnostics and initial results
+  - Sweat testing: performed locally; result later confirmed positive for CF (late Oct 2025), triggering CF-directed therapy.
+  - Stool/nutrition: baseline stools greasy; plan to monitor response to enzyme therapy.
+  - Care plan upon confirmation: weight-based pancreatic enzyme replacement started; tailored nutrition plan; monitor stool consistency, feeding tolerance, hydration, and electrolyte balance.
 
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+- Treatment steps and early response
+  - Enzyme therapy: initiate weight-based pancreatic enzyme replacement after CF confirmation.
+  - Nutrition and growth: implement tailored nutrition plan; monitor stool quality and feeding tolerance; ensure hydration and energy needs.
+  - Early response (about 2 weeks): stools less greasy; feeding tolerance improved; respiratory status stabilized.
+  - Follow-up framework: tele-visit every two weeks for dose refinement; monthly in-person visits as growth stabilizes.
+  - Home care and environment: chest physiotherapy (CPT) introduced; caregiver trained in CPT and nebulization; humidified home air recommended; diary-guided dosing/calorie adjustments; salt supplementation advised in hot weather; emphasize smoke-free household; ensure hydration and electrolyte balance.
+  - Diet focus: energy-dense foods (e.g., ghee, paneer, nuts); manage fat intake until enzymes optimized.
 
-TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
-TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
+- Ongoing care, supports, and access considerations
+  - Tele-health and labs: two-week tele-visits to refine dosing; vitamin D and iron labs reaffirmed; growth diaries guide dosing.
+  - CPT and home care: caregiver training completed (including elder sibling involvement); home nebulizer hygiene with boiled water; CPT recommended at least twice daily.
+  - Growth monitoring: weekly weight checks; diary reviews during tele-visits; adjust enzymes/calories as growth evolves.
+  - Subscriptions and cost: discussion of subsidies; consideration of Indian generic enzymes (Panlipase, Enzar Forte) if subsidized; referrals to regional centers if local testing is unavailable.
+  - Infections and environment: reinforce infection prevention; vaccines up to date; continue salt and hydration strategies.
+  - Family involvement: expand CPT training to more family members; provide simple instructional materials and videos.
 
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/fewshot"
+- Contingencies and next steps
+  - Worsening cough or weight stall: reassess severity, consider additional testing or referrals.
+  - Enzyme intolerance or persistent stool issues: adjust dosing; maintain tele-visit support.
+  - Local testing disruption: escalate to regional centers while maintaining tele-visit and home monitoring.
+  - Daily diary and tele-visit cadence: continue; two-week reviews; vaccinations as scheduled.
 
-TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
+- Progress and anticipated trajectory (late 2025 into early 2026)
+  - Late 2025: positive trajectory with improved stool consistency and energy; cough largely improved; vaccines current.
+  - Early 2026: growth stabilizing; enzyme dosing refined according to weight gain and stool quality; shift toward monthly tele-visits as routine monitoring suffices; aim to minimize hospital visits through local testing and telehealth.
+  - Ongoing emphasis: nutrition with energy-dense options and balanced fats; continued CPT; hydration and infection prevention; monitor for dose adjustments as Aarav grows.
+  - Family and planning: ongoing training of multiple family members for CPT; regional center and subsidy planning; vaccines continue on schedule; next vitamin D/iron labs as needed.
 
-# FEW_SHOT_K = 0 → zero-shot
-# FEW_SHOT_K > 0 → few-shot
-FEW_SHOT_K = 2
-FEW_SHOT_SEED = 42
-
-USE_4BIT = True
-
-# Practical full context for Qwen 2.5 7B on 32GB GPU
-MAX_TOTAL_INPUT_TOKENS = 16384
-
-# Generation length (your decision)
-MAX_NEW_TOKENS_SUMMARY = 1024
-
-# Fixed, conservative budgets
-SYSTEM_AND_OVERHEAD_TOKENS = 512
-FEWSHOT_DIALOGUE_BUDGET = 512
-
-SYSTEM_SUMMARY = (
-    "You are a clinical summarization assistant. "
-    "Read a doctor–patient dialogue and write a fluent English clinical summary. "
-    "Focus on symptoms, diagnosis, investigations, management plan, "
-    "supportive care, and follow-up. "
-    "Do not hallucinate new diagnoses or tests. "
-    "End your summary with the token <<END>>."
-)
-
-# ============================================================
-# UTILS
-# ============================================================
-
-def tprint(msg: str):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path: Path):
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            try:
-                rows.append(json.loads(line.strip()))
-            except Exception:
-                continue
-    return rows
-
-def write_text(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.strip() + "\n", encoding="utf-8")
-
-def clip_tokens(tokenizer, text: str, max_tokens: int) -> str:
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
-
-def build_messages(system_prompt: str, user_prompt: str):
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-def chat_generate(model, tokenizer, messages):
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
-            do_sample=False,
-            num_beams=1,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    gen_ids = output[0][inputs.input_ids.shape[-1]:]
-    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
-
-# ============================================================
-# FEW-SHOT COLLECTION
-# ============================================================
-
-def collect_few_shot_examples(root: str, lang: str, k: int, seed: int):
-    if k == 0:
-        return []
-
-    lang_dir = Path(root) / lang
-    dlg_dir = lang_dir / "Dialogues"
-    sum_dir = lang_dir / "Summary_Text"
-
-    if not dlg_dir.exists() or not sum_dir.exists():
-        return []
-
-    files = sorted(dlg_dir.glob("*.jsonl"))
-    rng = random.Random(seed)
-    rng.shuffle(files)
-
-    examples = []
-    for f in files:
-        sum_file = sum_dir / f"{f.stem}_summary.txt"
-        if not sum_file.exists():
-            continue
-
-        rows = safe_read_jsonl(f)
-        dialogue = " ".join(
-            r.get("dialogue", "") if isinstance(r, dict) else str(r)
-            for r in rows
-        ).strip()
-
-        summary = sum_file.read_text(encoding="utf-8", errors="replace").strip()
-        if dialogue and summary:
-            examples.append((dialogue, summary.replace("<<END>>", "").strip()))
-        if len(examples) >= k:
-            break
-
-    return examples
-
-# ============================================================
-# MODEL LOADING
-# ============================================================
-
-def load_model():
-    tprint("Loading tokenizer and model")
-
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    quant_cfg = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        quantization_config=quant_cfg,
-        dtype=torch.float16
-    )
-
-    model.eval()
-    return model, tokenizer
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
-
-def run_summary_only():
-    model, tokenizer = load_model()
-
-    dialogue_budget = (
-        MAX_TOTAL_INPUT_TOKENS
-        - MAX_NEW_TOKENS_SUMMARY
-        - SYSTEM_AND_OVERHEAD_TOKENS
-        - (FEW_SHOT_K * FEWSHOT_DIALOGUE_BUDGET)
-    )
-
-    langs = [
-        p for p in Path(TEST_DIR).iterdir()
-        if p.is_dir() and p.name in TARGET_LANGS
-    ]
-
-    for lang_dir in langs:
-        lang = lang_dir.name
-        tprint(f"Processing language: {lang}")
-
-        dlg_dir = lang_dir / "Dialogues"
-        out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
-
-        files = sorted(dlg_dir.glob("*.jsonl"))[:100]
-
-        few_examples = collect_few_shot_examples(
-            TRAIN_SPLIT_DIR, lang, FEW_SHOT_K, FEW_SHOT_SEED
-        )
-
-        for f in tqdm(files, desc=lang):
-            out_file = out_dir / f"{f.stem}_summary.txt"
-            if out_file.exists():
-                continue
-
-            rows = safe_read_jsonl(f)
-            dialogue = " ".join(
-                r.get("dialogue", "") if isinstance(r, dict) else str(r)
-                for r in rows
-            )
-
-            dialogue_clip = clip_tokens(tokenizer, dialogue, dialogue_budget)
-
-            few_shot_str = ""
-            if few_examples:
-                parts = []
-                for i, (ex_dlg, ex_sum) in enumerate(few_examples, 1):
-                    ex_dlg_clip = clip_tokens(
-                        tokenizer, ex_dlg, FEWSHOT_DIALOGUE_BUDGET
-                    )
-                    parts.append(
-                        f"Example {i}:\nDialogue:\n{ex_dlg_clip}\n\n"
-                        f"English Summary:\n{ex_sum}\n---"
-                    )
-                few_shot_str = (
-                    "Below are example dialogues with their English summaries.\n\n"
-                    + "\n\n".join(parts)
-                    + "\n\nNow summarize the following dialogue.\n\n"
-                )
-
-            user_prompt = (
-                f"{few_shot_str}"
-                f"Dialogue:\n{dialogue_clip}\n\n"
-                "Write an English clinical summary and end with <<END>>."
-            )
-
-            messages = build_messages(SYSTEM_SUMMARY, user_prompt)
-            summary_raw = chat_generate(model, tokenizer, messages)
-
-            end_pos = summary_raw.find("<<END>>")
-            summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
-
-            if detect(summary) != "en":
-                messages = build_messages(
-                    SYSTEM_SUMMARY,
-                    f"Dialogue:\n{dialogue_clip}\n\n"
-                    "Write ONLY an English clinical summary. End with <<END>>."
-                )
-                summary_raw = chat_generate(model, tokenizer, messages)
-                end_pos = summary_raw.find("<<END>>")
-                summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
-
-            write_text(out_file, summary)
-
-        torch.cuda.empty_cache()
-
-    tprint("Inference complete.")
-
-# ============================================================
-# ENTRY POINT
-# ============================================================
-
-if __name__ == "__main__":
-    run_summary_only()
+Overall, the plan centers on early local CF diagnosis via sweat testing, weight-based enzyme replacement with a nutrition-forward approach, caregiver training (including siblings) for CPT and nebulization, regular tele-visit–driven dose adjustments, and navigation of subsidies and regional testing options to minimize travel while maintaining close growth and symptom monitoring. The team emphasizes hydration, salt supplementation, energy-dense but balanced fat intake, infection prevention, and expanding local testing access as Aarav grows. Continuous diary-based tracking of stools, growth, and feeding tolerance guides ongoing dosing and dietary adjustments, with a gradual shift to monthly tele-visits as stability improves.
