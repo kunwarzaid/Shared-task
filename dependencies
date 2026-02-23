@@ -1,97 +1,417 @@
+Zero-Shot
 You are a clinical documentation assistant.
-
+ 
 Your task is to generate a clinical summary of the following doctor–patient dialogue.
-
+ 
 STRICT RULES:
+
 1. Only use information that is explicitly stated in the dialogue.
+
 2. Do NOT infer, assume, or add any information not directly mentioned.
+
 3. If something is not stated, do not include it.
+
 4. Preserve negations exactly (e.g., "denies chest pain" must not become "has chest pain").
+
 5. Do not add diagnoses, medications, durations, or advice unless explicitly mentioned.
-
+ 
 Follow this exact process:
-
+ 
 STEP 1: Extract Key Facts
+
 - List all explicitly mentioned clinical facts in bullet form.
+
 - Include symptoms, duration, diagnoses, medications, test results, and relevant history.
+
 - Include negated findings separately.
+
 - Do not paraphrase heavily. Stay close to wording in dialogue.
-
+ 
 STEP 2: Write Summary
+
 - Write a concise clinical summary using ONLY the extracted facts above.
+
 - Do not introduce any new information.
+
 - If a fact is not in the extracted list, it must not appear in the summary.
-
+ 
 Format your output exactly as:
-
+ 
 [Extracted Facts]
+
 - ...
-
+ 
 [Summary]
+
 ...
-
+ 
 Now summarize the following dialogue:
-
+ 
 <DIALOGUE>
+
 {insert dialogue here}
 </DIALOGUE>
 
-
+ 
+FewShot
+ 
 You are a clinical documentation assistant.
-
+ 
 Your task is to generate a clinical summary grounded strictly in the provided dialogue.
-
+ 
 STRICT RULES:
+
 1. Only include information explicitly stated in the dialogue.
+
 2. Do NOT infer or add missing diagnoses, medications, or details.
+
 3. Preserve negations exactly.
+
 4. If something is not mentioned, do not include it.
-
+ 
 You must follow this process:
+
 STEP 1: Extract explicit clinical facts.
+
 STEP 2: Write a summary using ONLY those extracted facts.
-
+ 
 Below are examples.
-
+ 
 ========================
+
 Example 1
-
+ 
 Dialogue:
 <example dialogue>
-
+ 
 [Extracted Facts]
-- Symptom: fever for 3 days
-- Denies chest pain
-- Diagnosis: viral infection
-- Medication: paracetamol prescribed
 
+ 
 [Summary]
-The patient reports fever for three days and denies chest pain. The doctor diagnosed a viral infection and prescribed paracetamol.
-========================
 
+========================
+ 
 Example 2
-
+ 
 Dialogue:
 <example dialogue>
-
+ 
 [Extracted Facts]
-- Symptom: cough for 1 week
-- No shortness of breath
-- Past history: asthma
 
+ 
 [Summary]
-The patient presents with a one-week history of cough and no shortness of breath. There is a past history of asthma.
+
 ========================
-
+ 
 Now process the following dialogue.
-
+ 
 Dialogue:
 <INSERT TARGET DIALOGUE>
-
+ 
 Provide output in exactly this format:
-
+ 
 [Extracted Facts]
-- ...
 
+- ...
+ 
 [Summary]
+
 ...
+
+Code:
+import os, json, time, re,random
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from langdetect import detect, DetectorFactory
+
+from huggingface_hub import login
+
+import torch, bitsandbytes as bnb, transformers
+print(torch.__version__)
+print(torch.version.cuda)      # None = CPU build; must match your system CUDA
+print(bnb.__version__)
+print(transformers.__version__)
+
+def huggingface_login():
+    """
+    Logs into the Hugging Face Hub using the user's token.
+    """
+    # print("Please enter your Hugging Face token. You can generate one at: https://huggingface.co/settings/tokens")
+    token = ''
+    try:
+        # Log in to the Hugging Face Hub
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
+    except Exception as e:
+        print(f"Failed to log in: {e}")
+
+huggingface_login()
+
+
+# Deterministic language detection
+DetectorFactory.seed = 42
+torch.set_grad_enabled(False)
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+# Chat model
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+
+# Root directory containing language subfolders for TEST (inference target)
+TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
+
+# Path to the train_split used for few-shot examples
+TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
+
+# Output root directory
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/fewshot"
+
+# Use 4-bit quantization (recommended for 32GB GPU)
+USE_4BIT = True
+
+# Only these language folders will be processed
+TARGET_LANGS = ["Bangla","English","Hindi","Marathi"]
+#TARGET_LANGS = ["Bangla"]
+# number of few-shot examples per target language (k-shot)
+FEW_SHOT_K = 0
+
+# seed for deterministic sampling of few-shot examples
+FEW_SHOT_SEED = 42
+
+# Practical full context for Qwen 2.5 7B on 32GB GPU
+MAX_TOTAL_INPUT_TOKENS = 16384
+
+# Generation length (your decision)
+MAX_NEW_TOKENS_SUMMARY = 1024
+
+# Fixed, conservative budgets
+SYSTEM_AND_OVERHEAD_TOKENS = 512
+FEWSHOT_DIALOGUE_BUDGET = 512
+
+SYSTEM_SUMMARY = (
+    "You are a clinical summarization assistant. "
+    "Read a doctor–patient dialogue and write a fluent English clinical summary. "
+    "Focus on symptoms, diagnosis, investigations, management plan, "
+    "supportive care, and follow-up. "
+    "Do not hallucinate new diagnoses or tests. "
+    "End your summary with the token <<END>>."
+)
+
+# ============================================================
+# UTILS
+# ============================================================
+
+def tprint(msg: str):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def safe_read_jsonl(path: Path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                rows.append(json.loads(line.strip()))
+            except Exception:
+                continue
+    return rows
+
+def write_text(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text.strip() + "\n", encoding="utf-8")
+
+def clip_tokens(tokenizer, text: str, max_tokens: int) -> str:
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
+
+def build_messages(system_prompt: str, user_prompt: str):
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+def chat_generate(model, tokenizer, messages):
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
+            do_sample=False,
+            num_beams=1,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    gen_ids = output[0][inputs.input_ids.shape[-1]:]
+    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+
+# ============================================================
+# FEW-SHOT COLLECTION
+# ============================================================
+
+def collect_few_shot_examples(root: str, lang: str, k: int, seed: int):
+    if k == 0:
+        return []
+
+    lang_dir = Path(root) / lang
+    dlg_dir = lang_dir / "Dialogues"
+    sum_dir = lang_dir / "Summary_Text"
+
+    if not dlg_dir.exists() or not sum_dir.exists():
+        return []
+
+    files = sorted(dlg_dir.glob("*.jsonl"))
+    rng = random.Random(seed)
+    rng.shuffle(files)
+
+    examples = []
+    for f in files:
+        sum_file = sum_dir / f"{f.stem}_summary.txt"
+        if not sum_file.exists():
+            continue
+
+        rows = safe_read_jsonl(f)
+        dialogue = " ".join(
+            r.get("dialogue", "") if isinstance(r, dict) else str(r)
+            for r in rows
+        ).strip()
+
+        summary = sum_file.read_text(encoding="utf-8", errors="replace").strip()
+        if dialogue and summary:
+            examples.append((dialogue, summary.replace("<<END>>", "").strip()))
+        if len(examples) >= k:
+            break
+
+    return examples
+
+# ============================================================
+# MODEL LOADING
+# ============================================================
+
+def load_model():
+    tprint("Loading tokenizer and model")
+
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    quant_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        device_map="auto",
+        quantization_config=quant_cfg,
+        dtype=torch.float16
+    )
+
+    model.eval()
+    return model, tokenizer
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+
+def run_summary_only():
+    model, tokenizer = load_model()
+
+    dialogue_budget = (
+        MAX_TOTAL_INPUT_TOKENS
+        - MAX_NEW_TOKENS_SUMMARY
+        - SYSTEM_AND_OVERHEAD_TOKENS
+        - (FEW_SHOT_K * FEWSHOT_DIALOGUE_BUDGET)
+    )
+
+    langs = [
+        p for p in Path(TEST_DIR).iterdir()
+        if p.is_dir() and p.name in TARGET_LANGS
+    ]
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        tprint(f"Processing language: {lang}")
+
+        dlg_dir = lang_dir / "Dialogues"
+        out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
+
+        files = sorted(dlg_dir.glob("*.jsonl"))[:100]
+
+        few_examples = collect_few_shot_examples(
+            TRAIN_SPLIT_DIR, lang, FEW_SHOT_K, FEW_SHOT_SEED
+        )
+
+        for f in tqdm(files, desc=lang):
+            out_file = out_dir / f"{f.stem}_summary.txt"
+            if out_file.exists():
+                continue
+
+            rows = safe_read_jsonl(f)
+            dialogue = " ".join(
+                r.get("dialogue", "") if isinstance(r, dict) else str(r)
+                for r in rows
+            )
+
+            dialogue_clip = clip_tokens(tokenizer, dialogue, dialogue_budget)
+
+            few_shot_str = ""
+            if few_examples:
+                parts = []
+                for i, (ex_dlg, ex_sum) in enumerate(few_examples, 1):
+                    ex_dlg_clip = clip_tokens(
+                        tokenizer, ex_dlg, FEWSHOT_DIALOGUE_BUDGET
+                    )
+                    parts.append(
+                        f"Example {i}:\nDialogue:\n{ex_dlg_clip}\n\n"
+                        f"English Summary:\n{ex_sum}\n---"
+                    )
+                few_shot_str = (
+                    "Below are example dialogues with their English summaries.\n\n"
+                    + "\n\n".join(parts)
+                    + "\n\nNow summarize the following dialogue.\n\n"
+                )
+
+            user_prompt = (
+                f"{few_shot_str}"
+                f"Dialogue:\n{dialogue_clip}\n\n"
+                "Write an English clinical summary and end with <<END>>."
+            )
+
+            messages = build_messages(SYSTEM_SUMMARY, user_prompt)
+            summary_raw = chat_generate(model, tokenizer, messages)
+
+            end_pos = summary_raw.find("<<END>>")
+            summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+
+            if detect(summary) != "en":
+                messages = build_messages(
+                    SYSTEM_SUMMARY,
+                    f"Dialogue:\n{dialogue_clip}\n\n"
+                    "Write ONLY an English clinical summary. End with <<END>>."
+                )
+                summary_raw = chat_generate(model, tokenizer, messages)
+                end_pos = summary_raw.find("<<END>>")
+                summary = summary_raw[:end_pos].strip() if end_pos != -1 else summary_raw.strip()
+
+            write_text(out_file, summary)
+
+        torch.cuda.empty_cache()
+
+    tprint("Inference complete.")
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    run_summary_only()
