@@ -3,7 +3,331 @@ You are a clinical documentation assistant.
  
 Your task is to generate a clinical summary of the following doctor–patient dialogue.
  
+STRICT RULES:import os, json, time, re, random
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from langdetect import detect, DetectorFactory
+from huggingface_hub import login
+import torch, bitsandbytes as bnb, transformers
+
+print(torch.__version__)
+print(torch.version.cuda)
+print(bnb.__version__)
+print(transformers.__version__)
+
+# ============================================================
+# HUGGINGFACE LOGIN
+# ============================================================
+
+def huggingface_login():
+    token = ''
+    try:
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
+    except Exception as e:
+        print(f"Failed to log in: {e}")
+
+huggingface_login()
+
+DetectorFactory.seed = 42
+torch.set_grad_enabled(False)
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+
+TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
+TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/grounded"
+
+USE_4BIT = True
+
+TARGET_LANGS = ["Bangla","English","Hindi","Marathi"]
+
+# Set to 0 for Zero-Shot, >0 for Few-Shot
+FEW_SHOT_K = 0
+FEW_SHOT_SEED = 42
+
+MAX_TOTAL_INPUT_TOKENS = 16384
+MAX_NEW_TOKENS_SUMMARY = 1024
+
+SYSTEM_AND_OVERHEAD_TOKENS = 512
+FEWSHOT_DIALOGUE_BUDGET = 512
+
+# ============================================================
+# PROMPTS
+# ============================================================
+
+ZERO_SHOT_PROMPT_TEMPLATE = """
+You are a clinical documentation assistant.
+
+Your task is to generate a clinical summary of the following doctor–patient dialogue.
+
 STRICT RULES:
+
+1. Only use information that is explicitly stated in the dialogue.
+2. Do NOT infer, assume, or add any information not directly mentioned.
+3. If something is not stated, do not include it.
+4. Preserve negations exactly.
+5. Do not add diagnoses, medications, durations, or advice unless explicitly mentioned.
+
+Follow this exact process:
+
+STEP 1: Extract Key Facts
+- List all explicitly mentioned clinical facts in bullet form.
+- Include symptoms, duration, diagnoses, medications, test results, and relevant history.
+- Include negated findings separately.
+- Do not paraphrase heavily.
+
+STEP 2: Write Summary
+- Write a concise clinical summary using ONLY the extracted facts above.
+- Do not introduce any new information.
+
+Format your output exactly as:
+
+[Extracted Facts]
+
+- ...
+
+[Summary]
+
+...
+
+Now summarize the following dialogue:
+
+<DIALOGUE>
+{dialogue}
+</DIALOGUE>
+"""
+
+FEW_SHOT_INSTRUCTION_HEADER = """
+You are a clinical documentation assistant.
+
+Your task is to generate a clinical summary grounded strictly in the provided dialogue.
+
+STRICT RULES:
+
+1. Only include information explicitly stated in the dialogue.
+2. Do NOT infer or add missing diagnoses, medications, or details.
+3. Preserve negations exactly.
+4. If something is not mentioned, do not include it.
+
+You must follow this process:
+
+STEP 1: Extract explicit clinical facts.
+STEP 2: Write a summary using ONLY those extracted facts.
+
+Provide output in exactly this format:
+
+[Extracted Facts]
+
+- ...
+
+[Summary]
+
+...
+"""
+
+# ============================================================
+# UTILS
+# ============================================================
+
+def tprint(msg):
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def safe_read_jsonl(path):
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            try:
+                rows.append(json.loads(line.strip()))
+            except:
+                continue
+    return rows
+
+def write_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text.strip() + "\n", encoding="utf-8")
+
+def clip_tokens(tokenizer, text, max_tokens):
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
+
+def build_messages(user_prompt):
+    return [{"role": "user", "content": user_prompt}]
+
+def chat_generate(model, tokenizer, messages):
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
+            do_sample=False,
+            num_beams=1,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    gen_ids = output[0][inputs.input_ids.shape[-1]:]
+    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+
+# ============================================================
+# FEW-SHOT EXAMPLES
+# ============================================================
+
+def collect_few_shot_examples(root, lang, k, seed):
+    if k == 0:
+        return []
+
+    lang_dir = Path(root) / lang
+    dlg_dir = lang_dir / "Dialogues"
+    sum_dir = lang_dir / "Summary_Text"
+
+    files = sorted(dlg_dir.glob("*.jsonl"))
+    rng = random.Random(seed)
+    rng.shuffle(files)
+
+    examples = []
+    for f in files:
+        sum_file = sum_dir / f"{f.stem}_summary.txt"
+        if not sum_file.exists():
+            continue
+
+        rows = safe_read_jsonl(f)
+        dialogue = " ".join(r.get("dialogue", "") for r in rows if isinstance(r, dict))
+        summary = sum_file.read_text(encoding="utf-8", errors="replace")
+
+        if dialogue and summary:
+            examples.append((dialogue.strip(), summary.strip()))
+
+        if len(examples) >= k:
+            break
+
+    return examples
+
+# ============================================================
+# MODEL LOADING
+# ============================================================
+
+def load_model():
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    quant_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        device_map="auto",
+        quantization_config=quant_cfg,
+        dtype=torch.float16
+    )
+
+    model.eval()
+    return model, tokenizer
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+
+def run_summary_only():
+    model, tokenizer = load_model()
+
+    dialogue_budget = (
+        MAX_TOTAL_INPUT_TOKENS
+        - MAX_NEW_TOKENS_SUMMARY
+        - SYSTEM_AND_OVERHEAD_TOKENS
+        - (FEW_SHOT_K * FEWSHOT_DIALOGUE_BUDGET)
+    )
+
+    langs = [
+        p for p in Path(TEST_DIR).iterdir()
+        if p.is_dir() and p.name in TARGET_LANGS
+    ]
+
+    for lang_dir in langs:
+        lang = lang_dir.name
+        tprint(f"Processing language: {lang}")
+
+        dlg_dir = lang_dir / "Dialogues"
+        out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
+
+        files = sorted(dlg_dir.glob("*.jsonl"))
+
+        few_examples = collect_few_shot_examples(
+            TRAIN_SPLIT_DIR, lang, FEW_SHOT_K, FEW_SHOT_SEED
+        )
+
+        for f in tqdm(files, desc=lang):
+            out_file = out_dir / f"{f.stem}_summary.txt"
+            if out_file.exists():
+                continue
+
+            rows = safe_read_jsonl(f)
+            dialogue = " ".join(
+                r.get("dialogue", "") for r in rows if isinstance(r, dict)
+            )
+
+            dialogue_clip = clip_tokens(tokenizer, dialogue, dialogue_budget)
+
+            # =========================
+            # ZERO SHOT
+            # =========================
+            if FEW_SHOT_K == 0:
+                user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
+                    dialogue=dialogue_clip
+                )
+
+            # =========================
+            # FEW SHOT
+            # =========================
+            else:
+                example_blocks = []
+                for i, (ex_dlg, ex_sum) in enumerate(few_examples, 1):
+                    ex_dlg_clip = clip_tokens(
+                        tokenizer, ex_dlg, FEWSHOT_DIALOGUE_BUDGET
+                    )
+                    example_blocks.append(
+                        f"Example {i}\n\nDialogue:\n{ex_dlg_clip}\n\n{ex_sum}\n"
+                    )
+
+                user_prompt = (
+                    FEW_SHOT_INSTRUCTION_HEADER
+                    + "\n========================\n\n"
+                    + "\n========================\n".join(example_blocks)
+                    + "\n========================\n\n"
+                    + f"Now process the following dialogue.\n\nDialogue:\n{dialogue_clip}"
+                )
+
+            messages = build_messages(user_prompt)
+            summary = chat_generate(model, tokenizer, messages)
+
+            write_text(out_file, summary)
+
+        torch.cuda.empty_cache()
+
+    tprint("Inference complete.")
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    run_summary_only()
 
 1. Only use information that is explicitly stated in the dialogue.
 
