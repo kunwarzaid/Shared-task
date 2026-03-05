@@ -1,56 +1,45 @@
-def query_model(
-    model: str,
-    user_prompt: str,
-    system_prompt: Optional[str] = None,
-    image_bytes: Optional[bytes] = None,
-    image_mime_type: Optional[str] = None,
-    pdf_text: Optional[str] = None,
-    tries: int = 2,
-    timeout_val_for_retry: float = 2.0,
-) -> str:
+def tokenize(example):
 
-    payload = {
-        "model": model,
-        "prompt": [
-            {"role": "system", "content": system_prompt or ""},
-            {"role": "user", "content": user_prompt}
-        ],
-        "max_tokens": 1024,
-        "employeeId": "1757421"
-    }
+    try:
 
-    for attempt in range(tries):
+        prompt_text = build_prompt(example["dialogue"])
 
-        try:
+        messages = [
+            {"role": "system", "content": "You are a clinical documentation assistant."},
+            {"role": "user", "content": prompt_text}
+        ]
 
-            response = requests.post(
-                AZURE_WRAPPER_URL,
-                json=payload,
-                timeout=120
-            )
+        prompt = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
 
-            data = response.json()
+        summary = example["summary"] + tokenizer.eos_token
 
-            # wrapper response format
-            if "response" in data:
-                ans = data["response"]
+        prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+        summary_ids = tokenizer.encode(summary, add_special_tokens=False)
 
-            elif "choices" in data:
-                ans = data["choices"][0]["message"]["content"]
+        # skip if too long
+        if len(prompt_ids) + len(summary_ids) > CTX_MAX:
+            return {}
 
-            else:
-                ans = str(data)
+        input_ids = prompt_ids + summary_ids
 
-            return ans.strip()
+        labels = [-100] * len(prompt_ids) + summary_ids
+        labels = labels[:len(input_ids)]
 
-        except Exception as ex:
+        return {
+            "input_ids": input_ids,
+            "attention_mask": [1] * len(input_ids),
+            "labels": labels
+        }
 
-            log_trace(
-                f"Error in Azure query_model (attempt {attempt+1}/{tries}): {ex}",
-                "ERROR",
-            )
+    except Exception:
+        return {}
 
-            if attempt < tries - 1:
-                time.sleep(timeout_val_for_retry)
+train_dataset = train_dataset.map(tokenize, remove_columns=train_dataset.column_names)
+dev_dataset = dev_dataset.map(tokenize, remove_columns=dev_dataset.column_names)
 
-    return "ERROR: LLM query failed"
+train_dataset = train_dataset.filter(lambda x: len(x["input_ids"]) > 0)
+dev_dataset = dev_dataset.filter(lambda x: len(x["input_ids"]) > 0)
