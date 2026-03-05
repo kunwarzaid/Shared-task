@@ -1,26 +1,21 @@
-{
-[notice] A new release of pip is available: 23.2.1 -> 26.0.1
-[notice] To update, run: python -m pip install --upgrade pip
+def load_jsonl(path):
 
-jTraceback (most recent call last):
-  File "/workspace/multi_summ/qwen_finetune.py", line 144, in <module>
+    rows = []
 
-�    train_raw = build_dataset(os.path.join(DATA_DIR, "train_split"))
-  File "/workspace/multi_summ/qwen_finetune.py", line 121, in build_dataset
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
 
-y    rows = load_jsonl(os.path.join(dlg_dir, fn))
-  File "/workspace/multi_summ/qwen_finetune.py", line 81, in load_jsonl
+        for line in f:
 
-d    rows.append(json.loads(line))
-  File "/usr/lib/python3.10/json/__init__.py", line 346, in loads
+            line = line.strip()
 
-h    return _default_decoder.decode(s)
-  File "/usr/lib/python3.10/json/decoder.py", line 337, in decode
+            if not line:
+                continue
 
-|    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/usr/lib/python3.10/json/decoder.py", line 353, in raw_decode
+            try:
+                rows.append(json.loads(line))
 
-x    obj, end = self.scan_once(s, idx)
-json.decoder.JSONDecodeError: Expecting ':' delimiter: line 1 column 36 (char 35)
+            except json.JSONDecodeError:
+                # skip malformed lines
+                continue
 
-removing /jobs/296952
+    return rows
