@@ -1,21 +1,20 @@
-def load_jsonl(path):
+{
+[notice] A new release of pip is available: 23.2.1 -> 26.0.1
+[notice] To update, run: python -m pip install --upgrade pip
 
-    rows = []
+jTraceback (most recent call last):
+  File "/workspace/multi_summ/qwen_finetune.py", line 156, in <module>
 
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+�    train_raw = build_examples(os.path.join(DATA_DIR, "train_split"))
+  File "/workspace/multi_summ/qwen_finetune.py", line 134, in build_examples
 
-        for line in f:
+o    dialogue = join_dialogue(rows)
+  File "/workspace/multi_summ/qwen_finetune.py", line 104, in join_dialogue
 
-            line = line.strip()
+     val = r.get("dialogue", "")
 
-            if not line:
-                continue
+4AttributeError: 'str' object has no attribute 'get'
 
-            try:
-                rows.append(json.loads(line))
+removing /jobs/296975
 
-            except json.JSONDecodeError:
-                # skip malformed lines
-                continue
-
-    return rows
+Failed to execute script
