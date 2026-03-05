@@ -11,32 +11,29 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-
-# =========================================================
+# ==========================================================
 # CONFIG
-# =========================================================
+# ==========================================================
 
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 DATA_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
-
 OUTPUT_DIR = "./qwen_medical_summary_ft"
 
-
 CTX_MAX = 16000
-
 LR = 2e-5
 EPOCHS = 3
 
 BATCH_SIZE = 1
 GRAD_ACCUM = 16
 
-torch.manual_seed(42)
+SEED = 42
+torch.manual_seed(SEED)
 
 
-# =========================================================
+# ==========================================================
 # TOKENIZER
-# =========================================================
+# ==========================================================
 
 tokenizer = AutoTokenizer.from_pretrained(
     BASE_MODEL,
@@ -49,11 +46,11 @@ if tokenizer.pad_token is None:
 tokenizer.padding_side = "right"
 
 
-# =========================================================
-# DATA LOADER
-# =========================================================
+# ==========================================================
+# DATA LOADING
+# ==========================================================
 
-def load_jsonl(path):
+def read_jsonl(path):
 
     rows = []
 
@@ -80,7 +77,7 @@ def join_dialogue(rows):
     return "\n".join(parts)
 
 
-def build_dataset(split_dir):
+def build_examples(split_dir):
 
     examples = []
 
@@ -99,7 +96,7 @@ def build_dataset(split_dir):
             if not fn.endswith(".jsonl"):
                 continue
 
-            rows = load_jsonl(os.path.join(dlg_dir, fn))
+            rows = read_jsonl(os.path.join(dlg_dir, fn))
             dialogue = join_dialogue(rows)
 
             sum_path = os.path.join(
@@ -122,70 +119,70 @@ def build_dataset(split_dir):
     return examples
 
 
-train_raw = build_dataset(os.path.join(DATA_DIR, "train_split"))
-dev_raw = build_dataset(os.path.join(DATA_DIR, "dev"))
+train_raw = build_examples(os.path.join(DATA_DIR, "train_split"))
+dev_raw = build_examples(os.path.join(DATA_DIR, "dev"))
 
-print("Train size:", len(train_raw))
-print("Dev size:", len(dev_raw))
-
+print("Train:", len(train_raw))
+print("Dev:", len(dev_raw))
 
 train_dataset = Dataset.from_list(train_raw)
 dev_dataset = Dataset.from_list(dev_raw)
 
 
-# =========================================================
+# ==========================================================
 # PROMPT
-# =========================================================
+# ==========================================================
 
 def build_prompt(dialogue):
 
     return f"""
-You are a clinical documentation assistant.
-
-Below is a doctor–patient dialogue.
+Below is a doctor–patient conversation.
 
 The dialogue may be written in Hindi, Marathi, Bangla, or English.
 
 Write a concise and faithful clinical summary in English.
 
 Rules:
-- Only include information explicitly mentioned in the dialogue.
-- Do not add symptoms, diagnoses, or medications that are not stated.
-- Preserve negations (example: "denies fever").
+- Only include information explicitly mentioned.
+- Do not infer diagnoses or medications.
+- Preserve negations such as "denies fever".
 
 Dialogue:
 {dialogue}
-
-English Clinical Summary:
 """
 
 
-# =========================================================
+# ==========================================================
 # TOKENIZATION
-# =========================================================
+# ==========================================================
 
 def tokenize(example):
 
-    prompt = build_prompt(example["dialogue"])
+    prompt_text = build_prompt(example["dialogue"])
+
+    messages = [
+        {"role": "system", "content": "You are a clinical documentation assistant."},
+        {"role": "user", "content": prompt_text}
+    ]
+
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
     summary = example["summary"] + tokenizer.eos_token
 
-    prompt_ids = tokenizer.encode(
-        prompt,
-        add_special_tokens=False
-    )
-
-    summary_ids = tokenizer.encode(
-        summary,
-        add_special_tokens=False
-    )
+    prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+    summary_ids = tokenizer.encode(summary, add_special_tokens=False)
 
     if len(prompt_ids) + len(summary_ids) > CTX_MAX:
-
-        prompt_ids = prompt_ids[:CTX_MAX - len(summary_ids)]
+        return None
 
     input_ids = prompt_ids + summary_ids
 
     labels = [-100] * len(prompt_ids) + summary_ids
+    labels = labels[:len(input_ids)]
 
     return {
         "input_ids": input_ids,
@@ -194,20 +191,16 @@ def tokenize(example):
     }
 
 
-train_dataset = train_dataset.map(
-    tokenize,
-    remove_columns=train_dataset.column_names
-)
+train_dataset = train_dataset.map(tokenize)
+dev_dataset = dev_dataset.map(tokenize)
 
-dev_dataset = dev_dataset.map(
-    tokenize,
-    remove_columns=dev_dataset.column_names
-)
+train_dataset = train_dataset.filter(lambda x: x is not None)
+dev_dataset = dev_dataset.filter(lambda x: x is not None)
 
 
-# =========================================================
+# ==========================================================
 # COLLATOR
-# =========================================================
+# ==========================================================
 
 def collate(batch):
 
@@ -240,49 +233,34 @@ def collate(batch):
     }
 
 
-# =========================================================
+# ==========================================================
 # MODEL
-# =========================================================
+# ==========================================================
 
 bnb_config = BitsAndBytesConfig(
-
     load_in_4bit=True,
-
     bnb_4bit_quant_type="nf4",
-
     bnb_4bit_compute_dtype=torch.float16
 )
 
-
 model = AutoModelForCausalLM.from_pretrained(
-
     BASE_MODEL,
-
     device_map="auto",
-
     quantization_config=bnb_config,
-
-    trust_remote_code=True,
-
-    torch_dtype=torch.float16
+    trust_remote_code=True
 )
 
-
 model = prepare_model_for_kbit_training(model)
-
 model.gradient_checkpointing_enable()
 
 
 lora_config = LoraConfig(
 
-    r=16,
-
+    r=8,
     lora_alpha=32,
-
     lora_dropout=0.05,
 
     target_modules=[
-
         "q_proj",
         "k_proj",
         "v_proj",
@@ -295,22 +273,19 @@ lora_config = LoraConfig(
     task_type="CAUSAL_LM"
 )
 
-
 model = get_peft_model(model, lora_config)
-
 model.print_trainable_parameters()
 
 
-# =========================================================
+# ==========================================================
 # TRAINING
-# =========================================================
+# ==========================================================
 
 training_args = TrainingArguments(
 
     output_dir=OUTPUT_DIR,
 
     per_device_train_batch_size=BATCH_SIZE,
-
     gradient_accumulation_steps=GRAD_ACCUM,
 
     num_train_epochs=EPOCHS,
@@ -321,13 +296,14 @@ training_args = TrainingArguments(
 
     logging_steps=50,
 
-    save_steps=500,
+    evaluation_strategy="steps",
+    eval_steps=500,
 
+    save_steps=500,
     save_total_limit=2,
 
     report_to="none"
 )
-
 
 trainer = Trainer(
 
@@ -336,16 +312,12 @@ trainer = Trainer(
     args=training_args,
 
     train_dataset=train_dataset,
-
     eval_dataset=dev_dataset,
 
     data_collator=collate
 )
 
-
 trainer.train()
 
-
 trainer.save_model(OUTPUT_DIR)
-
 tokenizer.save_pretrained(OUTPUT_DIR)
