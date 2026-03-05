@@ -1,57 +1,26 @@
-Got it — this needs to be framed cleanly and safely for appraisal: acknowledging client inspiration without claiming direct delivery, and highlighting deployability. Here’s a simple, professional, appraisal-ready section you can drop under “Client Projects / Client Impact”.
+{
+[notice] A new release of pip is available: 23.2.1 -> 26.0.1
+[notice] To update, run: python -m pip install --upgrade pip
 
-⸻
+jTraceback (most recent call last):
+  File "/workspace/multi_summ/qwen_finetune.py", line 144, in <module>
 
-Client-Inspired Projects and Practical Impact
+�    train_raw = build_dataset(os.path.join(DATA_DIR, "train_split"))
+  File "/workspace/multi_summ/qwen_finetune.py", line 121, in build_dataset
 
-Although my role does not involve working directly on client delivery projects, several of my research and system development works were inspired by real client requirements, ensuring strong practical relevance and deployability.
+y    rows = load_jsonl(os.path.join(dlg_dir, fn))
+  File "/workspace/multi_summ/qwen_finetune.py", line 81, in load_jsonl
 
-CSR Summarization – Client-Inspired Idea
+d    rows.append(json.loads(line))
+  File "/usr/lib/python3.10/json/__init__.py", line 346, in loads
 
-The idea for the CSR (Clinical Study Report) table summarization work originated from a requirement discussion with Bayer. The client requirement highlighted the difficulty of manually summarizing large, complex clinical tables and the need for accurate, focused summaries.
+h    return _default_decoder.decode(s)
+  File "/usr/lib/python3.10/json/decoder.py", line 337, in decode
 
-This real-world requirement directly shaped the research direction and system design. The resulting solution:
-	•	Addresses actual industry pain points
-	•	Produces deployable, end-to-end pipelines
-	•	Can be integrated into clinical writing and review workflows
+|    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/usr/lib/python3.10/json/decoder.py", line 353, in raw_decode
 
-The work progressed from a client-inspired problem to a research publication, patent filing, and working application, demonstrating clear value beyond academic contribution.
+x    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Expecting ':' delimiter: line 1 column 36 (char 35)
 
-Alchemist-Inspired Research and Systems
-
-The second and third works of 2025 were inspired by ideas and discussions originating from the Alchemist project. These works extend the core vision of Alchemist by focusing on:
-	•	Multi-agent medical reasoning
-	•	Safety-aware decision making
-	•	Explainability and trust in LLM systems
-
-While these were research-driven efforts, the systems were designed with deployment in mind, not as theoretical prototypes.
-
-Deployability and Engineering Focus
-
-Across these client-inspired works, I ensured that:
-	•	All systems are end-to-end and runnable
-	•	Web-based applications were built using Streamlit
-	•	Pipelines support real inputs such as tables, PDFs, and images
-	•	Safety, logging, and traceability are built-in, making them suitable for regulated environments
-	•	The architectures can be scaled or integrated into larger enterprise platforms
-
-These projects demonstrate my ability to:
-	•	Translate client needs into research problems
-	•	Convert research ideas into deployable systems
-	•	Build solutions that are industry-ready, not just experimental
-
-Overall Client Impact
-
-Even without direct client delivery, this work shows:
-	•	Strong alignment with real client requirements
-	•	Ability to build practical, deployable AI solutions
-	•	Contribution to future-ready offerings that can be taken to clients when required
-
-⸻
-
-If you want, I can:
-	•	Make this more conservative (extra-safe wording for client names)
-	•	Merge this with your overall appraisal summary
-	•	Rewrite it in a leadership / business impact tone
-
-Just tell me 👍
+removing /jobs/296952
