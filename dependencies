@@ -1,369 +1,351 @@
-import os, json, torch, inspect, traceback
+import os
+import json
+import torch
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
-    Trainer,
     TrainingArguments,
-    BitsAndBytesConfig,
-    TrainerCallback
+    Trainer,
+    BitsAndBytesConfig
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-def accelerate_compat_shim():
-    try:
-        import accelerate
-        sig = inspect.signature(accelerate.Accelerator.unwrap_model)
-        if "keep_torch_compile" not in sig.parameters:
-            _orig = accelerate.Accelerator.unwrap_model
+# =========================================================
+# CONFIG
+# =========================================================
 
-            def _shim(self, model, *a, **kw):
-                kw.pop("keep_torch_compile", None)
-                return _orig(self, model, *a, **kw)
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
-            accelerate.Accelerator.unwrap_model = _shim
-            print("[shim] unwrap_model patched for Accelerate.")
-        else:
-            print("[shim] No patch needed.")
-    except Exception as e:
-        print("[shim] Accelerate shim failed:", e)
-        traceback.print_exc()
+DATA_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
+
+OUTPUT_DIR = "./qwen_medical_summary_ft"
 
 
-accelerate_compat_shim()
+CTX_MAX = 16000
 
+LR = 2e-5
+EPOCHS = 3
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"               
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"   
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/qwen_2.5_7b_finetune_split"            
-
-SEED = 42
-CTX_MAX = 1536
-PROMPT_MAX = 512
-TARGET_MAX = CTX_MAX - PROMPT_MAX
-WINDOW_OVERLAP = 256
 BATCH_SIZE = 1
-GRAD_ACCUM = 8
-NUM_EPOCHS = 2
-LR = 2e-4
-SAVE_STEPS = 1000
-FP16 = True
+GRAD_ACCUM = 16
+
+torch.manual_seed(42)
 
 
-ALLOWED_LANG_DIRS = {
-    "en", "eng", "english",
-    "hi", "hindi",
-    "mr", "marathi",
-    "bn", "bangla", "bengali"
-}
+# =========================================================
+# TOKENIZER
+# =========================================================
+
+tokenizer = AutoTokenizer.from_pretrained(
+    BASE_MODEL,
+    trust_remote_code=True
+)
+
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+tokenizer.padding_side = "right"
 
 
+# =========================================================
+# DATA LOADER
+# =========================================================
 
-def tprint(msg):
-    print(f"[{msg}]", flush=True)
+def load_jsonl(path):
 
-
-def safe_read_jsonl(path):
     rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+
+    with open(path, "r", encoding="utf8") as f:
         for line in f:
-            s = line.strip()
-            if s:
-                try:
-                    rows.append(json.loads(s))
-                except:
-                    continue
+            rows.append(json.loads(line))
+
     return rows
 
 
 def join_dialogue(rows):
+
     parts = []
+
     for r in rows:
-        if isinstance(r, dict):
-            val = r.get("dialogue", "")
-            if isinstance(val, list):
-                val = " ".join(map(str, val))
-            parts.append(str(val))
-        else:
-            parts.append(str(r))
-    return "\n".join(parts).strip()
+
+        val = r.get("dialogue", "")
+
+        if isinstance(val, list):
+            val = " ".join(val)
+
+        parts.append(val)
+
+    return "\n".join(parts)
 
 
+def build_dataset(split_dir):
 
-def make_examples(split):
     examples = []
-    for lang in os.listdir(split):
-        ldir = os.path.join(split, lang)
-        if not os.path.isdir(ldir):
+
+    for lang in os.listdir(split_dir):
+
+        lang_dir = os.path.join(split_dir, lang)
+
+        dlg_dir = os.path.join(lang_dir, "Dialogues")
+        sum_dir = os.path.join(lang_dir, "Summary_Text")
+
+        if not os.path.isdir(dlg_dir):
             continue
 
-        
-        if lang.lower() not in ALLOWED_LANG_DIRS:
-            continue
+        for fn in os.listdir(dlg_dir):
 
-        dlg = os.path.join(ldir, "Dialogues")
-        summ = os.path.join(ldir, "Summary_Text")
-        
+            if not fn.endswith(".jsonl"):
+                continue
 
-        
-        if os.path.isdir(dlg) and os.path.isdir(summ):
-            for fn in os.listdir(dlg):
-                if not fn.endswith(".jsonl"):
-                    continue
-                rows = safe_read_jsonl(os.path.join(dlg, fn))
-                dialogue = join_dialogue(rows)
-                if not dialogue:
-                    continue
+            rows = load_jsonl(os.path.join(dlg_dir, fn))
+            dialogue = join_dialogue(rows)
 
-                sfile = os.path.join(
-                    summ,
-                    fn.replace(".jsonl", "_summary.txt")
-                )
-                if not os.path.exists(sfile):
-                    continue
+            sum_path = os.path.join(
+                sum_dir,
+                fn.replace(".jsonl", "_summary.txt")
+            )
 
-                text = open(sfile, "r", encoding="utf-8").read().strip()
-                if not text:
-                    continue
+            if not os.path.exists(sum_path):
+                continue
 
-                
-                prompt = (
-                    "Summarize the following doctor–patient dialogue in English "
-                    "The dialogue may be in any language:\n"
-                    f"{dialogue}\n\nSummary:"
-                )
-                examples.append({"prompt": prompt, "target": text})
+            summary = open(sum_path).read().strip()
 
-    tprint(f"Loaded {len(examples)} examples from {split}")
+            examples.append(
+                {
+                    "dialogue": dialogue,
+                    "summary": summary
+                }
+            )
+
     return examples
 
 
+train_raw = build_dataset(os.path.join(DATA_DIR, "train_split"))
+dev_raw = build_dataset(os.path.join(DATA_DIR, "dev"))
 
-def build_tokenizer(path):
-    tok = AutoTokenizer.from_pretrained(
-        path,
-        use_fast=True,
-        trust_remote_code=True  
-    )
-    if tok.pad_token is None:
-        tok.pad_token = tok.eos_token
-    
-    tok.padding_side = "right"
-    return tok
+print("Train size:", len(train_raw))
+print("Dev size:", len(dev_raw))
 
 
-def sliding_chunks(ids, size, overlap):
-    if len(ids) <= size:
-        return [ids]
-    step = size - overlap
-    return [ids[i:i + size] for i in range(0, len(ids), step)]
+train_dataset = Dataset.from_list(train_raw)
+dev_dataset = Dataset.from_list(dev_raw)
 
 
-def map_fn(tokenizer):
-    def _map(batch):
-        out = {"input_ids": [], "attention_mask": [], "labels": []}
-        for p, t in zip(batch["prompt"], batch["target"]):
-            
-            p_ids = tokenizer.encode(p, add_special_tokens=False)[-PROMPT_MAX:]
-            t_ids = tokenizer.encode(" " + t, add_special_tokens=False)[:TARGET_MAX]
-            full = p_ids + t_ids
+# =========================================================
+# PROMPT
+# =========================================================
 
-            for ch in sliding_chunks(full, CTX_MAX, WINDOW_OVERLAP):
-                att = [1] * len(ch)
-                plen = min(len(ch), len(p_ids))
-                labels = [-100] * plen + ch[plen:]
-                out["input_ids"].append(ch)
-                out["attention_mask"].append(att)
-                out["labels"].append(labels)
-        return out
+def build_prompt(dialogue):
 
-    return _map
+    return f"""
+You are a clinical documentation assistant.
 
+Below is a doctor–patient dialogue.
 
+The dialogue may be written in Hindi, Marathi, Bangla, or English.
 
-class Collator:
-    def __init__(self, tok):
-        self.tok = tok
+Write a concise and faithful clinical summary in English.
 
-    def __call__(self, batch):
-        m = max(len(x["input_ids"]) for x in batch)
+Rules:
+- Only include information explicitly mentioned in the dialogue.
+- Do not add symptoms, diagnoses, or medications that are not stated.
+- Preserve negations (example: "denies fever").
 
-        def pad(lst, val):
-            return lst + [val] * (m - len(lst))
+Dialogue:
+{dialogue}
 
-        ids = [pad(x["input_ids"], self.tok.pad_token_id) for x in batch]
-        att = [pad(x["attention_mask"], 0) for x in batch]
-        lbl = [pad(x["labels"], -100) for x in batch]
-        return {
-            "input_ids": torch.tensor(ids),
-            "attention_mask": torch.tensor(att),
-            "labels": torch.tensor(lbl),
-        }
+English Clinical Summary:
+"""
 
 
+# =========================================================
+# TOKENIZATION
+# =========================================================
 
-def build_model():
-    bnb_cfg = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
+def tokenize(example):
+
+    prompt = build_prompt(example["dialogue"])
+    summary = example["summary"] + tokenizer.eos_token
+
+    prompt_ids = tokenizer.encode(
+        prompt,
+        add_special_tokens=False
     )
 
-    model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        quantization_config=bnb_cfg,
-        torch_dtype=torch.float16,
-        trust_remote_code=True,
+    summary_ids = tokenizer.encode(
+        summary,
+        add_special_tokens=False
     )
 
-    model.config.use_cache = False
-    if hasattr(model, "enable_input_require_grads"):
-        model.enable_input_require_grads()
+    if len(prompt_ids) + len(summary_ids) > CTX_MAX:
 
-    
-    model = prepare_model_for_kbit_training(model)
-    model.gradient_checkpointing_enable()
+        prompt_ids = prompt_ids[:CTX_MAX - len(summary_ids)]
 
-    
-    if getattr(model.config, "pad_token_id", None) is None:
-        
-        tokenizer = AutoTokenizer.from_pretrained(
-            BASE_MODEL,
-            trust_remote_code=True,
-            use_fast=True,
+    input_ids = prompt_ids + summary_ids
+
+    labels = [-100] * len(prompt_ids) + summary_ids
+
+    return {
+        "input_ids": input_ids,
+        "attention_mask": [1] * len(input_ids),
+        "labels": labels
+    }
+
+
+train_dataset = train_dataset.map(
+    tokenize,
+    remove_columns=train_dataset.column_names
+)
+
+dev_dataset = dev_dataset.map(
+    tokenize,
+    remove_columns=dev_dataset.column_names
+)
+
+
+# =========================================================
+# COLLATOR
+# =========================================================
+
+def collate(batch):
+
+    max_len = max(len(x["input_ids"]) for x in batch)
+
+    input_ids = []
+    attention_mask = []
+    labels = []
+
+    for x in batch:
+
+        pad = max_len - len(x["input_ids"])
+
+        input_ids.append(
+            x["input_ids"] + [tokenizer.pad_token_id] * pad
         )
-        if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.pad_token_id
 
-    
-    lora = LoraConfig(
-        r=8,
-        lora_alpha=32,
-        lora_dropout=0.05,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        task_type="CAUSAL_LM",
-        bias="none",
-    )
-    model = get_peft_model(model, lora)
-    model.print_trainable_parameters()
-    return model
+        attention_mask.append(
+            x["attention_mask"] + [0] * pad
+        )
+
+        labels.append(
+            x["labels"] + [-100] * pad
+        )
+
+    return {
+        "input_ids": torch.tensor(input_ids),
+        "attention_mask": torch.tensor(attention_mask),
+        "labels": torch.tensor(labels)
+    }
 
 
+# =========================================================
+# MODEL
+# =========================================================
 
-class SavePeftAdapterCallback(TrainerCallback):
-    def __init__(self, out_dir, save_steps=1000):
-        self.out_dir = out_dir
-        self.save_steps = save_steps
-        os.makedirs(out_dir, exist_ok=True)
+bnb_config = BitsAndBytesConfig(
 
-    def on_step_end(self, args, state, control, **kwargs):
-        if state.global_step % self.save_steps == 0 and state.global_step > 0:
-            model = kwargs.get("model")
-            if hasattr(model, "save_pretrained"):
-                ckpt = os.path.join(
-                    self.out_dir, f"adapter_step_{state.global_step}"
-                )
-                model.save_pretrained(ckpt, safe_serialization=True)
-                print(
-                    f"[callback] Saved adapter-only checkpoint at step {state.global_step}"
-                )
+    load_in_4bit=True,
+
+    bnb_4bit_quant_type="nf4",
+
+    bnb_4bit_compute_dtype=torch.float16
+)
 
 
+model = AutoModelForCausalLM.from_pretrained(
 
-def main():
-    torch.manual_seed(SEED)
-    tok = build_tokenizer(BASE_MODEL)
+    BASE_MODEL,
 
-    train_raw = make_examples(os.path.join(DATA_DIR, "train_split"))
-    dev_raw = make_examples(os.path.join(DATA_DIR, "dev"))
+    device_map="auto",
 
-    train = Dataset.from_list(train_raw).map(
-        map_fn(tok),
-        batched=True,
-        num_proc=4,
-        remove_columns=["prompt", "target"],
-    )
-    dev = Dataset.from_list(dev_raw).map(
-        map_fn(tok),
-        batched=True,
-        num_proc=4,
-        remove_columns=["prompt", "target"],
-    )
+    quantization_config=bnb_config,
 
-    model = build_model()
-    args = TrainingArguments(
-        output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=BATCH_SIZE,
-        gradient_accumulation_steps=GRAD_ACCUM,
-        num_train_epochs=NUM_EPOCHS,
-        learning_rate=LR,
-        fp16=FP16,
-        logging_steps=50,
-        save_strategy="steps",
-        save_steps=SAVE_STEPS,
-        save_total_limit=3,
-        eval_strategy="no",  
-        report_to="none",
-        save_safetensors=True,
-        max_steps=28000,
-        eval_accumulation_steps=2,
-    )
+    trust_remote_code=True,
 
-    trainer = Trainer(
-        model=model,
-        args=args,
-        train_dataset=train,
-        eval_dataset=dev,
-        data_collator=Collator(tok),
-        callbacks=[SavePeftAdapterCallback(OUTPUT_DIR, SAVE_STEPS)],
-    )
-
-    
-    ckpt = None
-    if os.path.isdir(OUTPUT_DIR):
-        ckpts = [
-            d
-            for d in os.listdir(OUTPUT_DIR)
-            if d.startswith(("checkpoint-", "adapter_step_"))
-        ]
-        if ckpts:
-            ckpt = os.path.join(
-                OUTPUT_DIR,
-                sorted(
-                    ckpts,
-                    key=lambda x: int("".join(filter(str.isdigit, x)) or 0),
-                )[-1],
-            )
-
-    if ckpt:
-        tprint(f"Resuming from {ckpt}")
-        try:
-            trainer.train(resume_from_checkpoint=ckpt)
-        except ValueError as e:
-            if "vulnerability issue in `torch.load`" in str(e):
-                print(
-                    "[safe-resume] Torch < 2.6 detected; resuming weights only (optimizer reset)."
-                )
-                trainer.train(resume_from_checkpoint=None)
-            else:
-                raise
-    else:
-        tprint("Starting fresh training")
-        trainer.train()
-
-    tprint("Saving final model…")
-    trainer.save_model(OUTPUT_DIR)
-    tok.save_pretrained(OUTPUT_DIR)
-    tprint("Training complete!")
+    torch_dtype=torch.float16
+)
 
 
-if __name__ == "__main__":
-    main()
+model = prepare_model_for_kbit_training(model)
+
+model.gradient_checkpointing_enable()
+
+
+lora_config = LoraConfig(
+
+    r=16,
+
+    lora_alpha=32,
+
+    lora_dropout=0.05,
+
+    target_modules=[
+
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+    ],
+
+    task_type="CAUSAL_LM"
+)
+
+
+model = get_peft_model(model, lora_config)
+
+model.print_trainable_parameters()
+
+
+# =========================================================
+# TRAINING
+# =========================================================
+
+training_args = TrainingArguments(
+
+    output_dir=OUTPUT_DIR,
+
+    per_device_train_batch_size=BATCH_SIZE,
+
+    gradient_accumulation_steps=GRAD_ACCUM,
+
+    num_train_epochs=EPOCHS,
+
+    learning_rate=LR,
+
+    fp16=True,
+
+    logging_steps=50,
+
+    save_steps=500,
+
+    save_total_limit=2,
+
+    report_to="none"
+)
+
+
+trainer = Trainer(
+
+    model=model,
+
+    args=training_args,
+
+    train_dataset=train_dataset,
+
+    eval_dataset=dev_dataset,
+
+    data_collator=collate
+)
+
+
+trainer.train()
+
+
+trainer.save_model(OUTPUT_DIR)
+
+tokenizer.save_pretrained(OUTPUT_DIR)
