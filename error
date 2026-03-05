@@ -1,84 +1,30 @@
-# ============================================================
-#  AZURE OPENAI WRAPPER CLIENT
-# ============================================================
+def load_dialogue_file(path):
 
-import requests
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read().strip()
 
-# Your Azure wrapper endpoint
-AZURE_WRAPPER_URL = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
+        # case 1: JSON array
+        if text.startswith("["):
+            data = json.loads(text)
 
-# your employee id
-EMPLOYEE_ID = "1757421"
+        # case 2: JSONL
+        else:
+            data = []
+            for line in text.splitlines():
+                try:
+                    data.append(json.loads(line))
+                except:
+                    continue
 
-DEFAULT_GPT_MODEL = "gpt-5"
+    except Exception:
+        print("⚠️ Skipping corrupted file:", path)
+        return []
 
+    rows = []
 
-def query_model(
-    model: str,
-    user_prompt: str,
-    system_prompt: Optional[str] = None,
-    image_bytes: Optional[bytes] = None,
-    image_mime_type: Optional[str] = None,
-    pdf_text: Optional[str] = None,
-    tries: int = 2,
-    timeout_val_for_retry: float = 2.0,
-) -> str:
+    for item in data:
+        if isinstance(item, dict):
+            rows.append(item)
 
-    last_exception = None
-
-    combined_prompt = ""
-
-    if system_prompt:
-        combined_prompt += f"SYSTEM:\n{system_prompt}\n\n"
-
-    if pdf_text:
-        combined_prompt += f"[PDF_CONTENT_START]\n{pdf_text}\n[PDF_CONTENT_END]\n\n"
-
-    combined_prompt += f"USER:\n{user_prompt}"
-
-    payload = {
-        "model": model,
-        "prompt": [
-            {"role": "system", "content": system_prompt or ""},
-            {"role": "user", "content": combined_prompt}
-        ],
-        "max_tokens": 2048,
-        "employeeId": EMPLOYEE_ID
-    }
-
-    for attempt in range(tries):
-        try:
-
-            response = requests.post(
-                AZURE_WRAPPER_URL,
-                json=payload,
-                timeout=60
-            )
-
-            response.raise_for_status()
-
-            data = response.json()
-
-            ans = data["choices"][0]["message"]["content"]
-
-            log_trace(
-                f"Azure wrapper model '{model}' answered, len={len(ans)}.",
-                "DEBUG"
-            )
-
-            return ans.strip()
-
-        except Exception as ex:
-
-            last_exception = ex
-
-            log_trace(
-                f"Error in Azure query_model (attempt {attempt+1}/{tries}): "
-                f"{type(ex).__name__} - {ex}",
-                "ERROR",
-            )
-
-            if attempt < tries - 1:
-                time.sleep(timeout_val_for_retry)
-
-    return f"ERROR: LLM query failed after {tries} attempts. Last error: {last_exception}"
+    return rows
