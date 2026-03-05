@@ -1,7 +1,6 @@
 def tokenize(example):
 
     try:
-
         prompt_text = build_prompt(example["dialogue"])
 
         messages = [
@@ -20,14 +19,16 @@ def tokenize(example):
         prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
         summary_ids = tokenizer.encode(summary, add_special_tokens=False)
 
-        # skip if too long
         if len(prompt_ids) + len(summary_ids) > CTX_MAX:
-            return {}
+            return {
+                "input_ids": [],
+                "attention_mask": [],
+                "labels": []
+            }
 
         input_ids = prompt_ids + summary_ids
 
         labels = [-100] * len(prompt_ids) + summary_ids
-        labels = labels[:len(input_ids)]
 
         return {
             "input_ids": input_ids,
@@ -36,10 +37,8 @@ def tokenize(example):
         }
 
     except Exception:
-        return {}
-
-train_dataset = train_dataset.map(tokenize, remove_columns=train_dataset.column_names)
-dev_dataset = dev_dataset.map(tokenize, remove_columns=dev_dataset.column_names)
-
-train_dataset = train_dataset.filter(lambda x: len(x["input_ids"]) > 0)
-dev_dataset = dev_dataset.filter(lambda x: len(x["input_ids"]) > 0)
+        return {
+            "input_ids": [],
+            "attention_mask": [],
+            "labels": []
+        }
