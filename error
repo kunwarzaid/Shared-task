@@ -1,254 +1,36 @@
-import os, json, time
-from pathlib import Path
-from tqdm import tqdm
+\section{Introduction}
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from peft import PeftModel
+Large Language Models (LLMs) such as GPT-4 \cite{achiam2023gpt}, Gemini \cite{team2023gemini}, and Med-PaLM 2 \cite{singhal2025toward} have demonstrated remarkable progress in natural language reasoning and generalization across diverse domains, including medicine. They now perform at near-clinician levels on medical question-answering benchmarks \cite{kung2023performance,nori2023capabilities}, suggesting potential applications in decision support, documentation, and triage \cite{lee2023benefits}. Yet, the very properties that make LLMs powerful—scale, open-endedness, and linguistic fluency—also render them unreliable in domains requiring factual precision, causal reasoning, and accountability \cite{ji2023survey,begoli2019need}.
 
+Integrating LLMs into healthcare introduces challenges that extend beyond accuracy. Medicine demands not only correct predictions but also \emph{explainable and justifiable} reasoning. Clinicians reason through causality, uncertainty, and evidence weighting—capabilities that current LLMs only partially emulate. When an AI system proposes a diagnosis or prescription, its credibility depends as much on \emph{why} it reached that conclusion as on \emph{what} it predicts \cite{tonekaboni2019clinicians,amann2020explainability}. Without transparent reasoning, even correct answers may be unsafe, as the underlying rationale could be spurious or unverifiable.
 
-# ============================================================
-# CONFIG
-# ============================================================
+Despite improvements in alignment and red-teaming \cite{mei2023assert}, clinical LLMs still struggle with trustworthiness—a composite property encompassing accuracy, consistency, safety, and interpretability \cite{a2019,huang2025survey}. Models frequently display unjustified confidence \cite{kadavath2022language}, produce inconsistent explanations, or fail to acknowledge uncertainty in ambiguous cases. This epistemic overconfidence poses a critical risk in medicine, where admitting uncertainty can be safer than being confidently wrong. While systems such as Med-PaLM 2 \cite{singhal2025toward}, BioGPT \cite{luo2022biogpt}, and ChatDoctor \cite{li2023chatdoctor} exhibit strong factual accuracy, they often lack reasoning stability—small prompt changes can yield entirely different diagnoses. Such instability parallels findings in calibration and abstention research, where uncalibrated confidence undermines clinical reliability \cite{guo2017calibration,malinin2020uncertainty}.
 
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
-ADAPTER_DIR = "/workspace/data/KZ_2117574/EACL/finetune_restructure/EACL/qwen_2.5_7b_finetune_split"
+Prior works such as Med-Guard \cite{jain2025medguard}, addressed safety but not transparency, their reasoning process remains opaque: clinicians could not inspect the model’s thought process, track evolving hypotheses, or understand why specific conclusions were reached.
 
-TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
+These limitations motivated \textbf{Trust-X}, a to design \emph{trust-centered explainability}. 
+Trust-X includes four main features:
+\begin{itemize}
+    \item \textbf{Consensus Reasoning:} Several Doctor Agents analyze each case independently and vote on the best diagnosis. Their disagreement, measured by the \textit{Consensus Disagreement Rate (CDR)}, shows uncertainty.
+    \item \textbf{Reasoning Trace:} Each diagnostic step includes a clear trace linking evidence, reasoning, and results, showing how thoughts evolve.
+    \item \textbf{End-to-End Logging:} Every agent action is recorded with time, role, and reason, allowing full replay and accountability.
+    \item \textbf{Trust Scoring:} A trust layer combines interpretability, safety, and reasoning quality into measurable trust scores.
+\end{itemize}
+Together, these parts make reasoning visible and testable. Logging turns black-box behavior into traceable steps; consensus captures uncertainty; and trust scores connect reasoning quality with safety.
+Rather than claiming to make LLMs trustworthy, Trust-X \emph{reveals and measures} where trust emerges—and where it fails—establishing trustworthiness as a property of the reasoning process, not merely the outcome.
 
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/finetune_2"
 
-TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
+\section{Related Work}
 
-MAX_CONTEXT = 8192
-MAX_NEW_TOKENS_SUMMARY = 256
+The pursuit of explainability in artificial intelligence has long sought to bridge algorithmic performance with human interpretability. Early work on Explainable AI (XAI) employed feature attribution and surrogate modeling—e.g., LIME \cite{ribeiro2016should}, SHAP \cite{lundberg2017unified}, and Grad-CAM \cite{selvaraju2017grad}—to visualize which features influenced predictions. While effective for static models, such methods are ill-suited for domains like medicine, where decisions evolve through dialogue and evidence accumulation. As Holzinger et al. \cite{holzinger2019causability} and Ahmad et al. \cite{ahmad2018interpretable} argue, medical explainability requires \emph{causability}: a human-understandable mapping between evidence, inference, and outcome.
 
+The advent of LLMs has redefined explainability through reasoning traces and self-reflection. Chain-of-thought prompting \cite{wei2022chain}, self-consistency \cite{wang2022self}, and reflection-based reasoning \cite{shinn2023reflexion} externalize a model’s deliberations as text. However, these traces are self-generated and often post-hoc rationalizations rather than genuine reasoning \cite{turpin2023language}. Models frequently express confident but incorrect rationales \cite{kadavath2022language,ji2023survey}, resulting in what clinicians might call “hallucinated certainty.” Thus, transparency alone does not guarantee truthfulness of thought.
 
-# ============================================================
-# SYSTEM PROMPT
-# ============================================================
+In medicine, explainability and safety are inseparable. Tonekaboni et al. \cite{tonekaboni2019clinicians} and Amann et al. \cite{amann2020explainability} highlight that clinicians evaluate models by their reasoning legitimacy—whether conclusions align with medical logic. While LLM-based medical systems like BioGPT \cite{luo2022biogpt}, Med-PaLM 2 \cite{singhal2025toward}, and ChatDoctor \cite{li2023chatdoctor} demonstrate strong factual performance, they remain opaque in diagnostic reasoning. Clinical-Camel \cite{toma2023clinical} and similar systems introduced interactive consultations but still operate as single-agent frameworks without explicit uncertainty estimation or differential tracking.
 
-SYSTEM_SUMMARY = (
-    "You are a clinical documentation assistant. "
-    "Generate a concise and faithful English clinical summary "
-    "from a doctor–patient dialogue. "
-    "Only include information explicitly mentioned in the dialogue. "
-    "Do not infer diagnoses, tests, or medications. "
-    "Preserve negations such as 'denies fever'. "
-    "End the summary with the token <<END>>."
-)
+Multi-agent systems have begun addressing these gaps. AgentClinic \cite{schmidgall2024agentclinic} modeled doctor–patient interaction as a cooperative dialogue between reasoning and data agents, improving conversational coherence. Yet, accountability remains limited—agents exchange information but do not produce verifiable reasoning records. Similarly, recent safety frameworks like GuardMed and SafetyBench integrate oversight mechanisms but focus on output moderation rather than process transparency.
 
+Regulatory frameworks from the World Health Organization \cite{guidance2021ethics} and the European Commission \cite{bomhard2021regulation} emphasize traceability and auditability as cornerstones of trustworthy medical AI. However, most current LLM pipelines remain black boxes during inference, offering no visibility into evolving reasoning states—hindering reproducibility, fairness audits, and clinician trust \cite{begoli2019need,doshi2017towards}.
 
-# ============================================================
-# UTILS
-# ============================================================
-
-def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-
-def safe_read_jsonl(path):
-
-    rows = []
-
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            try:
-                rows.append(json.loads(line))
-            except:
-                continue
-
-    return rows
-
-
-def write_text(path, text):
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
-
-
-def build_messages(system_prompt, user_prompt):
-
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-
-# ============================================================
-# MODEL LOADING
-# ============================================================
-
-def load_model():
-
-    tprint("Loading tokenizer")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        BASE_MODEL,
-        trust_remote_code=True
-    )
-
-    tokenizer.pad_token = tokenizer.eos_token
-
-    quant_cfg = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    tprint("Loading base model")
-
-    base_model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        quantization_config=quant_cfg,
-        torch_dtype=torch.float16,
-        trust_remote_code=True
-    )
-
-    tprint("Loading LoRA adapter")
-
-    model = PeftModel.from_pretrained(
-        base_model,
-        ADAPTER_DIR,
-        torch_dtype=torch.float16
-    )
-
-    model.eval()
-    model.config.use_cache = True
-
-    return model, tokenizer
-
-
-# ============================================================
-# GENERATION
-# ============================================================
-
-def chat_generate(model, tokenizer, messages):
-
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-
-    ids = tokenizer.encode(prompt, add_special_tokens=False)
-
-    if len(ids) > MAX_CONTEXT:
-        ids = ids[-MAX_CONTEXT:]
-        prompt = tokenizer.decode(ids, skip_special_tokens=True)
-
-    inputs = tokenizer([prompt], return_tensors="pt").to(model.device)
-
-    with torch.no_grad():
-
-        output = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
-            do_sample=False,
-            num_beams=4,
-            repetition_penalty=1.1,
-            length_penalty=1.0,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    gen = output[0][len(inputs.input_ids[0]):]
-
-    return tokenizer.decode(gen, skip_special_tokens=True).strip()
-
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
-
-def run_summary():
-
-    model, tokenizer = load_model()
-
-    for lang_dir in Path(TEST_DIR).iterdir():
-
-        if lang_dir.name not in TARGET_LANGS:
-            continue
-
-        tprint(f"Processing language: {lang_dir.name}")
-
-        dlg_dir = lang_dir / "Dialogues"
-
-        out_dir = Path(OUTPUT_DIR) / lang_dir.name / "Summary_Text"
-
-        files = sorted(dlg_dir.glob("*.jsonl"))
-
-        print_limit = 3
-        printed = 0
-
-        for f in tqdm(files, desc=lang_dir.name):
-
-            out_file = out_dir / f"{f.stem}_summary.txt"
-
-            if out_file.exists():
-                continue
-
-            rows = safe_read_jsonl(f)
-
-            dialogue = " ".join(
-                r.get("dialogue", "")
-                for r in rows
-                if isinstance(r, dict)
-            )
-
-            user_prompt = f"""
-Below is a doctor–patient conversation.
-
-The dialogue may be written in Hindi, Marathi, Bangla, or English.
-
-Write a concise and faithful clinical summary in English.
-
-Rules:
-- Only include information explicitly mentioned.
-- Do not infer diagnoses or medications.
-- Preserve negations such as "denies fever".
-
-Dialogue:
-{dialogue}
-"""
-
-            summary = chat_generate(
-                model,
-                tokenizer,
-                build_messages(SYSTEM_SUMMARY, user_prompt)
-            )
-
-            summary = summary.split("<<END>>")[0].strip()
-
-            write_text(out_file, summary)
-
-            # PRINT EXAMPLES
-            if printed < print_limit:
-
-                print("\n==============================")
-                print("FILE:", f.name)
-
-                print("\nDIALOGUE SAMPLE:\n")
-                print(dialogue[:800])
-
-                print("\nGENERATED SUMMARY:\n")
-                print(summary)
-
-                print("==============================\n")
-
-                printed += 1
-
-        torch.cuda.empty_cache()
-
-    tprint("Inference completed.")
-
-
-# ============================================================
-# ENTRY POINT
-# ============================================================
-
-if __name__ == "__main__":
-    run_summary()
+\textbf{Trust-X} builds on these efforts by making explainability part of the reasoning process. It records reasoning steps, agent interactions, and consensus decisions in real time. Each exchange is logged with context, creating a full trail that clinicians can review. Unlike post-hoc methods, Trust-X captures how evidence leads to conclusions, helping clinicians inspect, question, and verify the model’s thought process.
