@@ -5,3 +5,40 @@ You must only use information explicitly mentioned in the dialogue.
 Do not infer diagnoses or treatments that are not stated.
 Always preserve negations such as "denies fever".
 Write summaries in English regardless of the dialogue language.
+
+
+You will generate a clinical summary from a doctor–patient dialogue.
+
+Step 1 — Extract Evidence
+Identify key facts explicitly stated in the dialogue:
+- symptoms
+- clinical findings
+- suspected diagnoses
+- investigations
+- treatments or management advice
+- follow-up instructions
+
+Write these as short bullet points titled:
+"EVIDENCE FROM DIALOGUE"
+
+Step 2 — Write Clinical Summary
+
+Using ONLY the evidence listed above, write a structured English clinical summary of the case.
+
+Guidelines:
+- Only include information explicitly mentioned in the dialogue.
+- Do NOT add medical knowledge or assumptions.
+- Preserve negations such as "denies fever".
+- The summary should cover symptoms, diagnosis suspicion, investigations, treatment plan, and follow-up if mentioned.
+- Write in clear clinical language.
+
+Dialogue:
+{dialogue}
+
+Output format:
+
+EVIDENCE FROM DIALOGUE:
+- ...
+
+CLINICAL SUMMARY:
+...
