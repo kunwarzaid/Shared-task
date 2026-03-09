@@ -1,30 +1,11 @@
-import os, json, time, re, random
+import os, json, time
 from pathlib import Path
 from tqdm import tqdm
+
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
-from langdetect import detect, DetectorFactory
-from huggingface_hub import login
 
-import torch, bitsandbytes as bnb, transformers
-print(torch.__version__)
-print(torch.version.cuda)
-print(bnb.__version__)
-print(transformers.__version__)
-
-# ============================================================
-# AUTH (optional)
-# ============================================================
-
-def huggingface_login():
-    token = os.getenv("", "")
-    if token:
-        login(token=token)
-
-huggingface_login()
-
-DetectorFactory.seed = 42
-torch.set_grad_enabled(False)
 
 # ============================================================
 # CONFIG
@@ -32,36 +13,32 @@ torch.set_grad_enabled(False)
 
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
-# 🔴 PATH TO YOUR FINETUNED LoRA ADAPTER
 ADAPTER_DIR = "/workspace/data/KZ_2117574/EACL/finetune_restructure/EACL/qwen_2.5_7b_finetune_split"
 
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
-TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
+
 OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/finetune_2"
 
-USE_4BIT = True
 TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
 
-FEW_SHOT_K = 0
-FEW_SHOT_SEED = 42
-MAX_NEW_TOKENS_SUMMARY = 512
+MAX_CONTEXT = 8192
+MAX_NEW_TOKENS_SUMMARY = 256
 
-# 🔒 HARD MEMORY-SAFE LIMITS (CRITICAL)
-MAX_TOTAL_INPUT_TOKENS = 8192
-TARGET_DIALOGUE_TOKENS = 2048
-EXAMPLE_DIALOGUE_TOKENS = 512
 
-MAX_NEW_TOKENS_SUMMARY = 512
-MAX_TEST_EXAMPLES = 100
+# ============================================================
+# SYSTEM PROMPT
+# ============================================================
 
 SYSTEM_SUMMARY = (
-    "You are a clinical summarization assistant. "
-    "Read a doctor–patient dialogue and write a fluent English summary "
-    "focusing on diagnosis, symptoms, investigations, management plan, "
-    "supportive care, and follow-up. "
-    "Do not hallucinate new diagnoses or tests. "
-    "End your summary with the token <<END>>."
+    "You are a clinical documentation assistant. "
+    "Generate a concise and faithful English clinical summary "
+    "from a doctor–patient dialogue. "
+    "Only include information explicitly mentioned in the dialogue. "
+    "Do not infer diagnoses, tests, or medications. "
+    "Preserve negations such as 'denies fever'. "
+    "End the summary with the token <<END>>."
 )
+
 
 # ============================================================
 # UTILS
@@ -70,197 +47,173 @@ SYSTEM_SUMMARY = (
 def tprint(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
+
 def safe_read_jsonl(path):
+
     rows = []
+
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
                 rows.append(json.loads(line))
             except:
                 continue
+
     return rows
 
+
 def write_text(path, text):
+
     path.parent.mkdir(parents=True, exist_ok=True)
+
     with open(path, "w", encoding="utf-8") as f:
         f.write(text.strip() + "\n")
 
-def detect_lang(text):
-    try:
-        return detect(text)
-    except:
-        return "unknown"
-
-def clip_tokens(tokenizer, text, max_tokens):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
-
-def clip_prompt_after_template(tokenizer, text, max_tokens):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
 
 def build_messages(system_prompt, user_prompt):
+
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
 
-# ============================================================
-# FEW-SHOT EXAMPLES
-# ============================================================
-
-def collect_few_shot_examples(root, lang, k, seed):
-    rng = random.Random(seed)
-    dlg_dir = Path(root) / lang / "Dialogues"
-    sum_dir = Path(root) / lang / "Summary_Text"
-
-    if not dlg_dir.exists():
-        return []
-
-    files = sorted(dlg_dir.glob("*.jsonl"))[:100]
-    rng.shuffle(files)
-
-    examples = []
-    for f in files:
-        sfile = sum_dir / f"{f.stem}_summary.txt"
-        if not sfile.exists():
-            continue
-
-        dialogue = " ".join(
-            r.get("dialogue", "")
-            for r in safe_read_jsonl(f)
-            if isinstance(r, dict)
-        ).strip()
-
-        summary = sfile.read_text(encoding="utf-8", errors="replace").strip()
-        if dialogue and summary:
-            examples.append((dialogue, summary))
-
-        if len(examples) == k:
-            break
-
-    return examples
 
 # ============================================================
-# MODEL LOADING (FINETUNED)
+# MODEL LOADING
 # ============================================================
 
-def load_model(base_model, adapter_dir):
+def load_model():
+
     tprint("Loading tokenizer")
-    tokenizer = AutoTokenizer.from_pretrained(base_model, use_fast=True)
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        BASE_MODEL,
+        trust_remote_code=True
+    )
+
     tokenizer.pad_token = tokenizer.eos_token
 
     quant_cfg = BitsAndBytesConfig(
-        load_in_4bit=USE_4BIT,
+        load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.float16
     )
 
     tprint("Loading base model")
+
     base_model = AutoModelForCausalLM.from_pretrained(
-        base_model,
+        BASE_MODEL,
         device_map="auto",
         quantization_config=quant_cfg,
-        dtype=torch.float16,
+        torch_dtype=torch.float16,
         trust_remote_code=True
     )
 
-    tprint("Loading fine-tuned LoRA adapter")
+    tprint("Loading LoRA adapter")
+
     model = PeftModel.from_pretrained(
         base_model,
-        adapter_dir,
-        dtype=torch.float16
+        ADAPTER_DIR,
+        torch_dtype=torch.float16
     )
 
     model.eval()
+    model.config.use_cache = True
+
     return model, tokenizer
+
 
 # ============================================================
 # GENERATION
 # ============================================================
 
 def chat_generate(model, tokenizer, messages):
+
     prompt = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True
     )
 
-    # 🔴 HARD CLIP FINAL PROMPT
-    prompt = clip_prompt_after_template(
-        tokenizer,
-        prompt,
-        MAX_TOTAL_INPUT_TOKENS
-    )
+    ids = tokenizer.encode(prompt, add_special_tokens=False)
+
+    if len(ids) > MAX_CONTEXT:
+        ids = ids[-MAX_CONTEXT:]
+        prompt = tokenizer.decode(ids, skip_special_tokens=True)
 
     inputs = tokenizer([prompt], return_tensors="pt").to(model.device)
 
     with torch.no_grad():
+
         output = model.generate(
             **inputs,
             max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
             do_sample=False,
-            num_beams=1,
-            use_cache=True,
+            num_beams=4,
+            repetition_penalty=1.1,
+            length_penalty=1.0,
             pad_token_id=tokenizer.eos_token_id
         )
 
     gen = output[0][len(inputs.input_ids[0]):]
+
     return tokenizer.decode(gen, skip_special_tokens=True).strip()
+
 
 # ============================================================
 # MAIN PIPELINE
 # ============================================================
 
-def run_summary_only():
-    model, tokenizer = load_model(BASE_MODEL, ADAPTER_DIR)
+def run_summary():
+
+    model, tokenizer = load_model()
 
     for lang_dir in Path(TEST_DIR).iterdir():
+
         if lang_dir.name not in TARGET_LANGS:
             continue
 
-        tprint(f"Language: {lang_dir.name}")
+        tprint(f"Processing language: {lang_dir.name}")
+
         dlg_dir = lang_dir / "Dialogues"
+
         out_dir = Path(OUTPUT_DIR) / lang_dir.name / "Summary_Text"
 
-        files = sorted(dlg_dir.glob("*.jsonl"))[:MAX_TEST_EXAMPLES]
+        files = sorted(dlg_dir.glob("*.jsonl"))
 
-        few_shot = collect_few_shot_examples(
-            TRAIN_SPLIT_DIR,
-            lang_dir.name,
-            FEW_SHOT_K,
-            FEW_SHOT_SEED
-        )
+        print_limit = 3
+        printed = 0
 
         for f in tqdm(files, desc=lang_dir.name):
+
             out_file = out_dir / f"{f.stem}_summary.txt"
+
             if out_file.exists():
                 continue
 
+            rows = safe_read_jsonl(f)
+
             dialogue = " ".join(
                 r.get("dialogue", "")
-                for r in safe_read_jsonl(f)
+                for r in rows
                 if isinstance(r, dict)
             )
-            dialogue = clip_tokens(tokenizer, dialogue, TARGET_DIALOGUE_TOKENS)
 
-            prefix = ""
-            for i, (d, s) in enumerate(few_shot, 1):
-                d = clip_tokens(tokenizer, d, EXAMPLE_DIALOGUE_TOKENS)
-                s = s.replace("<<END>>", "").strip()
-                prefix += (
-                    f"Example {i}:\nDialogue:\n{d}\n\n"
-                    f"English Summary:\n{s}\n---\n"
-                )
+            user_prompt = f"""
+Below is a doctor–patient conversation.
 
-            user_prompt = (
-                f"{prefix}\nDialogue:\n{dialogue}\n\n"
-                "Write a detailed but concise English clinical summary and end with <<END>>."
-            )
+The dialogue may be written in Hindi, Marathi, Bangla, or English.
+
+Write a concise and faithful clinical summary in English.
+
+Rules:
+- Only include information explicitly mentioned.
+- Do not infer diagnoses or medications.
+- Preserve negations such as "denies fever".
+
+Dialogue:
+{dialogue}
+"""
 
             summary = chat_generate(
                 model,
@@ -270,28 +223,32 @@ def run_summary_only():
 
             summary = summary.split("<<END>>")[0].strip()
 
-            # enforce English if needed
-            if detect_lang(summary) != "en":
-                user_prompt = (
-                    f"{prefix}\nDialogue:\n{dialogue}\n\n"
-                    "Write ONLY an English clinical summary. End with <<END>>."
-                )
-                summary = chat_generate(
-                    model,
-                    tokenizer,
-                    build_messages(SYSTEM_SUMMARY, user_prompt)
-                )
-                summary = summary.split("<<END>>")[0].strip()
-
             write_text(out_file, summary)
+
+            # PRINT EXAMPLES
+            if printed < print_limit:
+
+                print("\n==============================")
+                print("FILE:", f.name)
+
+                print("\nDIALOGUE SAMPLE:\n")
+                print(dialogue[:800])
+
+                print("\nGENERATED SUMMARY:\n")
+                print(summary)
+
+                print("==============================\n")
+
+                printed += 1
 
         torch.cuda.empty_cache()
 
-    tprint("Inference complete.")
+    tprint("Inference completed.")
+
 
 # ============================================================
 # ENTRY POINT
 # ============================================================
 
 if __name__ == "__main__":
-    run_summary_only()
+    run_summary()
