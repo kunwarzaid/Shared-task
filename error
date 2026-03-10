@@ -1,18 +1,110 @@
-8Now Evaluating: Qwen-2.5-7B-finetune
- Language: English
+Ground Truth
+Summary: In a head and neck cancer risk-screening encounter, Ravi Kumar (45) and his wife Priya were evaluated for risk factors, symptoms, and a plan to reduce cancer risk. No current alarm symptoms or neck lumps were found on a quick exam. A comprehensive risk-reduction plan was started, including tobacco/alcohol cessation, oral health improvements, HPV education, and follow-up in two weeks; additional tests or biopsy would be pursued only if suspicious findings appear.
 
-aTraceback (most recent call last):
-  File "/workspace/multi_summ/eval.py", line 277, in <module>
+Key events and findings
+- Setting and participants
+  - ENT risk-factor screening for Ravi, with wife Priya participating to support ongoing risk reduction.
+- Risk factors identified
+  - Tobacco: daily smokeless tobacco (khaini); occasional gutkha; no smoking history.
+  - Alcohol: weekend consumption (a couple of drinks).
+  - Betel/areca nut: betel quid chewing several times per week.
+  - HPV: not vaccinated; education provided; vaccination discussed per guidelines.
+  - Diet and dental health: dental hygiene generally okay; low fruit/vegetable intake.
+  - Occupational exposure: bus driver with dust/fumes exposure; plan includes dental check and emphasis on oral hygiene.
+  - Family history: no known cancer.
+- Symptoms and red flags
+  - Queries for persistent sore throat, hoarseness, dysphagia, neck lump, facial pain, ear fullness, nasal discharge, weight loss, fatigue, breathing trouble.
+  - Ravi reported no persistent symptoms or neck lump; throat irritation after long shifts noted but not persistent.
+- Physical examination plan and findings
+  - Quick oral screen (under tongue, teeth, gums, floor of mouth, tongue, tonsils) and neck exam for lumps.
+  - Exam: mouth opening normal; neck soft with no obvious lumps; no immediate red flags.
+  - Mouth appeared normal; no suspicious lesions or persistent red patches detected.
+- Counseling and management plan
+  - Tobacco/alcohol cessation
+    - Structured quit plan with nicotine replacement options (gum, patches, lozenges/tablets) and behavioral therapy.
+    - Emphasis on gradual reduction of smokeless tobacco; practical daily goals; home-environment changes.
+    - Discussion of costs/subsidies for cessation aids; hospital-based support arranged.
+    - Printed risk assessment and quit plan to be provided; two-week follow-up scheduled.
+  - Oral health and nutrition
+    - Guidance to improve dental hygiene (brushing, flossing) and increase fruit/vegetable intake; regular dental check-ups recommended.
+  - HPV education and vaccination
+    - HPV-related cancer risk discussed; vaccination information provided; patient requested more information before deciding.
+  - Other risk reduction
+    - Education to stop or reduce betel nut use; plan to gradually reduce smokeless tobacco.
+  - Tests and follow-up planning
+    - HIV/other infections tested only if indicated.
+    - If any suspicious findings arise during the quick exam, a biopsy would be planned.
+    - Dental referral arranged; HPV counseling provided today; imaging/biopsy only if necessary.
+    - Follow-up in two weeks to review progress and adjust the plan; printed materials provided; wife to review with patient.
+  - Additional notes
+    - If new symptoms develop (persistent sore throat, neck lump, trouble swallowing), urgent contact advised.
+    - Family involvement encouraged; wife joined for counseling and risk-reduction planning.
+- Next steps and notes
+  - Quick oral exam showed no immediate biopsy due to absence of suspicious findings.
+  - Two-week follow-up arranged to review progress and determine if further testing is warranted.
+  - Dental referral and HPV counseling provided; imaging/biopsy planned only if needed.
+  - Plan includes increasing fruits/vegetables and reducing red meat; intensified support if quitting proves difficult.
+  - Printed risk assessment, quit plan, and resources to be provided; Priya to assist with home follow-through.
+- Patient questions and educator responses
+  - Question: how soon benefits from quitting appear? Answer: energy and cravings may improve within days to weeks; long-term cancer risk reduction takes months to years, but daily reductions help.
+- Family involvement
+  - Priya to be involved in follow-up visits; home routine changes discussed; support plan to remove triggers and create coping strategies.
 
-E    main()
-  File "/workspace/multi_summ/eval.py", line 256, in main
+Overall assessment
+- Identified key risk factors (heavy smokeless tobacco use, betel quid chewing, weekend alcohol, dust exposure) with no current alarm symptoms or palpable neck lumps.
+- Implemented a comprehensive risk-reduction plan focused on cessation with nicotine replacement and behavioral support, improved oral health, HPV education/vaccination consideration, and gradual reduction of betel nut and smokeless tobacco.
+- No immediate imaging or biopsy; a two-week follow-up will reassess progress and decide if further testing is warranted.
+- Both Ravi and Priya engaged in planning, with materials provided and contact/follow-up arranged.
 
-r    scores = evaluate_language(lang, path)
-  File "/workspace/multi_summ/eval.py", line 230, in evaluate_language
+Generated
+Summary of the head and neck cancer risk-screening dialogue (key events, symptoms, diagnosis, and treatment steps)
 
-{    for i, (s, p) in enumerate(tqdm(list(zip(sources, preds)), desc=f"{lang} NLI")):
-NameError: name 'tqdm' is not defined
+- Patient profile and risk factors
+  - Ravi Kumar, 45, bus driver from Pune.
+  - Risk factors discussed: daily smokeless tobacco (khaini and occasional gutkha), betel quid chewing several times weekly, weekend alcohol use, dust exposure at work, low fruit/vegetable intake.
+  - No known family history of cancer.
 
-removing /jobs/297532
+- Presenting symptoms
+  - No persistent sore throat, hoarseness, dysphagia, or weight loss reported.
+  - Occasional throat irritation after long shifts; voice normal; occasional throat clearing.
 
-Failed to execute script
+- Screening process and findings
+  - Quick oral screen and neck examination performed.
+  - Mouth: no obvious lesions or persistent red patches.
+  - Neck: soft, no palpable lumps.
+  - Overall: no alarming symptoms; no immediate need for biopsy.
+
+- Diagnosis
+  - No cancer diagnosed at this screening.
+  - Emphasis on risk reduction and follow-up due to multiple risk factors.
+
+- Risk-reduction and management plan
+  - Tobacco cessation: structured quit plan with nicotine replacement options (gum, patches, lozenges) and behavioral therapy; tailored to Ravi’s preferences.
+  - Betel quid and gutkha: plan to reduce betel quid and gutkha gradually.
+  - Diet and dental health: improve dental hygiene (brush twice daily, floss regularly) and increase fruit/vegetable intake.
+  - Occupational exposure: dental check and emphasis on good oral hygiene due to dust exposure.
+  - HPV vaccination: discussed; some throat cancers are linked to HPV even in non-smokers; guidelines and vaccination options to be provided; HPV counseling offered.
+  - Testing: testing for infections only if indicated; HIV and other infections considered if symptoms or risk warrants.
+  - Follow-up: two-week follow-up to review progress, adjust the plan, and decide if further testing is warranted.
+  - Printed materials: risk factors, benefits of cessation, and plan for reducing tobacco and alcohol to be provided.
+
+- Involvement and support
+  - Ravi’s wife, Priya, invited to participate in counseling and decision-making for big decisions.
+  - Priya to review goals with Ravi and help him stay on track.
+  - Dental referral and HPV counseling to be arranged today.
+  - Home environment changes: remove easy access to tobacco, avoid triggers, and plan alternative coping strategies.
+
+- Next steps and timeline
+  - Two-week follow-up to review progress, adjust the plan, and determine if further testing is needed.
+  - Printed materials to be provided (risk assessment, quit plan, contact details for support).
+  - Dental referral and HPV counseling to be arranged today.
+  - If any suspicious findings arise during screening, a biopsy would be planned; no immediate biopsy required at this time.
+
+- Patient and family engagement
+  - Ravi expressed willingness to reduce tobacco use and improve dental health.
+  - Priya committed to supporting Ravi at home and participating in counseling.
+  - Both parties agreed to a step-by-step, doable plan with clear next steps.
+
+- Additional notes
+  - If symptoms worsen (new lump, persistent sore throat, trouble swallowing), Ravi should contact the clinic immediately.
+  - The team will document the plan and ensure the next steps are clear for both Ravi and Priya.
