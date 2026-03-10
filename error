@@ -5,9 +5,9 @@ import requests
 import pandas as pd
 from pathlib import Path
 
-# --------------------------------
+# -------------------------
 # CONFIG
-# --------------------------------
+# -------------------------
 
 WRAPPER_URL = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
 MODEL = "gpt-5"
@@ -20,9 +20,9 @@ DATA_DIR = "data_eval"
 MAX_TOKENS = 1200
 
 
-# --------------------------------
+# -------------------------
 # GPT CALL
-# --------------------------------
+# -------------------------
 
 def call_gpt(prompt):
 
@@ -44,9 +44,9 @@ def call_gpt(prompt):
         return ""
 
 
-# --------------------------------
+# -------------------------
 # UNZIP DATA
-# --------------------------------
+# -------------------------
 
 def unzip_data():
 
@@ -61,9 +61,9 @@ def unzip_data():
     print("Data extracted")
 
 
-# --------------------------------
+# -------------------------
 # LOAD DIALOGUE
-# --------------------------------
+# -------------------------
 
 def load_dialogue(path):
 
@@ -74,27 +74,27 @@ def load_dialogue(path):
         for line in f:
             obj = json.loads(line)
 
-            speaker = obj.get("speaker","")
-            text = obj.get("dialogue","")
+            speaker = obj.get("speaker", "")
+            text = obj.get("dialogue", "")
 
             lines.append(f"{speaker}: {text}")
 
     return "\n".join(lines)
 
 
-# --------------------------------
+# -------------------------
 # LOAD SUMMARY
-# --------------------------------
+# -------------------------
 
 def load_summary(path):
 
-    with open(path,"r",encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
 
-# --------------------------------
-# PROMPT
-# --------------------------------
+# -------------------------
+# BUILD PROMPT
+# -------------------------
 
 def build_prompt(dialogue, summary):
 
@@ -102,9 +102,8 @@ def build_prompt(dialogue, summary):
 Evaluate factual faithfulness of the summary with respect to the dialogue.
 
 Steps:
-
 1 Extract atomic facts from the summary
-2 Check whether each fact is supported by the dialogue
+2 Verify each fact against the dialogue
 3 Mark unsupported facts as hallucinated
 
 Dialogue:
@@ -113,122 +112,123 @@ Dialogue:
 Summary:
 {summary}
 
-Return JSON:
+Return JSON ONLY:
 
 {{
- "facts":[
-   {{
-     "fact":"...",
-     "supported":true/false
-   }}
- ],
- "hallucinated_facts":[ "...","..." ],
- "supported_count":int,
- "hallucinated_count":int,
- "faithfulness_score":float
+ "supported_count": int,
+ "hallucinated_count": int,
+ "hallucinated_facts": ["fact1","fact2"],
+ "faithfulness_score": float
 }}
 """
 
 
-# --------------------------------
+# -------------------------
 # COLLECT FILE PAIRS
-# --------------------------------
+# -------------------------
 
 def collect_pairs():
 
-    pairs=[]
+    pairs = []
 
-    langs=["English","Hindi","Marathi","Bangla"]
+    langs = ["English", "Hindi", "Marathi", "Bangla"]
 
     for lang in langs:
 
-        summary_dir=Path(DATA_DIR)/"finetune"/lang/"Summary_Text"
-        dialogue_dir=Path(DATA_DIR)/"test"/lang/"Dialogues"
+        summary_dir = Path(DATA_DIR) / "finetune" / lang / "Summary_Text"
+        dialogue_dir = Path(DATA_DIR) / "test" / lang / "Dialogues"
 
         if not summary_dir.exists():
             continue
 
-        for s in summary_dir.glob("*.txt"):
+        for s in summary_dir.glob("*_summary.txt"):
 
-            d=dialogue_dir/(s.stem+".jsonl")
+            base_name = s.stem.replace("_summary", "")
 
-            if d.exists():
+            dialogue_file = dialogue_dir / f"{base_name}.jsonl"
+
+            if dialogue_file.exists():
 
                 pairs.append({
-                    "language":lang,
-                    "summary":s,
-                    "dialogue":d
+                    "language": lang,
+                    "summary": s,
+                    "dialogue": dialogue_file
                 })
+
+    print("Total pairs found:", len(pairs))
 
     return pairs
 
 
-# --------------------------------
+# -------------------------
 # EVALUATE FILE
-# --------------------------------
+# -------------------------
 
 def evaluate(dialogue_path, summary_path):
 
-    dialogue=load_dialogue(dialogue_path)
-    summary=load_summary(summary_path)
+    dialogue = load_dialogue(dialogue_path)
+    summary = load_summary(summary_path)
 
-    prompt=build_prompt(dialogue,summary)
+    prompt = build_prompt(dialogue, summary)
 
-    result=call_gpt(prompt)
+    result = call_gpt(prompt)
 
     try:
         return json.loads(result)
     except:
         return {
-            "supported_count":0,
-            "hallucinated_count":0,
-            "faithfulness_score":0
+            "supported_count": 0,
+            "hallucinated_count": 0,
+            "faithfulness_score": 0
         }
 
 
-# --------------------------------
+# -------------------------
 # MAIN
-# --------------------------------
+# -------------------------
 
 def run():
 
     unzip_data()
 
-    pairs=collect_pairs()
+    pairs = collect_pairs()
 
-    rows=[]
+    rows = []
 
     for p in pairs:
 
-        print("Evaluating:",p["summary"])
+        print("Evaluating:", p["summary"].name)
 
-        res=evaluate(p["dialogue"],p["summary"])
+        res = evaluate(p["dialogue"], p["summary"])
 
         rows.append({
-            "language":p["language"],
-            "file":p["summary"].name,
-            "supported":res.get("supported_count",0),
-            "hallucinated":res.get("hallucinated_count",0),
-            "faithfulness":res.get("faithfulness_score",0)
+            "language": p["language"],
+            "file": p["summary"].name,
+            "supported": res.get("supported_count", 0),
+            "hallucinated": res.get("hallucinated_count", 0),
+            "faithfulness": res.get("faithfulness_score", 0)
         })
 
-    df=pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
 
-    df.to_csv("file_level_results.csv",index=False)
+    if df.empty:
+        print("No results generated. Check file matching.")
+        return
 
-    # language aggregation
-    lang_table=df.groupby("language").agg(
-        files=("file","count"),
-        avg_faithfulness=("faithfulness","mean"),
-        hallucinated_total=("hallucinated","sum")
+    df.to_csv("file_level_results.csv", index=False)
+
+    lang_table = df.groupby("language").agg(
+        files=("file", "count"),
+        avg_faithfulness=("faithfulness", "mean"),
+        hallucinated_total=("hallucinated", "sum")
     ).reset_index()
 
-    lang_table.to_csv("language_summary.csv",index=False)
+    lang_table.to_csv("language_summary.csv", index=False)
 
-    overall=df["faithfulness"].mean()
+    overall_score = df["faithfulness"].mean()
 
-    print("\nOverall Faithfulness:",round(overall,3))
+    print("\nOverall Faithfulness:", round(overall_score, 3))
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     run()
