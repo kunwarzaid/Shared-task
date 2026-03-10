@@ -1,104 +1,234 @@
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Hello, I’m Dr. Mehta. We’re doing an HNC risk-screening today. Can we start with some basic details, please?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Sure, yeah. I’m Ravi Kumar, 45, from Pune. I work as a bus driver, long hours, you know."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Nice to meet you, Ravi. Any symptoms you’ve noticed lately—like sore throat that lasts, hoarseness, trouble swallowing, weight loss?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Nah, nothing really like that. Sometimes a bit of throat irritation after long shifts, but not persistent."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Okay. Let me ask first about risk factors. Do you use any tobacco, in any form—smoked or smokeless?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Yeah, uh, I use smokeless tobacco every day—khaini, and sometimes gutkha. Not really smoking though."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "I see. And how often do you use it? Daily, or how many times a day?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Daily, you know, multiple times. Mostly khaini—like all day, plus an occasional gutkha in the evening."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Understood. Any alcohol use? especially on weekends, as we screen for head and neck risk."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Yeah, weekends I have a couple of drinks, mostly with friends."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Okay. What about betel quid chewing or areca nut with tobacco?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Yes, I chew betel quid sometimes, not every day but several times a week."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Noted. Do you have any HPV vaccination status you’d like to share? Some patients are not vaccinated and we educate accordingly."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "I wasn’t vaccinated. I’m not sure about the guidelines here. I’m open to more info."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "No problem. We’ll discuss it. How about dental health—how’s your hygiene? Any issues with teeth or gums?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Dental hygiene is okay, I think. I brush twice a day, but I don’t floss every day."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Okay, flossing helps. How about your fruits and vegetables—diet largely, or any concerns there?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Diet’s a bit low on fruits and vegetables, to be honest. I eat on the road a lot."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Got it. Any occupational exposures—dust, fumes, that kind of thing—since you drive a bus?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Yeah, lots of dust and fumes from buses. Not daily, but a lot of city air, you know."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Okay. Any family history of cancer or other major illnesses?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "No known cancer in the family, as far as I know."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Thanks. I’ll also check for any symptoms that could be red flags—like persistent sore throat or neck lumps."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "No persistent sore throat, no lumps, nothing really alarming."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Great. We do a quick screen of the mouth and neck to pick up anything suspicious. Are you okay with a brief exam today?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Yes, fine. I’m a bit anxious, but okay."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "No worries. We’ll keep it quick and gentle. Any history of swallowing trouble or voice changes?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Voice is fine, swallowing is fine. A bit of throat clearing sometimes."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Okay. Before we proceed, is there anyone else with you today who helps with decisions or can support you?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Actually yes, my wife Priya is usually with me for big decisions."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Great, we can include her. For now, I’ll start with a quick oral screen and neck check."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Sure, let’s do it."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Open your mouth wide and relax. I’ll look at under the tongue, teeth, gums, floor of mouth, tongue, and tonsils."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, okay."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Neck examination—I’ll feel for any lumps. Deep breath in and out."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Sure."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Mouth looks okay overall. I don’t see any obvious lesions or persistent red patches yet."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "That’s a relief."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Neck feels soft, no obvious lumps. But given risk factors—we’ll still plan risk-reduction and follow-up."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, please tell me what all this means."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "First off, your risk factors are notable: smokeless tobacco daily, betel quid chewing, alcohol on weekends, and dust exposure at work. Tobacco plus alcohol increases risk a lot."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Yeah, I know it’s not ideal, I want to reduce it."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "That’s the key. We’ll make a plan to reduce or quit. We’ll start with a structured quit plan and nicotine replacement options."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, like gums or patches?"}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Exactly. We can tailor to what you prefer—gum, patches, lozenges. Also behavioral therapy and support."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Sounds good. I want to try reducing gradually."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "We’ll set practical daily goals. For example, reduce daily khaini use by a certain amount each week."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, I can do that. What about betel quid and gutkha?"}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "We’ll also aim to reduce betel quid and gutkha gradually. We’ll give you a plan to minimize triggers."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "What about my diet and dental health?"}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "We’ll improve dental hygiene—brush and floss regularly, perhaps after meals. And increase fruit and vegetable intake to support overall health."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "I’ll try. I don’t eat much fruit and veggies, but I can start."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Also, due to dust exposure, we’ll arrange a dental check and emphasize good oral hygiene. Regular dental visits are advised."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, I’ll go to the dentist too."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "About HPV vaccination—some throat cancers are linked to HPV, even in non-smokers. We can discuss guidelines and vaccination options."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "I’m interested but not sure about the vaccine yet."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "We’ll provide information and help you decide. If you want, we can arrange HPV counseling today."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Yes, please. I’d like to know more."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "The plan also includes testing for infections only if indicated. HIV and others would be considered if symptoms or risk warrants."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, I understand."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "If any suspicious findings appear during screening, we’d plan a biopsy. For now, no immediate biopsy was needed."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "That’s good to hear."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "We’ll arrange a dental referral and HPV counseling today. Imaging or biopsy would only be if something shows up later."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Understood."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Two weeks from now, we’ll meet again to review progress, adjust the plan, and decide if further testing is warranted."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Two weeks? Okay, I can do that."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "We’ll print a risk assessment and quit-plan for you, plus resources to help you quit."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Great, I’ll take it. Will Priya be involved next time?"}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Yes, we’d like Priya to be involved since family support helps a lot. She can review goals with you and help you stay on track."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, she’ll join. She’s usually with me."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Now, a quick checklist of home environment changes: remove easy access to tobacco, avoid triggers, and plan alternative coping strategies."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "We can do that. I’ll talk to Priya and we’ll set up a reduce-and-quit plan at home."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Excellent. We’ll also provide printed materials—risk factors, benefits of cessation, and the plan for reducing tobacco and alcohol."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Thanks, that’ll help a lot."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Before you leave, do you have any questions about the risk factors we discussed—smokeless tobacco, alcohol, betel quid, or HPV?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "I want to know, how soon can I see benefit after I start quitting?"}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "You may notice improvements in energy and cravings within days to weeks. Long-term risk reduction for head and neck cancer can take months to years, but every day of reduced use helps."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Okay, I’ll stay motivated."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "One more thing: if you’re ever worried about symptoms like a new lump, persistent sore throat, or trouble swallowing, contact us immediately."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Will do."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "All right, Ravi. We’ll finalize the plan and hand you the printed materials. Priya can stay for counseling after you finish the screen."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Sounds good. I’ll wait for Priya now."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Perfect. I’ll also arrange the dental referral and HPV counseling today. Any other concerns?"}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "No major concerns right now. Just want to get healthier."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "That’s the spirit. We’ll make this a step-by-step but doable plan."}
-{"speaker": "Patient's Relative", "date": "2025-08-11", "dialogue": "Hi Doctor, Priya here. I’m Ravi’s wife. I’m happy to discuss how we can support him."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Nice to meet you, Priya. We’re glad you’re here. We discussed a risk-screening plan focusing on tobacco, alcohol, betel quid, dental health, HPV, and diet."}
-{"speaker": "Patient's Relative", "date": "2025-08-11", "dialogue": "We want to be involved. He’s tried before but often slips. What’s the plan?"}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "We’ll use a structured quit plan with nicotine replacement and behavioral support. We’ll set gradual targets and involve you to support him at home."}
-{"speaker": "Patient's Relative", "date": "2025-08-11", "dialogue": "That’s good. We’ll make a routine at home to reduce tobacco and improve meals."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Also, we’ll arrange a dental check and HPV counseling for Ravi today. He’s open to it, right?"}
-{"speaker": "Patient's Relative", "date": "2025-08-11", "dialogue": "Yes, we’ll do whatever is needed. And we’ll help him with the two-week follow-up."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Great. We’ll ensure you have all the resources—printed risk assessment, quit plan, and contact details for support."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Thanks, doctor. Appreciate all this."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "You’re welcome. We’ll document the plan and ensure the next steps are clear for you both."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "I’ll start sharing this with Priya and we’ll get started."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Perfect. We’ll see you both in two weeks for a progress check."}
-{"speaker": "Patient's Relative", "date": "2025-08-11", "dialogue": "Okay, doctor. We’ll be here. Thank you for explaining clearly."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "My pleasure. Take care, Ravi, and Priya—see you soon."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Bye, doctor."}
-{"speaker": "Patient's Relative", "date": "2025-08-11", "dialogue": "Bye, doctor. See you in two weeks."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "All right, I’ll send the referral orders and the printed materials to your phone and email. If you need anything in the meantime, call us."}
-{"speaker": "Patient", "date": "2025-08-11", "dialogue": "Will do. Thanks again."}
-{"speaker": "Health Worker", "date": "2025-08-11", "dialogue": "Take care, Ravi. And Priya, thanks for joining."}
+import os
+import json
+import zipfile
+import requests
+import pandas as pd
+from pathlib import Path
+
+# --------------------------------
+# CONFIG
+# --------------------------------
+
+WRAPPER_URL = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
+MODEL = "gpt-5"
+EMPLOYEE_ID = "1757421"
+
+FINETUNE_ZIP = "finetune.zip"
+TEST_ZIP = "test.zip"
+
+DATA_DIR = "data_eval"
+MAX_TOKENS = 1200
+
+
+# --------------------------------
+# GPT CALL
+# --------------------------------
+
+def call_gpt(prompt):
+
+    payload = {
+        "model": MODEL,
+        "prompt": [
+            {"role": "system", "content": "You are a strict medical summary faithfulness evaluator."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": MAX_TOKENS,
+        "employeeId": EMPLOYEE_ID
+    }
+
+    r = requests.post(WRAPPER_URL, json=payload)
+
+    try:
+        return r.json()["choices"][0]["message"]["content"]
+    except:
+        return ""
+
+
+# --------------------------------
+# UNZIP DATA
+# --------------------------------
+
+def unzip_data():
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    with zipfile.ZipFile(FINETUNE_ZIP, 'r') as z:
+        z.extractall(DATA_DIR)
+
+    with zipfile.ZipFile(TEST_ZIP, 'r') as z:
+        z.extractall(DATA_DIR)
+
+    print("Data extracted")
+
+
+# --------------------------------
+# LOAD DIALOGUE
+# --------------------------------
+
+def load_dialogue(path):
+
+    lines = []
+
+    with open(path, "r", encoding="utf-8") as f:
+
+        for line in f:
+            obj = json.loads(line)
+
+            speaker = obj.get("speaker","")
+            text = obj.get("dialogue","")
+
+            lines.append(f"{speaker}: {text}")
+
+    return "\n".join(lines)
+
+
+# --------------------------------
+# LOAD SUMMARY
+# --------------------------------
+
+def load_summary(path):
+
+    with open(path,"r",encoding="utf-8") as f:
+        return f.read()
+
+
+# --------------------------------
+# PROMPT
+# --------------------------------
+
+def build_prompt(dialogue, summary):
+
+    return f"""
+Evaluate factual faithfulness of the summary with respect to the dialogue.
+
+Steps:
+
+1 Extract atomic facts from the summary
+2 Check whether each fact is supported by the dialogue
+3 Mark unsupported facts as hallucinated
+
+Dialogue:
+{dialogue}
+
+Summary:
+{summary}
+
+Return JSON:
+
+{{
+ "facts":[
+   {{
+     "fact":"...",
+     "supported":true/false
+   }}
+ ],
+ "hallucinated_facts":[ "...","..." ],
+ "supported_count":int,
+ "hallucinated_count":int,
+ "faithfulness_score":float
+}}
+"""
+
+
+# --------------------------------
+# COLLECT FILE PAIRS
+# --------------------------------
+
+def collect_pairs():
+
+    pairs=[]
+
+    langs=["English","Hindi","Marathi","Bangla"]
+
+    for lang in langs:
+
+        summary_dir=Path(DATA_DIR)/"finetune"/lang/"Summary_Text"
+        dialogue_dir=Path(DATA_DIR)/"test"/lang/"Dialogues"
+
+        if not summary_dir.exists():
+            continue
+
+        for s in summary_dir.glob("*.txt"):
+
+            d=dialogue_dir/(s.stem+".jsonl")
+
+            if d.exists():
+
+                pairs.append({
+                    "language":lang,
+                    "summary":s,
+                    "dialogue":d
+                })
+
+    return pairs
+
+
+# --------------------------------
+# EVALUATE FILE
+# --------------------------------
+
+def evaluate(dialogue_path, summary_path):
+
+    dialogue=load_dialogue(dialogue_path)
+    summary=load_summary(summary_path)
+
+    prompt=build_prompt(dialogue,summary)
+
+    result=call_gpt(prompt)
+
+    try:
+        return json.loads(result)
+    except:
+        return {
+            "supported_count":0,
+            "hallucinated_count":0,
+            "faithfulness_score":0
+        }
+
+
+# --------------------------------
+# MAIN
+# --------------------------------
+
+def run():
+
+    unzip_data()
+
+    pairs=collect_pairs()
+
+    rows=[]
+
+    for p in pairs:
+
+        print("Evaluating:",p["summary"])
+
+        res=evaluate(p["dialogue"],p["summary"])
+
+        rows.append({
+            "language":p["language"],
+            "file":p["summary"].name,
+            "supported":res.get("supported_count",0),
+            "hallucinated":res.get("hallucinated_count",0),
+            "faithfulness":res.get("faithfulness_score",0)
+        })
+
+    df=pd.DataFrame(rows)
+
+    df.to_csv("file_level_results.csv",index=False)
+
+    # language aggregation
+    lang_table=df.groupby("language").agg(
+        files=("file","count"),
+        avg_faithfulness=("faithfulness","mean"),
+        hallucinated_total=("hallucinated","sum")
+    ).reset_index()
+
+    lang_table.to_csv("language_summary.csv",index=False)
+
+    overall=df["faithfulness"].mean()
+
+    print("\nOverall Faithfulness:",round(overall,3))
+
+
+if __name__=="__main__":
+    run()
