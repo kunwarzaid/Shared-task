@@ -6,9 +6,9 @@ import pandas as pd
 import re
 from pathlib import Path
 
-# =========================
+# =====================
 # CONFIG
-# =========================
+# =====================
 
 WRAPPER_URL = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
 MODEL = "gpt-5"
@@ -18,50 +18,46 @@ FINETUNE_ZIP = "finetune.zip"
 TEST_ZIP = "test.zip"
 
 DATA_DIR = "data_eval"
-
-CHUNK_SIZE = 40   # dialogue lines per chunk
 DEBUG_FILES = 3
 
 
-# =========================
+# =====================
 # GPT CALL
-# =========================
+# =====================
 
 def call_gpt(prompt):
 
     payload = {
         "model": MODEL,
         "prompt": [
-            {"role": "system", "content": "You are a clinical summarization evaluator."},
+            {"role": "system", "content": "You are an expert clinical summarization evaluator."},
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 600,
+        "max_tokens": 800,
         "employeeId": EMPLOYEE_ID
     }
 
-    for attempt in range(3):
+    try:
 
-        try:
+        response = requests.post(
+            WRAPPER_URL,
+            json=payload,
+            timeout=120
+        )
 
-            r = requests.post(
-                WRAPPER_URL,
-                json=payload,
-                timeout=120
-            )
+        data = response.json()
 
-            if r.status_code == 200:
-                return r.text
+        return data["choices"][0]["message"]["content"]
 
-        except Exception as e:
+    except Exception as e:
 
-            print("Retry", attempt+1, "failed:", e)
-
-    return ""
+        print("GPT call failed:", e)
+        return ""
 
 
-# =========================
-# JSON EXTRACTOR
-# =========================
+# =====================
+# JSON PARSER
+# =====================
 
 def extract_json(text):
 
@@ -81,9 +77,9 @@ def extract_json(text):
     return None
 
 
-# =========================
+# =====================
 # UNZIP DATA
-# =========================
+# =====================
 
 def unzip_data():
 
@@ -98,9 +94,9 @@ def unzip_data():
     print("Data extracted")
 
 
-# =========================
+# =====================
 # LOAD DIALOGUE
-# =========================
+# =====================
 
 def load_dialogue(path):
 
@@ -110,61 +106,52 @@ def load_dialogue(path):
 
         for line in f:
 
-            line = line.strip()
+            line=line.strip()
 
             if not line:
                 continue
 
             try:
 
-                obj = json.loads(line)
+                obj=json.loads(line)
 
-                speaker = obj.get("speaker","")
-                text = obj.get("dialogue","")
+                speaker=obj.get("speaker","")
+                text=obj.get("dialogue","")
 
                 lines.append(f"{speaker}: {text}")
 
             except:
                 continue
 
-    return lines
+    return "\n".join(lines)
 
 
-# =========================
+# =====================
 # LOAD SUMMARY
-# =========================
+# =====================
 
 def load_summary(path):
 
-    with open(path, encoding="utf-8") as f:
+    with open(path,encoding="utf-8") as f:
         return f.read()
 
 
-# =========================
-# SPLIT DIALOGUE INTO CHUNKS
-# =========================
+# =====================
+# PROMPT
+# =====================
 
-def chunk_dialogue(lines):
+def build_prompt(dialogue,summary):
 
-    chunks = []
+    return f"""
+Evaluate factual faithfulness of the summary with respect to the dialogue.
 
-    for i in range(0, len(lines), CHUNK_SIZE):
+Steps:
+1 Extract factual claims from the summary.
+2 Check if each claim is supported by the dialogue.
+3 Provide supporting evidence if present.
 
-        chunk = "\n".join(lines[i:i+CHUNK_SIZE])
-
-        chunks.append(chunk)
-
-    return chunks
-
-
-# =========================
-# CLAIM EXTRACTION
-# =========================
-
-def extract_claims(summary):
-
-    prompt = f"""
-Extract factual claims from the summary.
+Dialogue:
+{dialogue}
 
 Summary:
 {summary}
@@ -172,77 +159,43 @@ Summary:
 Return JSON:
 
 {{
- "claims":[]
+ "claims":[
+   {{
+     "claim":"",
+     "supported":true/false,
+     "evidence":""
+   }}
+ ],
+ "supported_count":0,
+ "hallucinated_count":0,
+ "faithfulness_score":0
 }}
 """
 
-    raw = call_gpt(prompt)
 
-    parsed = extract_json(raw)
-
-    if parsed and "claims" in parsed:
-
-        return parsed["claims"]
-
-    return []
-
-
-# =========================
-# VERIFY CLAIMS IN CHUNK
-# =========================
-
-def verify_chunk(claims, chunk):
-
-    prompt = f"""
-Check which claims are supported by the dialogue chunk.
-
-Dialogue chunk:
-{chunk}
-
-Claims:
-{claims}
-
-Return JSON:
-
-{{
- "supported":[]
-}}
-"""
-
-    raw = call_gpt(prompt)
-
-    parsed = extract_json(raw)
-
-    if parsed and "supported" in parsed:
-
-        return parsed["supported"]
-
-    return []
-
-
-# =========================
-# FILE MATCHING
-# =========================
+# =====================
+# COLLECT FILE PAIRS
+# =====================
 
 def collect_pairs():
 
-    pairs = []
+    pairs=[]
 
-    langs = ["English","Hindi","Marathi","Bangla"]
+    langs=["English","Hindi","Marathi","Bangla"]
 
     for lang in langs:
 
-        summary_dir = Path(DATA_DIR)/"finetune"/lang/"Summary_Text"
-        dialogue_dir = Path(DATA_DIR)/"test"/lang/"Dialogues"
+        summary_dir=Path(DATA_DIR)/"finetune"/lang/"Summary_Text"
+        dialogue_dir=Path(DATA_DIR)/"test"/lang/"Dialogues"
 
         if not summary_dir.exists():
             continue
 
         for s in summary_dir.glob("*_summary.txt"):
 
-            base = s.stem.replace("_summary","")
+            base=s.stem.replace("_summary","")
 
-            d = dialogue_dir / f"{base}.jsonl"
+            d=dialogue_dir/f"{base}.jsonl"
 
             if d.exists():
 
@@ -252,105 +205,86 @@ def collect_pairs():
                     "dialogue":d
                 })
 
-    print("Total pairs:", len(pairs))
+    print("Total pairs:",len(pairs))
 
     return pairs
 
 
-# =========================
-# EVALUATE ONE FILE
-# =========================
+# =====================
+# EVALUATION
+# =====================
 
-def evaluate(pair, debug=False):
+def evaluate(pair,debug=False):
 
-    summary = load_summary(pair["summary"])
+    summary=load_summary(pair["summary"])
+    dialogue=load_dialogue(pair["dialogue"])
 
-    dialogue_lines = load_dialogue(pair["dialogue"])
+    prompt=build_prompt(dialogue,summary)
 
-    chunks = chunk_dialogue(dialogue_lines)
+    raw=call_gpt(prompt)
 
-    claims = extract_claims(summary)
+    parsed=extract_json(raw)
 
-    remaining_claims = claims.copy()
+    if parsed:
 
-    supported_claims = []
+        if debug:
 
-    for chunk in chunks:
+            print("\nDEBUG FILE:",pair["summary"].name)
+            print("GPT OUTPUT:",raw[:800])
 
-        if not remaining_claims:
-            break
-
-        supported = verify_chunk(remaining_claims, chunk)
-
-        for c in supported:
-
-            if c in remaining_claims:
-
-                supported_claims.append(c)
-
-                remaining_claims.remove(c)
-
-    total = len(claims)
-
-    supported_count = len(supported_claims)
-
-    hallucinated = len(remaining_claims)
-
-    faithfulness = supported_count / total if total > 0 else 0
-
-    if debug:
-
-        print("\n======== DEBUG ========")
-        print("FILE:", pair["summary"].name)
-        print("Claims:", claims)
-        print("Supported:", supported_claims)
-        print("Hallucinated:", remaining_claims)
+        return {
+            "language":pair["language"],
+            "file":pair["summary"].name,
+            "supported":parsed.get("supported_count",0),
+            "hallucinated":parsed.get("hallucinated_count",0),
+            "faithfulness":parsed.get("faithfulness_score",0)
+        }
 
     return {
         "language":pair["language"],
         "file":pair["summary"].name,
-        "supported":supported_count,
-        "hallucinated":hallucinated,
-        "faithfulness":faithfulness
+        "supported":0,
+        "hallucinated":0,
+        "faithfulness":0
     }
 
 
-# =========================
+# =====================
 # MAIN
-# =========================
+# =====================
 
 def run():
 
     unzip_data()
 
-    pairs = collect_pairs()
+    pairs=collect_pairs()
 
-    results = []
+    results=[]
 
     for i,p in enumerate(pairs):
 
-        debug = True if i < DEBUG_FILES else False
+        debug=True if i<DEBUG_FILES else False
 
-        res = evaluate(p, debug)
+        res=evaluate(p,debug)
 
         results.append(res)
 
-        print("Completed:", i+1, "/", len(pairs))
+        print("Completed:",i+1,"/",len(pairs))
 
-    df = pd.DataFrame(results)
+    df=pd.DataFrame(results)
 
-    df.to_csv("file_level_results.csv", index=False)
+    df.to_csv("file_level_results.csv",index=False)
 
-    lang_table = df.groupby("language").agg(
+    lang_table=df.groupby("language").agg(
         files=("file","count"),
         avg_faithfulness=("faithfulness","mean"),
         hallucinated_total=("hallucinated","sum")
     ).reset_index()
 
-    lang_table.to_csv("language_summary.csv", index=False)
+    lang_table.to_csv("language_summary.csv",index=False)
 
-    print("\nOverall Faithfulness:", round(df["faithfulness"].mean(),3))
+    print("\nOverall Faithfulness:",round(df["faithfulness"].mean(),3))
 
 
-if __name__ == "__main__":
+if __name__=="__main__":
     run()
