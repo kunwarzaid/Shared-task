@@ -4,6 +4,7 @@ import zipfile
 import requests
 import pandas as pd
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # -------------------------
 # CONFIG
@@ -18,6 +19,8 @@ TEST_ZIP = "test.zip"
 
 DATA_DIR = "data_eval"
 MAX_TOKENS = 1200
+
+THREADS = 6
 
 
 # -------------------------
@@ -36,10 +39,12 @@ def call_gpt(prompt):
         "employeeId": EMPLOYEE_ID
     }
 
-    r = requests.post(WRAPPER_URL, json=payload)
-
     try:
+
+        r = requests.post(WRAPPER_URL, json=payload, timeout=60)
+
         return r.json()["choices"][0]["message"]["content"]
+
     except:
         return ""
 
@@ -72,12 +77,22 @@ def load_dialogue(path):
     with open(path, "r", encoding="utf-8") as f:
 
         for line in f:
-            obj = json.loads(line)
 
-            speaker = obj.get("speaker", "")
-            text = obj.get("dialogue", "")
+            line = line.strip()
 
-            lines.append(f"{speaker}: {text}")
+            if not line:
+                continue
+
+            try:
+                obj = json.loads(line)
+
+                speaker = obj.get("speaker", "")
+                text = obj.get("dialogue", "")
+
+                lines.append(f"{speaker}: {text}")
+
+            except:
+                continue
 
     return "\n".join(lines)
 
@@ -102,8 +117,8 @@ def build_prompt(dialogue, summary):
 Evaluate factual faithfulness of the summary with respect to the dialogue.
 
 Steps:
-1 Extract atomic facts from the summary
-2 Verify each fact against the dialogue
+1 Extract facts from the summary
+2 Check if each fact is supported by the dialogue
 3 Mark unsupported facts as hallucinated
 
 Dialogue:
@@ -112,19 +127,18 @@ Dialogue:
 Summary:
 {summary}
 
-Return JSON ONLY:
+Return JSON:
 
 {{
  "supported_count": int,
  "hallucinated_count": int,
- "hallucinated_facts": ["fact1","fact2"],
  "faithfulness_score": float
 }}
 """
 
 
 # -------------------------
-# COLLECT FILE PAIRS
+# FILE PAIRS
 # -------------------------
 
 def collect_pairs():
@@ -143,16 +157,16 @@ def collect_pairs():
 
         for s in summary_dir.glob("*_summary.txt"):
 
-            base_name = s.stem.replace("_summary", "")
+            base = s.stem.replace("_summary", "")
 
-            dialogue_file = dialogue_dir / f"{base_name}.jsonl"
+            d = dialogue_dir / f"{base}.jsonl"
 
-            if dialogue_file.exists():
+            if d.exists():
 
                 pairs.append({
                     "language": lang,
                     "summary": s,
-                    "dialogue": dialogue_file
+                    "dialogue": d
                 })
 
     print("Total pairs found:", len(pairs))
@@ -161,25 +175,38 @@ def collect_pairs():
 
 
 # -------------------------
-# EVALUATE FILE
+# EVALUATE
 # -------------------------
 
-def evaluate(dialogue_path, summary_path):
+def evaluate(pair):
 
-    dialogue = load_dialogue(dialogue_path)
-    summary = load_summary(summary_path)
+    dialogue = load_dialogue(pair["dialogue"])
+    summary = load_summary(pair["summary"])
 
     prompt = build_prompt(dialogue, summary)
 
     result = call_gpt(prompt)
 
     try:
-        return json.loads(result)
-    except:
+
+        res = json.loads(result)
+
         return {
-            "supported_count": 0,
-            "hallucinated_count": 0,
-            "faithfulness_score": 0
+            "language": pair["language"],
+            "file": pair["summary"].name,
+            "supported": res.get("supported_count", 0),
+            "hallucinated": res.get("hallucinated_count", 0),
+            "faithfulness": res.get("faithfulness_score", 0)
+        }
+
+    except:
+
+        return {
+            "language": pair["language"],
+            "file": pair["summary"].name,
+            "supported": 0,
+            "hallucinated": 0,
+            "faithfulness": 0
         }
 
 
@@ -193,27 +220,19 @@ def run():
 
     pairs = collect_pairs()
 
-    rows = []
+    results = []
 
-    for p in pairs:
+    with ThreadPoolExecutor(max_workers=THREADS) as executor:
 
-        print("Evaluating:", p["summary"].name)
+        futures = [executor.submit(evaluate, p) for p in pairs]
 
-        res = evaluate(p["dialogue"], p["summary"])
+        for f in as_completed(futures):
 
-        rows.append({
-            "language": p["language"],
-            "file": p["summary"].name,
-            "supported": res.get("supported_count", 0),
-            "hallucinated": res.get("hallucinated_count", 0),
-            "faithfulness": res.get("faithfulness_score", 0)
-        })
+            results.append(f.result())
 
-    df = pd.DataFrame(rows)
+            print("Completed:", len(results), "/", len(pairs))
 
-    if df.empty:
-        print("No results generated. Check file matching.")
-        return
+    df = pd.DataFrame(results)
 
     df.to_csv("file_level_results.csv", index=False)
 
@@ -225,9 +244,7 @@ def run():
 
     lang_table.to_csv("language_summary.csv", index=False)
 
-    overall_score = df["faithfulness"].mean()
-
-    print("\nOverall Faithfulness:", round(overall_score, 3))
+    print("\nOverall Faithfulness:", round(df["faithfulness"].mean(), 3))
 
 
 if __name__ == "__main__":
