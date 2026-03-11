@@ -5,11 +5,10 @@ import requests
 import pandas as pd
 import re
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# -------------------------
+# =========================
 # CONFIG
-# -------------------------
+# =========================
 
 WRAPPER_URL = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
 MODEL = "gpt-5"
@@ -20,42 +19,49 @@ TEST_ZIP = "test.zip"
 
 DATA_DIR = "data_eval"
 
-MAX_TOKENS = 1000
-THREADS = 6
+CHUNK_SIZE = 40   # dialogue lines per chunk
+DEBUG_FILES = 3
 
 
-# -------------------------
+# =========================
 # GPT CALL
-# -------------------------
+# =========================
 
 def call_gpt(prompt):
 
     payload = {
         "model": MODEL,
         "prompt": [
-            {"role": "system", "content": "You are a strict clinical summarization faithfulness evaluator."},
+            {"role": "system", "content": "You are a clinical summarization evaluator."},
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": MAX_TOKENS,
+        "max_tokens": 600,
         "employeeId": EMPLOYEE_ID
     }
 
-    try:
+    for attempt in range(3):
 
-        r = requests.post(WRAPPER_URL, json=payload, timeout=60)
+        try:
 
-        return r.text
+            r = requests.post(
+                WRAPPER_URL,
+                json=payload,
+                timeout=120
+            )
 
-    except Exception as e:
+            if r.status_code == 200:
+                return r.text
 
-        print("GPT call failed:", e)
+        except Exception as e:
 
-        return ""
+            print("Retry", attempt+1, "failed:", e)
+
+    return ""
 
 
-# -------------------------
+# =========================
 # JSON EXTRACTOR
-# -------------------------
+# =========================
 
 def extract_json(text):
 
@@ -64,7 +70,7 @@ def extract_json(text):
     except:
         pass
 
-    match = re.search(r'\{.*\}', text, re.DOTALL)
+    match = re.search(r"\{.*\}", text, re.DOTALL)
 
     if match:
         try:
@@ -75,9 +81,9 @@ def extract_json(text):
     return None
 
 
-# -------------------------
+# =========================
 # UNZIP DATA
-# -------------------------
+# =========================
 
 def unzip_data():
 
@@ -92,9 +98,9 @@ def unzip_data():
     print("Data extracted")
 
 
-# -------------------------
+# =========================
 # LOAD DIALOGUE
-# -------------------------
+# =========================
 
 def load_dialogue(path):
 
@@ -113,20 +119,20 @@ def load_dialogue(path):
 
                 obj = json.loads(line)
 
-                speaker = obj.get("speaker", "")
-                text = obj.get("dialogue", "")
+                speaker = obj.get("speaker","")
+                text = obj.get("dialogue","")
 
                 lines.append(f"{speaker}: {text}")
 
             except:
                 continue
 
-    return "\n".join(lines)
+    return lines
 
 
-# -------------------------
+# =========================
 # LOAD SUMMARY
-# -------------------------
+# =========================
 
 def load_summary(path):
 
@@ -134,40 +140,89 @@ def load_summary(path):
         return f.read()
 
 
-# -------------------------
-# PROMPT
-# -------------------------
+# =========================
+# SPLIT DIALOGUE INTO CHUNKS
+# =========================
 
-def build_prompt(dialogue, summary):
+def chunk_dialogue(lines):
 
-    return f"""
-Evaluate factual faithfulness of the summary with respect to the dialogue.
+    chunks = []
 
-Steps:
+    for i in range(0, len(lines), CHUNK_SIZE):
 
-1 Extract facts from the summary
-2 Check whether each fact appears in the dialogue
-3 Unsupported facts are hallucinations
+        chunk = "\n".join(lines[i:i+CHUNK_SIZE])
 
-Dialogue:
-{dialogue}
+        chunks.append(chunk)
+
+    return chunks
+
+
+# =========================
+# CLAIM EXTRACTION
+# =========================
+
+def extract_claims(summary):
+
+    prompt = f"""
+Extract factual claims from the summary.
 
 Summary:
 {summary}
 
-Return JSON ONLY:
+Return JSON:
 
 {{
- "supported_count": number,
- "hallucinated_count": number,
- "faithfulness_score": number
+ "claims":[]
 }}
 """
 
+    raw = call_gpt(prompt)
 
-# -------------------------
+    parsed = extract_json(raw)
+
+    if parsed and "claims" in parsed:
+
+        return parsed["claims"]
+
+    return []
+
+
+# =========================
+# VERIFY CLAIMS IN CHUNK
+# =========================
+
+def verify_chunk(claims, chunk):
+
+    prompt = f"""
+Check which claims are supported by the dialogue chunk.
+
+Dialogue chunk:
+{chunk}
+
+Claims:
+{claims}
+
+Return JSON:
+
+{{
+ "supported":[]
+}}
+"""
+
+    raw = call_gpt(prompt)
+
+    parsed = extract_json(raw)
+
+    if parsed and "supported" in parsed:
+
+        return parsed["supported"]
+
+    return []
+
+
+# =========================
 # FILE MATCHING
-# -------------------------
+# =========================
 
 def collect_pairs():
 
@@ -197,56 +252,72 @@ def collect_pairs():
                     "dialogue":d
                 })
 
-    print("Total pairs found:", len(pairs))
+    print("Total pairs:", len(pairs))
 
     return pairs
 
 
-# -------------------------
-# EVALUATION
-# -------------------------
+# =========================
+# EVALUATE ONE FILE
+# =========================
 
 def evaluate(pair, debug=False):
 
-    dialogue = load_dialogue(pair["dialogue"])
     summary = load_summary(pair["summary"])
 
-    prompt = build_prompt(dialogue, summary)
+    dialogue_lines = load_dialogue(pair["dialogue"])
 
-    raw = call_gpt(prompt)
+    chunks = chunk_dialogue(dialogue_lines)
 
-    parsed = extract_json(raw)
+    claims = extract_claims(summary)
+
+    remaining_claims = claims.copy()
+
+    supported_claims = []
+
+    for chunk in chunks:
+
+        if not remaining_claims:
+            break
+
+        supported = verify_chunk(remaining_claims, chunk)
+
+        for c in supported:
+
+            if c in remaining_claims:
+
+                supported_claims.append(c)
+
+                remaining_claims.remove(c)
+
+    total = len(claims)
+
+    supported_count = len(supported_claims)
+
+    hallucinated = len(remaining_claims)
+
+    faithfulness = supported_count / total if total > 0 else 0
 
     if debug:
 
-        print("\n==========================")
-        print("DEBUG SCENARIO")
-        print("File:", pair["summary"].name)
-        print("\nGPT RAW RESPONSE:\n", raw[:800])
-        print("==========================\n")
-
-    if parsed:
-
-        return {
-            "language": pair["language"],
-            "file": pair["summary"].name,
-            "supported": parsed.get("supported_count",0),
-            "hallucinated": parsed.get("hallucinated_count",0),
-            "faithfulness": parsed.get("faithfulness_score",0)
-        }
+        print("\n======== DEBUG ========")
+        print("FILE:", pair["summary"].name)
+        print("Claims:", claims)
+        print("Supported:", supported_claims)
+        print("Hallucinated:", remaining_claims)
 
     return {
-        "language": pair["language"],
-        "file": pair["summary"].name,
-        "supported": 0,
-        "hallucinated": 0,
-        "faithfulness": 0
+        "language":pair["language"],
+        "file":pair["summary"].name,
+        "supported":supported_count,
+        "hallucinated":hallucinated,
+        "faithfulness":faithfulness
     }
 
 
-# -------------------------
+# =========================
 # MAIN
-# -------------------------
+# =========================
 
 def run():
 
@@ -256,27 +327,19 @@ def run():
 
     results = []
 
-    with ThreadPoolExecutor(max_workers=THREADS) as executor:
+    for i,p in enumerate(pairs):
 
-        futures = []
+        debug = True if i < DEBUG_FILES else False
 
-        for i,p in enumerate(pairs):
+        res = evaluate(p, debug)
 
-            debug = True if i < 3 else False
+        results.append(res)
 
-            futures.append(
-                executor.submit(evaluate, p, debug)
-            )
-
-        for i,f in enumerate(as_completed(futures)):
-
-            results.append(f.result())
-
-            print("Completed:", len(results), "/", len(pairs))
+        print("Completed:", i+1, "/", len(pairs))
 
     df = pd.DataFrame(results)
 
-    df.to_csv("file_level_results.csv",index=False)
+    df.to_csv("file_level_results.csv", index=False)
 
     lang_table = df.groupby("language").agg(
         files=("file","count"),
@@ -284,7 +347,7 @@ def run():
         hallucinated_total=("hallucinated","sum")
     ).reset_index()
 
-    lang_table.to_csv("language_summary.csv",index=False)
+    lang_table.to_csv("language_summary.csv", index=False)
 
     print("\nOverall Faithfulness:", round(df["faithfulness"].mean(),3))
 
