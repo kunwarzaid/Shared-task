@@ -1,39 +1,117 @@
-def call_gpt(prompt):
+Code:
+import requests
+print("Hello")
 
-    payload = {
-        "model": MODEL,
-        "prompt": [
-            {"role": "system", "content": "You are an expert clinical summarization evaluator."},
-            {"role": "user", "content": prompt}
-        ],
-        "max_tokens": 800,
-        "employeeId": EMPLOYEE_ID
+url = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
+
+def call(prompt):
+
+  payload = {
+      "model": "gpt-5",
+      "prompt": [
+        {"role": "system", "content": "You are an expert clinical summarization evaluator."},
+        {"role": "user", "content": prompt}
+      ],
+      "max_tokens": 200,
+      "employeeId":"1757421"
     }
 
-    try:
+  response = requests.post(url, json=payload)
+  return response
 
-        response = requests.post(
-            WRAPPER_URL,
-            json=payload,
-            timeout=120
-        )
+def build_prompt(dialogue,summary):
 
-        data = response.json()
+    return f"""
+Evaluate factual faithfulness of the summary with respect to the dialogue.
 
-        # handle wrapper formats
-        if "response" in data:
-            ans = data["response"]
+Steps:
+1 Extract factual claims from the summary.
+2 Check if each claim is supported by the dialogue.
+3 Provide supporting evidence if present.
 
-        elif "choices" in data:
-            ans = data["choices"][0]["message"]["content"]
+Dialogue:
+{dialogue}
 
-        else:
-            ans = str(data)
+Summary:
+{summary}
 
-        return ans.strip()
+Return JSON:
 
-    except Exception as e:
+{{
+ "claims":[
+   {{
+     "claim":"",
+     "supported":true/false,
+     "evidence":""
+   }}
+ ],
+ "supported_count":0,
+ "hallucinated_count":0,
+ "faithfulness_score":0
+}}
+"""
+def load_dialogue(path):
 
-        print("GPT call failed:", e)
+    lines = []
 
-        return ""
+    with open(path, encoding="utf-8") as f:
+
+        for line in f:
+
+            line=line.strip()
+
+            if not line:
+                continue
+
+            try:
+
+                obj=json.loads(line)
+
+                speaker=obj.get("speaker","")
+                text=obj.get("dialogue","")
+
+                lines.append(f"{speaker}: {text}")
+
+            except:
+                continue
+
+    return "\n".join(lines)
+
+def load_summary(path):
+
+    with open(path,encoding="utf-8") as f:
+        return f.read()
+
+d = load_dialogue("D_1.jsonl")
+s = load_summary("S_1.txt")
+prompt = build_prompt(d,s)
+response = call(prompt)
+
+print(response.json())
+
+
+error:
+Hello
+Traceback (most recent call last):
+  File "/home/coder/test/myvenv/lib/python3.11/site-packages/requests/models.py", line 976, in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/coder/test/test.py", line 89, in <module>
+    print(response.json())
+          ^^^^^^^^^^^^^^^
+  File "/home/coder/test/myvenv/lib/python3.11/site-packages/requests/models.py", line 980, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
