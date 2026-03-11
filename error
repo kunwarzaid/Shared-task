@@ -14,14 +14,26 @@ def call_gpt(prompt):
 
         response = requests.post(
             WRAPPER_URL,
-            json=payload
+            json=payload,
+            timeout=120
         )
 
         data = response.json()
 
-        return data["choices"][0]["message"]["content"]
+        # handle wrapper formats
+        if "response" in data:
+            ans = data["response"]
+
+        elif "choices" in data:
+            ans = data["choices"][0]["message"]["content"]
+
+        else:
+            ans = str(data)
+
+        return ans.strip()
 
     except Exception as e:
 
         print("GPT call failed:", e)
+
         return ""
