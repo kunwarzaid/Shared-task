@@ -1,5 +1,5 @@
 import json
-import numpy as np
+import random
 from pathlib import Path
 from tqdm import tqdm
 from transformers import AutoTokenizer
@@ -8,9 +8,22 @@ from transformers import AutoTokenizer
 # CONFIG
 # ======================
 
-DIALOGUE_DIR = "dialogues"   # folder with jsonl files
+ROOT_DIR = "test"
+OUTPUT_FILE = "selected_dialogues.txt"
+
+TOKEN_MIN = 1024
+TOKEN_MAX = 4096
+
+SAMPLES_PER_LANG = 20
 
 MODEL_NAME = "ai4bharat/indictrans2-indic-en"
+
+LANG_TAGS = {
+    "English": "eng_Latn",
+    "Hindi": "hin_Deva",
+    "Marathi": "mar_Deva",
+    "Bangla": "ben_Beng"
+}
 
 # ======================
 # LOAD TOKENIZER
@@ -18,7 +31,10 @@ MODEL_NAME = "ai4bharat/indictrans2-indic-en"
 
 print("Loading tokenizer...")
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME,
+    use_fast=False
+)
 
 # ======================
 # LOAD DIALOGUE
@@ -46,10 +62,12 @@ def load_dialogue(path):
 # TOKEN COUNT
 # ======================
 
-def count_tokens(text):
+def count_tokens(text, src_tag):
+
+    formatted = f"{src_tag} eng_Latn {text}"
 
     tokens = tokenizer(
-        text,
+        formatted,
         truncation=False,
         add_special_tokens=False
     )
@@ -63,40 +81,43 @@ def count_tokens(text):
 
 def main():
 
-    files = list(Path(DIALOGUE_DIR).glob("*.jsonl"))
+    selected = {lang: [] for lang in LANG_TAGS}
 
-    lengths = []
+    for lang, tag in LANG_TAGS.items():
 
-    for f in tqdm(files):
+        dialogue_dir = Path(ROOT_DIR) / lang / "Dialogues"
 
-        dialogue = load_dialogue(f)
+        files = list(dialogue_dir.glob("*.jsonl"))
 
-        n_tokens = count_tokens(dialogue)
+        print(f"\nProcessing {lang} ({len(files)} files)...")
 
-        lengths.append(n_tokens)
+        for f in tqdm(files):
 
-    lengths = np.array(lengths)
+            dialogue = load_dialogue(f)
 
-    print("\n========== TOKEN STATS ==========")
+            tokens = count_tokens(dialogue, tag)
 
-    print("Total dialogues:", len(lengths))
-    print("Average tokens:", int(np.mean(lengths)))
-    print("Min tokens:", int(np.min(lengths)))
-    print("Max tokens:", int(np.max(lengths)))
+            if TOKEN_MIN <= tokens <= TOKEN_MAX:
 
-    print("\nPercentiles")
+                selected[lang].append(str(f))
 
-    print("50%:", int(np.percentile(lengths, 50)))
-    print("75%:", int(np.percentile(lengths, 75)))
-    print("90%:", int(np.percentile(lengths, 90)))
-    print("95%:", int(np.percentile(lengths, 95)))
+        print(f"{lang} candidates:", len(selected[lang]))
 
-    print("\nDistribution")
+    final_selection = []
 
-    print("<512:", np.sum(lengths < 512))
-    print("512-1024:", np.sum((lengths >= 512) & (lengths < 1024)))
-    print("1024-2048:", np.sum((lengths >= 1024) & (lengths < 2048)))
-    print(">2048:", np.sum(lengths >= 2048))
+    for lang, files in selected.items():
+
+        if len(files) > SAMPLES_PER_LANG:
+            files = random.sample(files, SAMPLES_PER_LANG)
+
+        final_selection.extend(files)
+
+    print("\nTotal selected:", len(final_selection))
+
+    with open(OUTPUT_FILE, "w") as f:
+
+        for file in final_selection:
+            f.write(file + "\n")
 
 
 if __name__ == "__main__":
