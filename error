@@ -1,5 +1,6 @@
 import json
 import random
+import shutil
 from pathlib import Path
 from tqdm import tqdm
 from transformers import AutoTokenizer
@@ -8,8 +9,8 @@ from transformers import AutoTokenizer
 # CONFIG
 # ======================
 
-ROOT_DIR = "test"
-OUTPUT_FILE = "selected_dialogues.txt"
+ROOT_DIR = "test/data_eval/test"
+OUTPUT_DIR = "selected_data"
 
 TOKEN_MIN = 1024
 TOKEN_MAX = 4096
@@ -98,26 +99,27 @@ def main():
             tokens = count_tokens(dialogue, tag)
 
             if TOKEN_MIN <= tokens <= TOKEN_MAX:
-
-                selected[lang].append(str(f))
+                selected[lang].append(f)
 
         print(f"{lang} candidates:", len(selected[lang]))
 
-    final_selection = []
+    # sample per language
+    for lang in selected:
 
+        if len(selected[lang]) > SAMPLES_PER_LANG:
+            selected[lang] = random.sample(selected[lang], SAMPLES_PER_LANG)
+
+    # copy files to output dataset
     for lang, files in selected.items():
 
-        if len(files) > SAMPLES_PER_LANG:
-            files = random.sample(files, SAMPLES_PER_LANG)
+        out_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-        final_selection.extend(files)
+        for f in files:
 
-    print("\nTotal selected:", len(final_selection))
+            shutil.copy(f, out_dir / f.name)
 
-    with open(OUTPUT_FILE, "w") as f:
-
-        for file in final_selection:
-            f.write(file + "\n")
+    print("\nDataset created at:", OUTPUT_DIR)
 
 
 if __name__ == "__main__":
