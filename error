@@ -1,125 +1,117 @@
 import json
-import random
-import shutil
 from pathlib import Path
 from tqdm import tqdm
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import torch
 
-# ======================
+# ==========================
 # CONFIG
-# ======================
+# ==========================
 
-ROOT_DIR = "test/data_eval/test"
-OUTPUT_DIR = "selected_data"
-
-TOKEN_MIN = 1024
-TOKEN_MAX = 4096
-
-SAMPLES_PER_LANG = 20
+INPUT_DIR = "selected_data"
+OUTPUT_DIR = "translated_data"
 
 MODEL_NAME = "ai4bharat/indictrans2-indic-en"
 
 LANG_TAGS = {
-    "English": "eng_Latn",
     "Hindi": "hin_Deva",
     "Marathi": "mar_Deva",
-    "Bangla": "ben_Beng"
+    "Bangla": "ben_Beng",
+    "English": "eng_Latn"
 }
 
-# ======================
-# LOAD TOKENIZER
-# ======================
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-print("Loading tokenizer...")
+# ==========================
+# LOAD MODEL
+# ==========================
 
-tokenizer = AutoTokenizer.from_pretrained(
-    MODEL_NAME,
-    use_fast=False
-)
+print("Loading IndicTrans2 model...")
 
-# ======================
-# LOAD DIALOGUE
-# ======================
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=False)
+model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to(DEVICE)
 
-def load_dialogue(path):
+# ==========================
+# TRANSLATION FUNCTION
+# ==========================
 
-    lines = []
+def translate_text(text, src_lang):
 
-    with open(path, encoding="utf-8") as f:
+    if src_lang == "eng_Latn":
+        return text
 
-        for line in f:
+    formatted = f"{src_lang} eng_Latn {text}"
 
-            obj = json.loads(line)
-
-            speaker = obj.get("speaker", "")
-            text = obj.get("dialogue", "")
-
-            lines.append(f"{speaker}: {text}")
-
-    return "\n".join(lines)
-
-
-# ======================
-# TOKEN COUNT
-# ======================
-
-def count_tokens(text, src_tag):
-
-    formatted = f"{src_tag} eng_Latn {text}"
-
-    tokens = tokenizer(
+    inputs = tokenizer(
         formatted,
-        truncation=False,
-        add_special_tokens=False
+        return_tensors="pt",
+        truncation=True,
+        max_length=4096
+    ).to(DEVICE)
+
+    outputs = model.generate(
+        **inputs,
+        max_length=4096,
+        num_beams=4
     )
 
-    return len(tokens["input_ids"])
+    translated = tokenizer.decode(
+        outputs[0],
+        skip_special_tokens=True
+    )
+
+    return translated
 
 
-# ======================
-# MAIN
-# ======================
+# ==========================
+# MAIN TRANSLATION LOOP
+# ==========================
 
 def main():
 
-    selected = {lang: [] for lang in LANG_TAGS}
-
     for lang, tag in LANG_TAGS.items():
 
-        dialogue_dir = Path(ROOT_DIR) / lang / "Dialogues"
+        input_dir = Path(INPUT_DIR) / lang / "Dialogues"
+        output_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
 
-        files = list(dialogue_dir.glob("*.jsonl"))
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"\nProcessing {lang} ({len(files)} files)...")
+        files = list(input_dir.glob("*.jsonl"))
+
+        print(f"\nTranslating {lang} ({len(files)} files)")
 
         for f in tqdm(files):
 
-            dialogue = load_dialogue(f)
+            translated_lines = []
 
-            tokens = count_tokens(dialogue, tag)
+            with open(f, encoding="utf-8") as file:
 
-            if TOKEN_MIN <= tokens <= TOKEN_MAX:
-                selected[lang].append(f)
+                for line in file:
 
-        print(f"{lang} candidates:", len(selected[lang]))
+                    try:
+                        obj = json.loads(line)
 
-    # sample per language
-    for lang in selected:
+                        speaker = obj.get("speaker", "")
+                        text = obj.get("dialogue", "")
 
-        if len(selected[lang]) > SAMPLES_PER_LANG:
-            selected[lang] = random.sample(selected[lang], SAMPLES_PER_LANG)
+                        translated_text = translate_text(text, tag)
 
-    # copy files to output dataset
-    for lang, files in selected.items():
+                        new_obj = {
+                            "speaker": speaker,
+                            "dialogue": translated_text
+                        }
 
-        out_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
-        out_dir.mkdir(parents=True, exist_ok=True)
+                        translated_lines.append(json.dumps(new_obj, ensure_ascii=False))
 
-        for f in files:
+                    except:
+                        translated_lines.append(line.strip())
 
-            shutil.copy(f, out_dir / f.name)
+            output_path = output_dir / f.name
 
-    print("\nDataset created at:", OUTPUT_DIR)
+            with open(output_path, "w", encoding="utf-8") as out:
+
+                for l in translated_lines:
+                    out.write(l + "\n")
 
 
 if __name__ == "__main__":
