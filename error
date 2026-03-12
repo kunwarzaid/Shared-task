@@ -1,55 +1,29 @@
-Code:
-import requests
-print("Hello")
+import json
+import numpy as np
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer
 
-url = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
+# ======================
+# CONFIG
+# ======================
 
-def call(prompt):
+DIALOGUE_DIR = "dialogues"   # folder with jsonl files
 
-  payload = {
-      "model": "gpt-5",
-      "prompt": [
-        {"role": "system", "content": "You are an expert clinical summarization evaluator."},
-        {"role": "user", "content": prompt}
-      ],
-      "max_tokens": 200,
-      "employeeId":"1757421"
-    }
+MODEL_NAME = "ai4bharat/indictrans2-indic-en"
 
-  response = requests.post(url, json=payload)
-  return response
+# ======================
+# LOAD TOKENIZER
+# ======================
 
-def build_prompt(dialogue,summary):
+print("Loading tokenizer...")
 
-    return f"""
-Evaluate factual faithfulness of the summary with respect to the dialogue.
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
-Steps:
-1 Extract factual claims from the summary.
-2 Check if each claim is supported by the dialogue.
-3 Provide supporting evidence if present.
+# ======================
+# LOAD DIALOGUE
+# ======================
 
-Dialogue:
-{dialogue}
-
-Summary:
-{summary}
-
-Return JSON:
-
-{{
- "claims":[
-   {{
-     "claim":"",
-     "supported":true/false,
-     "evidence":""
-   }}
- ],
- "supported_count":0,
- "hallucinated_count":0,
- "faithfulness_score":0
-}}
-"""
 def load_dialogue(path):
 
     lines = []
@@ -58,60 +32,72 @@ def load_dialogue(path):
 
         for line in f:
 
-            line=line.strip()
+            obj = json.loads(line)
 
-            if not line:
-                continue
+            speaker = obj.get("speaker", "")
+            text = obj.get("dialogue", "")
 
-            try:
-
-                obj=json.loads(line)
-
-                speaker=obj.get("speaker","")
-                text=obj.get("dialogue","")
-
-                lines.append(f"{speaker}: {text}")
-
-            except:
-                continue
+            lines.append(f"{speaker}: {text}")
 
     return "\n".join(lines)
 
-def load_summary(path):
 
-    with open(path,encoding="utf-8") as f:
-        return f.read()
+# ======================
+# TOKEN COUNT
+# ======================
 
-d = load_dialogue("D_1.jsonl")
-s = load_summary("S_1.txt")
-prompt = build_prompt(d,s)
-response = call(prompt)
+def count_tokens(text):
 
-print(response.json())
+    tokens = tokenizer(
+        text,
+        truncation=False,
+        add_special_tokens=False
+    )
+
+    return len(tokens["input_ids"])
 
 
-error:
-Hello
-Traceback (most recent call last):
-  File "/home/coder/test/myvenv/lib/python3.11/site-packages/requests/models.py", line 976, in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/json/__init__.py", line 346, in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/json/decoder.py", line 355, in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+# ======================
+# MAIN
+# ======================
 
-During handling of the above exception, another exception occurred:
+def main():
 
-Traceback (most recent call last):
-  File "/home/coder/test/test.py", line 89, in <module>
-    print(response.json())
-          ^^^^^^^^^^^^^^^
-  File "/home/coder/test/myvenv/lib/python3.11/site-packages/requests/models.py", line 980, in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+    files = list(Path(DIALOGUE_DIR).glob("*.jsonl"))
+
+    lengths = []
+
+    for f in tqdm(files):
+
+        dialogue = load_dialogue(f)
+
+        n_tokens = count_tokens(dialogue)
+
+        lengths.append(n_tokens)
+
+    lengths = np.array(lengths)
+
+    print("\n========== TOKEN STATS ==========")
+
+    print("Total dialogues:", len(lengths))
+    print("Average tokens:", int(np.mean(lengths)))
+    print("Min tokens:", int(np.min(lengths)))
+    print("Max tokens:", int(np.max(lengths)))
+
+    print("\nPercentiles")
+
+    print("50%:", int(np.percentile(lengths, 50)))
+    print("75%:", int(np.percentile(lengths, 75)))
+    print("90%:", int(np.percentile(lengths, 90)))
+    print("95%:", int(np.percentile(lengths, 95)))
+
+    print("\nDistribution")
+
+    print("<512:", np.sum(lengths < 512))
+    print("512-1024:", np.sum((lengths >= 512) & (lengths < 1024)))
+    print("1024-2048:", np.sum((lengths >= 1024) & (lengths < 2048)))
+    print(">2048:", np.sum(lengths >= 2048))
+
+
+if __name__ == "__main__":
+    main()
