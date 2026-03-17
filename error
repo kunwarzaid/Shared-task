@@ -5,44 +5,21 @@ from transformers import (
     AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
-    BitsAndBytesConfig,
-    TrainerCallback
+    BitsAndBytesConfig
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-def accelerate_compat_shim():
-    try:
-        import accelerate
-        sig = inspect.signature(accelerate.Accelerator.unwrap_model)
-        if "keep_torch_compile" not in sig.parameters:
-            _orig = accelerate.Accelerator.unwrap_model
-
-            def _shim(self, model, *a, **kw):
-                kw.pop("keep_torch_compile", None)
-                return _orig(self, model, *a, **kw)
-
-            accelerate.Accelerator.unwrap_model = _shim
-            print("[shim] unwrap_model patched for Accelerate.")
-        else:
-            print("[shim] No patch needed.")
-    except Exception as e:
-        print("[shim] Accelerate shim failed:", e)
-        traceback.print_exc()
-
-
-accelerate_compat_shim()
-
-
 # ============================================================
 # CONFIGURATION
 # ============================================================
-DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"               
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"   
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/qwen_2.5_7b_finetune_split"            
 
-CTX_MAX = 8192
+DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"
+BASE_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/mistral_7b_finetune"
+
+CTX_MAX = 16384
 
 LR = 2e-5
 EPOCHS = 3
@@ -52,21 +29,16 @@ GRAD_ACCUM = 8
 
 torch.manual_seed(42)
 
-
 # =========================================================
 # TOKENIZER
 # =========================================================
 
-tokenizer = AutoTokenizer.from_pretrained(
-    BASE_MODEL,
-    trust_remote_code=True
-)
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
-tokenizer.padding_side = "right"
-
+tokenizer.padding_side = "left"
 
 # =========================================================
 # SAFE JSON LOADER
@@ -78,11 +50,8 @@ def load_dialogue_file(path):
         with open(path, "r", encoding="utf-8") as f:
             text = f.read().strip()
 
-        # case 1: JSON array
         if text.startswith("["):
             data = json.loads(text)
-
-        # case 2: JSONL
         else:
             data = []
             for line in text.splitlines():
@@ -92,7 +61,7 @@ def load_dialogue_file(path):
                     continue
 
     except Exception:
-        print("⚠️ Skipping corrupted file:", path)
+        print("Skipping corrupted file:", path)
         return []
 
     rows = []
@@ -102,7 +71,6 @@ def load_dialogue_file(path):
             rows.append(item)
 
     return rows
-
 
 # =========================================================
 # JOIN DIALOGUE
@@ -115,7 +83,6 @@ def join_dialogue(rows):
     for r in rows:
 
         try:
-
             speaker = r.get("speaker", "")
             text = r.get("dialogue", "")
 
@@ -128,7 +95,6 @@ def join_dialogue(rows):
             continue
 
     return "\n".join(parts).strip()
-
 
 # =========================================================
 # BUILD DATASET
@@ -190,7 +156,6 @@ def build_examples(split_dir):
 
     return examples
 
-
 # =========================================================
 # LOAD DATA
 # =========================================================
@@ -204,7 +169,6 @@ print("Dev examples:", len(dev_raw))
 train_dataset = Dataset.from_list(train_raw)
 dev_dataset = Dataset.from_list(dev_raw)
 
-
 # =========================================================
 # PROMPT
 # =========================================================
@@ -212,21 +176,25 @@ dev_dataset = Dataset.from_list(dev_raw)
 def build_prompt(dialogue):
 
     return f"""
+You are a clinical documentation assistant.
+
 Below is a doctor–patient conversation.
 
 The dialogue may be written in Hindi, Marathi, Bangla, or English.
 
-Write a concise and faithful clinical summary in English.
+Your task is to produce a **concise clinical summary strictly in English**.
 
-Rules:
-- Only include information explicitly mentioned.
-- Do not infer diagnoses or medications.
+IMPORTANT RULES:
+
+- Only include information explicitly mentioned in the dialogue.
+- Do NOT infer diagnoses, medications, or symptoms.
 - Preserve negations such as "denies fever".
+- If information is not mentioned, do not add it.
+- Do not hallucinate.
 
 Dialogue:
 {dialogue}
 """
-
 
 # =========================================================
 # TOKENIZATION
@@ -235,20 +203,12 @@ Dialogue:
 def tokenize(example):
 
     try:
+
         prompt_text = build_prompt(example["dialogue"])
 
-        messages = [
-            {"role": "system", "content": "You are a clinical documentation assistant."},
-            {"role": "user", "content": prompt_text}
-        ]
+        prompt = f"<s>[INST] {prompt_text} [/INST]"
 
-        prompt = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )
-
-        summary = example["summary"] + tokenizer.eos_token
+        summary = example["summary"] + "</s>"
 
         prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
         summary_ids = tokenizer.encode(summary, add_special_tokens=False)
@@ -277,14 +237,11 @@ def tokenize(example):
             "labels": []
         }
 
-        
 train_dataset = train_dataset.map(tokenize, remove_columns=train_dataset.column_names)
 dev_dataset = dev_dataset.map(tokenize, remove_columns=dev_dataset.column_names)
 
-train_dataset = train_dataset.filter(lambda x: "input_ids" in x and len(x["input_ids"]) > 0)
-dev_dataset = dev_dataset.filter(lambda x: "input_ids" in x and len(x["input_ids"]) > 0)
-
-
+train_dataset = train_dataset.filter(lambda x: len(x["input_ids"]) > 0)
+dev_dataset = dev_dataset.filter(lambda x: len(x["input_ids"]) > 0)
 
 # =========================================================
 # COLLATOR
@@ -320,7 +277,6 @@ def collate(batch):
         "labels": torch.tensor(labels)
     }
 
-
 # =========================================================
 # MODEL
 # =========================================================
@@ -334,13 +290,16 @@ bnb_config = BitsAndBytesConfig(
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
     device_map="auto",
-    quantization_config=bnb_config,
-    trust_remote_code=True
+    quantization_config=bnb_config
 )
+
 model.config.use_cache = False
 model = prepare_model_for_kbit_training(model)
 model.gradient_checkpointing_enable()
 
+# =========================================================
+# LORA
+# =========================================================
 
 lora_config = LoraConfig(
 
@@ -352,10 +311,7 @@ lora_config = LoraConfig(
         "q_proj",
         "k_proj",
         "v_proj",
-        "o_proj",
-        "gate_proj",
-        "up_proj",
-        "down_proj"
+        "o_proj"
     ],
 
     task_type="CAUSAL_LM"
@@ -363,7 +319,6 @@ lora_config = LoraConfig(
 
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
-
 
 # =========================================================
 # TRAINING
@@ -385,14 +340,12 @@ training_args = TrainingArguments(
     logging_steps=50,
 
     eval_strategy="no",
-    #eval_steps=500,
 
     save_steps=2000,
     save_total_limit=2,
 
     report_to="none"
 )
-
 
 trainer = Trainer(
 
@@ -405,7 +358,6 @@ trainer = Trainer(
 
     data_collator=collate
 )
-
 
 trainer.train()
 
