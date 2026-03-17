@@ -1,118 +1,413 @@
-import json
-from pathlib import Path
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import torch
+import os, json, torch, inspect, traceback
+from datasets import Dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    Trainer,
+    TrainingArguments,
+    BitsAndBytesConfig,
+    TrainerCallback
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-# ==========================
-# CONFIG
-# ==========================
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-INPUT_DIR = "selected_data"
-OUTPUT_DIR = "translated_data"
+def accelerate_compat_shim():
+    try:
+        import accelerate
+        sig = inspect.signature(accelerate.Accelerator.unwrap_model)
+        if "keep_torch_compile" not in sig.parameters:
+            _orig = accelerate.Accelerator.unwrap_model
 
-MODEL_NAME = "ai4bharat/indictrans2-indic-en"
+            def _shim(self, model, *a, **kw):
+                kw.pop("keep_torch_compile", None)
+                return _orig(self, model, *a, **kw)
 
-LANG_TAGS = {
-    "Hindi": "hin_Deva",
-    "Marathi": "mar_Deva",
-    "Bangla": "ben_Beng",
-    "English": "eng_Latn"
-}
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-# ==========================
-# LOAD MODEL
-# ==========================
-
-print("Loading IndicTrans2 model...")
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=False)
-model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to(DEVICE)
-
-# ==========================
-# TRANSLATION FUNCTION
-# ==========================
-
-def translate_text(text, src_lang):
-
-    if src_lang == "eng_Latn":
-        return text
-
-    formatted = f"{src_lang} eng_Latn {text}"
-
-    inputs = tokenizer(
-        formatted,
-        return_tensors="pt",
-        truncation=True,
-        max_length=4096
-    ).to(DEVICE)
-
-    outputs = model.generate(
-        **inputs,
-        max_length=4096,
-        num_beams=4
-    )
-
-    translated = tokenizer.decode(
-        outputs[0],
-        skip_special_tokens=True
-    )
-
-    return translated
+            accelerate.Accelerator.unwrap_model = _shim
+            print("[shim] unwrap_model patched for Accelerate.")
+        else:
+            print("[shim] No patch needed.")
+    except Exception as e:
+        print("[shim] Accelerate shim failed:", e)
+        traceback.print_exc()
 
 
-# ==========================
-# MAIN TRANSLATION LOOP
-# ==========================
-
-def main():
-
-    for lang, tag in LANG_TAGS.items():
-
-        input_dir = Path(INPUT_DIR) / lang / "Dialogues"
-        output_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
-
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        files = list(input_dir.glob("*.jsonl"))
-
-        print(f"\nTranslating {lang} ({len(files)} files)")
-
-        for f in tqdm(files):
-
-            translated_lines = []
-
-            with open(f, encoding="utf-8") as file:
-
-                for line in file:
-
-                    try:
-                        obj = json.loads(line)
-
-                        speaker = obj.get("speaker", "")
-                        text = obj.get("dialogue", "")
-
-                        translated_text = translate_text(text, tag)
-
-                        new_obj = {
-                            "speaker": speaker,
-                            "dialogue": translated_text
-                        }
-
-                        translated_lines.append(json.dumps(new_obj, ensure_ascii=False))
-
-                    except:
-                        translated_lines.append(line.strip())
-
-            output_path = output_dir / f.name
-
-            with open(output_path, "w", encoding="utf-8") as out:
-
-                for l in translated_lines:
-                    out.write(l + "\n")
+accelerate_compat_shim()
 
 
-if __name__ == "__main__":
-    main()
+# ============================================================
+# CONFIGURATION
+# ============================================================
+DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"               
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"   
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/qwen_2.5_7b_finetune_split"            
+
+CTX_MAX = 8192
+
+LR = 2e-5
+EPOCHS = 3
+
+BATCH_SIZE = 1
+GRAD_ACCUM = 8
+
+torch.manual_seed(42)
+
+
+# =========================================================
+# TOKENIZER
+# =========================================================
+
+tokenizer = AutoTokenizer.from_pretrained(
+    BASE_MODEL,
+    trust_remote_code=True
+)
+
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+tokenizer.padding_side = "right"
+
+
+# =========================================================
+# SAFE JSON LOADER
+# =========================================================
+
+def load_dialogue_file(path):
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read().strip()
+
+        # case 1: JSON array
+        if text.startswith("["):
+            data = json.loads(text)
+
+        # case 2: JSONL
+        else:
+            data = []
+            for line in text.splitlines():
+                try:
+                    data.append(json.loads(line))
+                except:
+                    continue
+
+    except Exception:
+        print("⚠️ Skipping corrupted file:", path)
+        return []
+
+    rows = []
+
+    for item in data:
+        if isinstance(item, dict):
+            rows.append(item)
+
+    return rows
+
+
+# =========================================================
+# JOIN DIALOGUE
+# =========================================================
+
+def join_dialogue(rows):
+
+    parts = []
+
+    for r in rows:
+
+        try:
+
+            speaker = r.get("speaker", "")
+            text = r.get("dialogue", "")
+
+            if speaker:
+                parts.append(f"[{speaker}] {text}")
+            else:
+                parts.append(text)
+
+        except:
+            continue
+
+    return "\n".join(parts).strip()
+
+
+# =========================================================
+# BUILD DATASET
+# =========================================================
+
+def build_examples(split_dir):
+
+    examples = []
+
+    for lang in os.listdir(split_dir):
+
+        lang_dir = os.path.join(split_dir, lang)
+
+        dlg_dir = os.path.join(lang_dir, "Dialogues")
+        sum_dir = os.path.join(lang_dir, "Summary_Text")
+
+        if not os.path.isdir(dlg_dir):
+            continue
+
+        for fn in os.listdir(dlg_dir):
+
+            if not fn.endswith(".jsonl"):
+                continue
+
+            path = os.path.join(dlg_dir, fn)
+
+            rows = load_dialogue_file(path)
+
+            if not rows:
+                continue
+
+            dialogue = join_dialogue(rows)
+
+            if not dialogue:
+                continue
+
+            sum_path = os.path.join(
+                sum_dir,
+                fn.replace(".jsonl", "_summary.txt")
+            )
+
+            if not os.path.exists(sum_path):
+                continue
+
+            try:
+                summary = open(sum_path).read().strip()
+            except:
+                continue
+
+            if not summary:
+                continue
+
+            examples.append(
+                {
+                    "dialogue": dialogue,
+                    "summary": summary
+                }
+            )
+
+    return examples
+
+
+# =========================================================
+# LOAD DATA
+# =========================================================
+
+train_raw = build_examples(os.path.join(DATA_DIR, "train_split"))
+dev_raw = build_examples(os.path.join(DATA_DIR, "dev"))
+
+print("Train examples:", len(train_raw))
+print("Dev examples:", len(dev_raw))
+
+train_dataset = Dataset.from_list(train_raw)
+dev_dataset = Dataset.from_list(dev_raw)
+
+
+# =========================================================
+# PROMPT
+# =========================================================
+
+def build_prompt(dialogue):
+
+    return f"""
+Below is a doctor–patient conversation.
+
+The dialogue may be written in Hindi, Marathi, Bangla, or English.
+
+Write a concise and faithful clinical summary in English.
+
+Rules:
+- Only include information explicitly mentioned.
+- Do not infer diagnoses or medications.
+- Preserve negations such as "denies fever".
+
+Dialogue:
+{dialogue}
+"""
+
+
+# =========================================================
+# TOKENIZATION
+# =========================================================
+
+def tokenize(example):
+
+    try:
+        prompt_text = build_prompt(example["dialogue"])
+
+        messages = [
+            {"role": "system", "content": "You are a clinical documentation assistant."},
+            {"role": "user", "content": prompt_text}
+        ]
+
+        prompt = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+
+        summary = example["summary"] + tokenizer.eos_token
+
+        prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+        summary_ids = tokenizer.encode(summary, add_special_tokens=False)
+
+        if len(prompt_ids) + len(summary_ids) > CTX_MAX:
+            return {
+                "input_ids": [],
+                "attention_mask": [],
+                "labels": []
+            }
+
+        input_ids = prompt_ids + summary_ids
+
+        labels = [-100] * len(prompt_ids) + summary_ids
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": [1] * len(input_ids),
+            "labels": labels
+        }
+
+    except Exception:
+        return {
+            "input_ids": [],
+            "attention_mask": [],
+            "labels": []
+        }
+
+        
+train_dataset = train_dataset.map(tokenize, remove_columns=train_dataset.column_names)
+dev_dataset = dev_dataset.map(tokenize, remove_columns=dev_dataset.column_names)
+
+train_dataset = train_dataset.filter(lambda x: "input_ids" in x and len(x["input_ids"]) > 0)
+dev_dataset = dev_dataset.filter(lambda x: "input_ids" in x and len(x["input_ids"]) > 0)
+
+
+
+# =========================================================
+# COLLATOR
+# =========================================================
+
+def collate(batch):
+
+    max_len = max(len(x["input_ids"]) for x in batch)
+
+    input_ids = []
+    attention_mask = []
+    labels = []
+
+    for x in batch:
+
+        pad = max_len - len(x["input_ids"])
+
+        input_ids.append(
+            x["input_ids"] + [tokenizer.pad_token_id] * pad
+        )
+
+        attention_mask.append(
+            x["attention_mask"] + [0] * pad
+        )
+
+        labels.append(
+            x["labels"] + [-100] * pad
+        )
+
+    return {
+        "input_ids": torch.tensor(input_ids),
+        "attention_mask": torch.tensor(attention_mask),
+        "labels": torch.tensor(labels)
+    }
+
+
+# =========================================================
+# MODEL
+# =========================================================
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL,
+    device_map="auto",
+    quantization_config=bnb_config,
+    trust_remote_code=True
+)
+model.config.use_cache = False
+model = prepare_model_for_kbit_training(model)
+model.gradient_checkpointing_enable()
+
+
+lora_config = LoraConfig(
+
+    r=8,
+    lora_alpha=32,
+    lora_dropout=0.05,
+
+    target_modules=[
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+    ],
+
+    task_type="CAUSAL_LM"
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+
+
+# =========================================================
+# TRAINING
+# =========================================================
+
+training_args = TrainingArguments(
+
+    output_dir=OUTPUT_DIR,
+
+    per_device_train_batch_size=BATCH_SIZE,
+    gradient_accumulation_steps=GRAD_ACCUM,
+
+    num_train_epochs=EPOCHS,
+
+    learning_rate=LR,
+
+    fp16=True,
+
+    logging_steps=50,
+
+    eval_strategy="no",
+    #eval_steps=500,
+
+    save_steps=2000,
+    save_total_limit=2,
+
+    report_to="none"
+)
+
+
+trainer = Trainer(
+
+    model=model,
+
+    args=training_args,
+
+    train_dataset=train_dataset,
+    eval_dataset=dev_dataset,
+
+    data_collator=collate
+)
+
+
+trainer.train()
+
+trainer.save_model(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
