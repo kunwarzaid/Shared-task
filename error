@@ -1,25 +1,22 @@
 \begin{table}[t]
-\caption{ETI weight-sweep sensitivity showing stable rankings across weight variations. 
-B = Baseline, S = Safety, C = Consensus, T = Trust.}
-\label{tab:eti_weight_sweep}
-
 \centering
+\caption{Component ablations for ETI. Removing terms changes rankings, confirming that accuracy, consensus stability, and reasoning coherence all contribute to trust estimation.}
+\label{tab:eti_component_ablate}
+
 \small
 
 \begin{tabular}{|l|l|l|l|l|}
 \hline
-Weights (A/CDR/RDC) & ETI (B/S/C/T) & Rank$_{ETI}$ & FTI (B/S/C/T) & Rank$_{FTI}$ \\ 
+Variant & Rank$_{ETI}$ & Rank$_{FTI}$ & ETI$_{mean}$ & FTI$_{mean}$ \\ 
 \hline
-0.50/0.25/0.25 & 76.9/75.3/69.9/70.0 & B$>$S$>$C$>$T & 39.2/74.6/35.0/74.5 & S$>$T$>$B$>$C \\ 
+Default (0.4/0.3/0.3) & B$>$S$>$C$>$T & S$>$T$>$B$>$C & 73.9 & 56.1 \\ 
 \hline
-0.45/0.30/0.25 & 78.4/76.9/70.0/70.0 & B$>$S$>$C$>$T & 39.2/75.4/35.0/74.5 & S$>$T$>$B$>$C \\ 
+No RDC term & B$>$S$>$T$>$C & S$>$T$>$B$>$C & 78.4 & 57.3 \\ 
 \hline
-0.40/0.30/0.30 & 78.5/76.7/70.3/70.2 & B$>$S$>$C$>$T & 39.2/75.4/35.2/74.6 & S$>$T$>$B$>$C \\ 
+No CDR term & C$>$T$>$B$>$S & S$>$T$>$B$>$C & 69.5 & 53.9 \\ 
 \hline
-0.35/0.35/0.30 & 80.0/78.3/70.4/70.2 & B$>$S$>$C$>$T & 39.2/76.2/35.2/74.6 & S$>$T$>$B$>$C \\ 
+Accuracy-only & B$>$T$>$S$>$C & S$>$T$>$B$>$C & 68.5 & 52.8 \\ 
 \hline
-0.30/0.35/0.35 & 80.0/78.2/70.7/70.4 & B$>$S$>$C$>$T & 39.2/76.1/35.4/74.7 & S$>$T$>$B$>$C \\ 
-\hline
-
 \end{tabular}
+
 \end{table}
