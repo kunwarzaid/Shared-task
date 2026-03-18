@@ -1,186 +1,25 @@
-\documentclass[runningheads]{llncs}
+\begin{table}[t]
+\caption{ETI weight-sweep sensitivity showing stable rankings across weight variations. 
+B = Baseline, S = Safety, C = Consensus, T = Trust.}
+\label{tab:eti_weight_sweep}
 
-\usepackage[T1]{fontenc}
-\usepackage{graphicx}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit,shapes}
-
-\usepackage{amsmath}
-\usepackage{booktabs}
-
-% Algorithm packages (fixed conflict)
-\usepackage{algorithm}
-\usepackage{algpseudocode}
-
-\usepackage{listings}
-\usepackage{newfloat}
-
-\begin{document}
-
-\title{Trust-X: Towards Transparent and Safe Multi-Agent Reasoning}
-
-\titlerunning{Trust-X Framework}
-
-\author{Kunwar Zaid\inst{1} \and Amit Sangroya\inst{1}}
-
-\authorrunning{K. Zaid and A. Sangroya}
-
-\institute{
-TCS Research, New Delhi, India\
-\email{{kunwar.zaid, amit.sangroya}@tcs.com}
-}
-
-\maketitle
-
-\begin{abstract}
-
-Large Language Models (LLMs) have achieved strong performance on tasks such as clinical summarization, question-answering, and clinical diagnosis on medical reasoning benchmarks such as MedQA, yet their deployment remains constrained by opacity and unverifiable decision paths.
-
-We introduce \textbf{Trust-X}, a framework that embeds explainability, consensus reasoning, and real-time safety oversight to evaluate how transparently language models reason through diagnostic problems.
-
-Trust-X integrates multiple reasoning agents, safety monitoring agents, and quantitative trust indices that combine reasoning stability and operational safety.
-
-Across 50 clinical scenarios, Trust-X maintained stable diagnostic accuracy ($\approx68%$) while revealing that models can appear correct yet reason unreliably.
-
-These findings suggest that reliability in clinical AI emerges from transparency and accountability rather than accuracy alone.
-
-\keywords{Large Language Models \and Explainable AI \and Trustworthy AI \and Medical Diagnosis \and Multi-Agent Systems}
-
-\end{abstract}
-
-\section{Introduction}
-
-Large Language Models (LLMs) such as GPT-4 \cite{achiam2023gpt}, Gemini \cite{team2023gemini}, and Med-PaLM 2 \cite{singhal2025toward} have demonstrated remarkable progress in natural language reasoning across domains including medicine.
-
-They now perform at near-clinician levels on medical benchmarks \cite{kung2023performance,nori2023capabilities}. However, their deployment in healthcare remains constrained by opaque reasoning and unreliable decision paths.
-
-Medicine requires not only correct predictions but also \emph{explainable and justifiable reasoning}. Clinicians evaluate whether conclusions follow medical logic and evidence.
-
-Despite improvements in alignment and safety training, LLMs still show instability in reasoning and excessive confidence in uncertain cases.
-
-These limitations motivated the development of \textbf{Trust-X}, a framework designed to make reasoning transparent, inspectable, and measurable.
-
-Trust-X introduces four core features:
-
-\begin{itemize}
-\item \textbf{Consensus Reasoning:} Multiple doctor agents independently analyze each case and vote on the diagnosis.
-\item \textbf{Reasoning Trace:} Each step records the evidence, reasoning, and conclusion.
-\item \textbf{End-to-End Logging:} All actions are recorded for reproducibility.
-\item \textbf{Trust Scoring:} Reasoning quality and safety behavior are combined into quantitative trust indices.
-\end{itemize}
-
-Rather than claiming to make LLMs trustworthy, Trust-X measures when trust emerges and when it fails.
-
-\section{Related Work}
-
-Explainable AI techniques such as LIME \cite{ribeiro2016should}, SHAP \cite{lundberg2017unified}, and Grad-CAM \cite{selvaraju2017grad} attempt to reveal model reasoning.
-
-However, these approaches struggle in medical contexts where reasoning unfolds through dialogue and evidence accumulation.
-
-Recent work on chain-of-thought reasoning \cite{wei2022chain} and reflection-based prompting attempts to expose reasoning steps, but these explanations may not reflect genuine reasoning processes.
-
-Trust-X addresses this limitation by logging the reasoning process in real time rather than reconstructing explanations post-hoc.
-
-\section{Methodology}
-
-Trust-X models diagnostic reasoning as interactions between specialized agents.
-
-\subsection{Multi-Agent Diagnostic Simulation}
-
-The system includes four agent types:
-
-\begin{itemize}
-\item \textbf{Doctor Agent} – performs diagnostic reasoning.
-\item \textbf{Patient Agent} – provides patient responses.
-\item \textbf{Measurement Agent} – returns diagnostic test results.
-\item \textbf{Safety Agent} – monitors medical actions for risks.
-\end{itemize}
-
-\subsection{Consensus Disagreement Rate}
-
-Diagnostic uncertainty is captured through the Consensus Disagreement Rate (CDR):
-
-[
-\mathrm{CDR}i = 1 - \frac{\max{d \in D_i} f_i(d)}{K}
-]
-
-where (f_i(d)) is the number of agents predicting diagnosis (d).
-
-\section{Trust Metrics}
-
-Trust-X introduces three indices:
-
-\begin{itemize}
-\item Epistemic Trust Index (ETI)
-\item Operational Safety Index (OSI)
-\item Final Trust Index (FTI)
-\end{itemize}
-
-[
-\mathrm{ETI} = 0.4 \times Accuracy + 0.3 \times (1-CDR) + 0.3 \times RDC
-]
-
-[
-\mathrm{OSI} = 100 - 0.5(UnsafeRx + TestAlerts)
-]
-
-[
-\mathrm{FTI} = 0.5 \times (ETI + OSI)
-]
-
-\section{Algorithm}
-
-\begin{algorithm}
-\caption{Computation of Trust Metrics}
-\begin{algorithmic}[1]
-\For{each clinical case}
-\State Collect diagnoses from all agents
-\State Compute majority vote
-\State Calculate CDR
-\State Compute reasoning similarity (RDC)
-\State Compute ETI
-\State Compute OSI
-\State Compute final trust index FTI
-\EndFor
-\end{algorithmic}
-\end{algorithm}
-
-\section{Results}
-
-Experiments were conducted on 50 clinical diagnostic cases derived from the MedQA dataset.
-
-Across all configurations diagnostic accuracy remained stable around 68–69%.
-
-However trust metrics varied significantly depending on reasoning transparency and safety monitoring.
-
-\begin{table}
-\caption{Trust-X System Performance}
 \centering
-\begin{tabular}{lccc}
-\toprule
-System & Accuracy & ETI & FTI \
-\midrule
-Baseline & 69 & 78.5 & 39.2 \
-Safety & 68 & 76.8 & 75.4 \
-Consensus & 68 & 70.3 & 35.2 \
-Trust & 69 & 70.2 & 74.6 \
-\bottomrule
+\small
+
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+Weights (A/CDR/RDC) & ETI (B/S/C/T) & Rank$_{ETI}$ & FTI (B/S/C/T) & Rank$_{FTI}$ \\ 
+\hline
+0.50/0.25/0.25 & 76.9/75.3/69.9/70.0 & B$>$S$>$C$>$T & 39.2/74.6/35.0/74.5 & S$>$T$>$B$>$C \\ 
+\hline
+0.45/0.30/0.25 & 78.4/76.9/70.0/70.0 & B$>$S$>$C$>$T & 39.2/75.4/35.0/74.5 & S$>$T$>$B$>$C \\ 
+\hline
+0.40/0.30/0.30 & 78.5/76.7/70.3/70.2 & B$>$S$>$C$>$T & 39.2/75.4/35.2/74.6 & S$>$T$>$B$>$C \\ 
+\hline
+0.35/0.35/0.30 & 80.0/78.3/70.4/70.2 & B$>$S$>$C$>$T & 39.2/76.2/35.2/74.6 & S$>$T$>$B$>$C \\ 
+\hline
+0.30/0.35/0.35 & 80.0/78.2/70.7/70.4 & B$>$S$>$C$>$T & 39.2/76.1/35.4/74.7 & S$>$T$>$B$>$C \\ 
+\hline
+
 \end{tabular}
 \end{table}
-
-\section{Discussion}
-
-The results demonstrate that trustworthiness depends on reasoning transparency and safety monitoring rather than predictive accuracy alone.
-
-Systems with active safety supervision produced higher trust indices even when raw accuracy remained unchanged.
-
-\section{Conclusion}
-
-Trust-X demonstrates that trustworthy clinical AI requires transparency, consensus reasoning, and operational safety.
-
-Future work will explore larger clinical datasets and improved reasoning evaluation methods.
-
-\bibliographystyle{splncs04}
-\bibliography{aaai2026}
-
-\end{document}
