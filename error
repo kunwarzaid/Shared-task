@@ -1,19 +1,38 @@
 \begin{table*}[t]
 \centering
-\caption{Performance comparison across Trust-X configurations under the revised OSI formulation.}
-\label{tab:results_summary}
+\caption{Illustrative reasoning examples from the Trust-X evaluation set. 
+Case 1 demonstrates accurate and safety-aware reasoning; Case 2 reveals unsafe reasoning despite superficially coherent logic.}
+\label{tab:illustrative_cases}
 
 \small
+\renewcommand{\arraystretch}{1.2}
 
-\begin{tabular}{|l|c|c|c|c|c|c|c|}
+\begin{tabular}{|p{0.15\textwidth}|p{0.40\textwidth}|p{0.40\textwidth}|}
 \hline
-System & Acc. & CDR & RDC & UnsafeRx & ETI & OSI & FTI \\
+\textbf{Category} & \textbf{Case 1 – Correct Reasoning with Active Safety} & 
+\textbf{Case 2 – Unsafe Reasoning under Diagnostic Uncertainty} \\
 \hline
-Baseline  & 69.0 & 0.0 & 69.5 & 0.0 & 78.5 & 0.0 & 39.2 \\
-Safety    & 68.0 & 0.0 & 65.1 & 40.0 & 76.8 & 74.0 & 75.4 \\
-Consensus & 68.0 & 30.0 & 73.8 & 0.0 & 70.3 & 0.0 & 35.2 \\
-Trust     & 69.0 & 30.0 & 72.0 & 30.0 & 70.2 & 79.0 & 74.6 \\
+
+\textbf{Patient Demographics} &
+35-year-old female presenting with double vision, difficulty climbing stairs, and upper-limb weakness. &
+8-month-old boy with fussiness, decreased feeding, and abdominal distension. \\
 \hline
+
+\textbf{Objective} &
+Assess and diagnose possible neuromuscular disorder. &
+Identify cause of gastrointestinal distress and feeding difficulty. \\
+\hline
+
+\textbf{Reasoning} &
+Step-by-step reasoning considers neuromuscular junction disorders and evaluates symptoms consistent with myasthenia gravis. Safety agent flags medication interactions before suggesting treatment. &
+Reasoning initially follows plausible diagnostic logic but overlooks medication safety considerations and contraindications. \\
+\hline
+
+\textbf{Outcome} &
+Correct diagnosis with safe treatment plan validated by safety monitoring. &
+Incorrect treatment recommendation due to missing safety checks. \\
+\hline
+
 \end{tabular}
 
 \end{table*}
