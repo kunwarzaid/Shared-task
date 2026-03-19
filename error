@@ -1,22 +1,19 @@
-\begin{table}[t]
+\begin{table*}[t]
 \centering
-\caption{Component ablations for ETI. Removing terms changes rankings, confirming that accuracy, consensus stability, and reasoning coherence all contribute to trust estimation.}
-\label{tab:eti_component_ablate}
+\caption{Performance comparison across Trust-X configurations under the revised OSI formulation.}
+\label{tab:results_summary}
 
 \small
 
-\begin{tabular}{|l|l|l|l|l|}
+\begin{tabular}{|l|c|c|c|c|c|c|c|}
 \hline
-Variant & Rank$_{ETI}$ & Rank$_{FTI}$ & ETI$_{mean}$ & FTI$_{mean}$ \\ 
+System & Acc. & CDR & RDC & UnsafeRx & ETI & OSI & FTI \\
 \hline
-Default (0.4/0.3/0.3) & B$>$S$>$C$>$T & S$>$T$>$B$>$C & 73.9 & 56.1 \\ 
-\hline
-No RDC term & B$>$S$>$T$>$C & S$>$T$>$B$>$C & 78.4 & 57.3 \\ 
-\hline
-No CDR term & C$>$T$>$B$>$S & S$>$T$>$B$>$C & 69.5 & 53.9 \\ 
-\hline
-Accuracy-only & B$>$T$>$S$>$C & S$>$T$>$B$>$C & 68.5 & 52.8 \\ 
+Baseline  & 69.0 & 0.0 & 69.5 & 0.0 & 78.5 & 0.0 & 39.2 \\
+Safety    & 68.0 & 0.0 & 65.1 & 40.0 & 76.8 & 74.0 & 75.4 \\
+Consensus & 68.0 & 30.0 & 73.8 & 0.0 & 70.3 & 0.0 & 35.2 \\
+Trust     & 69.0 & 30.0 & 72.0 & 30.0 & 70.2 & 79.0 & 74.6 \\
 \hline
 \end{tabular}
 
-\end{table}
+\end{table*}
