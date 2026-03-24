@@ -15,12 +15,12 @@ print(transformers.__version__)
 # ============================================================
 
 def huggingface_login():
-    token = ''
+    token = ''  # add your token if required
     try:
         login(token=token)
         print("Successfully logged into Hugging Face!")
     except Exception as e:
-        print(f"Failed to log in: {e}")
+        print(f"Login failed: {e}")
 
 huggingface_login()
 
@@ -35,7 +35,7 @@ BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/transliterated_dialogues/transliterated_dialogues"
 OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_translit_16k/summary_only"
 
-TARGET_LANGS = ["Bangla","English","Hindi","Marathi"]
+TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
 
 CTX_MAX = 16000
 MAX_NEW_TOKENS_SUMMARY = 1024
@@ -47,28 +47,29 @@ MAX_NEW_TOKENS_SUMMARY = 1024
 ZERO_SHOT_PROMPT_TEMPLATE = """
 You are a clinical documentation assistant.
 
-The following dialogue is transliterated text written in Roman script representing {language}.
+{language_line}
 
-Your task is to generate a clinical summary of the doctor–patient dialogue.
+Important: The dialogue may be written in Roman script (transliterated) and is NOT English even if it looks similar. Interpret it in the correct language.
 
-STRICT RULES:
+Task: Write a clinical summary of the dialogue.
 
-1. Only use information explicitly stated in the dialogue.
-2. Do NOT infer or add missing details.
-3. Do NOT hallucinate diagnoses, medications, or durations.
-4. Preserve negations exactly.
-5. If something is not mentioned, do not include it.
-6. Do NOT translate the dialogue.
+Rules:
+- Use ONLY information explicitly stated in the dialogue.
+- Do NOT infer, assume, or add missing details.
+- Do NOT introduce diagnoses, medications, or durations unless explicitly mentioned.
+- Preserve negations exactly.
+- If information is not present, do not include it.
+- If unsure about any detail, omit it.
+- Do NOT translate or reinterpret the dialogue.
 
-Write a complete and detailed clinical summary.
+Write a clear, complete, and concise clinical summary.
 
-Output format:
+Output:
 [Summary]
-<your summary here>
+<summary>
 
-<DIALOGUE>
+Dialogue:
 {dialogue}
-</DIALOGUE>
 """
 
 # ============================================================
@@ -131,7 +132,7 @@ def load_model():
     return model, tokenizer
 
 # ============================================================
-# GENERATION (CTX SAFE)
+# GENERATION
 # ============================================================
 
 def chat_generate(model, tokenizer, messages):
@@ -141,7 +142,11 @@ def chat_generate(model, tokenizer, messages):
         add_generation_prompt=True
     )
 
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=False).to(model.device)
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        truncation=False
+    ).to(model.device)
 
     with torch.no_grad():
         output = model.generate(
@@ -164,13 +169,13 @@ def chat_generate(model, tokenizer, messages):
 def run_summary_only():
     model, tokenizer = load_model()
 
+    skipped = 0
+    processed = 0
+
     langs = [
         p for p in Path(TEST_DIR).iterdir()
         if p.is_dir() and p.name in TARGET_LANGS
     ]
-
-    skipped = 0
-    processed = 0
 
     for lang_dir in langs:
         lang = lang_dir.name
@@ -192,16 +197,27 @@ def run_summary_only():
                 r.get("dialogue", "") for r in rows if isinstance(r, dict)
             )
 
-            dialogue = normalize_transliterated(dialogue)
+            # Normalize transliterated text
+            if lang != "English":
+                dialogue = normalize_transliterated(dialogue)
+
+            # Language-aware instruction
+            if lang == "English":
+                language_line = "The dialogue is in English."
+            else:
+                language_line = f"The dialogue is written in Roman script and represents spoken {lang} (Romanized {lang}), possibly mixed with English."
 
             user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
                 dialogue=dialogue,
-                language=lang
+                language_line=language_line
             )
 
             messages = [{"role": "user", "content": user_prompt}]
 
-            # 🔥 CTX CHECK
+            # ============================
+            # CTX CHECK (16K SAFE)
+            # ============================
+
             prompt_text = tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
@@ -230,7 +246,7 @@ def run_summary_only():
     tprint(f"Done. Processed={processed}, Skipped={skipped}")
 
 # ============================================================
-# ENTRY
+# ENTRY POINT
 # ============================================================
 
 if __name__ == "__main__":
