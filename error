@@ -1,31 +1,17 @@
-import os, json, time, re, random
+import os, json, time
 from pathlib import Path
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
-from langdetect import detect, DetectorFactory
-from huggingface_hub import login
+import torch
 
-import torch, bitsandbytes as bnb, transformers
-print(torch.__version__)
-print(torch.version.cuda)
-print(bnb.__version__)
-print(transformers.__version__)
-
-# ============================================================
-# AUTH (optional)
-# ============================================================
-
-
-
-DetectorFactory.seed = 42
 torch.set_grad_enabled(False)
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+BASE_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
 
 ADAPTER_DIR = "/workspace/data/KZ_2117574/EACL/mistral_7b_finetune"
 
@@ -35,24 +21,8 @@ OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Mistral_exp/finetune"
 
 TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
 
-MAX_CONTEXT = 8192
-MAX_NEW_TOKENS_SUMMARY = 1000
-
-
-# ============================================================
-# SYSTEM PROMPT
-# ============================================================
-
-SYSTEM_SUMMARY = (
-    "You are a clinical documentation assistant. "
-    "Your task is to generate faithful clinical summaries from doctor–patient dialogues."
-    "You must only use information explicitly mentioned in the dialogue. "
-    "Do not infer diagnoses or treatments that are not stated. "
-    "Always preserve negations such as 'denies fever'. "
-    "Write summaries in English regardless of the dialogue language. "
-    "End the summary with the token <<END>>."
-)
-
+MAX_CONTEXT = 16384
+MAX_NEW_TOKENS_SUMMARY = 512
 
 # ============================================================
 # UTILS
@@ -63,33 +33,20 @@ def tprint(msg):
 
 
 def safe_read_jsonl(path):
-
     rows = []
-
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
                 rows.append(json.loads(line))
             except:
                 continue
-
     return rows
 
 
 def write_text(path, text):
-
     path.parent.mkdir(parents=True, exist_ok=True)
-
     with open(path, "w", encoding="utf-8") as f:
         f.write(text.strip() + "\n")
-
-
-def build_messages(system_prompt, user_prompt):
-
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
 
 
 # ============================================================
@@ -100,12 +57,10 @@ def load_model():
 
     tprint("Loading tokenizer")
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        BASE_MODEL,
-        trust_remote_code=True
-    )
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 
     tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
 
     quant_cfg = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -119,8 +74,7 @@ def load_model():
         BASE_MODEL,
         device_map="auto",
         quantization_config=quant_cfg,
-        torch_dtype=torch.float16,
-        trust_remote_code=True
+        torch_dtype=torch.float16
     )
 
     tprint("Loading LoRA adapter")
@@ -138,16 +92,42 @@ def load_model():
 
 
 # ============================================================
+# PROMPT (MATCH TRAINING)
+# ============================================================
+
+def build_prompt(dialogue):
+
+    return f"""
+You are an expert clinical documentation assistant.
+
+The following is a doctor–patient conversation. The dialogue may be written
+in Hindi, Marathi, Bangla, or English.
+
+Your task is to produce a **faithful clinical summary strictly in English**.
+
+Rules:
+- Only include information explicitly mentioned in the dialogue.
+- Do NOT infer diagnoses or medications.
+- Do NOT add new symptoms.
+- Preserve negations such as "denies fever".
+- If information is missing, do not guess.
+
+Dialogue:
+{dialogue}
+
+SUMMARY:
+"""
+
+
+# ============================================================
 # GENERATION
 # ============================================================
 
-def chat_generate(model, tokenizer, messages):
+def generate_summary(model, tokenizer, dialogue):
 
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
+    prompt_text = build_prompt(dialogue)
+
+    prompt = f"<s>[INST] {prompt_text} [/INST]\nSUMMARY:\n"
 
     ids = tokenizer.encode(prompt, add_special_tokens=False)
 
@@ -162,16 +142,17 @@ def chat_generate(model, tokenizer, messages):
         output = model.generate(
             **inputs,
             max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
-            do_sample=False,
-            num_beams=4,
-            repetition_penalty=1.1,
-            length_penalty=0.9,
+            do_sample=False,              # IMPORTANT
+            temperature=0.0,             # deterministic
+            repetition_penalty=1.05,
             pad_token_id=tokenizer.eos_token_id
         )
 
     gen = output[0][len(inputs.input_ids[0]):]
 
-    return tokenizer.decode(gen, skip_special_tokens=True).strip()
+    text = tokenizer.decode(gen, skip_special_tokens=True)
+
+    return text.strip()
 
 
 # ============================================================
@@ -190,13 +171,9 @@ def run_summary():
         tprint(f"Processing language: {lang_dir.name}")
 
         dlg_dir = lang_dir / "Dialogues"
-
         out_dir = Path(OUTPUT_DIR) / lang_dir.name / "Summary_Text"
 
         files = sorted(dlg_dir.glob("*.jsonl"))[:110]
-
-        print_limit = 3
-        printed = 0
 
         for f in tqdm(files, desc=lang_dir.name):
 
@@ -213,47 +190,9 @@ def run_summary():
                 if isinstance(r, dict)
             )
 
-            user_prompt = f"""
-Below is a doctor–patient conversation.
-
-The dialogue may be written in Hindi, Marathi, Bangla, or English.
-
-Write a concise and faithful clinical summary only in English, do not use any other language in the summary.
-
-Rules:
-- Only include information explicitly mentioned.
-- Do not infer diagnoses or medications.
-- Preserve negations such as "denies fever".
-
-Dialogue:
-{dialogue}
-"""
-
-            summary = chat_generate(
-                model,
-                tokenizer,
-                build_messages(SYSTEM_SUMMARY, user_prompt)
-            )
-
-            summary = summary.split("<<END>>")[0].strip()
+            summary = generate_summary(model, tokenizer, dialogue)
 
             write_text(out_file, summary)
-
-            # PRINT EXAMPLES
-            if printed < print_limit:
-
-                print("\n==============================")
-                print("FILE:", f.name)
-
-                print("\nDIALOGUE SAMPLE:\n")
-                print(dialogue[:800])
-
-                print("\nGENERATED SUMMARY:\n")
-                print(summary)
-
-                print("==============================\n")
-
-                printed += 1
 
         torch.cuda.empty_cache()
 
@@ -261,7 +200,7 @@ Dialogue:
 
 
 # ============================================================
-# ENTRY POINT
+# ENTRY
 # ============================================================
 
 if __name__ == "__main__":
