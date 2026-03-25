@@ -32,10 +32,10 @@ torch.set_grad_enabled(False)
 
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
-TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/transliterated_dialogues/transliterated_dialogues"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_translit_16k/summary_only"
+TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/translated_data"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/translated/qwen"
 
-TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
+TARGET_LANGS = ["Bangla","Hindi", "Marathi"]
 
 CTX_MAX = 16000
 MAX_NEW_TOKENS_SUMMARY = 1024
@@ -49,7 +49,7 @@ You are a clinical documentation assistant.
 
 {language_line}
 
-Important: The dialogue may be written in Roman script (transliterated) and is NOT English even if it looks similar. Interpret it in the correct language.
+Important: The dialogue is written in English (translated from original language).
 
 Task: Write a clinical summary of the dialogue.
 
@@ -94,14 +94,14 @@ def write_text(path, text):
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
 def normalize_transliterated(text):
-    text = text.lower()
-    replacements = {
-        "kr": "kar",
-        "rha": "raha",
-        "hn": "haan"
-    }
-    for k, v in replacements.items():
-        text = re.sub(rf"\b{k}\b", v, text)
+   # text = text.lower()
+   # replacements = {
+    #    "kr": "kar",
+     #   "rha": "raha",
+      #  "hn": "haan"
+   # }
+    #for k, v in replacements.items():
+     #   text = re.sub(rf"\b{k}\b", v, text)
     return text
 
 def count_tokens(tokenizer, text):
