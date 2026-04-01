@@ -1,58 +1,30 @@
-import os, json, time, re,random
+import os, json, time, random
 from pathlib import Path
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from langdetect import detect, DetectorFactory
+import torch
 
-from huggingface_hub import login
-
-import torch, bitsandbytes as bnb, transformers
-print(torch.__version__)
-print(torch.version.cuda)      # None = CPU build; must match your system CUDA
-print(bnb.__version__)
-print(transformers.__version__)
-
-def huggingface_login():
-    """
-    Logs into the Hugging Face Hub using the user's token.
-    """
-    # print("Please enter your Hugging Face token. You can generate one at: https://huggingface.co/settings/tokens")
-    token = ''
-    try:
-        # Log in to the Hugging Face Hub
-        login(token=token)
-        print("Successfully logged into Hugging Face!")
-    except Exception as e:
-        print(f"Failed to log in: {e}")
-
-huggingface_login()
-
-DetectorFactory.seed = 42
 torch.set_grad_enabled(False)
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+BASE_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
 
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
 TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/grounded"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Mistral_base_exp"
 
-USE_4BIT = True
+TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi"]
 
-TARGET_LANGS = ["Bangla","English","Hindi","Marathi"]
-
-# Set to 0 for Zero-Shot, >0 for Few-Shot
-FEW_SHOT_K = 0
+# 🔥 CONTROL THIS
+FEW_SHOT_K = 1   # 0 = Zero-shot, 1 = Few-shot (FULL example)
 FEW_SHOT_SEED = 42
 
-MAX_TOTAL_INPUT_TOKENS = 16384
+MAX_CONTEXT = 16384
 MAX_NEW_TOKENS_SUMMARY = 1024
-
-SYSTEM_AND_OVERHEAD_TOKENS = 512
-FEWSHOT_DIALOGUE_BUDGET = 512
+SYSTEM_OVERHEAD = 512
 
 # ============================================================
 # PROMPTS
@@ -129,14 +101,15 @@ def safe_read_jsonl(path):
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             try:
-                rows.append(json.loads(line.strip()))
+                rows.append(json.loads(line))
             except:
                 continue
     return rows
 
 def write_text(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.strip() + "\n", encoding="utf-8")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.strip() + "\n")
 
 def clip_tokens(tokenizer, text, max_tokens):
     ids = tokenizer.encode(text, add_special_tokens=False)
@@ -144,15 +117,92 @@ def clip_tokens(tokenizer, text, max_tokens):
         return text
     return tokenizer.decode(ids[-max_tokens:], skip_special_tokens=True)
 
-def build_messages(user_prompt):
-    return [{"role": "user", "content": user_prompt}]
+# ============================================================
+# FEW-SHOT EXAMPLE (FULL, NO CLIPPING)
+# ============================================================
 
-def chat_generate(model, tokenizer, messages):
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
+def collect_one_full_example(root, lang, seed):
+    lang_dir = Path(root) / lang
+    dlg_dir = lang_dir / "Dialogues"
+    sum_dir = lang_dir / "Summary_Text"
+
+    files = sorted(dlg_dir.glob("*.jsonl"))
+    random.Random(seed).shuffle(files)
+
+    for f in files:
+        sum_file = sum_dir / f"{f.stem}_summary.txt"
+        if not sum_file.exists():
+            continue
+
+        rows = safe_read_jsonl(f)
+        dialogue = " ".join(
+            r.get("dialogue", "") for r in rows if isinstance(r, dict)
+        )
+
+        summary = sum_file.read_text(encoding="utf-8", errors="replace")
+
+        if dialogue.strip() and summary.strip():
+            return dialogue.strip(), summary.strip()
+
+    return None, None
+
+# ============================================================
+# MODEL
+# ============================================================
+
+def load_model():
+    tprint("Loading tokenizer")
+
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
+
+    quant_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
     )
+
+    tprint("Loading base model")
+
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        device_map="auto",
+        quantization_config=quant_cfg,
+        torch_dtype=torch.float16
+    )
+
+    model.eval()
+    return model, tokenizer
+
+# ============================================================
+# PROMPT BUILDER
+# ============================================================
+
+def build_prompt(dialogue, few_example):
+
+    # ZERO-SHOT
+    if FEW_SHOT_K == 0 or few_example[0] is None:
+        return ZERO_SHOT_PROMPT_TEMPLATE.format(dialogue=dialogue)
+
+    # FEW-SHOT (FULL EXAMPLE)
+    ex_dlg, ex_sum = few_example
+
+    return (
+        FEW_SHOT_INSTRUCTION_HEADER
+        + "\n========================\n\n"
+        + f"Example 1\n\nDialogue:\n{ex_dlg}\n\n{ex_sum}\n"
+        + "\n========================\n\n"
+        + f"Now process the following dialogue.\n\nDialogue:\n{dialogue}"
+    )
+
+# ============================================================
+# GENERATION
+# ============================================================
+
+def generate_summary(model, tokenizer, prompt_text):
+
+    prompt = f"<s>[INST] {prompt_text} [/INST]"
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
@@ -161,156 +211,75 @@ def chat_generate(model, tokenizer, messages):
             **inputs,
             max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
             do_sample=False,
-            num_beams=1,
+            temperature=0.0,
+            repetition_penalty=1.05,
             pad_token_id=tokenizer.eos_token_id
         )
 
-    gen_ids = output[0][inputs.input_ids.shape[-1]:]
-    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
-
-# ============================================================
-# FEW-SHOT EXAMPLES
-# ============================================================
-
-def collect_few_shot_examples(root, lang, k, seed):
-    if k == 0:
-        return []
-
-    lang_dir = Path(root) / lang
-    dlg_dir = lang_dir / "Dialogues"
-    sum_dir = lang_dir / "Summary_Text"
-
-    files = sorted(dlg_dir.glob("*.jsonl"))
-    rng = random.Random(seed)
-    rng.shuffle(files)
-
-    examples = []
-    for f in files:
-        sum_file = sum_dir / f"{f.stem}_summary.txt"
-        if not sum_file.exists():
-            continue
-
-        rows = safe_read_jsonl(f)
-        dialogue = " ".join(r.get("dialogue", "") for r in rows if isinstance(r, dict))
-        summary = sum_file.read_text(encoding="utf-8", errors="replace")
-
-        if dialogue and summary:
-            examples.append((dialogue.strip(), summary.strip()))
-
-        if len(examples) >= k:
-            break
-
-    return examples
-
-# ============================================================
-# MODEL LOADING
-# ============================================================
-
-def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, use_fast=True)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    quant_cfg = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        quantization_config=quant_cfg,
-        dtype=torch.float16
-    )
-
-    model.eval()
-    return model, tokenizer
+    gen = output[0][inputs.input_ids.shape[-1]:]
+    return tokenizer.decode(gen, skip_special_tokens=True).strip()
 
 # ============================================================
 # MAIN PIPELINE
 # ============================================================
 
-def run_summary_only():
+def run_summary():
+
     model, tokenizer = load_model()
 
+    # Only reserve space for output + system
     dialogue_budget = (
-        MAX_TOTAL_INPUT_TOKENS
+        MAX_CONTEXT
         - MAX_NEW_TOKENS_SUMMARY
-        - SYSTEM_AND_OVERHEAD_TOKENS
-        - (FEW_SHOT_K * FEWSHOT_DIALOGUE_BUDGET)
+        - SYSTEM_OVERHEAD
     )
 
-    langs = [
-        p for p in Path(TEST_DIR).iterdir()
-        if p.is_dir() and p.name in TARGET_LANGS
-    ]
+    for lang_dir in Path(TEST_DIR).iterdir():
 
-    for lang_dir in langs:
+        if lang_dir.name not in TARGET_LANGS:
+            continue
+
         lang = lang_dir.name
-        tprint(f"Processing language: {lang}")
+        tprint(f"Processing: {lang}")
 
         dlg_dir = lang_dir / "Dialogues"
         out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
 
         files = sorted(dlg_dir.glob("*.jsonl"))[:110]
 
-        few_examples = collect_few_shot_examples(
-            TRAIN_SPLIT_DIR, lang, FEW_SHOT_K, FEW_SHOT_SEED
+        # Load ONE full example
+        few_example = collect_one_full_example(
+            TRAIN_SPLIT_DIR, lang, FEW_SHOT_SEED
         )
 
         for f in tqdm(files, desc=lang):
+
             out_file = out_dir / f"{f.stem}_summary.txt"
             if out_file.exists():
                 continue
 
             rows = safe_read_jsonl(f)
+
             dialogue = " ".join(
                 r.get("dialogue", "") for r in rows if isinstance(r, dict)
             )
 
+            # Clip ONLY test dialogue
             dialogue_clip = clip_tokens(tokenizer, dialogue, dialogue_budget)
 
-            # =========================
-            # ZERO SHOT
-            # =========================
-            if FEW_SHOT_K == 0:
-                user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
-                    dialogue=dialogue_clip
-                )
+            prompt_text = build_prompt(dialogue_clip, few_example)
 
-            # =========================
-            # FEW SHOT
-            # =========================
-            else:
-                example_blocks = []
-                for i, (ex_dlg, ex_sum) in enumerate(few_examples, 1):
-                    ex_dlg_clip = clip_tokens(
-                        tokenizer, ex_dlg, FEWSHOT_DIALOGUE_BUDGET
-                    )
-                    example_blocks.append(
-                        f"Example {i}\n\nDialogue:\n{ex_dlg_clip}\n\n{ex_sum}\n"
-                    )
-
-                user_prompt = (
-                    FEW_SHOT_INSTRUCTION_HEADER
-                    + "\n========================\n\n"
-                    + "\n========================\n".join(example_blocks)
-                    + "\n========================\n\n"
-                    + f"Now process the following dialogue.\n\nDialogue:\n{dialogue_clip}"
-                )
-
-            messages = build_messages(user_prompt)
-            summary = chat_generate(model, tokenizer, messages)
+            summary = generate_summary(model, tokenizer, prompt_text)
 
             write_text(out_file, summary)
 
         torch.cuda.empty_cache()
 
-    tprint("Inference complete.")
+    tprint("Inference completed.")
 
 # ============================================================
-# ENTRY POINT
+# ENTRY
 # ============================================================
 
 if __name__ == "__main__":
-    run_summary_only()
+    run_summary()
