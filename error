@@ -1,15 +1,8 @@
-Here’s a LinkedIn copy closely matching the sample style:
-
-⸻
-
-The growing use of AI in healthcare brings immense potential, but also critical challenges around safety, trust, and reliability in clinical decision-making.
-
-At [Conference Name], our researchers present Med-Guard, a novel multi-agent LLM-based system designed to improve diagnostic accuracy while ensuring patient safety through built-in guardrails.
-
-By combining specialized agents for diagnosis, prescription generation, and safety validation, the system enables structured, transparent, and self-correcting clinical workflows. The proposed approach not only enhances reliability but also integrates cost-aware recommendations for better patient outcomes.
-
-Read more: [insert link]
-
-[Author names]
-
-#TCSResearch #inventingforimpact #AIinHealthcare #ResponsibleAI #LLM #HealthcareInnovation
+\section{Introduction}
+Clinical consultations between doctors and patients typically has a rich mix of essential details - including symptoms, diagnostic reasoning, medication histories, treatment decisions, and relevant psychosocial context - all of which are vital for accurate documentation and continuity of care. Automating the summarization of these clinical interactions can significantly ease documentation workloads, enhance provider efficiency, and support more seamless continuity of care across the patient’s treatment journey. 
+%Some related work here
+\textcolor{red}{Some related work here}
+Prior research has primarily studied clinical dialogue summarization in monolingual settings, focusing on structured note generation, while the problem of trustworthiness in cross-lingual clinical summarization remains largely unexplored.
+\citet{lyu2025automatic} use prompt-tuned clinical LLMs to summarize doctor–patient dialogues into structured notes, demonstrating strong performance on MTS-DIALOG.
+While recent advances in large language models (LLMs) have demonstrated promising performance in medical summarization tasks, the vast majority of existing work focuses on English-only settings.
+However, real-world clinical communication spans diverse languages, and healthcare delivery frequently occurs in multilingual and low-resource linguistic environments. In this paper, we analyze the trustworthiness of cross-lingual clinical summarization systems, focusing on trustworthiness, safety, and explainability. We examine how linguistic and resource differences influence summarization quality and demonstrate that performance degrades substantially for low-resource languages. To the best of our knowledge, this is the first systematic study that characterizes trustworthiness failures in multilingual clinical dialogue summarization for Indic languages. These results underscore the need for linguistically informed, safety-aware evaluation frameworks for multilingual clinical NLP.
