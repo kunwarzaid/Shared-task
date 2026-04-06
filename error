@@ -1,40 +1,15 @@
-Here are concise answers (30–40 words each) based on your paper:
+Here’s a LinkedIn copy closely matching the sample style:
 
 ⸻
 
-1. What are you exploring in the paper?
-We explore Med-Guard, a safety-first multi-agent LLM system for clinical diagnosis and treatment support, focusing on improving diagnostic accuracy, prescription safety, and transparency through structured workflows and specialized safety agents.  ￼
+The growing use of AI in healthcare brings immense potential, but also critical challenges around safety, trust, and reliability in clinical decision-making.
 
-⸻
+At [Conference Name], our researchers present Med-Guard, a novel multi-agent LLM-based system designed to improve diagnostic accuracy while ensuring patient safety through built-in guardrails.
 
-2. Why are you exploring this topic?
-LLMs in healthcare face critical challenges like hallucinations, unsafe prescriptions, and lack of explainability. With rising adoption of AI in medicine, there is a need for systems that prioritize safety, trustworthiness, and accountability in high-stakes clinical decision-making.  ￼
+By combining specialized agents for diagnosis, prescription generation, and safety validation, the system enables structured, transparent, and self-correcting clinical workflows. The proposed approach not only enhances reliability but also integrates cost-aware recommendations for better patient outcomes.
 
-⸻
+Read more: [insert link]
 
-3. How is your work addressing this trend?
-We use a multi-agent architecture with specialized roles (doctor, safety agents, prescription writer) and enforce procedural safety loops, including test validation and prescription auditing using drug-interaction datasets, ensuring reliable and safe clinical outputs.  ￼
+[Author names]
 
-⸻
-
-4. What did you develop in your paper?
-We developed Med-Guard, a modular LLM-based diagnostic system with six agents, including safety and utility agents, designed at TCS Research, New Delhi, enabling structured reasoning, traceability, and safe clinical decision support.  ￼
-
-⸻
-
-5. Technological impact / applications?
-Med-Guard improves healthcare AI by enabling safe diagnostics, prescription validation, and cost-aware treatment recommendations. It can be applied in telemedicine, clinical decision support tools, and AI-assisted patient interaction systems with enhanced reliability and auditability.  ￼
-
-⸻
-
-6. Impact on scientific community?
-This work advances research in safe AI systems, demonstrating how safety can be embedded at the architectural level rather than post-processing. It provides a modular framework for studying trust, interpretability, and agent-based reasoning in healthcare AI.  ￼
-
-⸻
-
-7. Impact on industry and customers?
-For industry, it enables deployable, trustworthy AI healthcare solutions. For customers (patients), it improves safety, reduces diagnostic errors, and provides cost transparency, leading to better clinical outcomes and more accessible, reliable healthcare services.  ￼
-
-⸻
-
-If you want, I can tailor these answers to sound more “presentation-friendly” or more technical depending on your audience.
+#TCSResearch #inventingforimpact #AIinHealthcare #ResponsibleAI #LLM #HealthcareInnovation
