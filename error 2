@@ -1,26 +1,158 @@
-def translate_text(text, src_lang):
+import json
+import random
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer
+import shutil
 
-    if src_lang == "eng_Latn":
-        return text
 
-    inputs = tokenizer(
-        text,
-        src_lang=src_lang,
-        tgt_lang="eng_Latn",
-        return_tensors="pt",
-        truncation=True,
-        max_length=4096
-    ).to(DEVICE)
+from huggingface_hub import login
+#from IndicTransToolkit.processor import IndicProcessor
+# ============================================================
+# LOGIN (OPTIONAL – REQUIRED ONLY FOR GATED MODELS)
+# ============================================================
 
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=1024,
-        num_beams=4
+def huggingface_login():
+    token = ""   
+    if token:
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
+
+huggingface_login()
+
+# ======================
+# CONFIG
+# ======================
+
+ROOT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/test"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/selected_data"
+
+TOKEN_MIN = 1024
+TOKEN_MAX = 4096
+
+SAMPLES_PER_LANG = 60
+
+MODEL_NAME = "ai4bharat/indictrans2-indic-en-1B"
+
+LANG_TAGS = {
+    "Hindi": "hin_Deva",
+    "Marathi": "mar_Deva",
+    "Bangla": "ben_Beng",
+    "English": "eng_Latn",
+    "Telugu":"tel_Telu",
+    "Tamil": "tam_Taml",
+    "Kannada": "kan_Knda",
+    "Gujrati": "guj_Gujr",
+    "Dogri": "doi_Deva",
+    "Assamese": "asm_Beng"
+}
+
+
+# ======================
+# LOAD TOKENIZER
+# ======================
+
+print("Loading tokenizer...")
+
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME,
+    use_fast=False,trust_remote_code=True
+)
+
+# ======================
+# LOAD DIALOGUE
+# ======================
+
+def load_dialogue(path):
+
+    lines = []
+
+    with open(path, encoding="utf-8") as f:
+
+        for line in f:
+
+            line=line.strip()
+
+            if not line:
+                continue
+
+            try:
+
+                obj=json.loads(line)
+
+                speaker=obj.get("speaker","")
+                text=obj.get("dialogue","")
+
+                lines.append(f"{speaker}: {text}")
+
+            except:
+                continue
+
+    return "\n".join(lines)
+
+
+# ======================
+# TOKEN COUNT
+# ======================
+
+def count_tokens(text, src_tag):
+
+    formatted = f"{src_tag} eng_Latn {text}"
+
+    tokens = tokenizer(
+        formatted,
+        truncation=False,
+        add_special_tokens=False
     )
 
-    translated = tokenizer.decode(
-        outputs[0],
-        skip_special_tokens=True
-    )
+    return len(tokens["input_ids"])
 
-    return translated
+
+# ======================
+# MAIN
+# ======================
+
+
+def main():
+
+    selected = {lang: [] for lang in LANG_TAGS}
+
+    for lang, tag in LANG_TAGS.items():
+
+        dialogue_dir = Path(ROOT_DIR) / lang / "Dialogues"
+
+        files = list(dialogue_dir.glob("*.jsonl"))
+
+        print(f"\nProcessing {lang} ({len(files)} files)...")
+
+        for f in tqdm(files):
+
+            dialogue = load_dialogue(f)
+
+            tokens = count_tokens(dialogue, tag)
+
+            if TOKEN_MIN <= tokens <= TOKEN_MAX:
+                selected[lang].append(f)
+
+        print(f"{lang} candidates:", len(selected[lang]))
+
+    # sample per language
+    for lang in selected:
+
+        if len(selected[lang]) > SAMPLES_PER_LANG:
+            selected[lang] = random.sample(selected[lang], SAMPLES_PER_LANG)
+
+    # copy files to output dataset
+    for lang, files in selected.items():
+
+        out_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        for f in files:
+
+            shutil.copy(f, out_dir / f.name)
+
+    print("\nDataset created at:", OUTPUT_DIR)
+
+if __name__ == "__main__":
+    main()
