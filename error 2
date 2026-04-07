@@ -1,71 +1,12 @@
-import json
-from pathlib import Path
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import torch
-
-
-from huggingface_hub import login
-#from IndicTransToolkit.processor import IndicProcessor
-# ============================================================
-# LOGIN (OPTIONAL – REQUIRED ONLY FOR GATED MODELS)
-# ============================================================
-
-def huggingface_login():
-    token = ""   
-    if token:
-        login(token=token)
-        print("Successfully logged into Hugging Face!")
-
-huggingface_login()
-
-
-# ==========================
-# CONFIG
-# ==========================
-
-INPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/selected_data"
-OUTPUT_DIR ="/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/translated_data"
-
-MODEL_NAME = "ai4bharat/indictrans2-indic-en-1B"
-
-LANG_TAGS = {
-    "Hindi": "hin_Deva",
-    "Marathi": "mar_Deva",
-    "Bangla": "ben_Beng",
-    "English": "eng_Latn",
-    "Telugu":"tel_Telu",
-    "Tamil": "tam_Taml",
-    "Kannada": "kan_Knda",
-    "Gujrati": "guj_Gujr",
-    "Dogri": "doi_Deva",
-    "Assamese": "asm_Beng"
-}
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-# ==========================
-# LOAD MODEL
-# ==========================
-
-print("Loading IndicTrans2 model...")
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=False,trust_remote_code=True)
-model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME,trust_remote_code=True).to(DEVICE)
-
-# ==========================
-# TRANSLATION FUNCTION
-# ==========================
-
 def translate_text(text, src_lang):
 
     if src_lang == "eng_Latn":
         return text
 
-    formatted = f"{src_lang} eng_Latn {text}"
-
     inputs = tokenizer(
-        formatted,
+        text,
+        src_lang=src_lang,
+        tgt_lang="eng_Latn",
         return_tensors="pt",
         truncation=True,
         max_length=4096
@@ -73,7 +14,7 @@ def translate_text(text, src_lang):
 
     outputs = model.generate(
         **inputs,
-        max_length=4096,
+        max_new_tokens=1024,
         num_beams=4
     )
 
@@ -83,58 +24,3 @@ def translate_text(text, src_lang):
     )
 
     return translated
-
-
-# ==========================
-# MAIN TRANSLATION LOOP
-# ==========================
-
-def main():
-
-    for lang, tag in LANG_TAGS.items():
-
-        input_dir = Path(INPUT_DIR) / lang / "Dialogues"
-        output_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
-
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        files = list(input_dir.glob("*.jsonl"))
-
-        print(f"\nTranslating {lang} ({len(files)} files)")
-
-        for f in tqdm(files):
-
-            translated_lines = []
-
-            with open(f, encoding="utf-8") as file:
-
-                for line in file:
-
-                    try:
-                        obj = json.loads(line)
-
-                        speaker = obj.get("speaker", "")
-                        text = obj.get("dialogue", "")
-
-                        translated_text = translate_text(text, tag)
-
-                        new_obj = {
-                            "speaker": speaker,
-                            "dialogue": translated_text
-                        }
-
-                        translated_lines.append(json.dumps(new_obj, ensure_ascii=False))
-
-                    except:
-                        translated_lines.append(line.strip())
-
-            output_path = output_dir / f.name
-
-            with open(output_path, "w", encoding="utf-8") as out:
-
-                for l in translated_lines:
-                    out.write(l + "\n")
-
-
-if __name__ == "__main__":
-    main()
