@@ -1,587 +1,164 @@
-Processing Hindi (1241 files)...
+import json
+import random
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer
+import shutil
+from huggingface_hub import login
 
-  0%|          | 0/1241 [00:00<?, ?it/s]
-  1%|          | 8/1241 [00:00<00:15, 77.99it/s]
-  1%|▏         | 18/1241 [00:00<00:14, 86.76it/s]
-  2%|▏         | 28/1241 [00:00<00:13, 88.97it/s]
-  3%|▎         | 37/1241 [00:00<00:23, 51.37it/s]
-  4%|▍         | 48/1241 [00:00<00:18, 64.68it/s]
-  5%|▍         | 57/1241 [00:00<00:16, 70.07it/s]
-  5%|▌         | 66/1241 [00:00<00:15, 75.04it/s]
-  6%|▌         | 77/1241 [00:01<00:13, 83.26it/s]
-�[ERROR] scenario_3_a25b3f29dad44a53815b81c716aa6e64_IDX_01_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_39_22a9f7f8b7a7490ea66cf2a2c5926d7a_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_52_38f79274f0c042d0a2db2971ea693d2c_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_69_d161efb8de42402ea610e9ef0ee3edaf_IDX_03_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_8_1aef642d86f643179947f6d4f3e5666c_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_48_958028778bfa4be09412c226aab812e5_IDX_01_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_ad1fc07498b44789a5a89def1a6db898_IDX_00_0.jsonl: Invalid source language tag: Patient's
-[ERROR] scenario_8_2e841ee9fc9d4f6fbea4ae864c9fdd81_IDX_04_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_13_ea0107d9f45e423a83aff8d5259e67a8_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_11_505fe16b49df47b58e6b455c5b8acd00_IDX_04_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_5_adbc05cefddc490893b6e0c285db18d8_IDX_05_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_b60e7bd55f974493bcc35548d65fe7e1_IDX_04_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_5_070184759dfb407f94c87f132f358b3c_IDX_05_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_6b784bad98b64a69aa08138f884a6712_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_a5e1b0cd8ac74f4792ff335f958d7896_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_f9d5db3ac9da453a8b6396fe905c210a_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_3b9e2bcc4b534edd8ae3212f7f227d45_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_4_5393e38a141f47409f45bc2e43016553_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_41_920036dbaced4faea43db8fe3110235a_IDX_00_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_03789207d3ac4caaaff8be94e3af7132_IDX_03_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_82_4c04e595d32a4d6ca8b3da6fe444b40f_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_2_74683ad88fea4be78a17cf95404bc925_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_89_286763156a01447bb085ec2dc0f42250_IDX_00_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_41_091c22e8c3d345a3bd7c6b107201b227_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_31_cbe2330aabb34de88322b3c03c6aa651_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_19_166279b882bf4913b79a193c7abb2c08_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_46_f487ac31d9ca44898f7ea27cf1cf5ff0_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_3_16a656a98144434cbbeb169f3d590e5b_IDX_02_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_1_d7063274059f4731a31644f66e36dcea_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_15_c145389b6dce48fbb145059bfbd08d5a_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_5_64a7f4ce0dbc4d8e83b90ea20c4981e7_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_57_1bfca75e7e1e4095a3092b9d0e673d13_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_33_adeb4a55ef8d4427acc670142d5bbe4e_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_31_4b8a50482aaa4dceb477e33b326603f1_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_38_74180f64d14d433dafd65a0e33c43196_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_22_44de1ff85a42420184a987f196fc38cd_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_50_c3271f146bc6493a8f2aade5f3a69c28_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_55_8ab08339fa94479a8bc4ba085d5dae2b_IDX_05_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_57_6fe784e8a18145afb70d733d4c2f3583_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_0_1b77545da39d4a21aae6862afb66deb5_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_49_ceb90689832d42649ae26b7a1d0a398d_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_7f2436b514b74147bcaa396328380960_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_50_0f0cef580de149f7a63d2887906a7504_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_73_6278f0d900914247bcd567d233f9deb0_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_10_293552041fd441f99a310791f5abeb77_IDX_01_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_51_cbac9743ef604444ac1d4ee6f61d3938_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_8_66677cf5ecc84e2297ef649eced94b55_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_89_a7030f55708942db8d27f51785d52b07_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_42_aa6f5084d7ca493e9fb83123f5ab8741_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_3b7f3b55b0bb4915aa63e2594b82c0b2_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_34_c2f6164472364857a126140d159a3cfd_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_16_21a43920a8de4005803505bb9d87d4c8_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_12_347e9054c1a74eb882cbb83d078a353b_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_19_e98eabd3cb624846ade30c61f0aa3eaa_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_15_2846c3c61ff5451aab0c51767e17385c_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_10_519669f4472544e9a439752c5d0e64c8_IDX_01_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_de661f360ed94c028465e4c9aed346f7_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_0_6ec382690b95498aaaf5c08ceab9e6ea_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_15_ade841d3644a4656ba8cfd7e7f8b7065_IDX_03_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_b943f4bd5c24418a988f5504cc912ffd_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_5_73a0910b9f154d5db07cc3a6bd0537d9_IDX_03_5.jsonl: Invalid source language tag: Patient's
-[ERROR] scenario_80_8f2a78a72a3c4d838788606ab5bbf3b7_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_11_6c31f6b7a40d4c1ea97768477b094cb2_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_1_15f1d97955be48b2b88990d163223a61_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_36_f9bd6d6ec42e400ea83669895ff1daa0_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_11_c54c10beae5146979dd729cecb24c773_IDX_00_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_59_959ac60b6f0b443e8232510d5964f33a_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_16_178876fb438643cb8706d5064f784080_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_72_524a131bf3904387b724b2ff1234d68e_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_5345951dad28444593db9d0aa0c28333_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_40_3903e4120aa2475e8ea247357a21dda5_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_7_f6353cc56165419da34c63090809bcc5_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_0e9989a194054661a14d20b87d8ba4e0_IDX_04_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_25487c17fde5405191fe99dcdb526d22_IDX_02_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_3_c8869adc966f4b18b198570300b8caca_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_50_7138dd85ecdc4331af522819aefe566a_IDX_00_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_78_cedaa55b6c7a4a41b375efb548e77ad7_IDX_02_1.jsonl: Invalid source language tag: Health
+# ============================================================
+# LOGIN
+# ============================================================
 
-  7%|▋         | 87/1241 [00:01<00:14, 79.60it/s]
-  8%|▊         | 96/1241 [00:01<00:14, 76.63it/s]
-  8%|▊         | 105/1241 [00:01<00:14, 79.29it/s]
-  9%|▉         | 114/1241 [00:01<00:21, 52.95it/s]
- 10%|█         | 125/1241 [00:01<00:17, 63.19it/s]
- 11%|█         | 136/1241 [00:02<00:21, 51.00it/s]
- 12%|█▏        | 147/1241 [00:02<00:17, 60.86it/s]
-�[ERROR] scenario_27_b20c026b24ff4acfbfacaf30fd16cb9c_IDX_02_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_41_3f0db984dc98437ea7e4aade92ec44ef_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_19_14d4155fb6644f05b7a1a2d072f3ac8b_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_e498a38ae06d4d299b9ea79e0dbfa864_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_30_55fa9e650408456bb908bfcab46989f8_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_34_1c4f0753b6de462e896da36446557cef_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_a8e577851cf34098a5c970cf0a3ded2e_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_3_1efbd7e249e34c20a267933c4d3601a2_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_c79b4a9fc7b742fcb6e87bdee50cde50_IDX_03_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_814c10b40c06402bb99342a4c9686dc7_IDX_02_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_48_3e4da10487474c848f6425efb08dc357_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_2646affbed0c4dc2859b2dfdb887cb47_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_63_c7a9a891de6f4f59801777397b1f3502_IDX_05_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_32_0f1819c9ebf64b9ebe49af8932b78690_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_31_3281e0c22c744547be26a275036d50b7_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_bb8148906bf341199bbb3d18b59596a3_IDX_05_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_711ef4f98b7c4223b7b102ba930296c3_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_2_e8cb2881545243fe99f3e0c227ca7d86_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_47_4bfdf59224bf4745bd8ad4cf07d700e0_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_47_9b690d9f98c2479ba4b9069d3de72300_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_54_cf61769872c441bb819124da5e526555_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_32_03309ec492b644edbd336887c9b4ef95_IDX_02_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_56_41ec94b442de455ab61a89893413267f_IDX_02_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_41_c1b2296b72e848e19066b9366f7328a0_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_63_11d68f2176624b9cb21c9e6f64c998ed_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_22_4838f2f835e3470db968442652bed632_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_c6ee402701ea48b18353b8d19daf3638_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_46_60b8b300b23447e78fdfc171d6c88826_IDX_01_0.jsonl: Invalid source language tag: Patient's
-[ERROR] scenario_4_5bb93f2597da4001a8c656e76fc9d333_IDX_04_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_1b21d38f8c9a4a17be913e37469d9da1_IDX_00_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_4_3e9009a3a35340b79fa376ffa608732d_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_24_f05abc638eea40f1b4e95269d5ab9d51_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_82_6fc1bf31a68441678b0acab7b8ad225d_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_31_4969c17a66064012ac0dfc848b733e79_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_10_83654f695b4d4dabb23c456bcc9b7dfc_IDX_03_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_0_335217cb31974b1c8b2d64f1b89e293b_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_76_b47bb39e68964dde8c9dbd0fee36eeeb_IDX_01_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_8d0b42674d13467ca1a2b3b14b6dfe33_IDX_00_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_41_8c71b72876ff47358bab18f4cee18770_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_86_41a8079a969c4be5bac6c270b0c848ba_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_25_e50a600192014a8b95362642acf23ba7_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_34_767549de84564f31813c5d98e39db183_IDX_05_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_31_0c7301b5537c47ec8ce1d8dfad10ffc0_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_0979b7d0ab8a497da3222f87e15f0c5e_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_1_af1033a96eb2442d86b92600949589c5_IDX_02_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_21_4aaa49d4718044108a9e39f86f4db70d_IDX_03_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_42_6b62f27675ef4de7835b5bd37aa91252_IDX_00_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_56_a53ebf055a00476495dff0adbb1090a6_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_be14cf447ce94a2f871e96ed7a866f8f_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_16_d50ab42f1afe4781a4fea66cde79755e_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_37_5429bee7ae1e46e4a4202869767464b6_IDX_02_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_21_d1e98685774c450391fcad50755b04c7_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_10_6960f6d9a14a40698e8be2d3eb102df2_IDX_00_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_48_d2e58ed0443f48a2b5391f09d79b064b_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_59_b1fea9f727614e739747da4eefb550d5_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_14_f3de055a92df49a7a49a627bbc575d8f_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_85a5a59542af46d48cf93ff6764223ea_IDX_04_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_20_9278650bcb5f4df7b3a5b70acbd75c5a_IDX_05_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_13_b2da36648646486ca9c14f2da5088bd7_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_5_84e32395cfd840089941cbcf1e789e8b_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_49_e803e00139504acd8b2908998ae45078_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_cad6d015f96d46e0ab09781ebca4e9dd_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_fd9bb1b3f9914872baf97c85d55fd91f_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_f59820bda0fc4514bbe6678f6248dad5_IDX_05_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_28_8dc9a0dc14ea41d9abba53eb8c037115_IDX_04_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_6_4adce1a1221c455b9d8afd4e2c4161bf_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_77_b0b1ca4a4c7445c093f4d38e60c8c0cd_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_21f99e0eb6104e75b09474857aaf0afb_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_33_d1fcee0f524d41c7954e10f688fc7532_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_13_918e0170d55b4b03961b9e46a38f2ba7_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_26_2d945d4e0e284e73aa43eba4a5cb40df_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_46_f003c4d3e0164a1bb09984c30942dac4_IDX_00_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_4ab4e50b0ac7479082d3f8318882d34d_IDX_00_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_69_5c53c505af8f48d0bfe4d7d12cb1979e_IDX_02_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_87_d9fb27aaa3f943cf91f27d21ebb9a862_IDX_02_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_13_0bb956f7aa7d4d4e9c3ae9627fb2199a_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_24_48261503845049a48aace803496e6c83_IDX_05_4.jsonl: Invalid source language tag: Health
+def huggingface_login():
+    token = ""  # add if needed
+    if token:
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
 
- 13%|█▎        | 159/1241 [00:02<00:15, 72.11it/s]
- 14%|█▎        | 168/1241 [00:02<00:14, 74.43it/s]
- 15%|█▍        | 180/1241 [00:02<00:12, 84.40it/s]
- 15%|█▌        | 192/1241 [00:02<00:11, 91.24it/s]
- 16%|█▋        | 203/1241 [00:02<00:10, 95.32it/s]
- 17%|█▋        | 214/1241 [00:02<00:11, 89.76it/s]
- 18%|█▊        | 225/1241 [00:03<00:11, 91.85it/s]
-�[ERROR] scenario_10_08d174e7f08746edbcbdaba49d1924a7_IDX_02_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_0_d472bf54539d4d5daf2c03051be5f273_IDX_02_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_2526ea843bf744ad9c00f32ce637286a_IDX_00_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_30_b93fe316970c4df4bc082c917e5dd41a_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_86_aba720d8574542d8b3b99391862c2908_IDX_04_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_50_5eed955c397b4120bada8fa5e140a87d_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_7_8eb36510ce214c8781423396daa23599_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_31_f6c312510dd142478b96df2f805735a3_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_47_ddca9494c92c42c6ae02f514b63df39a_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_50_6c2adc8b52c6457a8e4ac951d335e34f_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_506efe98723340c8ac7c1407a9f48755_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_24_7fbe168f5a1d45d3abed39bc4a1332a7_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_26_057b349fcbd742adb7b8105399d813c7_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_fdeb5ec6097944a18a32856d5e2d0553_IDX_01_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_39_472ae3467bdd407da975c4adbf4c29af_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_87_a032c947a823464aa3f164239814a3b4_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_93_b4ef73eb151f42569171473c5b0b81d1_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_4dabc98f7f87433f80eb46129ee7e72a_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_26_898b7135b0a9492cad5298d87753906c_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_90_1439875105f9462095215046a861ffa3_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_53_5df6903020184572a81ee4bad0fc6daf_IDX_04_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_5_5c4d5998682b49ab8cc67d640c925719_IDX_01_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_281d5a9cf4da41b496f68978a3a02ccd_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_24_890d82a62b1943b0b7f29d9be272fc76_IDX_05_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_2_57648c84388c45109ce5a2ac1f9503b6_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_4_6b6cbed9b0484f9a89e415845f55ee5d_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_16_66bdf02e3e2c48f78bbe17232960b91a_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_33_f979bd8663bb4ccc8b17a2bd632a9937_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_22_8d744805d162426bb252d4d4d906d7e7_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_303d0c8dd81c4aaeaa37b6ab965f9438_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_23b7b3501b514337b7d5d79f04949d0d_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_88_2a209467b0c044ea83294211688366c2_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_f444431b058b4935b29f4617b3f3393d_IDX_02_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_24_c8ab33cca8e146b2b60d185df8a045a0_IDX_01_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_18_c812d539614741c0a573b4a9f4ad4fb9_IDX_00_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_11_06d55cd47dc646d695eed3673323984c_IDX_04_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_50_ec09e8b6ea7c4577b3b965165274d725_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_1_0796f71d41464d4e9a24a3585a3bd082_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_10_1358469fd6234a72ac3624c317feb87f_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_22_3175821b4d654ca385b70a9a18cad203_IDX_02_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_42_e7fbee56bc6e46048ae62fda0a484b1e_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_84_4d33a2cc95c84ab28f13cb6adaff4a23_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_36_82129aee3bf042049078a12a04a50c23_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_6_9671194574344a9189323e0f74d6cfdf_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_29_076ef733da6d46eb9c358dc2182282d1_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_40_ada565a540e141a6933df5f9fc7f2894_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_44_98bf439886f74fcbb5d335d181f19868_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_44_d1d0e3e206544469a331f0789fa1915e_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_55ab04a1bd44461f9b48f58fe8953e16_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_2f6b2158e8cd4152afabb0a5a93a9350_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_5_ee2730b729cb406baf166d8883010d48_IDX_01_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_4_7545404399ea4679beed0922aaea38d9_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_43_71841e817bb34b858e083b8f882909ea_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_40_03d90efbbb964210801064b394f640d4_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_43_e9075fac884a4997b1c03a2e44508e31_IDX_00_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_64_5c43cc7f78f2427b8c877e48317d26c7_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_33_947005bd57a54eef86b69d305f369137_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_42_eb35756fbcfe449ca3677eecc1aedeba_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_37_2b18c238be5d4b6ebda57068a0825ddf_IDX_05_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_61_3a37d1ab7ecd47118ee9cde0a158a292_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_64_aa2e57301a5841bea1d8b4685b06bdf1_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_44_8ef60383a05f4bcdb9bd7318c25bd8f4_IDX_01_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_31_821ac97c942d40488ab43218a263ffd5_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_21_fde352d3fda04e9187b5a770d7c06dcf_IDX_04_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_54_f9dab44a7fc54619844d35d0c7271d3b_IDX_02_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_1_e80bb0e63a224405885fd45caaf5d4f5_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_66_4148bbc33ac941b1a01fb0bd060d3db2_IDX_05_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_34_1c01c0d850b845898c9ff8da9c922633_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_2_db7da1590ac343b19141d017c2890cd0_IDX_04_2.jsonl: Invalid source language tag: Patient's
-[ERROR] scenario_65_c061bb3b18bf4c62948f5703c0cb4e22_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_16_2f377552ef0848e588779c513043f5e6_IDX_04_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_18_5bca2ba7068341c3bb016e5d89ec4781_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_83_04752fd67e6246a0bde502689b0d34f0_IDX_04_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_18_592b1a40af4342859641fe837573a528_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_a0384a1d5e904058b1c6929432512e5f_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_59_d6f77e7980e440f7aa340eb7206d671a_IDX_04_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_e266c94dd1a6400b8953794f1cf7c9ef_IDX_03_2.jsonl: Invalid source language tag: Patient:
+huggingface_login()
 
- 19%|█▉        | 235/1241 [00:03<00:10, 92.38it/s]
- 20%|█▉        | 247/1241 [00:03<00:10, 98.53it/s]
- 21%|██        | 258/1241 [00:03<00:10, 93.89it/s]
- 22%|██▏       | 268/1241 [00:03<00:10, 92.35it/s]
- 22%|██▏       | 278/1241 [00:03<00:10, 91.47it/s]
- 23%|██▎       | 288/1241 [00:03<00:10, 91.14it/s]
- 24%|██▍       | 299/1241 [00:03<00:10, 90.36it/s]
-�[ERROR] scenario_87_f0766ed529ea458d9618c00a08e0a243_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_44_bf70e7f4fd6a4672808355b309aeac66_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_20_89f0b5c2453445e78a3e63dd88e49a58_IDX_01_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_3_86ed057f58c348cfbdac2e246ce62a93_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_49_81737391f59949d990b58f4b69455745_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_10_8c64705d32674374899c68a04ef0d3d4_IDX_01_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_26_8816caaed4e84521a55551b512fc95f5_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_45_6ad9968286344ac4bd34598caad63611_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_74_bc9cfdd355844edcbe8249caffdd4060_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_fcc31f6c14e74bf095691df2dfcee690_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_2_c02b3b7a7482454185d7e3ce283ffb3c_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_2_fb782616618c4107948b413032830806_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_17_f8b79e9b4f7c436cb778e11298972f54_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_410d8309d7884ca7ae9208ec7915e8ee_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_21_f79f61080ba84fdcb6fe2f8d4ccf2d5b_IDX_04_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_3_31a5c9410d5c4302ac8bf47ddd66201c_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_1_52cfe8a09a634a32bfb00e3f37806e11_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_61_be4a41833a9f420082d09fb25ef5146b_IDX_05_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_13_5a2e621c964f4498937c818af655feaa_IDX_01_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_30_9cfe39ac1b58473d8f5705cbd9b940a1_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_6_8f5ebecf5dd74b17b16f652c75f53606_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_20_67e6772e9b2743c883a050ca5283957f_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_62_f8a001eae45046e4a2da78ef2225b1d3_IDX_02_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_1_8f41ba2de4d54d669a0b51fbea5e58d7_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_9f712044f8d14a42930840a705d59dea_IDX_02_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_21_5c52d10ac72b4c8f821d8f965a6a66a7_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_eb3205bb647643b2b6804c268dc3929b_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_ca2bb67bb8c04d4ca7c2f0d0a2e52d47_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_91a79c5f7d7c467ab89307db52e93c0f_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_22_17d61f4fe3ce4ecbbf8edebeb737f1af_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_61_084bba354525408b8a09d6857130f77c_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_21_0c915b29f3a745158481faf96b6b2c7d_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_81_71673b3338084e559a4e6a97159ec536_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_2_49b4076a888449279445292a08ce794b_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_32_b5e4ab8be3e543f1bb694ab605707684_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_62_dccef97df5fc48e99e9c6d96c44ce141_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_1_359b0da5c1824a14a740bb50211b24e9_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_23_22ff118ccb5b470fb3af5e8f8cf62509_IDX_00_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_76_7808557eda36486b8d7ce189fefbcc8e_IDX_03_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_29_be9c258d68b042a8b9876e5ff9296f66_IDX_05_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_43_978ec7ae60e04d77bb3fc98eaae9d516_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_43_5c6a57c5bebc48d7965297ad2b3d7260_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_5_7d4c8e9a71b842288dc7ff3579386634_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_72_584bcc095a9a4dc7a7ae8b15c3d9b638_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_34_b4e219c9897849b2bc6d70cd49723a5f_IDX_05_0.jsonl: Invalid source language tag: Patient's
-[ERROR] scenario_0_1ceb96e8c2c542839c94729a7886b007_IDX_05_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_64_943b31dcbaa745c89ff81590e19d36d6_IDX_02_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_69_82689803e93c4d5d8f54e18534bd64d4_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_7cd9d66604bb4185bd64e7882ac20710_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_61f9f6cbfa9a4eb295168801bb87d0fe_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_12_4372b77bbcc94911a81407e2cd819413_IDX_00_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_35_c4ef0cc1217943558e179c5037304a57_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_32_2fcb57d205ef4914b1492850f0676635_IDX_01_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_26_e619678d55ab42b890790e256f48a5f0_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_15_4bd458231a204f3fb9245b6f777547e8_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_88_730af053537e4ff1b35a7347d326c557_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_36_965e0b2ada184a729eef366bb3978ce5_IDX_02_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_36_9b9c333252234480b0030fa54ce76c13_IDX_05_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_79_1962bb782e1a4771b743f1c395184ee2_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_13_008fcf473c514c60b29595e866964e76_IDX_04_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_ee29ad15f48c43b5a02d86e65523ac41_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_40_f606946e5fc94e278f90c13699ed7616_IDX_01_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_53_43ad5b9a544e4b03b6cd2ed6c48a309f_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_88acbaa882cd4459bccfadac807e25b6_IDX_03_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_21_b51a968eb6374837b66399e36f17ab9f_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_c498f89744b1491895c7da9de89c5ffa_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_3_6cac17746abe40f58b170da5255e487c_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_20_8cbdb7f972be4b7b9dbea5af136f73d6_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_23_fa910d3037094f45813a21b82f541d22_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_61_026742849e2745a199783368ed3d3392_IDX_01_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_13_b71ab070f41c4d6a9213b45bad770d9e_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_34_8be197a8176f437187812befda90c73c_IDX_02_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_3_fbc849ae6ab44d6c82abaeed062a753d_IDX_02_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_23_df576569b44f484e82ed328c0fca3c7e_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_3_2f826fda198f4c82a648c20e501fd79f_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_64_0570547471a145fcbfc1915fabe0d46f_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_40_79a0796ca7a1444d998090219189eb46_IDX_02_1.jsonl: Invalid source language tag: Health
+# ============================================================
+# CONFIG
+# ============================================================
 
- 25%|██▍       | 310/1241 [00:03<00:10, 92.16it/s]
- 26%|██▌       | 321/1241 [00:04<00:09, 95.10it/s]
- 27%|██▋       | 331/1241 [00:04<00:09, 92.85it/s]
- 27%|██▋       | 341/1241 [00:04<00:09, 92.38it/s]
- 28%|██▊       | 351/1241 [00:04<00:09, 90.57it/s]
- 29%|██▉       | 361/1241 [00:04<00:09, 89.24it/s]
- 30%|██▉       | 370/1241 [00:04<00:09, 88.38it/s]
- 31%|███       | 382/1241 [00:04<00:08, 95.55it/s]
-�[ERROR] scenario_9_57e767ef915f4723a5841a7c1bbd91a5_IDX_01_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_39_66c8cb02904348019e5bb22013866b6d_IDX_02_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_13_8706d0627ac7486e8d6de94e107df3da_IDX_02_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_31_3f25706c4a324525a10c6ff55063e0f4_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_89_d87cdbb63f6745c09bfcaeaacc13cba2_IDX_00_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_14_6f89b0b6bb444967bb717e4871e293e3_IDX_04_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_39_4898821c80dd46d7b9a6b4d140e1c663_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_34_b7abc782b2ce49f09d451220a22eff44_IDX_02_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_36_044625ab9c3b4028a98133321164eeb0_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_22_b731e652c5994df9a164d7c4d87466b7_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_8f4c3db8bfcf49f2859c0916d0ee0536_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_18_0a8997e599c2483bacfb1eda264bfd8e_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_42_1a86108b3614423884fab062f57756a8_IDX_02_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_45_b4bd8d24c4924ed1aceb09f6a2f437e3_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_31_cb11d5e182e04a52a15f86524a92db13_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_12_d85fb6e768f84d9caadf1ec7f8ad5639_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_a12113762f7b43fba817107d97ce5069_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_25_b1c8979518be4341ad65ab057b0b2aae_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_7_d81d3337bd6740c792b1e657b31dca70_IDX_01_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_79_7e7d6efca4a143e69318f9aa0fa2830b_IDX_04_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_a0d7a7c495b143aeb327a388284bb146_IDX_03_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_16_4bd8cb96fc424f7d9f5dc61f74a62302_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_21_fbbfd5e2d9b048d1a19b13ea22ca50ee_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_4_af42b36652884cdf9389cab6e3427c8f_IDX_05_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_32_49059929c8554e5499b81361cce68bf6_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_7_b6c0e5d1a696494b90d947279aaff38e_IDX_03_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_63_3e1c8fc46866468584d3d893a347abd4_IDX_01_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_45_f4243ccd69ba4fa484cdd2ef192b4866_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_42_fdaeebe09c894bbc944f074a005f041b_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_16_cffb4a72e4f04dbdb50f00d8a9ee8b2c_IDX_02_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_59_b196ad7b2e964cf08b62e47a77e690ac_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_11_7eecf0602fa5403fadec2b40e556e756_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_18_18f572657f414733a2a147e6900100ec_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_17_8a165a6041cc4af0a5ef5d35b5e33569_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_0_f111b96e7dd34dd1af4ef5ba6eb28a87_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_28_97202ff064704bbb9be8106538425286_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_18_e5b65271d9b046b2acda1988aad5af6c_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_11_7094d89902434f6aade8fd102b7af76e_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_226b327704464fbf8beebc527ee9c8ef_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_2_8b0d707baf604f2c8a1a556cd2f46a2f_IDX_03_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_38_7809f4f666634933869d8c6fff96348c_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_83b9c4d04ada40b3a0f755839eaf9fdf_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_19_3527831f89244281b07e5160187b2f95_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_95aaf42117724631a35907bbfd9b197f_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_87_003124f74f604be7bfc5194b75ac8052_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_67_9803f7049a1e4517a78c8ddbe4e66519_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_13_2ba5ce10dc884f8f995490b3ff5e40f5_IDX_03_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_2_920cecd822084cd1af3410953b592203_IDX_01_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_56_6b88e2f84b724e4a996a4a9178cda654_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_43_9e6fe2f0d66147ada9a38884ac0cf4b2_IDX_03_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_71_5bbaa3de684b4cd2b5a62ed1d5e8b0ca_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_44_c5f22a5ca2c74965948316c54465aa43_IDX_01_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_62_65579c8af04d4dd6b0dc1545ff7de7c8_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_30_b6175b083f63440d9cbbeba0a0e0e7e4_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_b54c6ec362b04e0995b3a2a69c47fc54_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_4_a205d1e122b647468226e8441652b2b3_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_79_da2d0edc638d4c52ba4295d3cf67a425_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_22_802d882d5f79448891defb07ceb72582_IDX_00_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_14_d954b8a3844243df84f2e9aa96d2ccd4_IDX_00_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_90_89045ce5708041f491e019b7d66df6a9_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_14_db7c664ac84d4b04bf55b8bc592b7ed1_IDX_00_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_29_2ecf79a77f4b457c94527c389017cb96_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_0924b13b0fe8405e81b25ec60f6ab7fb_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_70_f8e8eeaa14c94d51bec8b2ce445f9b2b_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_16_0cf19a405aa540ab81294fe63c28ef67_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_21_b88c9587a6e84639bb5088fbec4b5a1f_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_1_a834378a87944b2cb2da6b5c97655e2b_IDX_03_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_5e79e142a82b496aa3c84c86a2194723_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_68_26cb270699cf4e9d84ae5d1b6f861566_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_40_c3f63726587541b6b08d73f738d87e71_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_76_0789d33568d14bbabb72aaf19bf20805_IDX_05_1.jsonl: Invalid source language tag: Doctor:
-[ERROR] scenario_21_1b5e15df472b4443baa2bc3e29c00751_IDX_03_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_54_00c2e43f05434322a5271861db623fab_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_0_54529b4bf6394e3d9221291039b70eae_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_28_c58d12a74a884992984212fd26ce5359_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_33_928f9ca705b744cbbab168ad49d14c99_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_12_917a624a3701449d9cc0026b3e77a8f9_IDX_05_0.jsonl: Invalid source language tag: Patient:
+ROOT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/test"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/selected_data"
 
- 32%|███▏      | 392/1241 [00:04<00:09, 90.13it/s]
- 32%|███▏      | 402/1241 [00:04<00:09, 87.94it/s]
- 33%|███▎      | 413/1241 [00:05<00:08, 93.31it/s]
- 34%|███▍      | 424/1241 [00:05<00:08, 91.71it/s]
- 35%|███▍      | 434/1241 [00:05<00:09, 89.58it/s]
- 36%|███▌      | 445/1241 [00:05<00:08, 94.84it/s]
- 37%|███▋      | 458/1241 [00:05<00:07, 102.02it/s]
-�[ERROR] scenario_4_7b7fde41103644df9285919c6a7bf3d6_IDX_05_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_21_8d3362cea39045ab95e714335a9f9d8a_IDX_02_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_92_d5ee1101a4c24f928575cbad16a6f490_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_21_751b263473c548fbb3837d6aba192515_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_57_45823e7d9c534604ad23ebf431d91146_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_11_e84a2699658d45cbbd49a624573a58c6_IDX_00_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_47_da5c765a85a34e3cbfd88a73ce939e40_IDX_04_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_38_309445c5d58f4993a3111eab9d880c68_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_38_451193a960d747e9a67fa64493673a02_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_11_333e4fc26bff40b98972cffb5899ccfe_IDX_01_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_33_c5d66d3563e54efaab24559232052a53_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_74_33e9de1ac2224ec3b8b9a632b0c60b76_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_89_3955e7986cdb47398a77932032cb9d28_IDX_04_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_29_f343960906d5409f94293c7430dd781d_IDX_05_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_49_f4137da8e41646f49cfd633813dfa98d_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_43_f59e3afe9e6e4eacb9741680a2528fc7_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_4d3090c6ee824f1eaa13b315a29acbc5_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_0_2ebcde9c8c7b4fa8ba40747a189c0c6e_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_27_7a6ec74c58cb4149868fa260aebe3452_IDX_05_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_26_203fc34acc8b4fe79e86e89f68e87176_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_16850783b3284621b0a61e5e027d4c2d_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_2_94c774678c7648fa85322eecff4deef8_IDX_05_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_30_32ef465be2e94e17b0715891f389553e_IDX_04_4.jsonl: Invalid source language tag: Patient's
-[ERROR] scenario_70_1c4f6cf0988a4f8aa818d922530edad6_IDX_02_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_37_8744083ef1a64d15967046348ada3e8b_IDX_04_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_4_6bca59ce76b044fd9959f8e4cbbbe5f3_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_21_72b6c291f2dc490ebc31a82773c4d0c4_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_73_87b0721f8420487bb0bed73ceb943645_IDX_01_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_44_5486d3fa5f244bc98721537650566dc0_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_9_a41a07e44cbf4ba4aee0ec44926c70cc_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_20_27c1666a4600482ab7e5cae013f426d2_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_37_243a45cf40fc49f494fe5b52ca6b044e_IDX_04_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_30_58d1d8fe17f045feb6bd677ec0226cc2_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_27_053b78e5aab84f6dbc9c4920abce3790_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_45_c01a22433aa246f88f99869994c421d0_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_c849cb62937c4fa7889da27f406410ff_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_0_1dcd1446f06f4aa992c7c18cb91c5059_IDX_05_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_40_99cf0657f1c841cb858378aa3f174e2a_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_f0e43ec0d2b84316964de3828e9f48e6_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_9_79351edbcd5c42beb28fc9858f19fa9d_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_40_1f7fd59c1aaa456e8dcde11d7cf4a17f_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_36_d6d023135a64472aae956b020f9ac093_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_3_cb677429b0e54f73b6c75ea79b1f00a2_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_11_2af2531790b840f5a3e1371f1d85c8bf_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_35_3a1892bbed574d4fad4e3eed55cd88e0_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_16_01dc45821e1f4c968a0a153411468d1d_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_67_381a3f5be2cb4f3583a3e97aefc35cc6_IDX_03_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_29_25f6ec45f5ac4e3ebd395c0557c22a6d_IDX_02_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_54_ecaaf86d013c42fd97c9bb4c084fbabf_IDX_04_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_89_532ee74813174e1db9cd845df5d37ff2_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_16_d2e186fb3f0543cf9b5c6eaac1bcdb90_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_1_98788946777d4a189580923343dea3cb_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_19_b93c2cc377f04983bb3898b272362784_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_45_5a712063fdad49b987c1c2a2aee105e0_IDX_04_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_38_259efe8875a441fb9f9e5cc30a68c21c_IDX_03_1.jsonl: Invalid source language tag: Patient's
-[ERROR] scenario_16_f07eb844add14497bbbd4d2d16e42d6c_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_29_082323a0d0ac4535871dfd62f5a5d8c0_IDX_00_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_29_d95592c9721a4a08850b31d31ba25d19_IDX_05_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_49_dae28d63fba54f0ea4d1c61f0f1082eb_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_14_cc0e6e6231034ce1955a6e52de56d884_IDX_04_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_89_87c9f63cf96847b89eb3c71156f6ce84_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_d957643c647d49a8b434c047614429f1_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_66_1d1a647bb7504841a1f98d466a30986d_IDX_00_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_10_dd1508f8ad354fb692f16e200643af7e_IDX_03_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_24_42c4321a2e9842609ccd92074f1ee7ee_IDX_01_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_18_3b5e2f5112e24c628fba34cb6f8a661f_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_51_2bf1dcb5837a45f3acbf40b3890b8c5b_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_36_40e1a2fe0f9d4bf394bb4453256694b6_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_55_6e08e18842cf4947842fd2d064d0d6d9_IDX_04_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_28_59ee2ae69f404df68e923d480cc96851_IDX_02_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_15_5544b696cd194ae696807266cb9a3a7e_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_fb1d5571c3ed4ccc8e6329730b245ae6_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_11_671262cebbe14434b46cab28878e68ef_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_60_24057c8a27eb4ef1be9aa1f449a10cd6_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_8_acef9fa6bdf64179acbb59ae2f5688b5_IDX_00_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_38_41c9b8ad50d247f5b482a4668893e54c_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_75a0dfa932fa4d52914991f040731d5b_IDX_02_0.jsonl: Invalid source language tag: Health
+TOKEN_MIN = 1024
+TOKEN_MAX = 4096
+SAMPLES_PER_LANG = 60
 
- 38%|███▊      | 469/1241 [00:05<00:11, 65.40it/s] 
- 39%|███▊      | 478/1241 [00:05<00:11, 67.38it/s]
- 40%|███▉      | 491/1241 [00:06<00:09, 79.14it/s]
- 40%|████      | 501/1241 [00:06<00:09, 79.97it/s]
- 41%|████▏     | 512/1241 [00:06<00:08, 85.88it/s]
- 42%|████▏     | 523/1241 [00:06<00:07, 90.97it/s]
- 43%|████▎     | 533/1241 [00:06<00:08, 87.22it/s]
-�[ERROR] scenario_7_250aaa3b3a134b90b6eb24a20af4d363_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_18_d9dc5def64654dad91aac984ca016be4_IDX_04_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_57_d0d67619affe43778f9248e33c1c1efc_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_92_1b04c26f06b94850a17b8006e05f5248_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_6b3ae920078b492f8224af23b4772a49_IDX_02_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_67_0e8516abd8fe4e8793bdd0c53b71c6f5_IDX_01_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_32_c531141758eb4051800b995ecc8b9965_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_32_d5555660e79b401090b632477893a29d_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_26_1efb689796234b2fb431fe6c31951e8e_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_7991a03c83264fa6bfb9618744fa82f4_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_23_e9e034b5ebea4916aea3bd1401e3426c_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_2d50ea0d00e042aabf676194e679551c_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_20_18f564f37151450692526ccab49eaa92_IDX_00_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_47_a7d9e6c755404aafb02772691d48ea8b_IDX_01_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_42_cf41570c2cb5404194c2af127b422ea8_IDX_03_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_26_52969351baba48d098a84c71f9dc2f6f_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_4_edc18e79a59742ff886032081ab63276_IDX_02_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_12_d9e95b46c0464b15810766df4d554f8d_IDX_02_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_8_cc6b075ff74347bfbdee8e4691a43c2e_IDX_01_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_89_2e6e9433f1414702839c07814f248716_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_0_a840768059f345608a053389d41e9620_IDX_01_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_12_16bf99a72f454fc89ef56825b6a2ad44_IDX_04_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_11_539a736e6f9f412499a675de11086104_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_34_2d6b5e3183c5443db692257a03727354_IDX_05_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_51_0678901594eb487398524eb7a4fd4967_IDX_02_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_36_99c215f0fba9448eb1171fa966aaad99_IDX_05_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_80_92b46010ac96478b970c3c7495fff780_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_b5d706db46dc4a9bad97e12151dee640_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_2_09b43e1a3ccf44358885d403deee927f_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_86_16b240d0bd204e01bd593d49fb76f2a4_IDX_05_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_28_c705359c363d41b39188ead0e3431418_IDX_04_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_7_475da46954824b44963d34cc72a0635a_IDX_04_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_8_beb10f854d4949eb9dbfb813f23fc806_IDX_03_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_33_6dfee1a3a54c4339a995d8649cfc4f24_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_27_d0d2421671d646d0896b3739dc885c86_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_30_76d4dffa4e7d40bab9a65727e2216347_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_6e530477b6ef4012b693b416d19c99c7_IDX_00_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_47_84fedf30f22646f1ac177128d1bd6c79_IDX_01_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_28_06b9dba750034ad2867bcce8d4d76a68_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_44_8a13d89e7dd34db681e3584afdd8d623_IDX_00_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_5_96c266a8688c46069de1f118bf48f66c_IDX_03_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_64_355454d3c9d545aa88be26fb8d3ef636_IDX_02_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_16_a4afc35b764942649d34e3623aa96eda_IDX_03_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_8_5e7390acddb0422081dddcf857d385c1_IDX_05_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_22fcee8ea438409cba60d3f70f4708de_IDX_03_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_64_f6b9558901c3462782e1faf44999346c_IDX_04_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_37_65d95a9318df4a8abaf7ad2cc40b117c_IDX_01_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_6_72e3b112af8d42a48c833a4bc52a61f4_IDX_05_2.jsonl: Invalid source language tag: Health
-[ERROR] scenario_18_2890774d73604a55bde8ae41b70d8be7_IDX_03_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_34_df2ec4c96b524777866eafbb5f7cd339_IDX_02_1.jsonl: Invalid source language tag: Health
-[ERROR] scenario_1_b9567b94f11c4d3089adcc58ad9c2d0c_IDX_04_0.jsonl: Invalid source language tag: Health
-[ERROR] scenario_46_d27d5dca7ad1496bbbb4f51f0f53edd3_IDX_00_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_39_25ae86aeef524d4e9a970a594aeade0a_IDX_02_4.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_44_1bba3f9cdc044c22896cefde36340a57_IDX_00_5.jsonl: Invalid source language tag: Health
-[ERROR] scenario_43_d84ddea56a6f441a8649d798ddf485cf_IDX_00_4.jsonl: Invalid source language tag: Health
-[ERROR] scenario_39_624630bd58fc4f46a1ef6615f6b17ed9_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_35_e4b80c81908d4833aab231ccbb800b20_IDX_01_5.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_30_568569c0fad84c6e80ebcb0686dda24b_IDX_00_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_29_ab40e5e73f9b45af86ddbde65bd9279e_IDX_05_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_20_1bb3bc68eb7c429da20a6e0a44ea5875_IDX_04_1.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_50_a318300882644b4e8799d90de06807a9_IDX_04_3.jsonl: Invalid source language tag: Health
-[ERROR] scenario_25_8419b551788d479f929e5d8bb799caaa_IDX_04_2.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_23_e8afabc29253484ea21ec8090eaf0c57_IDX_02_0.jsonl: Invalid source language tag: Patient:
-[ERROR] scenario_27_cb752bc4988044c2ba9ff37ab79f8af2_IDX_03_3.jsonl: Invalid source language tag: Patient:
-[ERROR] scena
+# ✅ Use SAME tokenizer as your inference model
+MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
+
+TARGET_LANGS = [
+    "Hindi", "Marathi", "Bangla", "English",
+    "Telugu", "Tamil", "Kannada", "Gujarati",
+    "Dogri", "Assamese"
+]
+
+# ============================================================
+# LOAD TOKENIZER
+# ============================================================
+
+print("Loading tokenizer...")
+
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME,
+    use_fast=True
+)
+
+# ============================================================
+# LOAD DIALOGUE
+# ============================================================
+
+def load_dialogue(path):
+    lines = []
+
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                obj = json.loads(line)
+
+                speaker = obj.get("speaker", "").strip()
+                text = obj.get("dialogue", "").strip()
+
+                if text:
+                    if speaker:
+                        lines.append(f"{speaker}: {text}")
+                    else:
+                        lines.append(text)
+
+            except:
+                continue
+
+    # ✅ Single-line clean text (important)
+    return " ".join(lines)
+
+
+# ============================================================
+# TOKEN COUNT (ROBUST)
+# ============================================================
+
+def count_tokens(text):
+    tokens = tokenizer(
+        text,
+        truncation=False,
+        add_special_tokens=False
+    )
+    return len(tokens["input_ids"])
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    selected = {lang: [] for lang in TARGET_LANGS}
+
+    for lang in TARGET_LANGS:
+
+        dialogue_dir = Path(ROOT_DIR) / lang / "Dialogues"
+
+        if not dialogue_dir.exists():
+            print(f"Skipping {lang} (folder not found)")
+            continue
+
+        files = list(dialogue_dir.glob("*.jsonl"))
+
+        print(f"\nProcessing {lang} ({len(files)} files)...")
+
+        for f in tqdm(files):
+
+            try:
+                dialogue = load_dialogue(f)
+
+                if not dialogue:
+                    continue
+
+                tokens = count_tokens(dialogue)
+
+                if TOKEN_MIN <= tokens <= TOKEN_MAX:
+                    selected[lang].append(f)
+
+            except Exception as e:
+                print(f"[ERROR] {f.name}: {e}")
+                continue
+
+        print(f"{lang} candidates:", len(selected[lang]))
+
+    # ========================================================
+    # SAMPLE
+    # ========================================================
+
+    for lang in selected:
+        if len(selected[lang]) > SAMPLES_PER_LANG:
+            selected[lang] = random.sample(selected[lang], SAMPLES_PER_LANG)
+
+    # ========================================================
+    # COPY FILES
+    # ========================================================
+
+    for lang, files in selected.items():
+
+        out_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        for f in files:
+            shutil.copy(f, out_dir / f.name)
+
+    print("\nDataset created at:", OUTPUT_DIR)
+
+
+# ============================================================
+# ENTRY
+# ============================================================
+
+if __name__ == "__main__":
+    main()
