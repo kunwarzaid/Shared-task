@@ -1,46 +1,170 @@
-Successfully logged into Hugging Face!
-Loading tokenizer...
+import json
+import random
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer
+import shutil
+from huggingface_hub import login
 
-Processing Hindi (1241 files)...
+# ============================================================
+# LOGIN
+# ============================================================
 
-  0%|          | 0/1241 [00:00<?, ?it/s]
-SKeyword arguments {'src_lang': 'hin_Deva', 'tgt_lang': 'eng_Latn'} not recognized.
+def huggingface_login():
+    token = ""  # add if needed
+    if token:
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
 
-  0%|          | 0/1241 [00:00<?, ?it/s]
+huggingface_login()
 
-gTraceback (most recent call last):
-  File "/workspace/multi_summ/data_selec.py", line 158, in <module>
+# ============================================================
+# CONFIG
+# ============================================================
 
-K    main()
-  File "/workspace/multi_summ/data_selec.py", line 132, in main
+ROOT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/test"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/selected_data"
 
-q    tokens = count_tokens(dialogue, tag)
-  File "/workspace/multi_summ/data_selec.py", line 100, in count_tokens
+TOKEN_MIN = 1024
+TOKEN_MAX = 4096
+SAMPLES_PER_LANG = 60
 
-�    tokens = tokenizer(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 2858, in __call__
+MODEL_NAME = "ai4bharat/indictrans2-indic-en-1B"
 
-�    encodings = self._call_one(text=text, text_pair=text_pair, **all_kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 2964, in _call_one
+LANG_TAGS = {
+    "Hindi": "hin_Deva",
+    "Marathi": "mar_Deva",
+    "Bangla": "ben_Beng",
+    "English": "eng_Latn",
+    "Telugu": "tel_Telu",
+    "Tamil": "tam_Taml",
+    "Kannada": "kan_Knda",
+    "Gujarati": "guj_Gujr",   # ✅ fixed typo
+    "Dogri": "doi_Deva",
+    "Assamese": "asm_Beng"
+}
 
-�    return self.encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3037, in encode_plus
+# ============================================================
+# LOAD TOKENIZER
+# ============================================================
 
-�    return self._encode_plus(
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 719, in _encode_plus
+print("Loading tokenizer...")
 
-�    first_ids = get_input_ids(text)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 686, in get_input_ids
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME,
+    use_fast=False,
+    trust_remote_code=True
+)
 
-�    tokens = self.tokenize(text, **kwargs)
-  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 617, in tokenize
+# ============================================================
+# LOAD DIALOGUE
+# ============================================================
 
-�    tokenized_text.extend(self._tokenize(token))
-  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2-indic-en-1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/tokenization_indictrans.py", line 201, in _src_tokenize
+def load_dialogue(path):
+    lines = []
 
-�    assert src_lang in LANGUAGE_TAGS, f"Invalid source language tag: {src_lang}"
-AssertionError: Invalid source language tag: Health
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
 
-removing /jobs/300651
+            try:
+                obj = json.loads(line)
 
-Failed to execute script
+                speaker = obj.get("speaker", "").strip()
+                text = obj.get("dialogue", "").strip()
+
+                if speaker:
+                    lines.append(f"{speaker}: {text}")
+                else:
+                    lines.append(text)
+
+            except:
+                continue
+
+    return " ".join(lines)   # ✅ avoid newline issues
+
+
+# ============================================================
+# TOKEN COUNT (CORRECT WAY)
+# ============================================================
+
+def count_tokens(text, src_tag):
+
+    # ✅ Set language properly (CRITICAL)
+    tokenizer.src_lang = src_tag
+    tokenizer.tgt_lang = "eng_Latn"
+
+    tokens = tokenizer(
+        text,
+        truncation=False,
+        add_special_tokens=True
+    )
+
+    return len(tokens["input_ids"])
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    selected = {lang: [] for lang in LANG_TAGS}
+
+    for lang, tag in LANG_TAGS.items():
+
+        dialogue_dir = Path(ROOT_DIR) / lang / "Dialogues"
+        files = list(dialogue_dir.glob("*.jsonl"))
+
+        print(f"\nProcessing {lang} ({len(files)} files)...")
+
+        for f in tqdm(files):
+
+            try:
+                dialogue = load_dialogue(f)
+
+                if not dialogue:
+                    continue
+
+                tokens = count_tokens(dialogue, tag)
+
+                if TOKEN_MIN <= tokens <= TOKEN_MAX:
+                    selected[lang].append(f)
+
+            except Exception as e:
+                print(f"[ERROR] {f.name}: {e}")
+                continue
+
+        print(f"{lang} candidates:", len(selected[lang]))
+
+    # ========================================================
+    # SAMPLE
+    # ========================================================
+
+    for lang in selected:
+        if len(selected[lang]) > SAMPLES_PER_LANG:
+            selected[lang] = random.sample(selected[lang], SAMPLES_PER_LANG)
+
+    # ========================================================
+    # COPY FILES
+    # ========================================================
+
+    for lang, files in selected.items():
+
+        out_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        for f in files:
+            shutil.copy(f, out_dir / f.name)
+
+    print("\nDataset created at:", OUTPUT_DIR)
+
+
+# ============================================================
+# ENTRY
+# ============================================================
+
+if __name__ == "__main__":
+    main()
