@@ -1,114 +1,140 @@
-Below is a clean, publication-ready Experiments section, written in the style and tone expected by an EACL reviewer.
-I have made all assumptions explicit, added the fine-tuning details, and kept claims conservative and reproducible.
+import json
+from pathlib import Path
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import torch
 
-⸻
 
-4 Experiments
+from huggingface_hub import login
+#from IndicTransToolkit.processor import IndicProcessor
+# ============================================================
+# LOGIN (OPTIONAL – REQUIRED ONLY FOR GATED MODELS)
+# ============================================================
 
-4.1 Task Definition
+def huggingface_login():
+    token = ""   
+    if token:
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
 
-We study multilingual clinical dialogue summarization, where the input is a doctor–patient conversation and the output is a plain-text English clinical summary.
-Dialogues may be in English, Hindi, Marathi, or Bangla, while all reference summaries are written in English. The task requires both cross-lingual understanding and domain-specific summarization without hallucinating clinical facts.
+huggingface_login()
 
-⸻
 
-4.2 Models Evaluated
+# ==========================
+# CONFIG
+# ==========================
 
-We evaluate three large language models representative of recent instruction-tuned open-weight systems:
-	•	LLaMA-2-13B-Chat
-	•	Mistral-7B-Instruct
-	•	Qwen2.5-7B-Instruct
+INPUT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/selected_data"
+OUTPUT_DIR ="/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/translated_data"
 
-These models were selected to cover different model families and sizes while remaining feasible for deployment on a single 32 GB GPU.
+MODEL_NAME = "ai4bharat/indictrans2-indic-en-1B"
 
-⸻
+LANG_TAGS = {
+    "Hindi": "hin_Deva",
+    "Marathi": "mar_Deva",
+    "Bangla": "ben_Beng",
+    "English": "eng_Latn",
+    "Telugu":"tel_Telu",
+    "Tamil": "tam_Taml",
+    "Kannada": "kan_Knda",
+    "Gujrati": "guj_Gujr",
+    "Dogri": "doi_Deva",
+    "Assamese": "asm_Beng"
+}
 
-4.3 Inference Settings: Zero-Shot and Few-Shot
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-For all three models, we conduct both zero-shot and few-shot inference.
+# ==========================
+# LOAD MODEL
+# ==========================
 
-Zero-Shot Inference
-In the zero-shot setting, the model is prompted only with a system instruction and the target dialogue. The prompt instructs the model to generate a concise English clinical summary, focusing on diagnosis, symptoms, investigations, treatment, and follow-up, without introducing unsupported medical claims.
+print("Loading IndicTrans2 model...")
 
-Few-Shot Inference
-In the few-shot setting, we prepend k = 3 in-context examples to the prompt. Each example consists of:
-	•	a doctor–patient dialogue, and
-	•	its corresponding gold English summary.
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=False,trust_remote_code=True)
+model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME,trust_remote_code=True).to(DEVICE)
 
-Few-shot examples are sampled from the training split and are language-matched to the test dialogue when possible. Example dialogues are truncated to ensure the total prompt remains within the model’s context window.
-Few-shot prompting is applied uniformly across all three models to enable a fair comparison.
+# ==========================
+# TRANSLATION FUNCTION
+# ==========================
 
-⸻
+def translate_text(text, src_lang):
 
-4.4 Fine-Tuning Setup
+    if src_lang == "eng_Latn":
+        return text
 
-In addition to prompt-based inference, we fine-tune Qwen2.5-7B-Instruct for domain adaptation.
+    formatted = f"{src_lang} eng_Latn {text}"
 
-Training Data
-We use a corpus of doctor–patient dialogues across four languages (English, Hindi, Marathi, Bangla). All target summaries are in English.
-The original training data is split into train and test subsets, while a provided development set is retained for validation.
+    inputs = tokenizer(
+        formatted,
+        return_tensors="pt",
+        truncation=True,
+        max_length=4096
+    ).to(DEVICE)
 
-Fine-Tuning Method
-We employ parameter-efficient fine-tuning (PEFT) using QLoRA:
-	•	Base model: Qwen2.5-7B-Instruct
-	•	Quantization: 4-bit NF4
-	•	LoRA rank: 8
-	•	LoRA target modules: query, key, value, and output projections
-	•	Optimizer: AdamW
-	•	Learning rate: 2 \times 10^{-4}
-	•	Batch size: 1 with gradient accumulation
-	•	Maximum sequence length: 1,536 tokens
-	•	Training epochs: 1
+    outputs = model.generate(
+        **inputs,
+        max_length=4096,
+        num_beams=4
+    )
 
-Only LoRA adapter parameters are updated, keeping the base model frozen. This allows efficient training on a single NVIDIA V100 32 GB GPU.
+    translated = tokenizer.decode(
+        outputs[0],
+        skip_special_tokens=True
+    )
 
-⸻
+    return translated
 
-4.5 Fine-Tuning Variants
 
-We explore two fine-tuning variants of Qwen2.5-7B-Instruct.
+# ==========================
+# MAIN TRANSLATION LOOP
+# ==========================
 
-4.5.1 Plain-Text Summary Fine-Tuning
-In the first variant, the model is fine-tuned to generate plain-text English summaries directly from multilingual dialogues.
-The training prompt explicitly instructs the model to produce an English summary regardless of the input language. At inference time, we perform zero-shot generation using the fine-tuned model.
+def main():
 
-4.5.2 Reasoning-Structured Fine-Tuning
-In the second variant, we restructure the training targets to encourage implicit reasoning.
-Intermediate reasoning markers present in the data are removed from the output, forcing the model to internalize reasoning while still producing a clean final summary.
-This variant is also evaluated using zero-shot inference, allowing us to isolate the effect of output structuring during training.
+    for lang, tag in LANG_TAGS.items():
 
-⸻
+        input_dir = Path(INPUT_DIR) / lang / "Dialogues"
+        output_dir = Path(OUTPUT_DIR) / lang / "Dialogues"
 
-4.6 Evaluation Protocol
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-We evaluate all models on the same held-out test set. Since gold summaries are available only for the train and dev portions, the test split is derived from the original training data to enable controlled evaluation.
+        files = list(input_dir.glob("*.jsonl"))
 
-We report results separately for:
-	•	zero-shot prompting,
-	•	few-shot prompting, and
-	•	fine-tuned models.
+        print(f"\nTranslating {lang} ({len(files)} files)")
 
-Automatic evaluation metrics are complemented by qualitative analysis, focusing on factual correctness, clinical relevance, and linguistic fluency across languages.
+        for f in tqdm(files):
 
-⸻
+            translated_lines = []
 
-4.7 Experimental Goals
+            with open(f, encoding="utf-8") as file:
 
-Our experiments are designed to answer the following questions:
-	1.	How do zero-shot and few-shot prompting compare across different model families?
-	2.	Does domain-specific fine-tuning improve clinical summarization quality over prompting alone?
-	3.	Does restructuring training outputs to encourage implicit reasoning lead to better summaries?
+                for line in file:
 
-⸻
+                    try:
+                        obj = json.loads(line)
 
-Reviewer-style closing remark
+                        speaker = obj.get("speaker", "")
+                        text = obj.get("dialogue", "")
 
-Overall, this experimental setup allows us to disentangle the effects of model choice, prompting strategy, and fine-tuning design on multilingual clinical dialogue summarization.
+                        translated_text = translate_text(text, tag)
 
-⸻
+                        new_obj = {
+                            "speaker": speaker,
+                            "dialogue": translated_text
+                        }
 
-If you want, I can next:
-	•	Add tables placeholders (“Table 1 shows…”)
-	•	Write a Results section with expected trends
-	•	Tighten this to fit a strict EACL page limit
-	•	Or adapt the tone to ACL / EMNLP style instead
+                        translated_lines.append(json.dumps(new_obj, ensure_ascii=False))
+
+                    except:
+                        translated_lines.append(line.strip())
+
+            output_path = output_dir / f.name
+
+            with open(output_path, "w", encoding="utf-8") as out:
+
+                for l in translated_lines:
+                    out.write(l + "\n")
+
+
+if __name__ == "__main__":
+    main()
