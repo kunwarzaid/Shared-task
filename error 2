@@ -1,11 +1,46 @@
-def count_tokens(text, src_tag):
+Successfully logged into Hugging Face!
+Loading tokenizer...
 
-    tokens = tokenizer(
-        text,
-        src_lang=src_tag,
-        tgt_lang="eng_Latn",
-        truncation=False,
-        add_special_tokens=False
-    )
+Processing Hindi (1241 files)...
 
-    return len(tokens["input_ids"])
+  0%|          | 0/1241 [00:00<?, ?it/s]
+SKeyword arguments {'src_lang': 'hin_Deva', 'tgt_lang': 'eng_Latn'} not recognized.
+
+  0%|          | 0/1241 [00:00<?, ?it/s]
+
+gTraceback (most recent call last):
+  File "/workspace/multi_summ/data_selec.py", line 158, in <module>
+
+K    main()
+  File "/workspace/multi_summ/data_selec.py", line 132, in main
+
+q    tokens = count_tokens(dialogue, tag)
+  File "/workspace/multi_summ/data_selec.py", line 100, in count_tokens
+
+�    tokens = tokenizer(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 2858, in __call__
+
+�    encodings = self._call_one(text=text, text_pair=text_pair, **all_kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 2964, in _call_one
+
+�    return self.encode_plus(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils_base.py", line 3037, in encode_plus
+
+�    return self._encode_plus(
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 719, in _encode_plus
+
+�    first_ids = get_input_ids(text)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 686, in get_input_ids
+
+�    tokens = self.tokenize(text, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/transformers/tokenization_utils.py", line 617, in tokenize
+
+�    tokenized_text.extend(self._tokenize(token))
+  File "/root/.cache/huggingface/modules/transformers_modules/ai4bharat/indictrans2-indic-en-1B/ac3daf0ecd37be3b6957764a9179ab2b07fa9d6a/tokenization_indictrans.py", line 201, in _src_tokenize
+
+�    assert src_lang in LANGUAGE_TAGS, f"Invalid source language tag: {src_lang}"
+AssertionError: Invalid source language tag: Health
+
+removing /jobs/300651
+
+Failed to execute script
