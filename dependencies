@@ -11,13 +11,17 @@ print(torch.version.cuda)
 print(bnb.__version__)
 print(transformers.__version__)
 
+# ============================================================
+# LOGIN
+# ============================================================
+
 def huggingface_login():
     token = ''
     try:
         login(token=token)
-        print("Successfully logged into Hugging Face!")
+        print("Logged in to Hugging Face")
     except Exception as e:
-        print(f"Failed to log in: {e}")
+        print(f"Login failed: {e}")
 
 huggingface_login()
 
@@ -32,24 +36,64 @@ BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/test"
 TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/train_split"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_2.5_7B_Instruct_split/grounded_full1"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Qwen_final_fixed"
 
 TARGET_LANGS = ["Bangla","English","Hindi","Marathi"]
 
-# 🔥 CONTROL
-FEW_SHOT_K = 1   # 0 = zero-shot, 1 = one FULL example
+FEW_SHOT_K = 1   # 0 = zero-shot, 1 = one full example
 FEW_SHOT_SEED = 42
 
 MAX_TOTAL_INPUT_TOKENS = 16384
 MAX_NEW_TOKENS_SUMMARY = 1024
-SYSTEM_AND_OVERHEAD_TOKENS = 512
+SYSTEM_OVERHEAD = 512
 
 # ============================================================
-# PROMPTS (UNCHANGED - SAME AS MISTRAL)
+# PROMPTS (SAME AS MISTRAL)
 # ============================================================
 
-ZERO_SHOT_PROMPT_TEMPLATE = """..."""  # keep same
-FEW_SHOT_INSTRUCTION_HEADER = """..."""  # keep same
+ZERO_SHOT_PROMPT_TEMPLATE = """
+You are a clinical documentation assistant.
+
+Your task is to generate a clinical summary of the following doctor–patient dialogue.
+
+STRICT RULES:
+- Only use explicitly stated information
+- Do NOT infer anything
+- Preserve negations exactly
+
+OUTPUT FORMAT (STRICT):
+
+[Summary]
+<final clinical summary>
+[/Summary]
+
+IMPORTANT:
+- Output ONLY ONE summary
+- Do NOT repeat or restate
+- Stop after [/Summary]
+
+Dialogue:
+{dialogue}
+"""
+
+FEW_SHOT_INSTRUCTION_HEADER = """
+You are a clinical documentation assistant.
+
+Follow:
+STEP 1: Extract facts
+STEP 2: Write summary
+
+OUTPUT FORMAT (STRICT):
+
+[Summary]
+<final clinical summary>
+[/Summary]
+
+IMPORTANT:
+- Output ONLY ONE summary
+- Do NOT repeat
+- Stop after [/Summary]
+"""
 
 # ============================================================
 # UTILS
@@ -81,33 +125,33 @@ def clip_tokens(tokenizer, text, max_tokens):
 def build_messages(user_prompt):
     return [{"role": "user", "content": user_prompt}]
 
-def chat_generate(model, tokenizer, messages):
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
+# ============================================================
+# CLEANING (KEY FIX)
+# ============================================================
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+def extract_summary(text):
+    if "[Summary]" in text and "[/Summary]" in text:
+        return text.split("[Summary]",1)[1].split("[/Summary]",1)[0].strip()
+    if "[Summary]" in text:
+        return text.split("[Summary]",1)[1].strip()
+    return text.strip().split("\n\n")[0]
 
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
-            do_sample=False,
-            num_beams=1,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    gen_ids = output[0][inputs.input_ids.shape[-1]:]
-    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+def remove_repeated_sentences(text):
+    sentences = text.split(". ")
+    seen = set()
+    cleaned = []
+    for s in sentences:
+        s_clean = s.strip()
+        if s_clean and s_clean not in seen:
+            cleaned.append(s_clean)
+            seen.add(s_clean)
+    return ". ".join(cleaned)
 
 # ============================================================
-# FEW-SHOT (ONE FULL EXAMPLE)
+# FEW-SHOT (1 FULL EXAMPLE)
 # ============================================================
 
 def collect_one_full_example(root, lang, seed):
-
     lang_dir = Path(root) / lang
     dlg_dir = lang_dir / "Dialogues"
     sum_dir = lang_dir / "Summary_Text"
@@ -157,18 +201,48 @@ def load_model():
     return model, tokenizer
 
 # ============================================================
-# MAIN
+# GENERATION
 # ============================================================
 
-def run_summary_only():
+def chat_generate(model, tokenizer, messages):
+
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
+            do_sample=False,
+            repetition_penalty=1.1,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    gen_ids = output[0][inputs.input_ids.shape[-1]:]
+    text = tokenizer.decode(gen_ids, skip_special_tokens=True)
+
+    summary = extract_summary(text)
+    summary = remove_repeated_sentences(summary)
+
+    return summary
+
+# ============================================================
+# MAIN PIPELINE
+# ============================================================
+
+def run_summary():
 
     model, tokenizer = load_model()
 
-    # ✅ Updated budget (NO few-shot subtraction)
     dialogue_budget = (
         MAX_TOTAL_INPUT_TOKENS
         - MAX_NEW_TOKENS_SUMMARY
-        - SYSTEM_AND_OVERHEAD_TOKENS
+        - SYSTEM_OVERHEAD
     )
 
     langs = [
@@ -177,15 +251,15 @@ def run_summary_only():
     ]
 
     for lang_dir in langs:
+
         lang = lang_dir.name
-        tprint(f"Processing language: {lang}")
+        tprint(f"Processing: {lang}")
 
         dlg_dir = lang_dir / "Dialogues"
         out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
 
         files = sorted(dlg_dir.glob("*.jsonl"))[:110]
 
-        # ✅ Load ONE full example
         few_example = collect_one_full_example(
             TRAIN_SPLIT_DIR, lang, FEW_SHOT_SEED
         )
@@ -204,26 +278,21 @@ def run_summary_only():
 
             dialogue_clip = clip_tokens(tokenizer, dialogue, dialogue_budget)
 
-            # =========================
             # ZERO SHOT
-            # =========================
             if FEW_SHOT_K == 0 or few_example[0] is None:
                 user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
                     dialogue=dialogue_clip
                 )
 
-            # =========================
-            # FEW SHOT (1 FULL)
-            # =========================
+            # FEW SHOT (1 FULL EXAMPLE)
             else:
                 ex_dlg, ex_sum = few_example
 
                 user_prompt = (
                     FEW_SHOT_INSTRUCTION_HEADER
-                    + "\n========================\n\n"
-                    + f"Example 1\n\nDialogue:\n{ex_dlg}\n\n{ex_sum}\n"
-                    + "\n========================\n\n"
-                    + f"Now process the following dialogue.\n\nDialogue:\n{dialogue_clip}"
+                    + "\n\nExample:\n"
+                    + ex_dlg + "\n\n" + ex_sum
+                    + "\n\nNow process:\n" + dialogue_clip
                 )
 
             messages = build_messages(user_prompt)
@@ -234,102 +303,11 @@ def run_summary_only():
 
         torch.cuda.empty_cache()
 
-    tprint("Inference complete.")
+    tprint("Inference completed.")
 
 # ============================================================
 # ENTRY
 # ============================================================
 
 if __name__ == "__main__":
-    run_summary_only()   run()
-
-
-# ONLY showing changed core parts (rest same as yours)
-
-# ============================================================
-# CLEANING FUNCTIONS (ADD)
-# ============================================================
-
-def extract_summary(text):
-    if "[Summary]" in text and "[/Summary]" in text:
-        return text.split("[Summary]",1)[1].split("[/Summary]",1)[0].strip()
-    if "[Summary]" in text:
-        return text.split("[Summary]",1)[1].strip()
-    return text.strip().split("\n\n")[0]
-
-def remove_repeated_sentences(text):
-    sentences = text.split(". ")
-    seen = set()
-    cleaned = []
-    for s in sentences:
-        if s.strip() and s not in seen:
-            cleaned.append(s)
-            seen.add(s)
-    return ". ".join(cleaned)
-
-# ============================================================
-# GENERATION FIX
-# ============================================================
-
-def chat_generate(model, tokenizer, messages):
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
-    )
-
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-
-    output = model.generate(
-        **inputs,
-        max_new_tokens=1024,   # unchanged
-        do_sample=False,
-        repetition_penalty=1.1,
-        pad_token_id=tokenizer.eos_token_id
-    )
-
-    gen_ids = output[0][inputs.input_ids.shape[-1]:]
-    text = tokenizer.decode(gen_ids, skip_special_tokens=True)
-
-    summary = extract_summary(text)
-    summary = remove_repeated_sentences(summary)
-
-    return summary
-
-# ============================================================
-# FEW-SHOT FIX (1 FULL EXAMPLE)
-# ============================================================
-
-def collect_one_full_example(root, lang, seed):
-    files = sorted((Path(root)/lang/"Dialogues").glob("*.jsonl"))
-    random.Random(seed).shuffle(files)
-
-    for f in files:
-        sum_file = Path(root)/lang/"Summary_Text"/f"{f.stem}_summary.txt"
-        if not sum_file.exists():
-            continue
-
-        rows = safe_read_jsonl(f)
-        dialogue = " ".join(r.get("dialogue","") for r in rows if isinstance(r,dict))
-        summary = sum_file.read_text(encoding="utf-8")
-
-        if dialogue and summary:
-            return dialogue, summary
-
-    return None, None
-
-# ============================================================
-# PROMPT BUILD (FIXED)
-# ============================================================
-
-if FEW_SHOT_K == 0 or few_example[0] is None:
-    user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(dialogue=dialogue_clip)
-else:
-    ex_dlg, ex_sum = few_example
-
-    user_prompt = (
-        FEW_SHOT_INSTRUCTION_HEADER
-        + "\n\nExample:\n"
-        + ex_dlg + "\n\n" + ex_sum
-        + "\n\nNow process:\n" + dialogue_clip
-    )
+    run_summary()
