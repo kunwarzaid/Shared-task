@@ -1,82 +1,53 @@
 def run():
+
     model, tokenizer = load_model()
 
+    # Token budget (leave space for generation + system)
     budget = MAX_CONTEXT - MAX_NEW_TOKENS_SUMMARY - SYSTEM_OVERHEAD
-    
+
+    SEED = 42
+    max_files_per_lang = 60
+
     for lang_dir in Path(TEST_DIR).iterdir():
+
         if lang_dir.name not in TARGET_LANGS:
             continue
 
-        example = collect_one_example(TRAIN_SPLIT_DIR, lang_dir.name, FEW_SHOT_SEED)
-
-        for f in tqdm(sorted((lang_dir/"Dialogues").glob("*.jsonl"))[:110]):
-
-            out_file = Path(OUTPUT_DIR)/lang_dir.name/"Summary_Text"/f"{f.stem}.txt"
-            if out_file.exists():
-                continue
-
-            rows = safe_read_jsonl(f)
-            dialogue = " ".join(r.get("dialogue","") for r in rows if isinstance(r,dict))
-            dialogue = clip_tokens(tokenizer, dialogue, budget)
-
-            if FEW_SHOT_K == 0 or example[0] is None:
-                prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(dialogue=dialogue)
-            else:
-                prompt = (
-                    FEW_SHOT_INSTRUCTION_HEADER
-                    + "\n\nExample:\n"
-                    + example[0] + "\n\n" + example[1]
-                    + "\n\nNow process:\n" + dialogue
-                )
-
-            summary = generate_summary(model, tokenizer, prompt)
-            write_text(out_file, summary)
-
-        torch.cuda.empty_cache()
-
-if __name__ == "__main__":
-    run()
-
-
-def run_summary():
-
-    model, tokenizer = load_model()
-
-    dialogue_budget = (
-        MAX_TOTAL_INPUT_TOKENS
-        - MAX_NEW_TOKENS_SUMMARY
-        - SYSTEM_OVERHEAD
-    )
-
-    langs = [
-        p for p in Path(TEST_DIR).iterdir()
-        if p.is_dir() and p.name in TARGET_LANGS
-    ]
-    max_files_per_lang = 60
-    SEED = 42
-
-    for lang_dir in langs:
-
         lang = lang_dir.name
-        tprint(f"Processing: {lang}")
+        print(f"\nProcessing language: {lang}")
 
         dlg_dir = lang_dir / "Dialogues"
         out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
 
+        # ============================================================
+        # RANDOM SAMPLING (FIXED)
+        # ============================================================
+
         files = sorted(dlg_dir.glob("*.jsonl"))
+
         random.seed(SEED)
         random.shuffle(files)
-        files = files[:min(max_files_per_lang,len(files))]
-        tprint(f"{lang}: using {len(files)} dialogues")
 
+        files = files[:min(max_files_per_lang, len(files))]
 
-        few_example = collect_one_full_example(
+        print(f"{lang}: using {len(files)} dialogues")
+
+        # ============================================================
+        # FEW-SHOT EXAMPLE (1 FULL)
+        # ============================================================
+
+        example = collect_one_example(
             TRAIN_SPLIT_DIR, lang, FEW_SHOT_SEED
         )
+
+        # ============================================================
+        # PROCESS FILES
+        # ============================================================
 
         for f in tqdm(files, desc=lang):
 
             out_file = out_dir / f"{f.stem}_summary.txt"
+
             if out_file.exists():
                 continue
 
@@ -86,38 +57,41 @@ def run_summary():
                 r.get("dialogue", "") for r in rows if isinstance(r, dict)
             )
 
-            dialogue_clip = clip_tokens(tokenizer, dialogue, dialogue_budget)
+            # Clip ONLY test dialogue
+            dialogue = clip_tokens(tokenizer, dialogue, budget)
 
-            # ZERO SHOT
-            if FEW_SHOT_K == 0 or few_example[0] is None:
-                user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
-                    dialogue=dialogue_clip
+            # ============================================================
+            # PROMPT
+            # ============================================================
+
+            if FEW_SHOT_K == 0 or example[0] is None:
+
+                prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
+                    dialogue=dialogue
                 )
 
-            # FEW SHOT (1 FULL EXAMPLE)
             else:
-                ex_dlg, ex_sum = few_example
+                ex_dlg, ex_sum = example
 
-                user_prompt = (
+                prompt = (
                     FEW_SHOT_INSTRUCTION_HEADER
                     + "\n\nExample:\n"
                     + ex_dlg + "\n\n" + ex_sum
-                    + "\n\nNow process:\n" + dialogue_clip
+                    + "\n\nNow process:\n" + dialogue
                 )
 
-            messages = build_messages(user_prompt)
+            # ============================================================
+            # GENERATE
+            # ============================================================
 
-            summary = chat_generate(model, tokenizer, messages)
+            summary = generate_summary(model, tokenizer, prompt)
+
+            # ============================================================
+            # SAVE
+            # ============================================================
 
             write_text(out_file, summary)
 
         torch.cuda.empty_cache()
 
-    tprint("Inference completed.")
-
-# ============================================================
-# ENTRY
-# ============================================================
-
-if __name__ == "__main__":
-    run_summary()
+    print("\nInference completed.")
