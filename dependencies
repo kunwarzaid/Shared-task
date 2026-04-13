@@ -1,15 +1,30 @@
-from openai import OpenAI
-import os
+import requests
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "your-key-here"))
+AZURE_WRAPPER_URL = "https://openai-wrapper-adf0awcrcjghg3cz.southindia-01.azurewebsites.net/openai_service"
+EMPLOYEE_ID = "1757421"
+
+payload = {
+    "model": "gpt-5",
+    "prompt": [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Say hello in one word."}
+    ],
+    "max_tokens": 10,
+    "employeeId": EMPLOYEE_ID
+}
 
 try:
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": "Say hello in one word."}],
-        max_tokens=10
-    )
-    print("SUCCESS:", response.choices[0].message.content)
+    res = requests.post(AZURE_WRAPPER_URL, json=payload, timeout=30)
+    data = res.json()
+    print("Status code:", res.status_code)
+    print("Raw response:", data)
+
+    if "response" in data:
+        print("SUCCESS:", data["response"])
+    elif "choices" in data:
+        print("SUCCESS:", data["choices"][0]["message"]["content"])
+    else:
+        print("UNEXPECTED FORMAT - check raw response above")
 
 except Exception as e:
     print("FAILED:", e)
