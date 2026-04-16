@@ -10,13 +10,7 @@ from typing import List, Dict
 import os
 from openai import AzureOpenAI
  
-endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
-model_name = "gpt-5"
-deployment = "gpt-5"
- 
-subscription_key = "5bc17f3698774aed9e7529e4bcecc2c1"
-api_version = "2024-12-01-preview"
- 
+
 client = AzureOpenAI(
     api_version=api_version,
     azure_endpoint=endpoint,
