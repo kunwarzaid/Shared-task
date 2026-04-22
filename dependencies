@@ -24,85 +24,59 @@ test_action_mismatch_rate: 0.18
 
 
 
-import shutil
+import pandas as pd
 from pathlib import Path
 
-def create_union_test_set(original_test_dir, experiment_dirs, output_dir):
+def audit_experiment_folders(experiment_dirs):
     """
-    Finds dialogues present in AT LEAST ONE experiment and copies them to a new filtered test folder.
+    Counts the number of summary files in each language folder for every experiment.
     """
-    orig_test_path = Path(original_test_dir)
-    output_path = Path(output_dir)
+    results = []
     
-    # Iterate through each language folder (Assamese, Bangla, Dogri, etc.)
-    for lang_folder in orig_test_path.iterdir():
-        if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
+    for exp_dir in experiment_dirs:
+        exp_path = Path(exp_dir)
+        if not exp_path.exists():
+            print(f"Warning: Directory not found -> {exp_dir}")
             continue
             
-        language = lang_folder.name
-        orig_dialogues_dir = lang_folder / "Dialogues"
+        # Get the experiment name (e.g., 'zeroshot', 'fewshot')
+        exp_name = exp_path.name 
         
-        if not orig_dialogues_dir.exists():
-            continue
-
-        # 1. Get the base set of all Case IDs in the original Test folder
-        # Removing '.jsonl' to get just the scenario ID
-        source_case_ids = {f.name.replace(".jsonl", "") for f in orig_dialogues_dir.glob("*.jsonl")}
-        
-        # 2. Build a master pool of Case IDs from ALL experiments for this language
-        all_experiment_cases = set()
-        
-        for exp_dir in experiment_dirs:
-            # Using 'Summary_Text' as shown in the images
-            exp_summary_dir = Path(exp_dir) / language / "Summary_Text"
-            
-            if exp_summary_dir.exists():
-                # Removing '_summary.txt' to get just the scenario ID
-                exp_cases = {f.name.replace("_summary.txt", "") for f in exp_summary_dir.glob("*_summary.txt")}
-                all_experiment_cases.update(exp_cases)
-
-        # 3. Filter: Keep cases that exist in the source folder AND our master experiment pool
-        valid_case_ids = source_case_ids.intersection(all_experiment_cases)
-
-        # 4. Copy the surviving dialogues to the new Filtered Test folder
-        if valid_case_ids:
-            # Create destination: Filtered_Test / Language / Dialogues
-            dest_dialogues_dir = output_path / language / "Dialogues"
-            dest_dialogues_dir.mkdir(parents=True, exist_ok=True)
-            
-            copied_count = 0
-            for case_id in valid_case_ids:
-                src_file = orig_dialogues_dir / f"{case_id}.jsonl"
-                dest_file = dest_dialogues_dir / f"{case_id}.jsonl"
+        for lang_folder in exp_path.iterdir():
+            if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
+                continue
                 
-                if src_file.exists():
-                    shutil.copy2(src_file, dest_file)
-                    copied_count += 1
+            language = lang_folder.name
+            summary_dir = lang_folder / "Summary_Text"
             
-            print(f"[{language}] Copied {copied_count} files.")
-        else:
-            print(f"[{language}] No matching dialogues found in any experiment. Skipped.")
+            count = 0
+            if summary_dir.exists():
+                count = len(list(summary_dir.glob("*_summary.txt")))
+                
+            results.append({
+                "Language": language,
+                "Experiment": exp_name,
+                "File_Count": count
+            })
+            
+    # Convert to a DataFrame and create a clean pivot table
+    df = pd.DataFrame(results)
+    if not df.empty:
+        # Rows = Languages, Columns = Experiments
+        matrix = df.pivot(index="Language", columns="Experiment", values="File_Count").fillna(0).astype(int)
+        print("\n=== File Count Matrix ===")
+        print(matrix.to_string())
+    else:
+        print("No summary files found.")
 
 # ==========================================
 # Execution Setup
 # ==========================================
-
-# Base paths based on your screenshots
-SOURCE_TEST_FOLDER = "SharedTask_NLPAI4Health_Train&dev_set/test"
-FILTERED_TEST_FOLDER = "Filtered_Test_For_Translation"
-
-# Add all your specific experiment paths here
 EXPERIMENT_FOLDERS = [
     "EACL/Qwen_exp/zeroshot",
     "EACL/Qwen_exp/fewshot",
     "EACL/Qwen_exp/translated"
-    # Note: Add your Mistral folder paths here as well if you want them included in the union
+    # Add your Mistral paths here
 ]
 
-print("Starting union filter...\n")
-create_union_test_set(
-    original_test_dir=SOURCE_TEST_FOLDER,
-    experiment_dirs=EXPERIMENT_FOLDERS,
-    output_dir=FILTERED_TEST_FOLDER
-)
-print("\nDone! Dialogues appearing in at least one experiment have been copied.")
+audit_experiment_folders(EXPERIMENT_FOLDERS)
