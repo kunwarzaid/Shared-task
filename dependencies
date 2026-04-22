@@ -27,21 +27,19 @@ test_action_mismatch_rate: 0.18
 import pandas as pd
 from pathlib import Path
 
-def audit_experiment_folders(experiment_dirs):
+def audit_experiment_folders(experiment_dict):
     """
     Counts the number of summary files in each language folder for every experiment.
+    Uses a dictionary to guarantee unique, clean column names.
     """
     results = []
     
-    for exp_dir in experiment_dirs:
+    for exp_name, exp_dir in experiment_dict.items():
         exp_path = Path(exp_dir)
         if not exp_path.exists():
             print(f"Warning: Directory not found -> {exp_dir}")
             continue
             
-        # Get the experiment name (e.g., 'zeroshot', 'fewshot')
-        exp_name = exp_path.name 
-        
         for lang_folder in exp_path.iterdir():
             if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
                 continue
@@ -55,7 +53,7 @@ def audit_experiment_folders(experiment_dirs):
                 
             results.append({
                 "Language": language,
-                "Experiment": exp_name,
+                "Experiment": exp_name,  # Uses the exact clean name from your dictionary keys
                 "File_Count": count
             })
             
@@ -72,11 +70,17 @@ def audit_experiment_folders(experiment_dirs):
 # ==========================================
 # Execution Setup
 # ==========================================
-EXPERIMENT_FOLDERS = [
-    "EACL/Qwen_exp/zeroshot",
-    "EACL/Qwen_exp/fewshot",
-    "EACL/Qwen_exp/translated"
-    # Add your Mistral paths here
-]
 
-audit_experiment_folders(EXPERIMENT_FOLDERS)
+# Using a dictionary guarantees there are zero duplicate column names.
+# Key = The exact column name you want in the printout.
+# Value = Your file path.
+EXPERIMENTS = {
+    "Mistral_Fewshot": "data/KZ_2117574/EACL/Mistral_exp/fewshot",
+    "Mistral_Zeroshot": "data/KZ_2117574/EACL/Mistral_exp/zeroshot",
+    "Mistral_Translated": "data/KZ_2117574/EACL/Mistral_exp/translated/mistral",
+    "Qwen_Fewshot": "data/KZ_2117574/EACL/Qwen_exp/fewshot",
+    "Qwen_Translated": "data/KZ_2117574/EACL/Qwen_exp/translated/qwen",
+    "Qwen_Zeroshot": "data/KZ_2117574/EACL/Qwen_exp/zeroshot"
+}
+
+audit_experiment_folders(EXPERIMENTS)
