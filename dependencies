@@ -27,32 +27,59 @@ test_action_mismatch_rate: 0.18
 import pandas as pd
 from pathlib import Path
 
-def match_experiment_files(experiment_name, dialogue_dir_path, summary_dir_path):
-    """Matches dialogue and summary files for a specific experiment and saves a dedicated CSV."""
-    dialogue_dir = Path(dialogue_dir_path)
-    summary_dir = Path(summary_dir_path)
+def match_experiment_files(experiment_name, test_base_dir, exp_base_dir):
+    """Matches dialogue and summary files across 10 language subfolders."""
+    test_base_path = Path(test_base_dir)
+    exp_base_path = Path(exp_base_dir)
     
     matched_pairs = []
 
-    # Iterate through all text files ending in '_summary.txt' in this specific experiment's folder
-    for summary_path in summary_dir.glob("*_summary.txt"):
+    # Iterate through each language folder in the test directory
+    for lang_folder in test_base_path.iterdir():
+        # Skip if it's not a directory (e.g., hidden files)
+        if not lang_folder.is_dir():
+            continue
+            
+        language = lang_folder.name
         
-        # Isolate the base name (e.g., 'case_001' from 'case_001_summary.txt')
-        base_name = summary_path.name.replace("_summary.txt", "")
+        # Construct the path to the 'Dialogues' subfolder for this language
+        dialogue_dir = lang_folder / "Dialogues"
         
-        # Construct the expected source dialogue filename (.jsnol as specified)
-        dialogue_filename = f"{base_name}.jsnol" 
-        dialogue_path = dialogue_dir / dialogue_filename
+        # Construct the expected path to the matching language folder in the experiments directory
+        exp_lang_folder = exp_base_path / language
         
-        # Verify the matching source file exists
-        if dialogue_path.exists():
-            matched_pairs.append({
-                "Case_ID": base_name,
-                "Dialogue_File": str(dialogue_path),
-                "Summary_File": str(summary_path)
-            })
-        else:
-            print(f"Warning: Missing source file for {summary_path.name} in {experiment_name}. Expected {dialogue_filename}")
+        if not exp_lang_folder.exists():
+            print(f"Warning: Missing language folder '{language}' in {experiment_name} directory.")
+            continue
+
+        # Use rglob (recursive glob) to find summary files. 
+        # This safely catches them whether they are directly in the language folder 
+        # or nested inside an additional subfolder (like /Hindi/Summaries/)
+        for summary_path in exp_lang_folder.rglob("*_summary.txt"):
+            
+            # Isolate the base name
+            base_name = summary_path.name.replace("_summary.txt", "")
+            
+            # Construct the expected source dialogue filename
+            dialogue_filename = f"{base_name}.jsnol" 
+            dialogue_path = dialogue_dir / dialogue_filename
+            
+            # Fallback check in case some files use the standard .jsonl extension
+            if not dialogue_path.exists():
+                alt_dialogue_path = dialogue_dir / f"{base_name}.jsonl"
+                if alt_dialogue_path.exists():
+                    dialogue_path = alt_dialogue_path
+            
+            # Verify the matching source file exists
+            if dialogue_path.exists():
+                matched_pairs.append({
+                    "Language": language, # Added to track language per case
+                    "Case_ID": base_name,
+                    "Dialogue_File": str(dialogue_path),
+                    "Summary_File": str(summary_path)
+                })
+            else:
+                print(f"Warning: Missing source file for {summary_path.name} in {language}. Expected {dialogue_filename}")
 
     # Convert the valid matches into a Pandas DataFrame
     df_log = pd.DataFrame(matched_pairs)
@@ -62,7 +89,7 @@ def match_experiment_files(experiment_name, dialogue_dir_path, summary_dir_path)
     
     if not df_log.empty:
         df_log.to_csv(output_filename, index=False)
-        print(f"[{experiment_name}] Successfully mapped {len(df_log)} file pairs. Saved to '{output_filename}'")
+        print(f"[{experiment_name}] Successfully mapped {len(df_log)} file pairs across {len(df_log['Language'].unique())} languages. Saved to '{output_filename}'")
     else:
         print(f"[{experiment_name}] No matches found. CSV not created.")
 
@@ -70,21 +97,21 @@ def match_experiment_files(experiment_name, dialogue_dir_path, summary_dir_path)
 # Execution Setup
 # ==========================================
 
-# 1. Define the single folder where all your raw test dialogues live
-test_dialogue_folder = "path/to/test_dialogues"
+# 1. Define the base 'test' folder that contains the 10 language folders
+test_folder = "SharedTask_NLPAI4Health_Train&dev_set/test"
 
-# 2. Define your experiments and the paths to their specific generated summaries
+# 2. Define your experiments and the base paths containing their respective language folders
 experiments = {
-    "zeroshot": "path/to/zeroshot_summaries",
-    "fewshot": "path/to/fewshot_summaries",
-    "translation": "path/to/translation_summaries",
-    "finetuning": "path/to/finetuning_summaries"
+    "zeroshot": "path/to/zeroshot_experiment_base",
+    "fewshot": "path/to/fewshot_experiment_base",
+    "translation": "path/to/translation_experiment_base",
+    "finetuning": "path/to/finetuning_experiment_base"
 }
 
 # 3. Run the matching function for each experiment separately
 for exp_name, exp_folder in experiments.items():
     match_experiment_files(
         experiment_name=exp_name, 
-        dialogue_dir_path=test_dialogue_folder, 
-        summary_dir_path=exp_folder
+        test_base_dir=test_folder, 
+        exp_base_dir=exp_folder
     )
