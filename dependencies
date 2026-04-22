@@ -34,9 +34,9 @@ def create_union_test_set(original_test_dir, experiment_dirs, output_dir):
     orig_test_path = Path(original_test_dir)
     output_path = Path(output_dir)
     
-    # Iterate through each language folder in the original Test directory
+    # Iterate through each language folder (Assamese, Bangla, Dogri, etc.)
     for lang_folder in orig_test_path.iterdir():
-        if not lang_folder.is_dir():
+        if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
             continue
             
         language = lang_folder.name
@@ -46,19 +46,19 @@ def create_union_test_set(original_test_dir, experiment_dirs, output_dir):
             continue
 
         # 1. Get the base set of all Case IDs in the original Test folder
-        source_case_ids = {f.name.replace(".jsnol", "") for f in orig_dialogues_dir.glob("*.jsnol")}
+        # Removing '.jsonl' to get just the scenario ID
+        source_case_ids = {f.name.replace(".jsonl", "") for f in orig_dialogues_dir.glob("*.jsonl")}
         
         # 2. Build a master pool of Case IDs from ALL experiments for this language
         all_experiment_cases = set()
         
         for exp_dir in experiment_dirs:
-            exp_summary_dir = Path(exp_dir) / language / "Summary"
+            # Using 'Summary_Text' as shown in the images
+            exp_summary_dir = Path(exp_dir) / language / "Summary_Text"
             
             if exp_summary_dir.exists():
-                # Extract 'case_123' from 'case_123_summary.txt'
+                # Removing '_summary.txt' to get just the scenario ID
                 exp_cases = {f.name.replace("_summary.txt", "") for f in exp_summary_dir.glob("*_summary.txt")}
-                
-                # Add these cases to our master pool (Union)
                 all_experiment_cases.update(exp_cases)
 
         # 3. Filter: Keep cases that exist in the source folder AND our master experiment pool
@@ -66,19 +66,20 @@ def create_union_test_set(original_test_dir, experiment_dirs, output_dir):
 
         # 4. Copy the surviving dialogues to the new Filtered Test folder
         if valid_case_ids:
+            # Create destination: Filtered_Test / Language / Dialogues
             dest_dialogues_dir = output_path / language / "Dialogues"
             dest_dialogues_dir.mkdir(parents=True, exist_ok=True)
             
             copied_count = 0
             for case_id in valid_case_ids:
-                src_file = orig_dialogues_dir / f"{case_id}.jsnol"
-                dest_file = dest_dialogues_dir / f"{case_id}.jsnol"
+                src_file = orig_dialogues_dir / f"{case_id}.jsonl"
+                dest_file = dest_dialogues_dir / f"{case_id}.jsonl"
                 
                 if src_file.exists():
                     shutil.copy2(src_file, dest_file)
                     copied_count += 1
             
-            print(f"[{language}] Copied {copied_count} dialogues (present in >= 1 experiment).")
+            print(f"[{language}] Copied {copied_count} files.")
         else:
             print(f"[{language}] No matching dialogues found in any experiment. Skipped.")
 
@@ -86,14 +87,16 @@ def create_union_test_set(original_test_dir, experiment_dirs, output_dir):
 # Execution Setup
 # ==========================================
 
-SOURCE_TEST_FOLDER = "Test"
+# Base paths based on your screenshots
+SOURCE_TEST_FOLDER = "SharedTask_NLPAI4Health_Train&dev_set/test"
 FILTERED_TEST_FOLDER = "Filtered_Test_For_Translation"
 
+# Add all your specific experiment paths here
 EXPERIMENT_FOLDERS = [
-    "Mistral_zeroshot",
-    "Mistral_fewshot",
-    "Mistral_finetuned",
-    "Mistral_translation"
+    "EACL/Qwen_exp/zeroshot",
+    "EACL/Qwen_exp/fewshot",
+    "EACL/Qwen_exp/translated"
+    # Note: Add your Mistral folder paths here as well if you want them included in the union
 ]
 
 print("Starting union filter...\n")
