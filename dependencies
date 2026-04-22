@@ -24,35 +24,67 @@ test_action_mismatch_rate: 0.18
 
 
 
-You are a clinical data extraction assistant. Your task is to extract structured medical and contextual entities from a patient-provider dialogue transcript and output them strictly as a JSON object.
+import pandas as pd
+from pathlib import Path
 
-Follow these strict extraction rules:
-1. Exact Extraction: Extract terms as closely to the original text as possible.
-2. No Hypotheticals: Do not extract conditions, treatments, or procedures that are only discussed as possibilities or future options (e.g., do not list "cancer" under diagnoses if the doctor states "if cancer is confirmed").
-3. Separation: Keep discrete concepts separate rather than clumping them together.
+def match_experiment_files(experiment_name, dialogue_dir_path, summary_dir_path):
+    """Matches dialogue and summary files for a specific experiment and saves a dedicated CSV."""
+    dialogue_dir = Path(dialogue_dir_path)
+    summary_dir = Path(summary_dir_path)
+    
+    matched_pairs = []
 
-Output your response using ONLY the following JSON schema:
+    # Iterate through all text files ending in '_summary.txt' in this specific experiment's folder
+    for summary_path in summary_dir.glob("*_summary.txt"):
+        
+        # Isolate the base name (e.g., 'case_001' from 'case_001_summary.txt')
+        base_name = summary_path.name.replace("_summary.txt", "")
+        
+        # Construct the expected source dialogue filename (.jsnol as specified)
+        dialogue_filename = f"{base_name}.jsnol" 
+        dialogue_path = dialogue_dir / dialogue_filename
+        
+        # Verify the matching source file exists
+        if dialogue_path.exists():
+            matched_pairs.append({
+                "Case_ID": base_name,
+                "Dialogue_File": str(dialogue_path),
+                "Summary_File": str(summary_path)
+            })
+        else:
+            print(f"Warning: Missing source file for {summary_path.name} in {experiment_name}. Expected {dialogue_filename}")
 
-{
-  "Symptoms": [
-    // Current physical or mental symptoms reported by the patient (e.g., "throat lump", "tickle", "mild hoarseness", "anxiety", "stress")
-  ],
-  "Diagnoses_and_Conditions": [
-    // Confirmed medical conditions. Do not include suspected conditions pending test results.
-  ],
-  "Substances_and_Habits": [
-    // Consumables, lifestyle habits, or substance replacement therapies (e.g., "smoking", "chews paan", "nicotine gum", "nicotine patches")
-  ],
-  "Procedures_and_Tests": [
-    // Mentioned medical exams, lab work, or imaging (e.g., "throat exam", "blood tests", "biopsy", "CT", "MRI", "HPV testing")
-  ],
-  "Treatments": [
-    // Medical interventions or therapies discussed (e.g., "surgery", "radiotherapy", "chemotherapy", "dental care")
-  ],
-  "Patient_Context": {
-    "Age": "", // Patient's age if mentioned
-    "Location": "", // Patient's geographic location or residence
-    "Languages": [], // Required languages or translation needs (e.g., "Marathi", "Hindi")
-    "Social_Factors": [] // Caregiver involvement, financial concerns, or logistical needs (e.g., "wife helps with paperwork", "worried about travel costs")
-  }
+    # Convert the valid matches into a Pandas DataFrame
+    df_log = pd.DataFrame(matched_pairs)
+    
+    # Save to a dedicated CSV named after the experiment
+    output_filename = f"{experiment_name}_matched_files.csv"
+    
+    if not df_log.empty:
+        df_log.to_csv(output_filename, index=False)
+        print(f"[{experiment_name}] Successfully mapped {len(df_log)} file pairs. Saved to '{output_filename}'")
+    else:
+        print(f"[{experiment_name}] No matches found. CSV not created.")
+
+# ==========================================
+# Execution Setup
+# ==========================================
+
+# 1. Define the single folder where all your raw test dialogues live
+test_dialogue_folder = "path/to/test_dialogues"
+
+# 2. Define your experiments and the paths to their specific generated summaries
+experiments = {
+    "zeroshot": "path/to/zeroshot_summaries",
+    "fewshot": "path/to/fewshot_summaries",
+    "translation": "path/to/translation_summaries",
+    "finetuning": "path/to/finetuning_summaries"
 }
+
+# 3. Run the matching function for each experiment separately
+for exp_name, exp_folder in experiments.items():
+    match_experiment_files(
+        experiment_name=exp_name, 
+        dialogue_dir_path=test_dialogue_folder, 
+        summary_dir_path=exp_folder
+    )
