@@ -24,94 +24,82 @@ test_action_mismatch_rate: 0.18
 
 
 
-import pandas as pd
+import shutil
 from pathlib import Path
 
-def match_experiment_files(experiment_name, test_base_dir, exp_base_dir):
-    """Matches dialogue and summary files across 10 language subfolders."""
-    test_base_path = Path(test_base_dir)
-    exp_base_path = Path(exp_base_dir)
+def create_union_test_set(original_test_dir, experiment_dirs, output_dir):
+    """
+    Finds dialogues present in AT LEAST ONE experiment and copies them to a new filtered test folder.
+    """
+    orig_test_path = Path(original_test_dir)
+    output_path = Path(output_dir)
     
-    matched_pairs = []
-
-    # Iterate through each language folder in the test directory
-    for lang_folder in test_base_path.iterdir():
-        # Skip if it's not a directory (e.g., hidden files)
+    # Iterate through each language folder in the original Test directory
+    for lang_folder in orig_test_path.iterdir():
         if not lang_folder.is_dir():
             continue
             
         language = lang_folder.name
+        orig_dialogues_dir = lang_folder / "Dialogues"
         
-        # Construct the path to the 'Dialogues' subfolder for this language
-        dialogue_dir = lang_folder / "Dialogues"
-        
-        # Construct the expected path to the matching language folder in the experiments directory
-        exp_lang_folder = exp_base_path / language
-        
-        if not exp_lang_folder.exists():
-            print(f"Warning: Missing language folder '{language}' in {experiment_name} directory.")
+        if not orig_dialogues_dir.exists():
             continue
 
-        # Use rglob (recursive glob) to find summary files. 
-        # This safely catches them whether they are directly in the language folder 
-        # or nested inside an additional subfolder (like /Hindi/Summaries/)
-        for summary_path in exp_lang_folder.rglob("*_summary.txt"):
+        # 1. Get the base set of all Case IDs in the original Test folder
+        source_case_ids = {f.name.replace(".jsnol", "") for f in orig_dialogues_dir.glob("*.jsnol")}
+        
+        # 2. Build a master pool of Case IDs from ALL experiments for this language
+        all_experiment_cases = set()
+        
+        for exp_dir in experiment_dirs:
+            exp_summary_dir = Path(exp_dir) / language / "Summary"
             
-            # Isolate the base name
-            base_name = summary_path.name.replace("_summary.txt", "")
-            
-            # Construct the expected source dialogue filename
-            dialogue_filename = f"{base_name}.jsnol" 
-            dialogue_path = dialogue_dir / dialogue_filename
-            
-            # Fallback check in case some files use the standard .jsonl extension
-            if not dialogue_path.exists():
-                alt_dialogue_path = dialogue_dir / f"{base_name}.jsonl"
-                if alt_dialogue_path.exists():
-                    dialogue_path = alt_dialogue_path
-            
-            # Verify the matching source file exists
-            if dialogue_path.exists():
-                matched_pairs.append({
-                    "Language": language, # Added to track language per case
-                    "Case_ID": base_name,
-                    "Dialogue_File": str(dialogue_path),
-                    "Summary_File": str(summary_path)
-                })
-            else:
-                print(f"Warning: Missing source file for {summary_path.name} in {language}. Expected {dialogue_filename}")
+            if exp_summary_dir.exists():
+                # Extract 'case_123' from 'case_123_summary.txt'
+                exp_cases = {f.name.replace("_summary.txt", "") for f in exp_summary_dir.glob("*_summary.txt")}
+                
+                # Add these cases to our master pool (Union)
+                all_experiment_cases.update(exp_cases)
 
-    # Convert the valid matches into a Pandas DataFrame
-    df_log = pd.DataFrame(matched_pairs)
-    
-    # Save to a dedicated CSV named after the experiment
-    output_filename = f"{experiment_name}_matched_files.csv"
-    
-    if not df_log.empty:
-        df_log.to_csv(output_filename, index=False)
-        print(f"[{experiment_name}] Successfully mapped {len(df_log)} file pairs across {len(df_log['Language'].unique())} languages. Saved to '{output_filename}'")
-    else:
-        print(f"[{experiment_name}] No matches found. CSV not created.")
+        # 3. Filter: Keep cases that exist in the source folder AND our master experiment pool
+        valid_case_ids = source_case_ids.intersection(all_experiment_cases)
+
+        # 4. Copy the surviving dialogues to the new Filtered Test folder
+        if valid_case_ids:
+            dest_dialogues_dir = output_path / language / "Dialogues"
+            dest_dialogues_dir.mkdir(parents=True, exist_ok=True)
+            
+            copied_count = 0
+            for case_id in valid_case_ids:
+                src_file = orig_dialogues_dir / f"{case_id}.jsnol"
+                dest_file = dest_dialogues_dir / f"{case_id}.jsnol"
+                
+                if src_file.exists():
+                    shutil.copy2(src_file, dest_file)
+                    copied_count += 1
+            
+            print(f"[{language}] Copied {copied_count} dialogues (present in >= 1 experiment).")
+        else:
+            print(f"[{language}] No matching dialogues found in any experiment. Skipped.")
 
 # ==========================================
 # Execution Setup
 # ==========================================
 
-# 1. Define the base 'test' folder that contains the 10 language folders
-test_folder = "SharedTask_NLPAI4Health_Train&dev_set/test"
+SOURCE_TEST_FOLDER = "Test"
+FILTERED_TEST_FOLDER = "Filtered_Test_For_Translation"
 
-# 2. Define your experiments and the base paths containing their respective language folders
-experiments = {
-    "zeroshot": "path/to/zeroshot_experiment_base",
-    "fewshot": "path/to/fewshot_experiment_base",
-    "translation": "path/to/translation_experiment_base",
-    "finetuning": "path/to/finetuning_experiment_base"
-}
+EXPERIMENT_FOLDERS = [
+    "Mistral_zeroshot",
+    "Mistral_fewshot",
+    "Mistral_finetuned",
+    "Mistral_translation"
+]
 
-# 3. Run the matching function for each experiment separately
-for exp_name, exp_folder in experiments.items():
-    match_experiment_files(
-        experiment_name=exp_name, 
-        test_base_dir=test_folder, 
-        exp_base_dir=exp_folder
-    )
+print("Starting union filter...\n")
+create_union_test_set(
+    original_test_dir=SOURCE_TEST_FOLDER,
+    experiment_dirs=EXPERIMENT_FOLDERS,
+    output_dir=FILTERED_TEST_FOLDER
+)
+print("\nDone! Dialogues appearing in at least one experiment have been copied.")
