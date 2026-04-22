@@ -21,3 +21,130 @@ avg_turns: 7.5
 avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
+
+
+import json
+import spacy
+from openai import OpenAI
+import os
+
+# --- 1. CONFIGURATION ---
+# Replace these with the actual paths to your test files
+RAW_JSONL_PATH = "scenario_118.jsnol"  # The file shown in your image
+GENERATED_SUMMARY_PATH = "scenario_118_summary.txt" 
+INDICTRANS_SUMMARY_PATH = "scenario_118_translated.txt" # Optional for this test
+
+# Insert your OpenAI API key here
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+client = OpenAI()
+
+print("Loading SciSpacy model (this takes a few seconds)...")
+nlp = spacy.load("en_ner_bc5cdr_md")
+
+# --- 2. CORE FUNCTIONS ---
+
+def parse_clinical_jsonl(filepath):
+    """
+    Reads a multi-line JSONL file where each line is an utterance.
+    Concatenates them into a single readable transcript.
+    """
+    transcript = ""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                data = json.loads(line.strip())
+                speaker = data.get("speaker", "Unknown")
+                dialogue = data.get("dialogue", "")
+                transcript += f"{speaker}: {dialogue}\n"
+        return transcript
+    except Exception as e:
+        print(f"Error reading JSONL: {e}")
+        return ""
+
+def extract_with_scispacy(text):
+    """Runs local NER on English text to find Diseases and Drugs."""
+    if not text:
+        return {"DISEASE": [], "CHEMICAL": []}
+        
+    doc = nlp(text)
+    entities = {"DISEASE": [], "CHEMICAL": []}
+    
+    for ent in doc.ents:
+        if ent.label_ in entities:
+            entities[ent.label_].append(ent.text.lower())
+            
+    return {
+        "DISEASE": list(set(entities["DISEASE"])),
+        "CHEMICAL": list(set(entities["CHEMICAL"]))
+    }
+
+def extract_with_gpt5(transcript_text):
+    """Uses GPT-5 to extract entities directly from the raw code-switched Indic text."""
+    if not transcript_text:
+        return {"DISEASE": [], "CHEMICAL": []}
+
+    system_prompt = """
+    You are a clinical data extraction assistant. Read the following doctor-patient transcript.
+    Extract all diseases/symptoms and medications/drugs. 
+    Translate the extracted entities into standard English.
+    You must respond in strictly valid JSON matching this schema:
+    {"DISEASE": ["symptom1", "disease2"], "CHEMICAL": ["drug1", "medication2"]}
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o", # Replace with your specific gpt-5 model string when available
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": transcript_text}
+            ],
+            response_format={ "type": "json_object" },
+            temperature=0.0 # Keep temperature at 0 for deterministic extraction
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print(f"GPT API Error: {e}")
+        return {"DISEASE": [], "CHEMICAL": []}
+
+def read_txt(filepath):
+    """Helper to safely read standard text files."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        print(f"File not found: {filepath}. Skipping this step.")
+        return ""
+
+# --- 3. EXECUTION BLOCK ---
+
+print("\n--- Starting Single File Pipeline Test ---")
+
+# Step A: Parse the raw dialogue
+print(f"\n1. Parsing {RAW_JSONL_PATH}...")
+raw_transcript = parse_clinical_jsonl(RAW_JSONL_PATH)
+print(f"Extracted Transcript length: {len(raw_transcript)} characters.")
+
+# Step B: Run GPT-5 extraction on the raw Indic text
+print("\n2. Sending raw transcript to GPT-5 for extraction...")
+gpt_entities = extract_with_gpt5(raw_transcript)
+print("GPT-5 Extracted Entities:")
+print(json.dumps(gpt_entities, indent=2))
+
+# Step C: Run SciSpacy on the generated English summary
+print(f"\n3. Running SciSpacy on {GENERATED_SUMMARY_PATH}...")
+summary_text = read_txt(GENERATED_SUMMARY_PATH)
+generated_entities = extract_with_scispacy(summary_text)
+print("SciSpacy Extracted Entities from Generated Summary:")
+print(json.dumps(generated_entities, indent=2))
+
+# Step D: (Optional) Run SciSpacy on the IndicTrans2 text
+print(f"\n4. Running SciSpacy on {INDICTRANS_SUMMARY_PATH}...")
+indictrans_text = read_txt(INDICTRANS_SUMMARY_PATH)
+if indictrans_text:
+    indictrans_entities = extract_with_scispacy(indictrans_text)
+    print("SciSpacy Extracted Entities from IndicTrans2 Text:")
+    print(json.dumps(indictrans_entities, indent=2))
+
+print("\n--- Test Complete ---")
