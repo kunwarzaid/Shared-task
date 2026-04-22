@@ -23,128 +23,123 @@ premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
 
-import json
-import spacy
-from openai import OpenAI
-import os
-
-# --- 1. CONFIGURATION ---
-# Replace these with the actual paths to your test files
-RAW_JSONL_PATH = "scenario_118.jsnol"  # The file shown in your image
-GENERATED_SUMMARY_PATH = "scenario_118_summary.txt" 
-INDICTRANS_SUMMARY_PATH = "scenario_118_translated.txt" # Optional for this test
-
-# Insert your OpenAI API key here
-os.environ["OPENAI_API_KEY"] = "your-api-key-here"
-client = OpenAI()
-
-print("Loading SciSpacy model (this takes a few seconds)...")
-nlp = spacy.load("en_ner_bc5cdr_md")
-
-# --- 2. CORE FUNCTIONS ---
-
-def parse_clinical_jsonl(filepath):
-    """
-    Reads a multi-line JSONL file where each line is an utterance.
-    Concatenates them into a single readable transcript.
-    """
-    transcript = ""
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                data = json.loads(line.strip())
-                speaker = data.get("speaker", "Unknown")
-                dialogue = data.get("dialogue", "")
-                transcript += f"{speaker}: {dialogue}\n"
-        return transcript
-    except Exception as e:
-        print(f"Error reading JSONL: {e}")
-        return ""
-
-def extract_with_scispacy(text):
-    """Runs local NER on English text to find Diseases and Drugs."""
-    if not text:
-        return {"DISEASE": [], "CHEMICAL": []}
-        
-    doc = nlp(text)
-    entities = {"DISEASE": [], "CHEMICAL": []}
-    
-    for ent in doc.ents:
-        if ent.label_ in entities:
-            entities[ent.label_].append(ent.text.lower())
-            
-    return {
-        "DISEASE": list(set(entities["DISEASE"])),
-        "CHEMICAL": list(set(entities["CHEMICAL"]))
-    }
-
-def extract_with_gpt5(transcript_text):
-    """Uses GPT-5 to extract entities directly from the raw code-switched Indic text."""
-    if not transcript_text:
-        return {"DISEASE": [], "CHEMICAL": []}
-
-    system_prompt = """
-    You are a clinical data extraction assistant. Read the following doctor-patient transcript.
-    Extract all diseases/symptoms and medications/drugs. 
-    Translate the extracted entities into standard English.
-    You must respond in strictly valid JSON matching this schema:
-    {"DISEASE": ["symptom1", "disease2"], "CHEMICAL": ["drug1", "medication2"]}
-    """
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o", # Replace with your specific gpt-5 model string when available
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": transcript_text}
-            ],
-            response_format={ "type": "json_object" },
-            temperature=0.0 # Keep temperature at 0 for deterministic extraction
-        )
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"GPT API Error: {e}")
-        return {"DISEASE": [], "CHEMICAL": []}
-
-def read_txt(filepath):
-    """Helper to safely read standard text files."""
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        print(f"File not found: {filepath}. Skipping this step.")
-        return ""
-
-# --- 3. EXECUTION BLOCK ---
-
-print("\n--- Starting Single File Pipeline Test ---")
-
-# Step A: Parse the raw dialogue
-print(f"\n1. Parsing {RAW_JSONL_PATH}...")
-raw_transcript = parse_clinical_jsonl(RAW_JSONL_PATH)
-print(f"Extracted Transcript length: {len(raw_transcript)} characters.")
-
-# Step B: Run GPT-5 extraction on the raw Indic text
-print("\n2. Sending raw transcript to GPT-5 for extraction...")
-gpt_entities = extract_with_gpt5(raw_transcript)
-print("GPT-5 Extracted Entities:")
-print(json.dumps(gpt_entities, indent=2))
-
-# Step C: Run SciSpacy on the generated English summary
-print(f"\n3. Running SciSpacy on {GENERATED_SUMMARY_PATH}...")
-summary_text = read_txt(GENERATED_SUMMARY_PATH)
-generated_entities = extract_with_scispacy(summary_text)
-print("SciSpacy Extracted Entities from Generated Summary:")
-print(json.dumps(generated_entities, indent=2))
-
-# Step D: (Optional) Run SciSpacy on the IndicTrans2 text
-print(f"\n4. Running SciSpacy on {INDICTRANS_SUMMARY_PATH}...")
-indictrans_text = read_txt(INDICTRANS_SUMMARY_PATH)
-if indictrans_text:
-    indictrans_entities = extract_with_scispacy(indictrans_text)
-    print("SciSpacy Extracted Entities from IndicTrans2 Text:")
-    print(json.dumps(indictrans_entities, indent=2))
-
-print("\n--- Test Complete ---")
+{"speaker": "Health Worker", "date": "", "dialogue": "Hello Mr. Sharma, I'm Dr. Desai. You're 45, from Mumbai, with that throat lump, tickle, and mild hoarseness. We'll go step by step and keep you informed."}
+{"speaker": "Patient", "date": "", "dialogue": "Hi doctor, thanks. I smoke in mornings and chew paan. I'm worried about this lump and voice."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We'll perform a quick throat exam today, and blood tests. If something looks suspicious, we'll discuss a tiny biopsy under local."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, I’m okay with tests, but I'm a bit anxious about surgery."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Understandable. For today, we'll start with exam and routine labs; biopsy only if a suspicious area persists."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, I’m ready. Will the blood work show anything urgent?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Blood work checks general health; it rarely delays things, but we'll call you today with results."}
+{"speaker": "Patient", "date": "", "dialogue": "Alright, and what about HPV testing, doctor?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "HPV testing is risk-based; we'll consider it if risk factors and patient preference align."}
+{"speaker": "Patient", "date": "", "dialogue": "Alright, I’ll decide after results."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll also discuss support options: counseling, tobacco cessation, and dental care."}
+{"speaker": "Patient", "date": "", "dialogue": "I need to quit. It's hard with stress."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We can offer counseling and NRT; start with nicotine gum or patches today."}
+{"speaker": "Patient", "date": "", "dialogue": "That would help. What about the throat exam today?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "We'll use a small camera through your mouth to inspect the area."}
+{"speaker": "Patient", "date": "", "dialogue": "If something looks off, you'll tell me immediately?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Yes, we'll explain everything as we go; no surprises."}
+{"speaker": "Patient", "date": "", "dialogue": "What about the biopsy, doctors? I heard it's scary."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Biopsy is very safe; tiny tissue sample under local; you'll feel a pinch."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, pinch sounds minor."}
+{"speaker": "Health Worker", "date": "", "dialogue": "If a suspicious area persists, we proceed with biopsy; otherwise we monitor."}
+{"speaker": "Patient", "date": "", "dialogue": "How long will results take?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Typically about seven days; we'll call then, or you'll have a follow-up."}
+{"speaker": "Patient", "date": "", "dialogue": "Seven days, okay. Will I need imaging after?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "If cancer is suspected, yes, we'd do CT or MRI to see size and spread."}
+{"speaker": "Patient", "date": "", "dialogue": "What about costs for scans?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Government programs exist; we'll coordinate with patient navigator for subsidies."}
+{"speaker": "Patient", "date": "", "dialogue": "Great, I'd like that. My wife helps with paperwork."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Wife is welcome; we'll provide translations and printed summaries."}
+{"speaker": "Patient", "date": "", "dialogue": "Now, risk factors: smoking, paan masala, dental health, and HPV risk assessment."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll arrange dental care and guidance on quitting; both help prognosis."}
+{"speaker": "Patient", "date": "", "dialogue": "If results show cancer, what are treatment options?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Surgery, radiotherapy, chemotherapy, plus supportive care; MDT will tailor."}
+{"speaker": "Patient", "date": "", "dialogue": "In India, late stages are common, right?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Stage III or IV seen; early detection improves outcomes."}
+{"speaker": "Patient", "date": "", "dialogue": "So if they say Stage III, what does it mean for me?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Stage III means bigger tumor; nodal involvement possible; prognosis varies."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We'd discuss with MDT after testing to pick best plan."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay. When would they decide whether surgery or radiotherapy?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "After imaging and biopsy results; MDT meets weekly."}
+{"speaker": "Patient", "date": "", "dialogue": "We’re worried about travel costs; we live in Mumbai, near Bandra."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Patient navigator helps; we'll estimate travel subsidies."}
+{"speaker": "Patient", "date": "", "dialogue": "Do I need to fast for blood tests?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "No fasting usually; drink water; bring previous reports."}
+{"speaker": "Patient", "date": "", "dialogue": "My wife is here now; she asks about second opinions?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Second opinions encouraged; you'll get copies and you can consult elsewhere."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "We're the family, doctor; we want clear options."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll provide Hindi/Marathi summaries; translations available."}
+{"speaker": "Patient", "date": "", "dialogue": "Thanks. If biopsy shows cancer, how soon can treatment start?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "As soon as staging confirms; we try to minimize delays."}
+{"speaker": "Patient", "date": "", "dialogue": "Are there government subsidies for radiotherapy?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Yes; we discuss options with the hospital social worker."}
+{"speaker": "Patient", "date": "", "dialogue": "What about lifestyle changes during treatment?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Maintain nutrition; avoid tobacco; avoid hot spices; stay hydrated."}
+{"speaker": "Patient", "date": "", "dialogue": "I’ll try. Do you think I have Stage III now?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Impossible to say yet; biopsy and imaging decide."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, I’ll wait for results."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll call you in 7 days; bring Meera when you come."}
+{"speaker": "Patient", "date": "", "dialogue": "Sure. If results are bad, what’s the first talk like?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll explain cancer, stage, options, and support; we'll answer questions."}
+{"speaker": "Patient", "date": "", "dialogue": "Will the doctor speak Marathi?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Yes, bilingual explanations available; Meera can get translations."}
+{"speaker": "Patient", "date": "", "dialogue": "That’s comforting. Do we need any other tests?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Only if needed; usually imaging follows biopsy after results."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, I’ll wait for results and then plan."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "Doctor, can we review the reports together later?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Yes, after results; we’ll email summaries and explain clearly."}
+{"speaker": "Patient", "date": "", "dialogue": "We’ll bring the documents to Bandra tomorrow."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Okay, we’ll keep the plan flexible; stage may shift with imaging."}
+{"speaker": "Patient", "date": "", "dialogue": "Um, could you repeat Step 4 again, in simple words?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Step 4: TNM staging; stage I to IV; numbers show size, nodes, metastasis."}
+{"speaker": "Patient", "date": "", "dialogue": "So Stage III means bigger tumor and neck nodes?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Yes; but many factors decide prognosis and treatment."}
+{"speaker": "Patient", "date": "", "dialogue": "I appreciate your patience, doctor."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We're here to help; any questions now?"}
+{"speaker": "Patient", "date": "", "dialogue": "Not at the moment, I’m listening."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Take your time; results may bring relief or new questions."}
+{"speaker": "Patient", "date": "", "dialogue": "During the next week, any foods to avoid?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Avoid extremes; avoid hot, spicy irritants; soft diet if throat sore."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, I’ll follow that."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll also monitor dental health; a dentist may review before treatment."}
+{"speaker": "Patient", "date": "", "dialogue": "If I don’t come with Meera, can I come alone?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Yes, you can; but family helps with decisions and transport."}
+{"speaker": "Patient", "date": "", "dialogue": "I’ll keep you posted about the biopsy decision."}
+{"speaker": "Health Worker", "date": "", "dialogue": "If the lesion looks normal, we’ll just continue the monitoring plan."}
+{"speaker": "Patient", "date": "", "dialogue": "And if cancer is confirmed, what’s the first appointment?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "PT/MDT meeting, staging, then treatment plan explained."}
+{"speaker": "Patient", "date": "", "dialogue": "I hope we get good news."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We stay hopeful; every patient’s outcome improves with early care."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "Doctor, can we have a copy of the plan in Marathi?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Yes, we’ll email a Marathi translation with recommendations."}
+{"speaker": "Patient", "date": "", "dialogue": "And what about vaccination regarding HPV?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "Vaccination for future protection; not immediate for this current cancer."}
+{"speaker": "Patient", "date": "", "dialogue": "Could you remind me how to prepare for a CT if needed?"}
+{"speaker": "Health Worker", "date": "", "dialogue": "No metal around; remove jewelry; fast is not required in many cases."}
+{"speaker": "Patient", "date": "", "dialogue": "Thanks for explaining. I'm slightly calmer."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Good to hear. Any other concerns today?"}
+{"speaker": "Patient", "date": "", "dialogue": "Not right now, just waiting."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Let me know if you feel worsening throat pain or fever."}
+{"speaker": "Patient", "date": "", "dialogue": "Will do. Bye for now."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Take care; we’ll reach out with results."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "Thank you, doctor; we’ll prepare notes for the meeting."}
+{"speaker": "Health Worker", "date": "", "dialogue": "You’re welcome; keep a small diary of symptoms."}
+{"speaker": "Patient", "date": "", "dialogue": "Will do. See you next week."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Next week we review; until then, stay hydrated."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, goodbye."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Bye."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "We’ll wait for the call."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll be in touch."}
+{"speaker": "Patient", "date": "", "dialogue": "Understood."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Take care."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "We’ll copy the discharge plan after the results."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Perfect; we’ll ensure all parties receive it."}
+{"speaker": "Patient", "date": "", "dialogue": "Thanks again for breaking it down."}
+{"speaker": "Health Worker", "date": "", "dialogue": "My pleasure; we’ll take it one step at a time."}
+{"speaker": "Patient", "date": "", "dialogue": "Okay, bye."}
+{"speaker": "Health Worker", "date": "", "dialogue": "Bye."}
+{"speaker": "Patient's Relative", "date": "", "dialogue": "We’ll wait for the call."}
+{"speaker": "Health Worker", "date": "", "dialogue": "We’ll be in touch."}
+{"speaker": "Patient", "date": "", "dialogue": "Take care."}
