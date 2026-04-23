@@ -24,112 +24,159 @@ test_action_mismatch_rate: 0.18
 
 
 
-import shutil
-import random
-from pathlib import Path
+# --- 1. CONFIGURATION ---
+# Replace these with the actual paths to your test files
+RAW_JSONL_PATH = "data_eval/test/English/Dialogues/scenario_0_2adf819632574aa28386079be144f708_IDX_02_2.jsonl"  # The file shown in your image
+GENERATED_SUMMARY_PATH = "scenario_118_summary.txt" 
+INDICTRANS_SUMMARY_PATH = "scenario_118_translated.txt" # Optional for this test
 
-def create_hybrid_evaluation_set(source_test_dir, experiment_dirs, output_dir, target_size=60):
+# Insert your OpenAI API key here
+endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
+model_name = "gpt-5"
+deployment = "gpt-5"
+ 
+subscription_key = ""
+api_version = "2024-12-01-preview"
+ 
+client = AzureOpenAI(
+    api_version=api_version,
+    azure_endpoint=endpoint,
+    api_key=subscription_key,
+)
+
+print("Loading SciSpacy model (this takes a few seconds)...")
+nlp = spacy.load("en_ner_bc5cdr_md")
+
+# --- 2. CORE FUNCTIONS ---
+
+def parse_clinical_jsonl(filepath):
     """
-    Fills up to target_size by prioritizing files present in ALL experiments (Strict).
-    Pads the remaining deficit with files present in AT LEAST ONE experiment (Union).
+    Reads a multi-line JSONL file where each line is an utterance.
+    Concatenates them into a single readable transcript.
     """
-    source_path = Path(source_test_dir)
-    dest_path = Path(output_dir)
+    transcript = ""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                data = json.loads(line.strip())
+                speaker = data.get("speaker", "Unknown")
+                dialogue = data.get("dialogue", "")
+                transcript += f"{speaker}: {dialogue}\n"
+        return transcript
+    except Exception as e:
+        print(f"Error reading JSONL: {e}")
+        return ""
+
+def extract_with_scispacy(text):
+    """Runs local NER on English text to find Diseases and Drugs."""
+    if not text:
+        return {"DISEASE": [], "CHEMICAL": []}
+        
+    doc = nlp(text)
+    entities = {"SYMPTOMS": [], "Diagnoses_and_Conditions": [], "Substances_and_Habits":[], "Procedures_and_Tests":[], "Treatments":[],"Patient_Context":[]}
     
-    # Set seed for reproducibility
-    random.seed(42) 
-    
-    print(f"Generating Hybrid Evaluation Set (Target: {target_size}/language)...\n")
-    
-    for lang_folder in source_path.iterdir():
-        if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
-            continue
+    for ent in doc.ents:
+        if ent.label_ in entities:
+            entities[ent.label_].append(ent.text.lower())
             
-        language = lang_folder.name
-        orig_dialogues_dir = lang_folder / "Dialogues"
-        
-        if not orig_dialogues_dir.exists():
-            continue
+    return {
+        "Symptoms": list(set(entities["SYMPTOMS"])),
+        "Diagnosis": list(set(entities["Diagnoses_and_Conditions"])),
+        "Habits":  list(set(entities["Substances_and_Habits"])),
+        "Procedures": list(set(entities["Procedures_and_Tests"])),
+        "Treatment": list(set(entities["Treatments"])),
+        "Patient": list(set(entities["Patient_Context"]))
+    }
 
-        # 1. Base pool: Cases that actually exist in the raw source folder
-        source_cases = {f.name.replace(".jsonl", "") for f in orig_dialogues_dir.glob("*.jsonl")}
-        
-        # 2. Map out what exists in the experiment folders
-        exp_case_sets = []
-        all_union_cases = set()
-        
-        for exp_dir in experiment_dirs:
-            exp_summary_dir = Path(exp_dir) / language / "Summary_Text"
-            if exp_summary_dir.exists():
-                cases_in_exp = {f.name.replace("_summary.txt", "") for f in exp_summary_dir.glob("*_summary.txt")}
-                exp_case_sets.append(cases_in_exp)
-                all_union_cases.update(cases_in_exp)
-            else:
-                exp_case_sets.append(set()) # Empty set if folder is missing
-        
-        # 3. Calculate Strict Intersection (Files in ALL experiments)
-        # Start with source cases, then intersect with every experiment set
-        strict_matches = set(source_cases)
-        for exp_set in exp_case_sets:
-            strict_matches = strict_matches.intersection(exp_set)
-            
-        # 4. Calculate Fallback Pool (Files in >= 1 experiment, but NOT in all)
-        # Intersect union with source to ensure the raw file exists, then remove the strict matches
-        valid_union = all_union_cases.intersection(source_cases)
-        fallback_pool = valid_union - strict_matches
-        
-        # 5. The Priority Fill Logic
-        selected_cases = []
-        strict_count = 0
-        padded_count = 0
-        
-        if len(strict_matches) >= target_size:
-            # Best case scenario: We have enough perfect matches to fill the quota
-            selected_cases = random.sample(list(strict_matches), target_size)
-            strict_count = target_size
-        else:
-            # We must pad: Take all strict matches, then fill the deficit from the fallback pool
-            selected_cases = list(strict_matches)
-            strict_count = len(strict_matches)
-            
-            deficit = target_size - strict_count
-            available_fallback = min(deficit, len(fallback_pool))
-            
-            if available_fallback > 0:
-                fallback_selection = random.sample(list(fallback_pool), available_fallback)
-                selected_cases.extend(fallback_selection)
-                padded_count = available_fallback
+def extract_with_gpt5(transcript_text):
+    """Uses GPT-5 to extract entities directly from the raw code-switched Indic text."""
+    if not transcript_text:
+        return {"DISEASE": [], "CHEMICAL": []}
 
-        # 6. Copy the finalized selection
-        total_selected = len(selected_cases)
-        if total_selected > 0:
-            dest_lang_dir = dest_path / language / "Dialogues"
-            dest_lang_dir.mkdir(parents=True, exist_ok=True)
-            
-            for case_id in selected_cases:
-                src_file = orig_dialogues_dir / f"{case_id}.jsonl"
-                dest_file = dest_lang_dir / f"{case_id}.jsonl"
-                shutil.copy2(src_file, dest_file)
-                
-            print(f"[{language.ljust(10)}] Total: {total_selected} | Strict Matches: {strict_count} | Union Padded: {padded_count}")
-        else:
-            print(f"[{language.ljust(10)}] 0 files found.")
+    system_prompt = """
+    You are a clinical data extraction assistant. Your task is to extract structured medical and contextual entities from a patient-provider dialogue transcript and output them strictly as a JSON object.
 
-# ==========================================
-# Execution Setup
-# ==========================================
+Follow these strict extraction rules:
+1. Exact Extraction: Extract terms as closely to the original text as possible.
+2. No Hypotheticals: Do not extract conditions, treatments, or procedures that are only discussed as possibilities or future options (e.g., do not list "cancer" under diagnoses if the doctor states "if cancer is confirmed").
+3. Separation: Keep discrete concepts separate rather than clumping them together.
+4. Extract entities as concise 1-3 word keywords, not full sentences.
 
-SOURCE_TEST_FOLDER = "SharedTask_NLPAI4Health_Train&dev_set/test"
-FINAL_EVAL_FOLDER = "Final_60_For_Translation"
+Output your response using ONLY the following JSON schema:
 
-# Use the list format to iterate through your paths
-EXPERIMENT_FOLDERS = [
-    "data/KZ_2117574/EACL/Mistral_exp/fewshot",
-    "data/KZ_2117574/EACL/Mistral_exp/zeroshot",
-    "data/KZ_2117574/EACL/Mistral_exp/translated/mistral",
-    "data/KZ_2117574/EACL/Qwen_exp/fewshot",
-    "data/KZ_2117574/EACL/Qwen_exp/translated/qwen",
-    "data/KZ_2117574/EACL/Qwen_exp/zeroshot"
-]
+{
+  "Symptoms": [
+    // Current physical or mental symptoms reported by the patient
+  ],
+  "Diagnoses_and_Conditions": [
+    // Confirmed medical conditions. Do not include suspected conditions pending test results.
+  ],
+  "Substances_and_Habits": [
+    // Consumables, lifestyle habits, or substance replacement therapies 
+  ],
+  "Procedures_and_Tests": [
+    // Mentioned medical exams, lab work, or imaging 
+  ],
+  "Treatments": [
+    // Medical interventions or therapies discussed 
+  ]
+}
+    """
 
-create_hybrid_evaluation_set(SOURCE_TEST_FOLDER, EXPERIMENT_FOLDERS, FINAL_EVAL_FOLDER, target_size=60)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-5", # Replace with your specific gpt-5 model string when available
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": transcript_text}
+            ],
+            response_format={ "type": "json_object" },
+           # temperature=0.0 # Keep temperature at 0 for deterministic extraction
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print(f"GPT API Error: {e}")
+        return {"DISEASE": [], "CHEMICAL": []}
+
+def read_txt(filepath):
+    """Helper to safely read standard text files."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        print(f"File not found: {filepath}. Skipping this step.")
+        return ""
+
+# --- 3. EXECUTION BLOCK ---
+
+print("\n--- Starting Single File Pipeline Test ---")
+
+# Step A: Parse the raw dialogue
+print(f"\n1. Parsing {RAW_JSONL_PATH}...")
+raw_transcript = parse_clinical_jsonl(RAW_JSONL_PATH)
+print(f"Extracted Transcript length: {len(raw_transcript)} characters.")
+
+# Step B: Run GPT-5 extraction on the raw Indic text
+print("\n2. Sending raw transcript to GPT-5 for extraction...")
+gpt_entities = extract_with_gpt5(raw_transcript)
+print("GPT-5 Extracted Entities:")
+print(json.dumps(gpt_entities, indent=2))
+
+# Step C: Run SciSpacy on the generated English summary
+# print(f"\n3. Running SciSpacy on {GENERATED_SUMMARY_PATH}...")
+# summary_text = read_txt(GENERATED_SUMMARY_PATH)
+# generated_entities = extract_with_scispacy(summary_text)
+# print("SciSpacy Extracted Entities from Generated Summary:")
+# print(json.dumps(generated_entities, indent=2))
+
+# Step D: (Optional) Run SciSpacy on the IndicTrans2 text
+print(f"\n4. Running SciSpacy on Dialouge...")
+#indictrans_text = read_txt(INDICTRANS_SUMMARY_PATH)
+#if indictrans_text:
+indictrans_entities = extract_with_scispacy(raw_transcript)
+print("SciSpacy Extracted Entities from Dialouge Text:")
+print(json.dumps(indictrans_entities, indent=2))
+
+print("\n--- Test Complete ---")
