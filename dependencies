@@ -24,146 +24,28 @@ test_action_mismatch_rate: 0.18
 
 
 
-import os
-import json
-from pathlib import Path
-from openai import AzureOpenAI
-
-# --- 1. CONFIGURATION ---
-SOURCE_TEST_FOLDER = "Final_60_For_Translation" # Your finalized test subset
-OUTPUT_ENTITIES_FOLDER = "Extracted_Test_Entities_GPT_Only"
-
-# Azure OpenAI Setup
-endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
-model_name = "gpt-5"
-deployment = "gpt-5"
-subscription_key = "YOUR_API_KEY_HERE" # Add your key
-api_version = "2024-12-01-preview"
-
-client = AzureOpenAI(
-    api_version=api_version,
-    azure_endpoint=endpoint,
-    api_key=subscription_key,
-)
-
-# --- 2. CORE FUNCTIONS ---
-
 def parse_clinical_jsonl(filepath):
-    """Reads a multi-line JSONL file and concatenates it into a single transcript."""
+    """Reads a multi-line JSONL file. Fault-tolerant to handle malformed JSON lines."""
     transcript = ""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                if not line.strip():
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
                     continue
-                data = json.loads(line.strip())
-                speaker = data.get("speaker", "Unknown")
-                dialogue = data.get("dialogue", "")
-                transcript += f"{speaker}: {dialogue}\n"
+                
+                try:
+                    # Try to parse it cleanly
+                    data = json.loads(line)
+                    speaker = data.get("speaker", "Unknown")
+                    dialogue = data.get("dialogue", "")
+                    transcript += f"{speaker}: {dialogue}\n"
+                except json.JSONDecodeError:
+                    # FALLBACK: If the JSON is broken (e.g., unescaped quotes), 
+                    # just feed the raw text to GPT so we don't lose the data.
+                    transcript += f"{line}\n"
+                    
         return transcript
     except Exception as e:
-        print(f"Error reading JSONL {filepath}: {e}")
+        print(f"Error opening file {filepath}: {e}")
         return ""
-
-def extract_with_gpt5(transcript_text, language):
-    """
-    Uses GPT-5 to extract entities. 
-    Includes strict instructions for cross-lingual translation to English keywords.
-    """
-    if not transcript_text:
-        return {}
-
-    system_prompt = f"""
-    You are a clinical data extraction assistant. The following doctor-patient transcript is in {language} (with potential English code-switching). 
-    
-    Your task is twofold:
-    1. Extract structured medical and contextual entities.
-    2. TRANSLATE all extracted entities into standard ENGLISH.
-
-    Follow these strict extraction rules:
-    - Translation Required: Regardless of the source language, the final extracted JSON values MUST be in English.
-    - Format: Extract entities as concise 1-3 word English keywords (e.g., "severe headache", "blood test"), not full sentences.
-    - No Hypotheticals: Do not extract conditions, treatments, or procedures discussed only as possibilities.
-    - Separation: Keep discrete concepts separate in the arrays.
-
-    Output your response using ONLY the following JSON schema:
-    {{
-      "Symptoms": [],
-      "Diagnoses_and_Conditions": [],
-      "Substances_and_Habits": [],
-      "Procedures_and_Tests": [],
-      "Treatments": []
-    }}
-    """
-
-    try:
-        response = client.chat.completions.create(
-            model=deployment, 
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": transcript_text}
-            ],
-            response_format={ "type": "json_object" },
-            temperature=0.0 # Kept at 0 for deterministic extraction
-        )
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"GPT API Error on {language} transcript: {e}")
-        return {}
-
-# --- 3. DIRECTORY TRAVERSAL & EXECUTION ---
-
-def process_test_folder(source_dir, output_dir):
-    source_path = Path(source_dir)
-    dest_path = Path(output_dir)
-    
-    if not source_path.exists():
-        print(f"Error: Source folder {source_dir} not found.")
-        return
-
-    print(f"\n--- Starting GPT-5 Extraction Pipeline ---")
-    
-    # Iterate through each language folder (Assamese, Hindi, English, etc.)
-    for lang_folder in source_path.iterdir():
-        if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
-            continue
-            
-        language = lang_folder.name
-        dialogues_dir = lang_folder / "Dialogues"
-        
-        if not dialogues_dir.exists():
-            continue
-            
-        # Create corresponding output directory
-        dest_lang_dir = dest_path / language / "Extracted_JSONs"
-        dest_lang_dir.mkdir(parents=True, exist_ok=True)
-        
-        jsonl_files = list(dialogues_dir.glob("*.jsonl"))
-        print(f"\nProcessing {len(jsonl_files)} files for {language}...")
-        
-        for jsonl_file in jsonl_files:
-            case_id = jsonl_file.name.replace(".jsonl", "")
-            
-            # 1. Read transcript
-            raw_transcript = parse_clinical_jsonl(jsonl_file)
-            
-            # 2. Extract with GPT-5 (Cross-lingual to English)
-            gpt_entities = extract_with_gpt5(raw_transcript, language)
-            
-            # 3. Compile the final JSON structure
-            final_output = {
-                "Case_ID": case_id,
-                "Language": language,
-                "GPT5_Extraction": gpt_entities
-            }
-            
-            # 4. Save the output
-            output_file = dest_lang_dir / f"{case_id}_ner.json"
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(final_output, f, indent=4)
-                
-        print(f"[{language}] Extraction complete. Saved to {dest_lang_dir}")
-
-# Run the pipeline
-process_test_folder(SOURCE_TEST_FOLDER, OUTPUT_ENTITIES_FOLDER)
-print("\n--- Pipeline Execution Finished ---")
