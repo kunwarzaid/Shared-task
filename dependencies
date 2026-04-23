@@ -24,36 +24,32 @@ test_action_mismatch_rate: 0.18
 
 
 
-# --- 1. CONFIGURATION ---
-# Replace these with the actual paths to your test files
-RAW_JSONL_PATH = "data_eval/test/English/Dialogues/scenario_0_2adf819632574aa28386079be144f708_IDX_02_2.jsonl"  # The file shown in your image
-GENERATED_SUMMARY_PATH = "scenario_118_summary.txt" 
-INDICTRANS_SUMMARY_PATH = "scenario_118_translated.txt" # Optional for this test
+import os
+import json
+from pathlib import Path
+from openai import AzureOpenAI
 
-# Insert your OpenAI API key here
+# --- 1. CONFIGURATION ---
+SOURCE_TEST_FOLDER = "Final_60_For_Translation" # Your finalized test subset
+OUTPUT_ENTITIES_FOLDER = "Extracted_Test_Entities_GPT_Only"
+
+# Azure OpenAI Setup
 endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
 model_name = "gpt-5"
 deployment = "gpt-5"
- 
-subscription_key = ""
+subscription_key = "YOUR_API_KEY_HERE" # Add your key
 api_version = "2024-12-01-preview"
- 
+
 client = AzureOpenAI(
     api_version=api_version,
     azure_endpoint=endpoint,
     api_key=subscription_key,
 )
 
-print("Loading SciSpacy model (this takes a few seconds)...")
-nlp = spacy.load("en_ner_bc5cdr_md")
-
 # --- 2. CORE FUNCTIONS ---
 
 def parse_clinical_jsonl(filepath):
-    """
-    Reads a multi-line JSONL file where each line is an utterance.
-    Concatenates them into a single readable transcript.
-    """
+    """Reads a multi-line JSONL file and concatenates it into a single transcript."""
     transcript = ""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -66,117 +62,108 @@ def parse_clinical_jsonl(filepath):
                 transcript += f"{speaker}: {dialogue}\n"
         return transcript
     except Exception as e:
-        print(f"Error reading JSONL: {e}")
+        print(f"Error reading JSONL {filepath}: {e}")
         return ""
 
-def extract_with_scispacy(text):
-    """Runs local NER on English text to find Diseases and Drugs."""
-    if not text:
-        return {"DISEASE": [], "CHEMICAL": []}
-        
-    doc = nlp(text)
-    entities = {"SYMPTOMS": [], "Diagnoses_and_Conditions": [], "Substances_and_Habits":[], "Procedures_and_Tests":[], "Treatments":[],"Patient_Context":[]}
-    
-    for ent in doc.ents:
-        if ent.label_ in entities:
-            entities[ent.label_].append(ent.text.lower())
-            
-    return {
-        "Symptoms": list(set(entities["SYMPTOMS"])),
-        "Diagnosis": list(set(entities["Diagnoses_and_Conditions"])),
-        "Habits":  list(set(entities["Substances_and_Habits"])),
-        "Procedures": list(set(entities["Procedures_and_Tests"])),
-        "Treatment": list(set(entities["Treatments"])),
-        "Patient": list(set(entities["Patient_Context"]))
-    }
-
-def extract_with_gpt5(transcript_text):
-    """Uses GPT-5 to extract entities directly from the raw code-switched Indic text."""
+def extract_with_gpt5(transcript_text, language):
+    """
+    Uses GPT-5 to extract entities. 
+    Includes strict instructions for cross-lingual translation to English keywords.
+    """
     if not transcript_text:
-        return {"DISEASE": [], "CHEMICAL": []}
+        return {}
 
-    system_prompt = """
-    You are a clinical data extraction assistant. Your task is to extract structured medical and contextual entities from a patient-provider dialogue transcript and output them strictly as a JSON object.
+    system_prompt = f"""
+    You are a clinical data extraction assistant. The following doctor-patient transcript is in {language} (with potential English code-switching). 
+    
+    Your task is twofold:
+    1. Extract structured medical and contextual entities.
+    2. TRANSLATE all extracted entities into standard ENGLISH.
 
-Follow these strict extraction rules:
-1. Exact Extraction: Extract terms as closely to the original text as possible.
-2. No Hypotheticals: Do not extract conditions, treatments, or procedures that are only discussed as possibilities or future options (e.g., do not list "cancer" under diagnoses if the doctor states "if cancer is confirmed").
-3. Separation: Keep discrete concepts separate rather than clumping them together.
-4. Extract entities as concise 1-3 word keywords, not full sentences.
+    Follow these strict extraction rules:
+    - Translation Required: Regardless of the source language, the final extracted JSON values MUST be in English.
+    - Format: Extract entities as concise 1-3 word English keywords (e.g., "severe headache", "blood test"), not full sentences.
+    - No Hypotheticals: Do not extract conditions, treatments, or procedures discussed only as possibilities.
+    - Separation: Keep discrete concepts separate in the arrays.
 
-Output your response using ONLY the following JSON schema:
-
-{
-  "Symptoms": [
-    // Current physical or mental symptoms reported by the patient
-  ],
-  "Diagnoses_and_Conditions": [
-    // Confirmed medical conditions. Do not include suspected conditions pending test results.
-  ],
-  "Substances_and_Habits": [
-    // Consumables, lifestyle habits, or substance replacement therapies 
-  ],
-  "Procedures_and_Tests": [
-    // Mentioned medical exams, lab work, or imaging 
-  ],
-  "Treatments": [
-    // Medical interventions or therapies discussed 
-  ]
-}
+    Output your response using ONLY the following JSON schema:
+    {{
+      "Symptoms": [],
+      "Diagnoses_and_Conditions": [],
+      "Substances_and_Habits": [],
+      "Procedures_and_Tests": [],
+      "Treatments": []
+    }}
     """
 
     try:
         response = client.chat.completions.create(
-            model="gpt-5", # Replace with your specific gpt-5 model string when available
+            model=deployment, 
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": transcript_text}
             ],
             response_format={ "type": "json_object" },
-           # temperature=0.0 # Keep temperature at 0 for deterministic extraction
+            temperature=0.0 # Kept at 0 for deterministic extraction
         )
         return json.loads(response.choices[0].message.content)
     except Exception as e:
-        print(f"GPT API Error: {e}")
-        return {"DISEASE": [], "CHEMICAL": []}
+        print(f"GPT API Error on {language} transcript: {e}")
+        return {}
 
-def read_txt(filepath):
-    """Helper to safely read standard text files."""
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        print(f"File not found: {filepath}. Skipping this step.")
-        return ""
+# --- 3. DIRECTORY TRAVERSAL & EXECUTION ---
 
-# --- 3. EXECUTION BLOCK ---
+def process_test_folder(source_dir, output_dir):
+    source_path = Path(source_dir)
+    dest_path = Path(output_dir)
+    
+    if not source_path.exists():
+        print(f"Error: Source folder {source_dir} not found.")
+        return
 
-print("\n--- Starting Single File Pipeline Test ---")
+    print(f"\n--- Starting GPT-5 Extraction Pipeline ---")
+    
+    # Iterate through each language folder (Assamese, Hindi, English, etc.)
+    for lang_folder in source_path.iterdir():
+        if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
+            continue
+            
+        language = lang_folder.name
+        dialogues_dir = lang_folder / "Dialogues"
+        
+        if not dialogues_dir.exists():
+            continue
+            
+        # Create corresponding output directory
+        dest_lang_dir = dest_path / language / "Extracted_JSONs"
+        dest_lang_dir.mkdir(parents=True, exist_ok=True)
+        
+        jsonl_files = list(dialogues_dir.glob("*.jsonl"))
+        print(f"\nProcessing {len(jsonl_files)} files for {language}...")
+        
+        for jsonl_file in jsonl_files:
+            case_id = jsonl_file.name.replace(".jsonl", "")
+            
+            # 1. Read transcript
+            raw_transcript = parse_clinical_jsonl(jsonl_file)
+            
+            # 2. Extract with GPT-5 (Cross-lingual to English)
+            gpt_entities = extract_with_gpt5(raw_transcript, language)
+            
+            # 3. Compile the final JSON structure
+            final_output = {
+                "Case_ID": case_id,
+                "Language": language,
+                "GPT5_Extraction": gpt_entities
+            }
+            
+            # 4. Save the output
+            output_file = dest_lang_dir / f"{case_id}_ner.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(final_output, f, indent=4)
+                
+        print(f"[{language}] Extraction complete. Saved to {dest_lang_dir}")
 
-# Step A: Parse the raw dialogue
-print(f"\n1. Parsing {RAW_JSONL_PATH}...")
-raw_transcript = parse_clinical_jsonl(RAW_JSONL_PATH)
-print(f"Extracted Transcript length: {len(raw_transcript)} characters.")
-
-# Step B: Run GPT-5 extraction on the raw Indic text
-print("\n2. Sending raw transcript to GPT-5 for extraction...")
-gpt_entities = extract_with_gpt5(raw_transcript)
-print("GPT-5 Extracted Entities:")
-print(json.dumps(gpt_entities, indent=2))
-
-# Step C: Run SciSpacy on the generated English summary
-# print(f"\n3. Running SciSpacy on {GENERATED_SUMMARY_PATH}...")
-# summary_text = read_txt(GENERATED_SUMMARY_PATH)
-# generated_entities = extract_with_scispacy(summary_text)
-# print("SciSpacy Extracted Entities from Generated Summary:")
-# print(json.dumps(generated_entities, indent=2))
-
-# Step D: (Optional) Run SciSpacy on the IndicTrans2 text
-print(f"\n4. Running SciSpacy on Dialouge...")
-#indictrans_text = read_txt(INDICTRANS_SUMMARY_PATH)
-#if indictrans_text:
-indictrans_entities = extract_with_scispacy(raw_transcript)
-print("SciSpacy Extracted Entities from Dialouge Text:")
-print(json.dumps(indictrans_entities, indent=2))
-
-print("\n--- Test Complete ---")
+# Run the pipeline
+process_test_folder(SOURCE_TEST_FOLDER, OUTPUT_ENTITIES_FOLDER)
+print("\n--- Pipeline Execution Finished ---")
