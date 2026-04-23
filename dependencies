@@ -25,37 +25,48 @@ test_action_mismatch_rate: 0.18
 
 
 import json
-import re # Make sure this is at the top of your script!
+import re
 
 def parse_clinical_jsonl(filepath):
-    """Robust parser that fixes single-line concatenated JSON objects."""
+    """
+    Indestructible parser. If strict JSON parsing fails due to typos in the file, 
+    it falls back to regex to aggressively extract the dialogue.
+    """
     transcript = ""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             raw_content = f.read().strip()
             
         if not raw_content:
-            print(f"  [WARNING] File is completely empty: {filepath}")
             return ""
             
-        # THE MAGIC FIX: Find touching brackets like '}{' or '} {' and inject a newline
+        # Fix concatenated brackets '}{' to '}\n{'
         fixed_content = re.sub(r'\}\s*\{', '}\n{', raw_content)
         
-        # Now we can safely loop through it line-by-line
         for line in fixed_content.split('\n'):
             line = line.strip()
             if not line:
                 continue
             
             try:
+                # 1. Try strict JSON parsing
                 data = json.loads(line)
                 speaker = data.get("speaker", "Unknown")
                 dialogue = data.get("dialogue", "")
-                transcript += f"{speaker}: {dialogue}\n"
-            except Exception:
-                # Fallback if a specific object has a bad typo
-                clean_line = line.replace('{"speaker":', 'Speaker:').replace('"dialogue":', '->')
-                transcript += f"{clean_line}\n"
+                
+                if dialogue:
+                    transcript += f"{speaker}: {dialogue}\n"
+                    
+            except json.JSONDecodeError:
+                # 2. FALLBACK: If JSON is corrupt, aggressively rip the text out using regex
+                speaker_match = re.search(r'"speaker"\s*:\s*"([^"]+)"', line)
+                dialogue_match = re.search(r'"dialogue"\s*:\s*"((?:\\"|[^"])*)"', line)
+                
+                speaker = speaker_match.group(1) if speaker_match else "Unknown"
+                dialogue = dialogue_match.group(1) if dialogue_match else ""
+                
+                if dialogue:
+                    transcript += f"{speaker}: {dialogue}\n"
                 
         return transcript
         
