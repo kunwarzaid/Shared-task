@@ -24,63 +24,112 @@ test_action_mismatch_rate: 0.18
 
 
 
-import pandas as pd
+import shutil
+import random
 from pathlib import Path
 
-def audit_experiment_folders(experiment_dict):
+def create_hybrid_evaluation_set(source_test_dir, experiment_dirs, output_dir, target_size=60):
     """
-    Counts the number of summary files in each language folder for every experiment.
-    Uses a dictionary to guarantee unique, clean column names.
+    Fills up to target_size by prioritizing files present in ALL experiments (Strict).
+    Pads the remaining deficit with files present in AT LEAST ONE experiment (Union).
     """
-    results = []
+    source_path = Path(source_test_dir)
+    dest_path = Path(output_dir)
     
-    for exp_name, exp_dir in experiment_dict.items():
-        exp_path = Path(exp_dir)
-        if not exp_path.exists():
-            print(f"Warning: Directory not found -> {exp_dir}")
+    # Set seed for reproducibility
+    random.seed(42) 
+    
+    print(f"Generating Hybrid Evaluation Set (Target: {target_size}/language)...\n")
+    
+    for lang_folder in source_path.iterdir():
+        if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
             continue
             
-        for lang_folder in exp_path.iterdir():
-            if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
-                continue
-                
-            language = lang_folder.name
-            summary_dir = lang_folder / "Summary_Text"
+        language = lang_folder.name
+        orig_dialogues_dir = lang_folder / "Dialogues"
+        
+        if not orig_dialogues_dir.exists():
+            continue
+
+        # 1. Base pool: Cases that actually exist in the raw source folder
+        source_cases = {f.name.replace(".jsonl", "") for f in orig_dialogues_dir.glob("*.jsonl")}
+        
+        # 2. Map out what exists in the experiment folders
+        exp_case_sets = []
+        all_union_cases = set()
+        
+        for exp_dir in experiment_dirs:
+            exp_summary_dir = Path(exp_dir) / language / "Summary_Text"
+            if exp_summary_dir.exists():
+                cases_in_exp = {f.name.replace("_summary.txt", "") for f in exp_summary_dir.glob("*_summary.txt")}
+                exp_case_sets.append(cases_in_exp)
+                all_union_cases.update(cases_in_exp)
+            else:
+                exp_case_sets.append(set()) # Empty set if folder is missing
+        
+        # 3. Calculate Strict Intersection (Files in ALL experiments)
+        # Start with source cases, then intersect with every experiment set
+        strict_matches = set(source_cases)
+        for exp_set in exp_case_sets:
+            strict_matches = strict_matches.intersection(exp_set)
             
-            count = 0
-            if summary_dir.exists():
-                count = len(list(summary_dir.glob("*_summary.txt")))
-                
-            results.append({
-                "Language": language,
-                "Experiment": exp_name,  # Uses the exact clean name from your dictionary keys
-                "File_Count": count
-            })
+        # 4. Calculate Fallback Pool (Files in >= 1 experiment, but NOT in all)
+        # Intersect union with source to ensure the raw file exists, then remove the strict matches
+        valid_union = all_union_cases.intersection(source_cases)
+        fallback_pool = valid_union - strict_matches
+        
+        # 5. The Priority Fill Logic
+        selected_cases = []
+        strict_count = 0
+        padded_count = 0
+        
+        if len(strict_matches) >= target_size:
+            # Best case scenario: We have enough perfect matches to fill the quota
+            selected_cases = random.sample(list(strict_matches), target_size)
+            strict_count = target_size
+        else:
+            # We must pad: Take all strict matches, then fill the deficit from the fallback pool
+            selected_cases = list(strict_matches)
+            strict_count = len(strict_matches)
             
-    # Convert to a DataFrame and create a clean pivot table
-    df = pd.DataFrame(results)
-    if not df.empty:
-        # Rows = Languages, Columns = Experiments
-        matrix = df.pivot(index="Language", columns="Experiment", values="File_Count").fillna(0).astype(int)
-        print("\n=== File Count Matrix ===")
-        print(matrix.to_string())
-    else:
-        print("No summary files found.")
+            deficit = target_size - strict_count
+            available_fallback = min(deficit, len(fallback_pool))
+            
+            if available_fallback > 0:
+                fallback_selection = random.sample(list(fallback_pool), available_fallback)
+                selected_cases.extend(fallback_selection)
+                padded_count = available_fallback
+
+        # 6. Copy the finalized selection
+        total_selected = len(selected_cases)
+        if total_selected > 0:
+            dest_lang_dir = dest_path / language / "Dialogues"
+            dest_lang_dir.mkdir(parents=True, exist_ok=True)
+            
+            for case_id in selected_cases:
+                src_file = orig_dialogues_dir / f"{case_id}.jsonl"
+                dest_file = dest_lang_dir / f"{case_id}.jsonl"
+                shutil.copy2(src_file, dest_file)
+                
+            print(f"[{language.ljust(10)}] Total: {total_selected} | Strict Matches: {strict_count} | Union Padded: {padded_count}")
+        else:
+            print(f"[{language.ljust(10)}] 0 files found.")
 
 # ==========================================
 # Execution Setup
 # ==========================================
 
-# Using a dictionary guarantees there are zero duplicate column names.
-# Key = The exact column name you want in the printout.
-# Value = Your file path.
-EXPERIMENTS = {
-    "Mistral_Fewshot": "data/KZ_2117574/EACL/Mistral_exp/fewshot",
-    "Mistral_Zeroshot": "data/KZ_2117574/EACL/Mistral_exp/zeroshot",
-    "Mistral_Translated": "data/KZ_2117574/EACL/Mistral_exp/translated/mistral",
-    "Qwen_Fewshot": "data/KZ_2117574/EACL/Qwen_exp/fewshot",
-    "Qwen_Translated": "data/KZ_2117574/EACL/Qwen_exp/translated/qwen",
-    "Qwen_Zeroshot": "data/KZ_2117574/EACL/Qwen_exp/zeroshot"
-}
+SOURCE_TEST_FOLDER = "SharedTask_NLPAI4Health_Train&dev_set/test"
+FINAL_EVAL_FOLDER = "Final_60_For_Translation"
 
-audit_experiment_folders(EXPERIMENTS)
+# Use the list format to iterate through your paths
+EXPERIMENT_FOLDERS = [
+    "data/KZ_2117574/EACL/Mistral_exp/fewshot",
+    "data/KZ_2117574/EACL/Mistral_exp/zeroshot",
+    "data/KZ_2117574/EACL/Mistral_exp/translated/mistral",
+    "data/KZ_2117574/EACL/Qwen_exp/fewshot",
+    "data/KZ_2117574/EACL/Qwen_exp/translated/qwen",
+    "data/KZ_2117574/EACL/Qwen_exp/zeroshot"
+]
+
+create_hybrid_evaluation_set(SOURCE_TEST_FOLDER, EXPERIMENT_FOLDERS, FINAL_EVAL_FOLDER, target_size=60)
