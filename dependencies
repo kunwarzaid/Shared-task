@@ -25,27 +25,35 @@ test_action_mismatch_rate: 0.18
 
 
 def parse_clinical_jsonl(filepath):
-    """Reads a multi-line JSONL file. Fault-tolerant to handle malformed JSON lines."""
+    """Indestructible file reader. Parses JSON if valid, falls back to raw text if broken."""
     transcript = ""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                if not line:
-                    continue
+            lines = f.readlines()
+            
+        if not lines:
+            print(f"  [WARNING] The file is physically empty: {filepath}")
+            return ""
+            
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            try:
+                # Attempt strict JSON parsing
+                data = json.loads(line)
+                speaker = data.get("speaker", "Unknown")
+                dialogue = data.get("dialogue", "")
+                transcript += f"{speaker}: {dialogue}\n"
+            except Exception:
+                # FALLBACK: If JSON is broken, just append the raw line text so we don't lose data!
+                # We do a quick string replace to make the broken JSON slightly more readable for GPT
+                clean_line = line.replace('{"speaker":', 'Speaker:').replace('"dialogue":', '->')
+                transcript += f"{clean_line}\n"
                 
-                try:
-                    # Try to parse it cleanly
-                    data = json.loads(line)
-                    speaker = data.get("speaker", "Unknown")
-                    dialogue = data.get("dialogue", "")
-                    transcript += f"{speaker}: {dialogue}\n"
-                except json.JSONDecodeError:
-                    # FALLBACK: If the JSON is broken (e.g., unescaped quotes), 
-                    # just feed the raw text to GPT so we don't lose the data.
-                    transcript += f"{line}\n"
-                    
         return transcript
+        
     except Exception as e:
-        print(f"Error opening file {filepath}: {e}")
+        print(f"  [FATAL ERROR] Could not open file {filepath}: {e}")
         return ""
