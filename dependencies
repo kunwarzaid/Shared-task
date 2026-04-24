@@ -24,12 +24,16 @@ test_action_mismatch_rate: 0.18
 
 
 
-import os, json, time, random
+import os
+os.environ["TRANSFORMERS_NO_ADRESS_CHECK"] = "1"
+os.environ["BITSANDBYTES_NOWELCOME"] = "1"
+os.environ["ACCELERATE_USE_FSDP"] = "false"
+import json, time, random
 from pathlib import Path
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig, login
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 import torch
-
+from huggingface_hub import login
 # Prevent gradient calculation to save VRAM
 torch.set_grad_enabled(False)
 
@@ -37,7 +41,7 @@ def huggingface_login():
     """
     Logs into the Hugging Face Hub using the user's token.
     """
-    token = 'YOUR_HF_TOKEN_HERE' # Please insert your token here
+    token = '' # Please insert your token here
     try:
         login(token=token)
         print("Successfully logged into Hugging Face!")
@@ -49,18 +53,18 @@ def huggingface_login():
 # ============================================================
 
 # Aya-101 is an Encoder-Decoder model (T5 architecture)
-BASE_MODEL = "facebook/aya-101"
+BASE_MODEL = "CohereLabs/aya-101"
 
-TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/test"
+TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/Final_60_For_Translation"
 TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/train_split"
 OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Aya_exp/zeroshot"
 
-TARGET_LANGS = ["Gujarati"]
+TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi","Telugu","Tamil","Kannada","Gujarati","Dogri","Assamese"]
 
 FEW_SHOT_K = 0   
 FEW_SHOT_SEED = 42
 
-MAX_CONTEXT = 16384
+MAX_CONTEXT = 8000
 MAX_NEW_TOKENS_SUMMARY = 1024
 SYSTEM_OVERHEAD = 512
 
@@ -68,23 +72,45 @@ SYSTEM_OVERHEAD = 512
 # PROMPTS
 # ============================================================
 
-ZERO_SHOT_PROMPT_TEMPLATE = """You are a clinical documentation assistant. 
+ZERO_SHOT_PROMPT_TEMPLATE = """
+You are a clinical documentation assistant.
+
 Your task is to generate a clinical summary of the following doctor–patient dialogue.
 
 STRICT RULES:
-1. Only use information that is explicitly stated in the dialogue.
-2. Do NOT infer, assume, or add any information.
-3. Preserve negations exactly.
-4. Format your output inside [Summary] tags.
 
-STEP 1: Extract Key Facts.
-STEP 2: Write Summary.
+1. Only use information that is explicitly stated in the dialogue.
+2. Do NOT infer, assume, or add any information not directly mentioned.
+3. If something is not stated, do not include it.
+4. Preserve negations exactly.
+5. Do not add diagnoses, medications, durations, or advice unless explicitly mentioned.
+
+Follow this exact process:
+
+STEP 1: Extract Key Facts
+- List all explicitly mentioned clinical facts in bullet form.
+- Include negated findings separately.
+- Do not paraphrase heavily.
+
+STEP 2: Write Summary
+- Write a clinical summary using ONLY the extracted facts above.
+- Do not introduce any new information.
+
+Format your output exactly as:
+...
+[Summary]
+<final clinical summary>
+[/Summary]
+
+IMPORTANT:
+- Output ONLY ONE summary
+- Do NOT repeat
+- Stop after [/Summary]
 
 Dialogue:
 {dialogue}
-
-[Summary]
 """
+
 
 # ============================================================
 # UTILS
@@ -151,7 +177,7 @@ def load_model():
         BASE_MODEL,
         device_map="auto",
         quantization_config=quant_config,
-        attn_implementation="sdpa" # Crucial for 16k context on V100
+        attn_implementation="eager" # Crucial for 16k context on V100
     )
 
     model.eval()
@@ -245,3 +271,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+
