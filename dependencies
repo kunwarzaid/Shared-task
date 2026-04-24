@@ -24,223 +24,75 @@ test_action_mismatch_rate: 0.18
 
 
 
-import os
-# --- VRAM & STABILITY SETTINGS ---
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-os.environ["TRANSFORMERS_NO_ADRESS_CHECK"] = "1"
-os.environ["BITSANDBYTES_NOWELCOME"] = "1"
-os.environ["ACCELERATE_USE_FSDP"] = "false"
+You are an expert equity research analyst and educator.
 
-import json, time, random, sys
-from pathlib import Path
-from tqdm import tqdm
-import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
-from huggingface_hub import login
+I will provide you with a transcript of a lecture on equity research. Your task is to convert it into extremely detailed, structured, and professional notes suitable for saving as a PDF document.
 
-# Prevent gradient calculation to save VRAM
-torch.set_grad_enabled(False)
+### 🎯 Objective:
+Create comprehensive notes that capture every important concept, explanation, example, and nuance from the transcript. The notes should be self-sufficient, meaning someone can understand the topic fully without watching the lecture.
 
-def huggingface_login():
-    """
-    Logs into the Hugging Face Hub using the user's token.
-    """
-    token = 'YOUR_HF_TOKEN_HERE' # INSERT YOUR TOKEN HERE
-    try:
-        login(token=token)
-        print("Successfully logged into Hugging Face!")
-    except Exception as e:
-        print(f"Failed to log in: {e}")
+---
 
-# ============================================================
-# CONFIG
-# ============================================================
+### 📌 Instructions:
 
-BASE_MODEL = "CohereLabs/aya-101"
+1. Structure & Organization
+   - Use a clear hierarchy:
+     - Title
+     - Sections
+     - Subsections
+     - Bullet points where appropriate
+   - Add a table of contents at the beginning.
+   - Maintain logical flow and grouping of concepts.
 
-TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/Final_60_For_Translation"
-TRAIN_SPLIT_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/train_split"
-OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Aya_exp/zeroshot"
+2. Content Depth
+   - Do NOT summarize aggressively — retain depth.
+   - Include:
+     - Definitions of all concepts
+     - Step-by-step explanations
+     - Examples explained clearly
+     - Any formulas, frameworks, or methodologies
+   - Expand slightly where needed for clarity (but do not hallucinate new facts).
 
-TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi","Telugu","Tamil","Kannada","Gujarati","Dogri","Assamese"]
+3. Equity Research Focus
+   - Highlight key areas such as:
+     - Financial statement analysis
+     - Valuation methods (DCF, comparables, etc.)
+     - Ratios and metrics
+     - Industry analysis
+     - Management evaluation
+     - Risk factors
+   - Clearly explain why each concept matters in real-world investing.
 
-# V100 32GB Optimizations
-MAX_CONTEXT = 7168  # Safer limit for 'eager' attention mode
-MAX_NEW_TOKENS_SUMMARY = 768
-SYSTEM_OVERHEAD = 256
+4. Formatting for PDF
+   - Use clean formatting:
+     - Headings (H1, H2, H3)
+     - Bullet points
+     - Tables (for comparisons, ratios, etc.)
+   - Add spacing for readability.
+   - Use bold for key terms.
 
-# ============================================================
-# PROMPTS
-# ============================================================
+5. Examples & Insights
+   - If the speaker gives examples, rewrite them clearly.
+   - If helpful, add small clarifications or structured interpretations.
 
-ZERO_SHOT_PROMPT_TEMPLATE = """You are a clinical documentation assistant.
-Your task is to generate a clinical summary of the following doctor–patient dialogue.
+6. Key Takeaways Section
+   - At the end of each major section, include:
+     - “Key Takeaways” bullets
 
-STRICT RULES:
-1. Only use information explicitly stated in the dialogue.
-2. Do NOT infer or assume details.
-3. Preserve negations exactly.
+7. Final Summary
+   - Add a concise but complete summary of the lecture at the end.
 
-STEP 1: Extract Key Facts.
-STEP 2: Write Summary using ONLY extracted facts.
+8. Language
+   - Keep language professional but easy to understand.
+   - Avoid filler or repetition.
 
-Dialogue:
-{dialogue}
+---
 
-Please provide the clinical summary below:
-[Summary]"""
+### 📥 Output Format:
+- Return the output in clean Markdown format so it can be directly converted into a PDF.
+- Ensure it is well-formatted and visually structured.
 
-# ============================================================
-# UTILS
-# ============================================================
+---
 
-def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path):
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            try:
-                rows.append(json.loads(line))
-            except:
-                continue
-    return rows
-
-def write_text(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text.strip() + "\n")
-
-def clip_tokens(tokenizer, text, max_tokens):
-    ids = tokenizer.encode(text, add_special_tokens=False)
-    if len(ids) <= max_tokens:
-        return text
-    return tokenizer.decode(ids[:max_tokens], skip_special_tokens=True)
-
-def extract_summary(text):
-    # Handle the model repeating the tag or instruction
-    if "[Summary]" in text:
-        text = text.split("[Summary]")[-1]
-    if "[/Summary]" in text:
-        text = text.split("[/Summary]")[0]
-    
-    # If the model explicitly wrote "STEP 2", take the content after it
-    if "STEP 2" in text:
-        text = text.split("STEP 2")[-1]
-        if ":" in text: # handle "STEP 2: Summary text..."
-            text = text.split(":", 1)[-1]
-
-    return text.strip()
-
-# ============================================================
-# MODEL LOADING
-# ============================================================
-
-def load_model():
-    # Force bypass broken Apex installation
-    sys.modules['apex'] = None
-    sys.modules['apex.normalization'] = None
-    sys.modules['apex.normalization.fused_layer_norm'] = None
-
-    tprint(f"Loading model: {BASE_MODEL}")
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    
-    quant_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    model = AutoModelForSeq2SeqLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        quantization_config=quant_config,
-        attn_implementation="eager"
-    )
-
-    model.eval()
-    return model, tokenizer
-
-# ============================================================
-# GENERATION
-# ============================================================
-
-def generate_summary(model, tokenizer, prompt_text):
-    inputs = tokenizer(
-        prompt_text, 
-        return_tensors="pt", 
-        truncation=True, 
-        max_length=MAX_CONTEXT
-    ).to(model.device)
-
-    output = model.generate(
-        **inputs,
-        max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
-        do_sample=False,
-        repetition_penalty=1.2,
-    )
-
-    # Decode FULL output (Seq2Seq specific)
-    text = tokenizer.decode(output[0], skip_special_tokens=True)
-
-    summary = extract_summary(text)
-    return summary
-
-# ============================================================
-# MAIN
-# ============================================================
-
-def run():
-    huggingface_login()
-    model, tokenizer = load_model()
-
-    budget = MAX_CONTEXT - MAX_NEW_TOKENS_SUMMARY - SYSTEM_OVERHEAD
-    SEED = 42
-    max_files_per_lang = 60
-
-    Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-
-    for lang_dir in Path(TEST_DIR).iterdir():
-        if lang_dir.name not in TARGET_LANGS:
-            continue
-
-        lang = lang_dir.name
-        tprint(f"Processing language: {lang}")
-
-        dlg_dir = lang_dir / "Dialogues"
-        out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        files = sorted(dlg_dir.glob("*.jsonl"))
-        random.seed(SEED)
-        random.shuffle(files)
-        files = files[:min(max_files_per_lang, len(files))]
-
-        for f in tqdm(files, desc=lang):
-            out_file = out_dir / f"{f.stem}_summary.txt"
-            if out_file.exists():
-                continue
-
-            rows = safe_read_jsonl(f)
-            dialogue = " ".join(r.get("dialogue", "") for r in rows if isinstance(r, dict))
-
-            # Clip dialogue
-            dialogue = clip_tokens(tokenizer, dialogue, budget)
-
-            # Build Prompt
-            prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(dialogue=dialogue)
-
-            # Generate
-            summary = generate_summary(model, tokenizer, prompt)
-
-            # Save
-            write_text(out_file, summary)
-
-        torch.cuda.empty_cache()
-
-    tprint("Inference completed.")
-
-if __name__ == "__main__":
-    run()
+### 📎 Transcript:
+[PASTE TRANSCRIPT HERE]
