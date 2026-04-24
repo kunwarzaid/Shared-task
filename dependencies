@@ -25,15 +25,19 @@ test_action_mismatch_rate: 0.18
 
 
 import os
+# --- VRAM & STABILITY SETTINGS ---
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["TRANSFORMERS_NO_ADRESS_CHECK"] = "1"
 os.environ["BITSANDBYTES_NOWELCOME"] = "1"
 os.environ["ACCELERATE_USE_FSDP"] = "false"
-import json, time, random
+
+import json, time, random, sys
 from pathlib import Path
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 import torch
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
 from huggingface_hub import login
+
 # Prevent gradient calculation to save VRAM
 torch.set_grad_enabled(False)
 
@@ -41,7 +45,7 @@ def huggingface_login():
     """
     Logs into the Hugging Face Hub using the user's token.
     """
-    token = '' # Please insert your token here
+    token = 'YOUR_HF_TOKEN_HERE' # INSERT YOUR TOKEN HERE
     try:
         login(token=token)
         print("Successfully logged into Hugging Face!")
@@ -52,7 +56,6 @@ def huggingface_login():
 # CONFIG
 # ============================================================
 
-# Aya-101 is an Encoder-Decoder model (T5 architecture)
 BASE_MODEL = "CohereLabs/aya-101"
 
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set/Final_60_For_Translation"
@@ -61,56 +64,31 @@ OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/Aya_exp/zeroshot"
 
 TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi","Telugu","Tamil","Kannada","Gujarati","Dogri","Assamese"]
 
-FEW_SHOT_K = 0   
-FEW_SHOT_SEED = 42
-
-MAX_CONTEXT = 8000
-MAX_NEW_TOKENS_SUMMARY = 1024
-SYSTEM_OVERHEAD = 512
+# V100 32GB Optimizations
+MAX_CONTEXT = 7168  # Safer limit for 'eager' attention mode
+MAX_NEW_TOKENS_SUMMARY = 768
+SYSTEM_OVERHEAD = 256
 
 # ============================================================
 # PROMPTS
 # ============================================================
 
-ZERO_SHOT_PROMPT_TEMPLATE = """
-You are a clinical documentation assistant.
-
+ZERO_SHOT_PROMPT_TEMPLATE = """You are a clinical documentation assistant.
 Your task is to generate a clinical summary of the following doctor–patient dialogue.
 
 STRICT RULES:
+1. Only use information explicitly stated in the dialogue.
+2. Do NOT infer or assume details.
+3. Preserve negations exactly.
 
-1. Only use information that is explicitly stated in the dialogue.
-2. Do NOT infer, assume, or add any information not directly mentioned.
-3. If something is not stated, do not include it.
-4. Preserve negations exactly.
-5. Do not add diagnoses, medications, durations, or advice unless explicitly mentioned.
-
-Follow this exact process:
-
-STEP 1: Extract Key Facts
-- List all explicitly mentioned clinical facts in bullet form.
-- Include negated findings separately.
-- Do not paraphrase heavily.
-
-STEP 2: Write Summary
-- Write a clinical summary using ONLY the extracted facts above.
-- Do not introduce any new information.
-
-Format your output exactly as:
-...
-[Summary]
-<final clinical summary>
-[/Summary]
-
-IMPORTANT:
-- Output ONLY ONE summary
-- Do NOT repeat
-- Stop after [/Summary]
+STEP 1: Extract Key Facts.
+STEP 2: Write Summary using ONLY extracted facts.
 
 Dialogue:
 {dialogue}
-"""
 
+Please provide the clinical summary below:
+[Summary]"""
 
 # ============================================================
 # UTILS
@@ -138,31 +116,33 @@ def clip_tokens(tokenizer, text, max_tokens):
     ids = tokenizer.encode(text, add_special_tokens=False)
     if len(ids) <= max_tokens:
         return text
-    # Keep the beginning of the dialogue (contains patient ID/initial complaint)
     return tokenizer.decode(ids[:max_tokens], skip_special_tokens=True)
 
 def extract_summary(text):
+    # Handle the model repeating the tag or instruction
     if "[Summary]" in text:
         text = text.split("[Summary]")[-1]
     if "[/Summary]" in text:
         text = text.split("[/Summary]")[0]
-    return text.strip()
+    
+    # If the model explicitly wrote "STEP 2", take the content after it
+    if "STEP 2" in text:
+        text = text.split("STEP 2")[-1]
+        if ":" in text: # handle "STEP 2: Summary text..."
+            text = text.split(":", 1)[-1]
 
-def remove_repeated_sentences(text):
-    sentences = text.split(". ")
-    seen = set()
-    cleaned = []
-    for s in sentences:
-        if s.strip() and s not in seen:
-            cleaned.append(s)
-            seen.add(s)
-    return ". ".join(cleaned)
+    return text.strip()
 
 # ============================================================
 # MODEL LOADING
 # ============================================================
 
 def load_model():
+    # Force bypass broken Apex installation
+    sys.modules['apex'] = None
+    sys.modules['apex.normalization'] = None
+    sys.modules['apex.normalization.fused_layer_norm'] = None
+
     tprint(f"Loading model: {BASE_MODEL}")
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
     
@@ -170,14 +150,14 @@ def load_model():
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.float16 # Optimized for V100
+        bnb_4bit_compute_dtype=torch.float16
     )
 
     model = AutoModelForSeq2SeqLM.from_pretrained(
         BASE_MODEL,
         device_map="auto",
         quantization_config=quant_config,
-        attn_implementation="eager" # Crucial for 16k context on V100
+        attn_implementation="eager"
     )
 
     model.eval()
@@ -188,7 +168,6 @@ def load_model():
 # ============================================================
 
 def generate_summary(model, tokenizer, prompt_text):
-    # Aya-101 doesn't use [INST] tags; it takes raw instruction text
     inputs = tokenizer(
         prompt_text, 
         return_tensors="pt", 
@@ -203,29 +182,24 @@ def generate_summary(model, tokenizer, prompt_text):
         repetition_penalty=1.2,
     )
 
-    # In Seq2Seq models, output is just the newly generated sequence
+    # Decode FULL output (Seq2Seq specific)
     text = tokenizer.decode(output[0], skip_special_tokens=True)
 
     summary = extract_summary(text)
-    summary = remove_repeated_sentences(summary)
-
     return summary
 
 # ============================================================
-# MAIN RUN LOGIC
+# MAIN
 # ============================================================
 
 def run():
     huggingface_login()
     model, tokenizer = load_model()
 
-    # Token budget (leave space for generation + prompt overhead)
     budget = MAX_CONTEXT - MAX_NEW_TOKENS_SUMMARY - SYSTEM_OVERHEAD
-
     SEED = 42
     max_files_per_lang = 60
 
-    # Ensure output directory exists
     Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
     for lang_dir in Path(TEST_DIR).iterdir():
@@ -252,10 +226,10 @@ def run():
             rows = safe_read_jsonl(f)
             dialogue = " ".join(r.get("dialogue", "") for r in rows if isinstance(r, dict))
 
-            # Clip dialogue to fit in context window
+            # Clip dialogue
             dialogue = clip_tokens(tokenizer, dialogue, budget)
 
-            # Generate Prompt
+            # Build Prompt
             prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(dialogue=dialogue)
 
             # Generate
@@ -264,11 +238,9 @@ def run():
             # Save
             write_text(out_file, summary)
 
-        # Clear cache between languages to prevent fragmentation
         torch.cuda.empty_cache()
 
     tprint("Inference completed.")
 
 if __name__ == "__main__":
     run()
-
