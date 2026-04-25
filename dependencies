@@ -24,75 +24,160 @@ test_action_mismatch_rate: 0.18
 
 
 
-You are an expert equity research analyst and educator.
+```python
+import os
+import json
+from pathlib import Path
+from openai import AzureOpenAI
 
-I will provide you with a transcript of a lecture on equity research. Your task is to convert it into extremely detailed, structured, and professional notes suitable for saving as a PDF document.
+# --- 1. CONFIGURATION ---
 
-### 🎯 Objective:
-Create comprehensive notes that capture every important concept, explanation, example, and nuance from the transcript. The notes should be self-sufficient, meaning someone can understand the topic fully without watching the lecture.
+EXPERIMENTS = {
+    "Mistral_Fewshot": "data_eval/Mistral_exp/fewshot",
+    "Mistral_Zeroshot": "data_eval/Mistral_exp/zeroshot",
+    "Mistral_Translated": "data_eval/Mistral_exp/translated/mistral",
+    "Qwen_Fewshot": "data_eval/Qwen_exp/fewshot",
+    "Qwen_Translated": "data_eval/Qwen_exp/translated/qwen",
+    "Qwen_Zeroshot": "data_eval/Qwen_exp/zeroshot"
+}
 
----
+# Dedicated folder for GPT outputs
+OUTPUT_ENTITIES_FOLDER = "data_eval/NER_extracted/Experiment_Summaries_GPT"
 
-### 📌 Instructions:
+# Azure OpenAI Setup
+endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
+model_name = "gpt-5"
+deployment = "gpt-5"
+subscription_key = "YOUR_API_KEY_HERE"  # Add your Azure key here
+api_version = "2024-12-01-preview"
 
-1. Structure & Organization
-   - Use a clear hierarchy:
-     - Title
-     - Sections
-     - Subsections
-     - Bullet points where appropriate
-   - Add a table of contents at the beginning.
-   - Maintain logical flow and grouping of concepts.
+client = AzureOpenAI(
+    api_version=api_version,
+    azure_endpoint=endpoint,
+    api_key=subscription_key,
+)
 
-2. Content Depth
-   - Do NOT summarize aggressively — retain depth.
-   - Include:
-     - Definitions of all concepts
-     - Step-by-step explanations
-     - Examples explained clearly
-     - Any formulas, frameworks, or methodologies
-   - Expand slightly where needed for clarity (but do not hallucinate new facts).
+# --- 2. CORE FUNCTIONS ---
 
-3. Equity Research Focus
-   - Highlight key areas such as:
-     - Financial statement analysis
-     - Valuation methods (DCF, comparables, etc.)
-     - Ratios and metrics
-     - Industry analysis
-     - Management evaluation
-     - Risk factors
-   - Clearly explain why each concept matters in real-world investing.
+def read_summary_txt(filepath):
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except Exception as e:
+        print(f"  [ERROR] Could not read file {filepath}: {e}")
+        return ""
 
-4. Formatting for PDF
-   - Use clean formatting:
-     - Headings (H1, H2, H3)
-     - Bullet points
-     - Tables (for comparisons, ratios, etc.)
-   - Add spacing for readability.
-   - Use bold for key terms.
+def extract_with_gpt5(summary_text, language):
+    if not summary_text:
+        return {}
 
-5. Examples & Insights
-   - If the speaker gives examples, rewrite them clearly.
-   - If helpful, add small clarifications or structured interpretations.
+    system_prompt = f"""
+    You are a clinical data extraction assistant. The following is a generated clinical summary in {language}. 
+    
+    Your task is twofold:
+    1. Extract structured medical and contextual entities.
+    2. TRANSLATE all extracted entities into standard ENGLISH.
 
-6. Key Takeaways Section
-   - At the end of each major section, include:
-     - “Key Takeaways” bullets
+    Follow these strict extraction rules:
+    - Translation Required: Regardless of the source language, the final extracted JSON values MUST be in English.
+    - Format: Extract entities as concise 1-3 word English keywords (e.g., "severe headache", "blood test"), not full sentences.
+    - No Hypotheticals: Do not extract conditions, treatments, or procedures discussed only as possibilities.
+    - Separation: Keep discrete concepts separate in the arrays.
 
-7. Final Summary
-   - Add a concise but complete summary of the lecture at the end.
+    Output your response using ONLY the following JSON schema:
+    {{
+      "Symptoms": [],
+      "Diagnoses_and_Conditions": [],
+      "Substances_and_Habits": [],
+      "Procedures_and_Tests": [],
+      "Treatments": []
+    }}
+    """
 
-8. Language
-   - Keep language professional but easy to understand.
-   - Avoid filler or repetition.
+    try:
+        response = client.chat.completions.create(
+            model=deployment, 
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": summary_text}
+            ],
+            response_format={ "type": "json_object" }
+        )
+        
+        raw_content = response.choices[0].message.content
+        if not raw_content:
+             return {}
+        return json.loads(raw_content)
+        
+    except Exception as e:
+        print(f"  [ERROR] GPT API Error on {language} summary: {e}")
+        return {}
 
----
+# --- 3. DIRECTORY TRAVERSAL ---
 
-### 📥 Output Format:
-- Return the output in clean Markdown format so it can be directly converted into a PDF.
-- Ensure it is well-formatted and visually structured.
+def process_gpt_experiments(experiments_dict, output_base_dir):
+    dest_base_path = Path(output_base_dir)
+    print("\n==================================================")
+    print("   STARTING GPT-5 NER EXTRACTION ON SUMMARIES")
+    print("==================================================\n")
 
----
+    for exp_name, exp_path_str in experiments_dict.items():
+        exp_path = Path(exp_path_str)
+        if not exp_path.exists():
+            continue
+            
+        print(f"---> Processing Experiment: {exp_name}")
+        
+        for lang_folder in exp_path.iterdir():
+            if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
+                continue
+                
+            language = lang_folder.name
+            summary_dir = lang_folder / "Summary_Text"
+            
+            if not summary_dir.exists():
+                continue
+                
+            dest_lang_dir = dest_base_path / exp_name / language
+            dest_lang_dir.mkdir(parents=True, exist_ok=True)
+            
+            txt_files = list(summary_dir.glob("*_summary.txt"))
+            if not txt_files:
+                continue
+                
+            print(f"     [{language.ljust(10)}] Found {len(txt_files)} summaries...")
+            
+            for count, txt_file in enumerate(txt_files, 1):
+                case_id = txt_file.name.replace("_summary.txt", "")
+                output_file = dest_lang_dir / f"{case_id}_gpt_ner.json"
+                
+                # Skip if already processed
+                if output_file.exists():
+                    continue
+                
+                summary_text = read_summary_txt(txt_file)
+                if not summary_text:
+                    continue
+                    
+                gpt_entities = extract_with_gpt5(summary_text, language)
+                
+                final_output = {
+                    "Case_ID": case_id,
+                    "Experiment": exp_name,
+                    "Language": language,
+                    "Extractor": "GPT-5",
+                    "Entities": gpt_entities
+                }
+                
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(final_output, f, indent=4)
+                    
+                if count % 10 == 0:
+                    print(f"        ...extracted {count}/{len(txt_files)}")
+                    
+            print(f"     [{language.ljust(10)}] ✓ Complete.")
 
-### 📎 Transcript:
-[PASTE TRANSCRIPT HERE]
+process_gpt_experiments(EXPERIMENTS, OUTPUT_ENTITIES_FOLDER)
+print("\n--- GPT Extraction Pipeline Finished ---")
+
+```
