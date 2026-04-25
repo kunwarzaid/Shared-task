@@ -23,7 +23,6 @@ premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
 
-
 ```python
 import os
 import json
@@ -67,31 +66,30 @@ def read_summary_txt(filepath):
         print(f"  [ERROR] Could not read file {filepath}: {e}")
         return ""
 
-def extract_with_gpt5(summary_text, language):
+def extract_with_gpt5(summary_text):
     if not summary_text:
         return {}
 
-    system_prompt = f"""
-    You are a clinical data extraction assistant. The following is a generated clinical summary in {language}. 
+    # SIMPLIFIED PROMPT: No translation instructions, just pure extraction.
+    system_prompt = """
+    You are a clinical data extraction assistant. The following is a generated clinical summary in English. 
     
-    Your task is twofold:
-    1. Extract structured medical and contextual entities.
-    2. TRANSLATE all extracted entities into standard ENGLISH.
+    Extract structured medical and contextual entities from the summary.
 
     Follow these strict extraction rules:
-    - Translation Required: Regardless of the source language, the final extracted JSON values MUST be in English.
     - Format: Extract entities as concise 1-3 word English keywords (e.g., "severe headache", "blood test"), not full sentences.
+    - Exact Extraction: Do not hallucinate or add terms that are not present in the text.
     - No Hypotheticals: Do not extract conditions, treatments, or procedures discussed only as possibilities.
     - Separation: Keep discrete concepts separate in the arrays.
 
     Output your response using ONLY the following JSON schema:
-    {{
+    {
       "Symptoms": [],
       "Diagnoses_and_Conditions": [],
       "Substances_and_Habits": [],
       "Procedures_and_Tests": [],
       "Treatments": []
-    }}
+    }
     """
 
     try:
@@ -110,7 +108,7 @@ def extract_with_gpt5(summary_text, language):
         return json.loads(raw_content)
         
     except Exception as e:
-        print(f"  [ERROR] GPT API Error on {language} summary: {e}")
+        print(f"  [ERROR] GPT API Error: {e}")
         return {}
 
 # --- 3. DIRECTORY TRAVERSAL ---
@@ -159,12 +157,13 @@ def process_gpt_experiments(experiments_dict, output_base_dir):
                 if not summary_text:
                     continue
                     
-                gpt_entities = extract_with_gpt5(summary_text, language)
+                # Removed the language parameter since the prompt assumes English
+                gpt_entities = extract_with_gpt5(summary_text)
                 
                 final_output = {
                     "Case_ID": case_id,
                     "Experiment": exp_name,
-                    "Language": language,
+                    "Language": language, # We still save the source language tag for analytics
                     "Extractor": "GPT-5",
                     "Entities": gpt_entities
                 }
@@ -179,5 +178,6 @@ def process_gpt_experiments(experiments_dict, output_base_dir):
 
 process_gpt_experiments(EXPERIMENTS, OUTPUT_ENTITIES_FOLDER)
 print("\n--- GPT Extraction Pipeline Finished ---")
+
 
 ```
