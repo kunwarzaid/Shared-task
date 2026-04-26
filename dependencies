@@ -22,144 +22,176 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
+%%%%%%%% ICML 2026 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
 
-```python
-import json
-from pathlib import Path
-from openai import AzureOpenAI
+\documentclass{article}
 
-# --- 1. CONFIGURATION ---
-GT_BASE_DIR = Path("data_eval/NER_extracted/GPT")
-SUMMARIES_DIR = Path("data_eval/NER_extracted/Experiment_Summaries_GPT")
-OUTPUT_DIR = Path("data_eval/NER_extracted/LLM_Judge_Verdicts")
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs} % for professional tables
 
-endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
-model_name = "gpt-5"
-deployment = "gpt-5"
-subscription_key = "YOUR_API_KEY_HERE"  # <-- ADD YOUR KEY HERE
-api_version = "2024-12-01-preview"
-
-client = AzureOpenAI(
-    api_version=api_version,
-    azure_endpoint=endpoint,
-    api_key=subscription_key,
-)
-
-# --- 2. HELPER FUNCTIONS ---
-def count_entities(data_dict):
-    """Counts the total number of items across all extracted lists."""
-    if not isinstance(data_dict, dict):
-        return 0
-    return sum(len(v) for v in data_dict.values() if isinstance(v, list))
-
-def call_llm_judge(ground_truth_json, summary_json):
-    system_prompt = """
-    You are an expert clinical auditor evaluating the performance of a medical AI system.
-    You will be provided with:
-    1. A 'Ground Truth' JSON representing the exact facts from a clinical encounter.
-    2. A 'Summary Output' JSON representing what an AI system extracted from a summary.
-
-    Your job is to compare the two and identify clinical discrepancies. Account for clinical synonyms (e.g., 'Hypertension' = 'High Blood Pressure', or 'hydration' = 'stay hydrated').
-    
-    Output your findings strictly using this JSON schema. Ensure your integer counts perfectly match the number of items in your arrays!
-    {
-        "Clinical_Hallucinations": ["List any items in the Summary Output that are NOT supported by the Ground Truth."],
-        "Clinical_Omissions": ["List any critical items in the Ground Truth that the Summary Output FAILED to include."],
-        "Valid_Matches": ["List items correctly identified in both (show as 'SummaryTerm == GT_Term')."],
-        "Total_Hallucination_Count": <integer count of the Clinical_Hallucinations array>,
-        "Total_Omission_Count": <integer count of the Clinical_Omissions array>
-    }
-    """
-    
-    user_prompt = f"GROUND TRUTH:\n{json.dumps(ground_truth_json)}\n\nSUMMARY OUTPUT:\n{json.dumps(summary_json)}"
-
-    try:
-        response = client.chat.completions.create(
-            model=deployment, 
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={ "type": "json_object" },
-            temperature=0.0
-        )
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"API Error: {e}")
-        return None
-
-# --- 3. EXECUTION ---
-def run_llm_judge():
-    print("\n--- Starting LLM-as-a-Judge Evaluation ---")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    
-    skipped_files = 0
-    
-    for exp_folder in SUMMARIES_DIR.iterdir():
-        if not exp_folder.is_dir() or exp_folder.name.startswith('.'): continue
-        experiment_name = exp_folder.name
-        
-        for lang_folder in exp_folder.iterdir():
-            if not lang_folder.is_dir() or lang_folder.name.startswith('.'): continue
-            language = lang_folder.name
-            
-            gt_lang_dir = GT_BASE_DIR / language
-            dest_lang_dir = OUTPUT_DIR / experiment_name / language
-            dest_lang_dir.mkdir(parents=True, exist_ok=True)
-            
-            files_to_process = list(lang_folder.glob("*_gpt_ner.json"))
-            if not files_to_process: continue
-            
-            print(f"[{experiment_name} | {language}] Judging {len(files_to_process)} cases...")
-            
-            for count, summary_file in enumerate(files_to_process, 1):
-                case_id = summary_file.name.replace("_gpt_ner.json", "")
-                output_file = dest_lang_dir / f"{case_id}_judge.json"
-                
-                if output_file.exists(): continue # Crash recovery is active
-                
-                # Locate GT
-                gt_file = gt_lang_dir / "Extracted_JSONs" / f"{case_id}_ner.json"
-                if not gt_file.exists():
-                    gt_file = gt_lang_dir / f"{case_id}_ner.json"
-                
-                if not gt_file.exists(): continue
-                    
-                with open(summary_file, 'r', encoding='utf-8') as sf, open(gt_file, 'r', encoding='utf-8') as gf:
-                    summary_data = json.load(sf).get("Entities", {})
-                    gt_data = json.load(gf).get("GPT5_Extraction", {})
-                
-                # --- PRE-FLIGHT SANITY CHECK ---
-                total_gt = count_entities(gt_data)
-                total_summary = count_entities(summary_data)
-                
-                if total_gt == 0 or total_summary == 0:
-                    print(f"  [SKIPPED] {case_id} contains no entities. GT: {total_gt}, Summary: {total_summary}")
-                    skipped_files += 1
-                    continue
-                # -------------------------------
-
-                judge_verdict = call_llm_judge(gt_data, summary_data)
-                
-                if judge_verdict:
-                    final_record = {
-                        "Case_ID": case_id,
-                        "Experiment": experiment_name,
-                        "Language": language,
-                        "Judge_Verdict": judge_verdict
-                    }
-                    with open(output_file, 'w', encoding='utf-8') as out:
-                        json.dump(final_record, out, indent=4)
-                        
-                if count % 10 == 0:
-                    print(f"  ...judged {count}/{len(files_to_process)}")
-
-    print("\n==================================================")
-    print(f"LLM-as-a-Judge Pipeline Complete!")
-    print(f"Skipped {skipped_files} gibberish/empty files to save costs.")
-    print("==================================================")
-
-run_llm_judge()
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2026} with \usepackage[nohyperref]{icml2026} above.
+\usepackage{hyperref}
 
 
-```
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2026}
+
+% For preprint, use
+% \usepackage[preprint]{icml2026}
+
+% If accepted, instead use the following line for the camera-ready submission:
+% \usepackage[accepted]{icml2026}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Submission and Formatting Instructions for ICML 2026}
+
+\begin{document}
+
+\twocolumn[
+  \icmltitle{Evaluating Trustworthiness in Cross-Lingual Clinical Conversation Summarization}
+
+  % It is OKAY to include author information, even for blind submissions: the
+  % style file will automatically remove it for you unless you've provided
+  % the [accepted] option to the icml2026 package.
+
+  % List of affiliations: The first argument should be a (short) identifier you
+  % will use later to specify author affiliations Academic affiliations
+  % should list Department, University, City, Region, Country Industry
+  % affiliations should list Company, City, Region, Country
+
+  % You can specify symbols, otherwise they are numbered in order. Ideally, you
+  % should not use this facility. Affiliations will be numbered in order of
+  % appearance and this is the preferred way.
+  \icmlsetsymbol{equal}{*}
+
+  \begin{icmlauthorlist}
+    \icmlauthor{Firstname1 Lastname1}{equal,yyy}
+    \icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
+    \icmlauthor{Firstname3 Lastname3}{comp}
+    \icmlauthor{Firstname4 Lastname4}{sch}
+    \icmlauthor{Firstname5 Lastname5}{yyy}
+    \icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+    \icmlauthor{Firstname7 Lastname7}{comp}
+    %\icmlauthor{}{sch}
+    \icmlauthor{Firstname8 Lastname8}{sch}
+    \icmlauthor{Firstname8 Lastname8}{yyy,comp}
+    %\icmlauthor{}{sch}
+    %\icmlauthor{}{sch}
+  \end{icmlauthorlist}
+
+  \icmlaffiliation{yyy}{Department of XXX, University of YYY, Location, Country}
+  \icmlaffiliation{comp}{Company Name, Location, Country}
+  \icmlaffiliation{sch}{School of ZZZ, Institute of WWW, Location, Country}
+
+  \icmlcorrespondingauthor{Firstname1 Lastname1}{first1.last1@xxx.edu}
+  \icmlcorrespondingauthor{Firstname2 Lastname2}{first2.last2@www.uk}
+
+  % You may provide any keywords that you find helpful for describing your
+  % paper; these are used to populate the "keywords" metadata in the PDF but
+  % will not be shown in the document
+  \icmlkeywords{Machine Learning, ICML}
+
+  \vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column listing the
+% affiliations and the copyright notice. The command takes one argument, which
+% is text to display at the start of the footnote. The \icmlEqualContribution
+% command is standard text for equal contribution. Remove it (just {}) if you
+% do not need this facility.
+
+% Use ONE of the following lines. DO NOT remove the command.
+% If you have no special notice, KEEP empty braces:
+\printAffiliationsAndNotice{}  % no special notice (required even if empty)
+% Or, if applicable, use the standard equal contribution text:
+% \printAffiliationsAndNotice{\icmlEqualContribution}
+\input{Sections/0.Abstract}
+
+\input{Sections/1.Introduction}
+
+\input{Sections/2.RelatedWork}
+\input{Sections/3.Approach}
+\input{Sections/4.Experiments}
+\input{Sections/5.Discussion}
+\input{Sections/6.Conclusion}
+
+\section*{Acknowledgements}
+
+\section*{Impact Statement}
+
+% In the unusual situation where you want a paper to appear in the
+% references without citing it in the main text, use \nocite
+\nocite{langley00}
+
+\bibliography{example_paper}
+\bibliographystyle{icml2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+\input{Sections/appendix}
+%\section{You \emph{can} have an appendix here.}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
