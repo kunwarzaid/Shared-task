@@ -25,106 +25,141 @@ test_action_mismatch_rate: 0.18
 
 ```python
 import json
-import random
 from pathlib import Path
-from difflib import SequenceMatcher
+from openai import AzureOpenAI
 
 # --- 1. CONFIGURATION ---
 GT_BASE_DIR = Path("data_eval/NER_extracted/GPT")
 SUMMARIES_DIR = Path("data_eval/NER_extracted/Experiment_Summaries_GPT")
+OUTPUT_DIR = Path("data_eval/NER_extracted/LLM_Judge_Verdicts")
 
-# --- 2. MATCHING LOGIC (Identical to your eval script) ---
-def is_match(term1, term2, threshold=0.8):
-    t1, t2 = term1.lower(), term2.lower()
-    if t1 in t2 or t2 in t1:
-        return True
-    similarity = SequenceMatcher(None, t1, t2).ratio()
-    return similarity >= threshold
+endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
+model_name = "gpt-5"
+deployment = "gpt-5"
+subscription_key = "YOUR_API_KEY_HERE"  # Add your Azure key here
+api_version = "2024-12-01-preview"
 
-# --- 3. VERIFICATION DISPLAY ---
-def print_verification(gt_list, pred_list, category):
-    matched_gt = []
-    matched_pred = []
-    matches_display = []
+client = AzureOpenAI(
+    api_version=api_version,
+    azure_endpoint=endpoint,
+    api_key=subscription_key,
+)
+
+# --- 2. HELPER FUNCTIONS ---
+def count_entities(data_dict):
+    """Counts the total number of items across all extracted lists."""
+    if not isinstance(data_dict, dict):
+        return 0
+    return sum(len(v) for v in data_dict.values() if isinstance(v, list))
+
+def call_llm_judge(ground_truth_json, summary_json):
+    system_prompt = """
+    You are an expert clinical auditor evaluating the performance of a medical AI system.
+    You will be provided with:
+    1. A 'Ground Truth' JSON representing the exact facts from a clinical encounter.
+    2. A 'Summary Output' JSON representing what an AI system extracted from a summary.
+
+    Your job is to compare the two and identify clinical discrepancies. Account for clinical synonyms (e.g., 'Hypertension' = 'High Blood Pressure').
     
-    # Find Matches
-    for gt_term in gt_list:
-        for pred_term in pred_list:
-            if pred_term not in matched_pred and is_match(gt_term, pred_term):
-                matched_gt.append(gt_term)
-                matched_pred.append(pred_term)
-                matches_display.append(f"'{gt_term}' == '{pred_term}'")
-                break
+    Output your findings strictly using this JSON schema:
+    {
+        "Clinical_Hallucinations": ["List any items in the Summary Output that are NOT supported by the Ground Truth."],
+        "Clinical_Omissions": ["List any critical items in the Ground Truth that the Summary Output FAILED to include."],
+        "Valid_Matches": ["List items correctly identified in both."],
+        "Total_Hallucination_Count": 0,
+        "Total_Omission_Count": 0
+    }
+    """
+    
+    user_prompt = f"GROUND TRUTH:\n{json.dumps(ground_truth_json)}\n\nSUMMARY OUTPUT:\n{json.dumps(summary_json)}"
+
+    try:
+        response = client.chat.completions.create(
+            model=deployment, 
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={ "type": "json_object" },
+            temperature=0.0
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print(f"API Error: {e}")
+        return None
+
+# --- 3. EXECUTION ---
+def run_llm_judge():
+    print("\n--- Starting LLM-as-a-Judge Evaluation ---")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    skipped_files = 0
+    
+    for exp_folder in SUMMARIES_DIR.iterdir():
+        if not exp_folder.is_dir() or exp_folder.name.startswith('.'): continue
+        experiment_name = exp_folder.name
+        
+        for lang_folder in exp_folder.iterdir():
+            if not lang_folder.is_dir() or lang_folder.name.startswith('.'): continue
+            language = lang_folder.name
+            
+            gt_lang_dir = GT_BASE_DIR / language
+            dest_lang_dir = OUTPUT_DIR / experiment_name / language
+            dest_lang_dir.mkdir(parents=True, exist_ok=True)
+            
+            files_to_process = list(lang_folder.glob("*_gpt_ner.json"))
+            if not files_to_process: continue
+            
+            print(f"[{experiment_name} | {language}] Judging {len(files_to_process)} cases...")
+            
+            for count, summary_file in enumerate(files_to_process, 1):
+                case_id = summary_file.name.replace("_gpt_ner.json", "")
+                output_file = dest_lang_dir / f"{case_id}_judge.json"
                 
-    # Find Hallucinations (In Prediction, not in GT)
-    hallucinations = [p for p in pred_list if p not in matched_pred]
-    
-    # Find Omissions (In GT, not in Prediction)
-    omissions = [g for g in gt_list if g not in matched_gt]
-    
-    print(f"\n--- [ {category.upper()} ] ---")
-    print(f"📄 Ground Truth : {gt_list}")
-    print(f"🤖 Summary Extra: {pred_list}")
-    print("-" * 30)
-    
-    if matches_display:
-        print("✅ MATCHES (True Positives):")
-        for m in matches_display: print(f"    {m}")
-    else:
-        print("✅ MATCHES: None")
-        
-    print(f"❌ HALLUCINATED (False Positives): {hallucinations}")
-    print(f"⚠️ OMITTED (False Negatives): {omissions}")
+                if output_file.exists(): continue # Crash recovery
+                
+                # Locate GT
+                gt_file = gt_lang_dir / "Extracted_JSONs" / f"{case_id}_ner.json"
+                if not gt_file.exists():
+                    gt_file = gt_lang_dir / f"{case_id}_ner.json"
+                
+                if not gt_file.exists(): continue
+                    
+                with open(summary_file, 'r', encoding='utf-8') as sf, open(gt_file, 'r', encoding='utf-8') as gf:
+                    summary_data = json.load(sf).get("Entities", {})
+                    gt_data = json.load(gf).get("GPT5_Extraction", {})
+                
+                # --- PRE-FLIGHT SANITY CHECK ---
+                total_gt = count_entities(gt_data)
+                total_summary = count_entities(summary_data)
+                
+                if total_gt == 0 or total_summary == 0:
+                    print(f"  [SKIPPED] {case_id} contains no entities (Gibberish Data). GT: {total_gt}, Summary: {total_summary}")
+                    skipped_files += 1
+                    continue
+                # -------------------------------
 
+                judge_verdict = call_llm_judge(gt_data, summary_data)
+                
+                if judge_verdict:
+                    final_record = {
+                        "Case_ID": case_id,
+                        "Experiment": experiment_name,
+                        "Language": language,
+                        "Judge_Verdict": judge_verdict
+                    }
+                    with open(output_file, 'w', encoding='utf-8') as out:
+                        json.dump(final_record, out, indent=4)
+                        
+                if count % 10 == 0:
+                    print(f"  ...judged {count}/{len(files_to_process)}")
 
-def run_verification(num_files_to_check=3):
     print("\n==================================================")
-    print("   EVALUATION METRICS VERIFICATION TOOL")
+    print(f"LLM-as-a-Judge Pipeline Complete!")
+    print(f"Skipped {skipped_files} gibberish/empty files to save costs.")
     print("==================================================")
-    
-    # Gather all available summary files
-    all_summary_files = list(SUMMARIES_DIR.rglob("*_gpt_ner.json"))
-    
-    if not all_summary_files:
-        print("No summary files found.")
-        return
-        
-    # Pick random files to verify
-    sample_files = random.sample(all_summary_files, min(num_files_to_check, len(all_summary_files)))
-    
-    for summary_file in sample_files:
-        case_id = summary_file.name.replace("_gpt_ner.json", "")
-        language = summary_file.parent.name
-        experiment = summary_file.parent.parent.name
-        
-        gt_lang_dir = GT_BASE_DIR / language
-        gt_file = gt_lang_dir / "Extracted_JSONs" / f"{case_id}_ner.json"
-        if not gt_file.exists():
-            gt_file = gt_lang_dir / f"{case_id}_ner.json"
-            
-        if not gt_file.exists():
-            continue
-            
-        print("\n\n==================================================")
-        print(f"🔍 CASE ID   : {case_id}")
-        print(f"🧪 EXPERIMENT: {experiment}")
-        print(f"🌍 LANGUAGE  : {language}")
-        print("==================================================")
-        
-        with open(summary_file, 'r', encoding='utf-8') as sf, open(gt_file, 'r', encoding='utf-8') as gf:
-            summary_data = json.load(sf).get("Entities", {})
-            gt_data = json.load(gf).get("GPT5_Extraction", {})
-            
-        categories = ["Symptoms", "Diagnoses_and_Conditions", "Substances_and_Habits", "Procedures_and_Tests", "Treatments"]
-        
-        for cat in categories:
-            gt_list = gt_data.get(cat, []) if isinstance(gt_data, dict) else []
-            pred_list = summary_data.get(cat, []) if isinstance(summary_data, dict) else []
-            
-            # Only print categories that actually have data to keep the terminal clean
-            if gt_list or pred_list:
-                print_verification(gt_list, pred_list, cat)
 
-run_verification(3) # Change this number to see more or fewer files
+run_llm_judge()
+
 
 ```
