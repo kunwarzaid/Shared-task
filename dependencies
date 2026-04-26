@@ -25,132 +25,106 @@ test_action_mismatch_rate: 0.18
 
 ```python
 import json
-import csv
+import random
 from pathlib import Path
 from difflib import SequenceMatcher
 
 # --- 1. CONFIGURATION ---
-# Updated to match your exact directory structure
-GT_BASE_DIR = Path("data_eval/NER_extracted/GPT") 
+GT_BASE_DIR = Path("data_eval/NER_extracted/GPT")
 SUMMARIES_DIR = Path("data_eval/NER_extracted/Experiment_Summaries_GPT")
-OUTPUT_CSV = "data_eval/NER_extracted/Programmatic_Evaluation_Results.csv"
 
-# --- 2. MATCHING LOGIC ---
+# --- 2. MATCHING LOGIC (Identical to your eval script) ---
 def is_match(term1, term2, threshold=0.8):
-    """
-    Checks if two terms match either by substring (e.g. 'headache' in 'severe headache')
-    or by string similarity (e.g. 'typ2 diabetes' vs 'type 2 diabetes').
-    """
     t1, t2 = term1.lower(), term2.lower()
-    
     if t1 in t2 or t2 in t1:
         return True
-        
     similarity = SequenceMatcher(None, t1, t2).ratio()
     return similarity >= threshold
 
-def evaluate_lists(gt_list, pred_list):
-    """Calculates True Positives, False Positives (Hallucinations), and False Negatives (Omissions)"""
-    tp = 0
-    matched_preds = set()
+# --- 3. VERIFICATION DISPLAY ---
+def print_verification(gt_list, pred_list, category):
+    matched_gt = []
+    matched_pred = []
+    matches_display = []
     
+    # Find Matches
     for gt_term in gt_list:
-        match_found = False
-        for i, pred_term in enumerate(pred_list):
-            if i not in matched_preds and is_match(gt_term, pred_term):
-                tp += 1
-                matched_preds.add(i)
-                match_found = True
+        for pred_term in pred_list:
+            if pred_term not in matched_pred and is_match(gt_term, pred_term):
+                matched_gt.append(gt_term)
+                matched_pred.append(pred_term)
+                matches_display.append(f"'{gt_term}' == '{pred_term}'")
                 break
                 
-    fp = len(pred_list) - tp # Hallucinations
-    fn = len(gt_list) - tp   # Omissions
+    # Find Hallucinations (In Prediction, not in GT)
+    hallucinations = [p for p in pred_list if p not in matched_pred]
     
-    return tp, fp, fn
+    # Find Omissions (In GT, not in Prediction)
+    omissions = [g for g in gt_list if g not in matched_gt]
+    
+    print(f"\n--- [ {category.upper()} ] ---")
+    print(f"📄 Ground Truth : {gt_list}")
+    print(f"🤖 Summary Extra: {pred_list}")
+    print("-" * 30)
+    
+    if matches_display:
+        print("✅ MATCHES (True Positives):")
+        for m in matches_display: print(f"    {m}")
+    else:
+        print("✅ MATCHES: None")
+        
+    print(f"❌ HALLUCINATED (False Positives): {hallucinations}")
+    print(f"⚠️ OMITTED (False Negatives): {omissions}")
 
-# --- 3. EXECUTION ---
-def run_evaluation():
-    results = []
+
+def run_verification(num_files_to_check=3):
+    print("\n==================================================")
+    print("   EVALUATION METRICS VERIFICATION TOOL")
+    print("==================================================")
     
-    print("\n--- Starting Programmatic Metric Evaluation ---")
+    # Gather all available summary files
+    all_summary_files = list(SUMMARIES_DIR.rglob("*_gpt_ner.json"))
     
-    if not GT_BASE_DIR.exists() or not SUMMARIES_DIR.exists():
-        print("Error: Input directories not found. Check your paths.")
+    if not all_summary_files:
+        print("No summary files found.")
         return
         
-    for exp_folder in SUMMARIES_DIR.iterdir():
-        if not exp_folder.is_dir() or exp_folder.name.startswith('.'): continue
-        experiment_name = exp_folder.name
+    # Pick random files to verify
+    sample_files = random.sample(all_summary_files, min(num_files_to_check, len(all_summary_files)))
+    
+    for summary_file in sample_files:
+        case_id = summary_file.name.replace("_gpt_ner.json", "")
+        language = summary_file.parent.name
+        experiment = summary_file.parent.parent.name
         
-        for lang_folder in exp_folder.iterdir():
-            if not lang_folder.is_dir() or lang_folder.name.startswith('.'): continue
-            language = lang_folder.name
+        gt_lang_dir = GT_BASE_DIR / language
+        gt_file = gt_lang_dir / "Extracted_JSONs" / f"{case_id}_ner.json"
+        if not gt_file.exists():
+            gt_file = gt_lang_dir / f"{case_id}_ner.json"
             
-            # Target the specific Ground Truth folder for this language
-            gt_lang_dir = GT_BASE_DIR / language
+        if not gt_file.exists():
+            continue
             
-            summary_files = list(lang_folder.glob("*_gpt_ner.json"))
-            if not summary_files: continue
+        print("\n\n==================================================")
+        print(f"🔍 CASE ID   : {case_id}")
+        print(f"🧪 EXPERIMENT: {experiment}")
+        print(f"🌍 LANGUAGE  : {language}")
+        print("==================================================")
+        
+        with open(summary_file, 'r', encoding='utf-8') as sf, open(gt_file, 'r', encoding='utf-8') as gf:
+            summary_data = json.load(sf).get("Entities", {})
+            gt_data = json.load(gf).get("GPT5_Extraction", {})
             
-            print(f"[{experiment_name} | {language}] Evaluating {len(summary_files)} summaries...")
+        categories = ["Symptoms", "Diagnoses_and_Conditions", "Substances_and_Habits", "Procedures_and_Tests", "Treatments"]
+        
+        for cat in categories:
+            gt_list = gt_data.get(cat, []) if isinstance(gt_data, dict) else []
+            pred_list = summary_data.get(cat, []) if isinstance(summary_data, dict) else []
             
-            for summary_file in summary_files:
-                case_id = summary_file.name.replace("_gpt_ner.json", "")
-                
-                # Locate the Ground Truth file (Checking both possible output locations from earlier)
-                gt_file = gt_lang_dir / "Extracted_JSONs" / f"{case_id}_ner.json"
-                if not gt_file.exists():
-                    gt_file = gt_lang_dir / f"{case_id}_ner.json" # Fallback
-                
-                if not gt_file.exists():
-                    # print(f"  -> Missing GT for {case_id}")
-                    continue
-                    
-                with open(summary_file, 'r', encoding='utf-8') as sf, open(gt_file, 'r', encoding='utf-8') as gf:
-                    # Map to the exact keys used in your previous extraction scripts
-                    summary_data = json.load(sf).get("Entities", {})
-                    gt_data = json.load(gf).get("GPT5_Extraction", {})
-                    
-                total_tp, total_fp, total_fn = 0, 0, 0
-                
-                categories = ["Symptoms", "Diagnoses_and_Conditions", "Substances_and_Habits", "Procedures_and_Tests", "Treatments"]
-                
-                for category in categories:
-                    gt_list = gt_data.get(category, []) if isinstance(gt_data, dict) else []
-                    pred_list = summary_data.get(category, []) if isinstance(summary_data, dict) else []
-                    
-                    tp, fp, fn = evaluate_lists(gt_list, pred_list)
-                    total_tp += tp
-                    total_fp += fp
-                    total_fn += fn
-                
-                precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
-                recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
-                f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
-                
-                results.append({
-                    "Case_ID": case_id,
-                    "Experiment": experiment_name,
-                    "Language": language,
-                    "True_Positives": total_tp,
-                    "Hallucinations_FP": total_fp,
-                    "Omissions_FN": total_fn,
-                    "Precision": round(precision, 4),
-                    "Recall": round(recall, 4),
-                    "F1_Score": round(f1, 4)
-                })
-                
-    if results:
-        keys = results[0].keys()
-        with open(OUTPUT_CSV, 'w', newline='', encoding='utf-8') as f:
-            dict_writer = csv.DictWriter(f, keys)
-            dict_writer.writeheader()
-            dict_writer.writerows(results)
-        print(f"\nEvaluation complete! Results successfully saved to {OUTPUT_CSV}")
-    else:
-        print("\nNo valid matches found to evaluate.")
+            # Only print categories that actually have data to keep the terminal clean
+            if gt_list or pred_list:
+                print_verification(gt_list, pred_list, cat)
 
-run_evaluation()
-
+run_verification(3) # Change this number to see more or fewer files
 
 ```
