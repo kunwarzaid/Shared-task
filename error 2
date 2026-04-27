@@ -1,5 +1,5 @@
 ```python
-import os, json, time, random
+import os, json, time
 from pathlib import Path
 from tqdm import tqdm
 from huggingface_hub import login
@@ -30,11 +30,8 @@ MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"
 
 MODEL_TYPE = "mistral"  # "qwen" or "mistral"
 
-# IMPORTANT: Path to your actual translated JSONL files
+# IMPORTANT: Point this DIRECTLY to the folder containing your 60 translated files
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/translated_data"
-
-# IMPORTANT: Path to your exact 60 Ground Truth files (to use as a filter)
-REFERENCE_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/Final_60_For_Translation/Final 60 For Translation"
 
 OUTPUT_DIR = f"/workspace/data/KZ_2117574/EACL/Mistral_exp/translated/{MODEL_TYPE}"
 
@@ -123,7 +120,6 @@ def load_model():
 # GENERATION
 # ============================================================
 def generate(model, tokenizer, prompt_text):
-    # We pass add_special_tokens=False because apply_chat_template already added them!
     inputs = tokenizer(
         prompt_text,
         return_tensors="pt",
@@ -153,29 +149,20 @@ def run_summary_only():
 
     skipped = 0
     processed = 0
-    ref_base = Path(REFERENCE_DIR)
 
     langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir() and p.name in TARGET_LANGS]
     
     for lang_dir in langs:
         lang = lang_dir.name
         tprint(f"\nProcessing language: {lang}")
-
-        # --- FIX 3: Get EXACT 60 Valid Files ---
-        ref_lang_dir = ref_base / lang.capitalize() / "Dialogues"
-        if not ref_lang_dir.exists():
-            tprint(f"  [WARNING] Reference folder not found for {lang}. Skipping.")
-            continue
-            
-        valid_case_ids = {f.name for f in ref_lang_dir.glob("*.jsonl")}
         
         dlg_dir = lang_dir / "Dialogues"
         out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
         
-        # Only process files that are inside our Valid 60 list
-        files = [f for f in dlg_dir.glob("*.jsonl") if f.name in valid_case_ids]
+        # Grab ALL files in this directory (since they are already the 60 filtered ones)
+        files = sorted(list(dlg_dir.glob("*.jsonl")))
         
-        tprint(f"  {lang}: Found {len(files)} exactly matching dialogues")
+        tprint(f"  {lang}: Found {len(files)} translated dialogues to process.")
 
         for f in tqdm(files, desc=lang):
             out_file = out_dir / f"{f.stem}_summary.txt"
@@ -189,7 +176,7 @@ def run_summary_only():
             for r in rows:
                 if isinstance(r, dict):
                     speaker = r.get("speaker", "Unknown")
-                    # Check standard keys for text, default to empty string
+                    # Safely grab either the translated dialogue or original
                     text = r.get("translated_dialogue", r.get("dialogue", ""))
                     if text:
                         dialogue_parts.append(f"{speaker}: {text}")
@@ -212,14 +199,14 @@ def run_summary_only():
                 language_line=language_line
             )
 
-            # --- FIX 2: Universal Chat Template (Works perfectly for both Mistral & Qwen) ---
+            # --- FIX 2: Universal Chat Template ---
             messages = [{"role": "user", "content": user_prompt}]
             prompt_text = tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
                 add_generation_prompt=True
             )
-            # --------------------------------------------------------------------------------
+            # --------------------------------------
 
             input_tokens = count_tokens(tokenizer, prompt_text)
             if input_tokens + MAX_NEW_TOKENS_SUMMARY > CTX_MAX:
@@ -243,5 +230,6 @@ def run_summary_only():
 
 if __name__ == "__main__":
     run_summary_only()
+
 
 ```
