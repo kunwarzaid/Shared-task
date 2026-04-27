@@ -1,19 +1,16 @@
-import os, json, time, re, random
+```python
+import os, json, time, random
 from pathlib import Path
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from huggingface_hub import login
 import torch, bitsandbytes as bnb, transformers
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
-print(torch.__version__)
-print(torch.version.cuda)
-print(bnb.__version__)
-print(transformers.__version__)
+print(f"Torch: {torch.__version__} | BNB: {bnb.__version__} | Transformers: {transformers.__version__}")
 
 # ============================================================
 # LOGIN
 # ============================================================
-
 def huggingface_login():
     token = ''  # add your token if required
     try:
@@ -23,30 +20,31 @@ def huggingface_login():
         print(f"Login failed: {e}")
 
 huggingface_login()
-
 torch.set_grad_enabled(False)
 
 # ============================================================
 # CONFIG
 # ============================================================
-
 MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"
 # MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 
 MODEL_TYPE = "mistral"  # "qwen" or "mistral"
 
+# IMPORTANT: Path to your actual translated JSONL files
 TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/translated_data"
+
+# IMPORTANT: Path to your exact 60 Ground Truth files (to use as a filter)
+REFERENCE_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/Final_60_For_Translation/Final 60 For Translation"
+
 OUTPUT_DIR = f"/workspace/data/KZ_2117574/EACL/Mistral_exp/translated/{MODEL_TYPE}"
 
 TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi","Telugu","Tamil","Kannada","Gujarati","Dogri","Assamese"]
-# TARGET_LANGS = ["Gujarati"]
 CTX_MAX = 16000
 MAX_NEW_TOKENS_SUMMARY = 1024
 
 # ============================================================
 # PROMPT
 # ============================================================
-
 ZERO_SHOT_PROMPT_TEMPLATE = """
 You are a clinical documentation assistant.
 
@@ -78,7 +76,6 @@ Dialogue:
 # ============================================================
 # UTILS
 # ============================================================
-
 def tprint(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
@@ -96,19 +93,14 @@ def write_text(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
-def normalize_transliterated(text):
-    return text
-
 def count_tokens(tokenizer, text):
     return len(tokenizer.encode(text, add_special_tokens=False))
 
 # ============================================================
 # MODEL
 # ============================================================
-
 def load_model():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
-
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -124,41 +116,19 @@ def load_model():
         quantization_config=quant_cfg,
         torch_dtype=torch.float16
     )
-
     model.eval()
     return model, tokenizer
 
 # ============================================================
-# PROMPT BUILDER
-# ============================================================
-
-def build_prompt(user_prompt):
-    if MODEL_TYPE == "qwen":
-        return [{"role": "user", "content": user_prompt}]
-    
-    elif MODEL_TYPE == "mistral":
-        # Mistral instruction format
-        return f"<s>[INST] {user_prompt.strip()} [/INST]"
-
-# ============================================================
 # GENERATION
 # ============================================================
-
-def generate(model, tokenizer, prompt):
-
-    if MODEL_TYPE == "qwen":
-        prompt_text = tokenizer.apply_chat_template(
-            prompt,
-            tokenize=False,
-            add_generation_prompt=True
-        )
-    else:
-        prompt_text = prompt
-
+def generate(model, tokenizer, prompt_text):
+    # We pass add_special_tokens=False because apply_chat_template already added them!
     inputs = tokenizer(
         prompt_text,
         return_tensors="pt",
-        truncation=False
+        truncation=False,
+        add_special_tokens=False 
     ).to(model.device)
 
     with torch.no_grad():
@@ -173,36 +143,39 @@ def generate(model, tokenizer, prompt):
         )
 
     gen_ids = output[0][inputs.input_ids.shape[-1]:]
-    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip(), prompt_text
+    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
 
 # ============================================================
 # MAIN PIPELINE
 # ============================================================
-
 def run_summary_only():
     model, tokenizer = load_model()
 
     skipped = 0
     processed = 0
+    ref_base = Path(REFERENCE_DIR)
 
-    langs = [
-        p for p in Path(TEST_DIR).iterdir()
-        if p.is_dir() and p.name in TARGET_LANGS
-    ]
-    max_files_per_lang = 60
-    SEED = 42
+    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir() and p.name in TARGET_LANGS]
+    
     for lang_dir in langs:
         lang = lang_dir.name
-        tprint(f"Processing language: {lang}")
+        tprint(f"\nProcessing language: {lang}")
 
+        # --- FIX 3: Get EXACT 60 Valid Files ---
+        ref_lang_dir = ref_base / lang.capitalize() / "Dialogues"
+        if not ref_lang_dir.exists():
+            tprint(f"  [WARNING] Reference folder not found for {lang}. Skipping.")
+            continue
+            
+        valid_case_ids = {f.name for f in ref_lang_dir.glob("*.jsonl")}
+        
         dlg_dir = lang_dir / "Dialogues"
         out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
-
-        files = sorted(dlg_dir.glob("*.jsonl"))
-        random.seed(SEED)
-        random.shuffle(files)
-        files = files[:min(max_files_per_lang,len(files))]
-        tprint(f"{lang}: using {len(files)} dialogues")
+        
+        # Only process files that are inside our Valid 60 list
+        files = [f for f in dlg_dir.glob("*.jsonl") if f.name in valid_case_ids]
+        
+        tprint(f"  {lang}: Found {len(files)} exactly matching dialogues")
 
         for f in tqdm(files, desc=lang):
             out_file = out_dir / f"{f.stem}_summary.txt"
@@ -211,47 +184,51 @@ def run_summary_only():
 
             rows = safe_read_jsonl(f)
 
-            dialogue = " ".join(
-                r.get("dialogue", "") for r in rows if isinstance(r, dict)
-            )
+            # --- FIX 1: Preserve Speaker Tags! ---
+            dialogue_parts = []
+            for r in rows:
+                if isinstance(r, dict):
+                    speaker = r.get("speaker", "Unknown")
+                    # Check standard keys for text, default to empty string
+                    text = r.get("translated_dialogue", r.get("dialogue", ""))
+                    if text:
+                        dialogue_parts.append(f"{speaker}: {text}")
+            
+            dialogue = "\n".join(dialogue_parts)
+            # -------------------------------------
 
-            if lang != "English":
-                dialogue = normalize_transliterated(dialogue)
+            if not dialogue.strip():
+                print(f"  [SKIPPED] {f.name} contained no valid text/dialogue.")
+                skipped += 1
+                continue
 
             if lang == "English":
                 language_line = "The dialogue is in English."
             else:
-                language_line = f"The dialogue is written/translated in English and represents spoken {lang} (Romanized {lang})."
+                language_line = f"The dialogue is translated into English and represents spoken {lang}."
 
             user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
                 dialogue=dialogue,
                 language_line=language_line
             )
 
-            prompt = build_prompt(user_prompt)
-
-            # ============================
-            # CTX CHECK
-            # ============================
-
-            if MODEL_TYPE == "qwen":
-                prompt_text = tokenizer.apply_chat_template(
-                    prompt,
-                    tokenize=False,
-                    add_generation_prompt=True
-                )
-            else:
-                prompt_text = prompt
+            # --- FIX 2: Universal Chat Template (Works perfectly for both Mistral & Qwen) ---
+            messages = [{"role": "user", "content": user_prompt}]
+            prompt_text = tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+            # --------------------------------------------------------------------------------
 
             input_tokens = count_tokens(tokenizer, prompt_text)
-
             if input_tokens + MAX_NEW_TOKENS_SUMMARY > CTX_MAX:
                 skipped += 1
                 print(f"[SKIPPED] {f.name} | tokens={input_tokens}")
                 continue
 
             try:
-                summary, _ = generate(model, tokenizer, prompt)
+                summary = generate(model, tokenizer, prompt_text)
                 write_text(out_file, summary)
                 processed += 1
 
@@ -264,9 +241,7 @@ def run_summary_only():
 
     tprint(f"Done. Processed={processed}, Skipped={skipped}")
 
-# ============================================================
-# ENTRY
-# ============================================================
-
 if __name__ == "__main__":
     run_summary_only()
+
+```
