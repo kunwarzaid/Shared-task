@@ -1,235 +1,59 @@
 ```python
-import os, json, time
+import json
 from pathlib import Path
-from tqdm import tqdm
-from huggingface_hub import login
-import torch, bitsandbytes as bnb, transformers
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
-print(f"Torch: {torch.__version__} | BNB: {bnb.__version__} | Transformers: {transformers.__version__}")
+# Path to the extracted JSONs for Mistral Translated
+base_json_dir = Path("data_eval/NER_extracted/Experiment_Summaries_GPT/Mistral_Translated")
+gt_base_dir = Path("data_eval/NER_extracted/GPT")
 
-# ============================================================
-# LOGIN
-# ============================================================
-def huggingface_login():
-    token = ''  # add your token if required
-    try:
-        login(token=token)
-        print("Successfully logged into Hugging Face!")
-    except Exception as e:
-        print(f"Login failed: {e}")
+print("\n=========================================================")
+print("   DIAGNOSING NER JSON FILES & MATCHING LOGIC")
+print("=========================================================\n")
 
-huggingface_login()
-torch.set_grad_enabled(False)
+langs_to_check = ["Kannada", "Gujarati"]
 
-# ============================================================
-# CONFIG
-# ============================================================
-MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"
-# MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
-
-MODEL_TYPE = "mistral"  # "qwen" or "mistral"
-
-# IMPORTANT: Point this DIRECTLY to the folder containing your 60 translated files
-TEST_DIR = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/translated_data"
-
-OUTPUT_DIR = f"/workspace/data/KZ_2117574/EACL/Mistral_exp/translated/{MODEL_TYPE}"
-
-TARGET_LANGS = ["Bangla", "English", "Hindi", "Marathi","Telugu","Tamil","Kannada","Gujarati","Dogri","Assamese"]
-CTX_MAX = 16000
-MAX_NEW_TOKENS_SUMMARY = 1024
-
-# ============================================================
-# PROMPT
-# ============================================================
-ZERO_SHOT_PROMPT_TEMPLATE = """
-You are a clinical documentation assistant.
-
-{language_line}
-
-Important: The dialogue is written in English (translated from original language).
-
-Task: Write a clinical summary of the dialogue.
-
-Rules:
-- Use ONLY information explicitly stated in the dialogue.
-- Do NOT infer, assume, or add missing details.
-- Do NOT introduce diagnoses, medications, or durations unless explicitly mentioned.
-- Preserve negations exactly.
-- If information is not present, do not include it.
-- If unsure about any detail, omit it.
-- Do NOT translate or reinterpret the dialogue.
-
-Write a clear, complete, and concise clinical summary.
-
-Output:
-[Summary]
-<summary>
-
-Dialogue:
-{dialogue}
-"""
-
-# ============================================================
-# UTILS
-# ============================================================
-def tprint(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def safe_read_jsonl(path):
-    rows = []
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
-        for line in f:
-            try:
-                rows.append(json.loads(line.strip()))
-            except:
-                continue
-    return rows
-
-def write_text(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.strip() + "\n", encoding="utf-8")
-
-def count_tokens(tokenizer, text):
-    return len(tokenizer.encode(text, add_special_tokens=False))
-
-# ============================================================
-# MODEL
-# ============================================================
-def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    quant_cfg = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        device_map="auto",
-        quantization_config=quant_cfg,
-        torch_dtype=torch.float16
-    )
-    model.eval()
-    return model, tokenizer
-
-# ============================================================
-# GENERATION
-# ============================================================
-def generate(model, tokenizer, prompt_text):
-    inputs = tokenizer(
-        prompt_text,
-        return_tensors="pt",
-        truncation=False,
-        add_special_tokens=False 
-    ).to(model.device)
-
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS_SUMMARY,
-            do_sample=False,
-            temperature=0.0,
-            num_beams=1,
-            pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.eos_token_id
-        )
-
-    gen_ids = output[0][inputs.input_ids.shape[-1]:]
-    return tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
-def run_summary_only():
-    model, tokenizer = load_model()
-
-    skipped = 0
-    processed = 0
-
-    langs = [p for p in Path(TEST_DIR).iterdir() if p.is_dir() and p.name in TARGET_LANGS]
+for lang in langs_to_check:
+    lang_dir = base_json_dir / lang
+    print(f"--- Checking {lang} ---")
     
-    for lang_dir in langs:
-        lang = lang_dir.name
-        tprint(f"\nProcessing language: {lang}")
+    if not lang_dir.exists():
+        print(f"  ❌ ERROR: Folder {lang_dir} does not exist!")
+        print("     (Did you run the GPT-5 NER Extraction script on the Translated folder?)\n")
+        continue
         
-        dlg_dir = lang_dir / "Dialogues"
-        out_dir = Path(OUTPUT_DIR) / lang / "Summary_Text"
+    json_files = list(lang_dir.glob("*.json"))
+    print(f"  ✅ Found {len(json_files)} JSON files.")
+    
+    if len(json_files) > 0:
+        sample_file = json_files[0]
+        print(f"  Sample filename: {sample_file.name}")
         
-        # Grab ALL files in this directory (since they are already the 60 filtered ones)
-        files = sorted(list(dlg_dir.glob("*.jsonl")))
+        # Test the LLM Judge matching logic
+        case_id = sample_file.name.replace("_gpt_ner.json", "")
+        print(f"  Extracted Case ID: {case_id}")
         
-        tprint(f"  {lang}: Found {len(files)} translated dialogues to process.")
-
-        for f in tqdm(files, desc=lang):
-            out_file = out_dir / f"{f.stem}_summary.txt"
-            if out_file.exists():
-                continue
-
-            rows = safe_read_jsonl(f)
-
-            # --- FIX 1: Preserve Speaker Tags! ---
-            dialogue_parts = []
-            for r in rows:
-                if isinstance(r, dict):
-                    speaker = r.get("speaker", "Unknown")
-                    # Safely grab either the translated dialogue or original
-                    text = r.get("translated_dialogue", r.get("dialogue", ""))
-                    if text:
-                        dialogue_parts.append(f"{speaker}: {text}")
+        # Check if GT exists
+        gt_lang_dir = gt_base_dir / lang
+        gt_file = gt_lang_dir / "Extracted_JSONs" / f"{case_id}_ner.json"
+        if not gt_file.exists():
+            gt_file = gt_lang_dir / f"{case_id}_ner.json"
             
-            dialogue = "\n".join(dialogue_parts)
-            # -------------------------------------
-
-            if not dialogue.strip():
-                print(f"  [SKIPPED] {f.name} contained no valid text/dialogue.")
-                skipped += 1
-                continue
-
-            if lang == "English":
-                language_line = "The dialogue is in English."
-            else:
-                language_line = f"The dialogue is translated into English and represents spoken {lang}."
-
-            user_prompt = ZERO_SHOT_PROMPT_TEMPLATE.format(
-                dialogue=dialogue,
-                language_line=language_line
-            )
-
-            # --- FIX 2: Universal Chat Template ---
-            messages = [{"role": "user", "content": user_prompt}]
-            prompt_text = tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True
-            )
-            # --------------------------------------
-
-            input_tokens = count_tokens(tokenizer, prompt_text)
-            if input_tokens + MAX_NEW_TOKENS_SUMMARY > CTX_MAX:
-                skipped += 1
-                print(f"[SKIPPED] {f.name} | tokens={input_tokens}")
-                continue
-
-            try:
-                summary = generate(model, tokenizer, prompt_text)
-                write_text(out_file, summary)
-                processed += 1
-
-            except RuntimeError as e:
-                print(f"[ERROR] {f.name}: {e}")
-                torch.cuda.empty_cache()
-                continue
-
-        torch.cuda.empty_cache()
-
-    tprint(f"Done. Processed={processed}, Skipped={skipped}")
-
-if __name__ == "__main__":
-    run_summary_only()
-
+        if gt_file.exists():
+            print("  ✅ Ground Truth MATCH FOUND.")
+            
+            # Check for gibberish/empty arrays
+            with open(sample_file, 'r', encoding='utf-8') as f:
+                data = json.load(f).get("Entities", {})
+                entity_count = sum(len(v) for v in data.values() if isinstance(v, list))
+                print(f"  Entity count in summary: {entity_count}")
+                if entity_count == 0:
+                    print("  ⚠️ WARNING: The JSON is empty (0 entities). The 'Gibberish' filter will skip this!")
+        else:
+            print("  ❌ GROUND TRUTH MISMATCH: Cannot find matching GT file.")
+            print("     (This is why the Judge is skipping the file!)")
+            if "_summary" in case_id:
+                print("     💡 FIX: The word '_summary' is stuck in the Case ID!")
+    
+    print("-" * 50 + "\n")
 
 ```
