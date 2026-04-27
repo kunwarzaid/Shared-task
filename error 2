@@ -1,59 +1,172 @@
-```python
+import os
 import json
 from pathlib import Path
+from openai import AzureOpenAI
 
-# Path to the extracted JSONs for Mistral Translated
-base_json_dir = Path("data_eval/NER_extracted/Experiment_Summaries_GPT/Mistral_Translated")
-gt_base_dir = Path("data_eval/NER_extracted/GPT")
+# --- 1. CONFIGURATION ---
 
-print("\n=========================================================")
-print("   DIAGNOSING NER JSON FILES & MATCHING LOGIC")
-print("=========================================================\n")
+EXPERIMENTS = {
+    # "Mistral_Fewshot": "data_eval/Mistral_exp/fewshot",
+    # "Mistral_Zeroshot": "data_eval/Mistral_exp/zeroshot",
+    "Mistral_Translated": "data_eval/Mistral_exp/translated/mistral",
+    # "Qwen_Fewshot": "data_eval/Qwen_exp/fewshot",
+    "Qwen_Translated": "data_eval/Qwen_exp/translated/qwen",
+    # "Qwen_Zeroshot": "data_eval/Qwen_exp/zeroshot"
+}
 
-langs_to_check = ["Kannada", "Gujarati"]
+# The folder containing your exact 60 chosen test files per language
+REFERENCE_TEST_FOLDER = "data_eval/Final_60_For_Translation/Final_60_For_Translation"
 
-for lang in langs_to_check:
-    lang_dir = base_json_dir / lang
-    print(f"--- Checking {lang} ---")
+# Dedicated folder for GPT outputs
+OUTPUT_ENTITIES_FOLDER = "data_eval/NER_extracted/Experiment_Summaries_GPT"
+
+# Azure OpenAI Setup
+endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
+model_name = "gpt-5"
+deployment = "gpt-5"
+subscription_key = ""  # Add your Azure key here
+api_version = "2024-12-01-preview"
+
+client = AzureOpenAI(
+    api_version=api_version,
+    azure_endpoint=endpoint,
+    api_key=subscription_key,
+)
+
+
+# --- 2. CORE FUNCTIONS ---
+
+def read_summary_txt(filepath):
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except Exception as e:
+        print(f"  [ERROR] Could not read file {filepath}: {e}")
+        return ""
+
+def extract_with_gpt5(summary_text):
+    if not summary_text:
+        return {}
+
+    system_prompt = """
+    You are a clinical data extraction assistant. The following is a generated clinical summary in English. 
     
-    if not lang_dir.exists():
-        print(f"  ❌ ERROR: Folder {lang_dir} does not exist!")
-        print("     (Did you run the GPT-5 NER Extraction script on the Translated folder?)\n")
-        continue
+    Extract structured medical and contextual entities from the summary.
+
+    Follow these strict extraction rules:
+    - Format: Extract entities as concise 1-3 word English keywords (e.g., "severe headache", "blood test"), not full sentences.
+    - Exact Extraction: Do not hallucinate or add terms that are not present in the text.
+    - No Hypotheticals: Do not extract conditions, treatments, or procedures discussed only as possibilities.
+    - Separation: Keep discrete concepts separate in the arrays.
+
+    Output your response using ONLY the following JSON schema:
+    {
+      "Symptoms": [],
+      "Diagnoses_and_Conditions": [],
+      "Substances_and_Habits": [],
+      "Procedures_and_Tests": [],
+      "Treatments": []
+    }
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model=deployment, 
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": summary_text}
+            ],
+            response_format={ "type": "json_object" }
+        )
         
-    json_files = list(lang_dir.glob("*.json"))
-    print(f"  ✅ Found {len(json_files)} JSON files.")
+        raw_content = response.choices[0].message.content
+        if not raw_content:
+             return {}
+        return json.loads(raw_content)
+        
+    except Exception as e:
+        print(f"  [ERROR] GPT API Error: {e}")
+        return {}
+
+# --- 3. DIRECTORY TRAVERSAL ---
+
+def process_gpt_experiments(experiments_dict, reference_base_dir, output_base_dir):
+    dest_base_path = Path(output_base_dir)
+    ref_base_path = Path(reference_base_dir)
     
-    if len(json_files) > 0:
-        sample_file = json_files[0]
-        print(f"  Sample filename: {sample_file.name}")
-        
-        # Test the LLM Judge matching logic
-        case_id = sample_file.name.replace("_gpt_ner.json", "")
-        print(f"  Extracted Case ID: {case_id}")
-        
-        # Check if GT exists
-        gt_lang_dir = gt_base_dir / lang
-        gt_file = gt_lang_dir / "Extracted_JSONs" / f"{case_id}_ner.json"
-        if not gt_file.exists():
-            gt_file = gt_lang_dir / f"{case_id}_ner.json"
+    print("\n==================================================")
+    print("   STARTING FILTERED GPT-5 NER EXTRACTION")
+    print("==================================================\n")
+
+    for exp_name, exp_path_str in experiments_dict.items():
+        exp_path = Path(exp_path_str)
+        if not exp_path.exists():
+            continue
             
-        if gt_file.exists():
-            print("  ✅ Ground Truth MATCH FOUND.")
+        print(f"---> Processing Experiment: {exp_name}")
+        
+        for lang_folder in exp_path.iterdir():
+            if not lang_folder.is_dir() or lang_folder.name.startswith('.'):
+                continue
+                
+            language = lang_folder.name
+            summary_dir = lang_folder / "Summary_Text"
             
-            # Check for gibberish/empty arrays
-            with open(sample_file, 'r', encoding='utf-8') as f:
-                data = json.load(f).get("Entities", {})
-                entity_count = sum(len(v) for v in data.values() if isinstance(v, list))
-                print(f"  Entity count in summary: {entity_count}")
-                if entity_count == 0:
-                    print("  ⚠️ WARNING: The JSON is empty (0 entities). The 'Gibberish' filter will skip this!")
-        else:
-            print("  ❌ GROUND TRUTH MISMATCH: Cannot find matching GT file.")
-            print("     (This is why the Judge is skipping the file!)")
-            if "_summary" in case_id:
-                print("     💡 FIX: The word '_summary' is stuck in the Case ID!")
-    
-    print("-" * 50 + "\n")
+            if not summary_dir.exists():
+                continue
+                
+            # --- THE FILTER LOGIC ---
+            # Look up the 60 valid Case IDs for this specific language
+            ref_lang_dir = ref_base_path / language / "Dialogues"
+            if not ref_lang_dir.exists():
+                print(f"     [{language.ljust(10)}] WARNING: No reference folder found. Skipping.")
+                continue
+                
+            valid_cases = {f.name.replace(".jsonl", "") for f in ref_lang_dir.glob("*.jsonl")}
+            # ------------------------
+            
+            dest_lang_dir = dest_base_path / exp_name / language
+            dest_lang_dir.mkdir(parents=True, exist_ok=True)
+            
+            txt_files = list(summary_dir.glob("*_summary.txt"))
+            
+            # Filter the files to only process ones in our valid list
+            filtered_txt_files = [f for f in txt_files if f.name.replace("_summary.txt", "") in valid_cases]
+            
+            if not filtered_txt_files:
+                continue
+                
+            print(f"     [{language.ljust(10)}] Processing {len(filtered_txt_files)} filtered summaries (out of {len(txt_files)} total)...")
+            
+            for count, txt_file in enumerate(filtered_txt_files, 1):
+                case_id = txt_file.name.replace("_summary.txt", "")
+                output_file = dest_lang_dir / f"{case_id}_gpt_ner.json"
+                
+                # Skip if already processed (Crash recovery)
+                if output_file.exists():
+                    continue
+                
+                summary_text = read_summary_txt(txt_file)
+                if not summary_text:
+                    continue
+                    
+                gpt_entities = extract_with_gpt5(summary_text)
+                
+                final_output = {
+                    "Case_ID": case_id,
+                    "Experiment": exp_name,
+                    "Language": language, 
+                    "Extractor": "GPT-5",
+                    "Entities": gpt_entities
+                }
+                
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(final_output, f, indent=4)
+                    
+                if count % 10 == 0:
+                    print(f"        ...extracted {count}/{len(filtered_txt_files)}")
+                    
+            print(f"     [{language.ljust(10)}] ✓ Complete.")
 
-```
+process_gpt_experiments(EXPERIMENTS, REFERENCE_TEST_FOLDER, OUTPUT_ENTITIES_FOLDER)
+print("\n--- GPT Extraction Pipeline Finished ---")
