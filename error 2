@@ -1,28 +1,57 @@
-\documentclass{article}
-\usepackage{booktabs} % Required for professional table rules
+```latex
+\section{Dataset and Task Formulation}
 
-\begin{document}
+\subsection{Corpus Description}
+We frame the task as cross-lingual abstractive summarization. The input is a raw doctor-patient conversational transcript in a source Indic language, and the target output is a structured English clinical note. 
 
-\begin{table}[htbp]
-\centering
-\caption{Language Scripts, Families, and Resource Levels}
-\label{tab:language_data}
-\begin{tabular}{llll}
-\toprule
-\textbf{Language} & \textbf{Script} & \textbf{Language Family} & \textbf{Resource Level} \\
-\midrule
-English & Latin & Indo-European (Germanic) & High \\
-Hindi & Devanagari & Indo-European (Indo-Aryan) & High \\
-Marathi & Devanagari & Indo-European (Indo-Aryan) & Medium \\
-Bengali (Bangla) & Bengali & Indo-European (Indo-Aryan) & Medium \\
-Tamil & Tamil & Dravidian & Medium \\
-Kannada & Kannada & Dravidian & Medium \\
-Gujarati & Gujarati & Indo-European (Indo-Aryan) & Medium \\
-Dogri & Devanagari & Indo-European (Indo-Aryan) & Low \\
-Assamese & Bengali & Indo-European (Indo-Aryan) & Low \\
-Telugu & Telugu & Dravidian & Medium \\
-\bottomrule
-\end{tabular}
-\end{table}
+Our dataset comprises parallel clinical scenarios translated across 10 languages: Assamese, Bangla, Dogri, English, Gujarati, Hindi, Kannada, Marathi, Tamil, and Telugu. To ensure a rigorous and balanced evaluation, we curated a uniform test set of exactly 60 verified clinical encounters per language (stored in JSONL format). Because these 60 scenarios are parallel across all languages, we can isolate a model's cross-lingual reasoning ability from variations in underlying medical complexity.
 
-\end{document}
+\section{Models and Hardware Constraints}
+Data privacy is a primary concern in healthcare. Sending protected health information (PHI) to cloud APIs is often legally prohibitive, requiring hospitals to rely on local deployments. To reflect realistic hospital IT budget constraints, we restricted our experiments to what can run locally on a single legacy enterprise GPU (NVIDIA V100, 32GB VRAM). 
+
+Given this strict constraint, we evaluate two 7-billion parameter (7B) open-weights models:
+\begin{itemize}
+    \item \textbf{Mistral-7B-Instruct (v0.2):} Chosen for its highly optimized attention mechanisms and strong baseline English instruction-following capabilities.
+    \item \textbf{Qwen2.5-7B-Instruct:} Selected for its exceptionally broad multilingual pre-training corpus, which includes significant exposure to Indic scripts.
+\end{itemize}
+
+\section{Experimental Pipelines}
+We test these models across four distinct pipelines to determine the optimal strategy for bridging the language barrier. 
+
+\subsection{Zero-Shot Prompting}
+The model receives the Indic transcript and is prompted to generate an English summary directly. No in-context examples are provided. This establishes a baseline for the model's native cross-lingual alignment.
+
+\subsection{Few-Shot Prompting}
+We augment the prompt with in-context learning demonstrations. We provide the model with examples mapping native-language dialogues to ideal English summaries, conditioning the model on the desired output formatting and clinical structure.
+
+\subsection{Translation-Augmented Inference (TTS)}
+As a comparative baseline, we utilize a Translate-then-Summarize cascade. Source transcripts are first translated into English using \textbf{IndicTrans2}, the current state-of-the-art open-source machine translation model for Indian languages. The LLM then performs a standard, monolingual English-to-English summarization.
+
+\subsection{Supervised Fine-Tuning (SFT)}
+Finally, we adapt the model weights directly to the task using Parameter-Efficient Fine-Tuning (LoRA) on paired Indic-to-English clinical data. This allows the model to internalize the structural norms of clinical documentation while remaining within our 32GB VRAM training limits.
+
+\section{Evaluation Framework}
+Evaluating clinical text generation requires far stricter scrutiny than standard NLP tasks. We designed a three-tiered evaluation framework to independently measure general text alignment, strict clinical extraction, and qualitative safety.
+
+\subsection{Tier 1: Automated Text Similarity}
+We calculate ROUGE (1, 2, L) and BERTScore against human-authored reference summaries. While ROUGE measures surface-level n-gram overlap, BERTScore provides a more robust measure of semantic similarity. These metrics establish a baseline for conversational fluency and structural coherence.
+
+\subsection{Tier 2: Clinical Entity Verification (NER)}
+A summary can achieve a high BERTScore while still hallucinating a dangerous medication dosage. To measure exact clinical accuracy, we focus explicitly on Hallucination Rates (False Positives) and Omission Rates (False Negatives). 
+
+We define five clinically salient entity categories: \textit{Symptoms, Diagnoses and Conditions, Substances and Habits, Procedures and Tests,} and \textit{Treatments.}
+
+\paragraph{The Master Ground Truth.} To prevent translation artifacts from skewing the evaluation across our 10 languages, we utilized GPT-5 (via Azure OpenAI) to extract a ``Master English Ground Truth'' directly from the original English source dialogues. 
+
+\paragraph{The LLM-as-a-Judge Protocol.} We evaluated every generated summary against this master ground truth. Initially, we utilized a programmatic Python script based on fuzzy string matching. However, this approach falsely penalized models for valid semantic synonyms (e.g., matching ``hydration'' to ``stay hydrated''). To resolve this, we deployed GPT-5 as a clinical auditor. The judge processes the ground truth and the generated summary side-by-side, semantically mapping concepts to output the exact counts of true positives, hallucinations, and omissions. From these counts, we calculate the clinical F1-score.
+
+\subsection{Tier 3: Qualitative Safety Assessment}
+Because clinical readiness extends beyond entity extraction, we employ GPT-5 to score the holistic quality of the summaries across four critical dimensions:
+\begin{itemize}
+    \item \textbf{Factual Faithfulness:} Does the timeline and severity of the summary accurately reflect the source dialogue?
+    \item \textbf{Safety:} Does the summary contain contraindicated recommendations or dangerous omissions?
+    \item \textbf{Trustworthiness:} Is the clinical tone objective, verifiable, and appropriate for medical records?
+    \item \textbf{Explainability:} Is the reasoning for the diagnoses clearly mapped to the patient's stated symptoms?
+\end{itemize}
+
+```
