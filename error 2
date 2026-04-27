@@ -1,105 +1,42 @@
 ```python
-import json
-import pandas as pd
 from pathlib import Path
 
-# --- 1. CONFIGURATION ---
-JUDGE_DIR = Path("data_eval/NER_extracted/LLM_Judge_Verdicts")
-OUTPUT_CSV = Path("data_eval/NER_extracted/LLM_Judge_Detailed_Metrics.csv")
-OUTPUT_MATRIX = Path("data_eval/NER_extracted/LLM_Judge_Paper_Table_F1.csv")
+# Path to one of your translated folders
+translated_dir = Path("data_eval/Mistral_exp/translated/mistral")
+ref_dir = Path("data_eval/Final_60_For_Translation/Final 60 For Translation")
 
-def generate_paper_tables():
-    if not JUDGE_DIR.exists():
-        print(f"Error: Could not find {JUDGE_DIR}. Run llm_judge_eval.py first.")
-        return
+print("\n--- DIAGNOSING MISTRAL TRANSLATED FOLDER ---")
 
-    records = []
-    print("\nParsing LLM Judge Verdicts...")
-
-    # Iterate through all verdict files
-    for exp_folder in JUDGE_DIR.iterdir():
-        if not exp_folder.is_dir() or exp_folder.name.startswith('.'): continue
-        experiment_name = exp_folder.name
+if not translated_dir.exists():
+    print(f"ERROR: Cannot find folder {translated_dir}")
+else:
+    for lang_folder in translated_dir.iterdir():
+        if not lang_folder.is_dir() or lang_folder.name.startswith('.'): continue
         
-        for lang_folder in exp_folder.iterdir():
-            if not lang_folder.is_dir() or lang_folder.name.startswith('.'): continue
-            language = lang_folder.name
+        language = lang_folder.name
+        summary_dir = lang_folder / "Summary_Text"
+        
+        if not summary_dir.exists():
+            print(f"[{language}] No 'Summary_Text' folder found.")
+            continue
             
-            total_tp, total_fp, total_fn = 0, 0, 0
-            file_count = 0
+        txt_files = list(summary_dir.glob("*.txt"))
+        
+        print(f"\n[{language}] Found {len(txt_files)} summary files.")
+        
+        if txt_files:
+            sample_name = txt_files[0].name
+            print(f"    Example filename: {sample_name}")
             
-            for verdict_file in lang_folder.glob("*_judge.json"):
-                try:
-                    with open(verdict_file, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        verdict = data.get("Judge_Verdict", {})
-                        
-                        # True Positives = length of valid matches list
-                        valid_matches = verdict.get("Valid_Matches", [])
-                        tp = len(valid_matches)
-                        
-                        # False Positives = Hallucinations
-                        fp = verdict.get("Total_Hallucination_Count", 0)
-                        
-                        # False Negatives = Omissions
-                        fn = verdict.get("Total_Omission_Count", 0)
-                        
-                        total_tp += tp
-                        total_fp += fp
-                        total_fn += fn
-                        file_count += 1
-                except Exception as e:
-                    print(f"Error reading {verdict_file.name}: {e}")
-            
-            if file_count > 0:
-                # Calculate aggregate metrics for this Language + Experiment combination
-                precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
-                recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
-                f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+            # Check against the reference list
+            ref_lang_dir = ref_dir / language.capitalize() / "Dialogues"
+            if ref_lang_dir.exists():
+                valid_cases = {f.name.replace(".jsonl", "") for f in ref_lang_dir.glob("*.jsonl")}
+                stripped_name = sample_name.replace("_summary.txt", "")
                 
-                records.append({
-                    "Language": language,
-                    "Experiment": experiment_name,
-                    "Files_Evaluated": file_count,
-                    "Precision": round(precision, 4),
-                    "Recall": round(recall, 4),
-                    "F1_Score": round(f1, 4)
-                })
-
-    if not records:
-        print("No verdict files found to aggregate.")
-        return
-
-    # 1. Create a detailed DataFrame
-    df = pd.DataFrame(records)
-    df.to_csv(OUTPUT_CSV, index=False)
-    print(f"✅ Detailed metrics saved to: {OUTPUT_CSV}")
-
-    # 2. Create the Paper-Ready F1 Matrix Pivot Table
-    matrix_f1 = df.pivot(index="Language", columns="Experiment", values="F1_Score")
-    matrix_f1 = matrix_f1.fillna(0.0)
-    matrix_f1.to_csv(OUTPUT_MATRIX)
-    print(f"✅ F1 Matrix saved to: {OUTPUT_MATRIX}")
-
-    # 3. Generate LaTeX Table format for the paper
-    print("\n=========================================================================")
-    print("📋 LATEX TABLE CODE (Copy & Paste directly into your paper/Overleaf)")
-    print("=========================================================================\n")
-    
-    latex_code = matrix_f1.to_latex(
-        float_format="%.3f",
-        caption="LLM-Evaluated F1-Scores for Clinical NER across multiple languages and experimental setups.",
-        label="tab:llm_judge_f1_scores",
-        bold_rows=True,
-        column_format="l" + "c" * len(matrix_f1.columns)
-    )
-    
-    # Add some nice booktabs formatting standard in NLP papers
-    latex_code = latex_code.replace("\\toprule", "\\toprule\n\\textbf{Language} & " + " & ".join([f"\\textbf{{{c.replace('_', ' ')}}}" for c in matrix_f1.columns]) + " \\\\")
-    
-    print(latex_code)
-    print("=========================================================================\n")
-
-generate_paper_tables()
+                if stripped_name in valid_cases:
+                    print("    ✅ Naming format MATCHES the Ground Truth.")
+                else:
+                    print(f"    ❌ NAMING MISMATCH! '{stripped_name}' is not in the Ground Truth list.")
 
 ```
