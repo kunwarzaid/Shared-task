@@ -1,57 +1,189 @@
 ```latex
-\section{Dataset and Task Formulation}
+% --- UNIVERSAL PREAMBLE BLOCK ---
+\documentclass[10pt, twocolumn, a4paper]{article}
+\usepackage[a4paper, top=2cm, bottom=2cm, left=1.5cm, right=1.5cm, columnsep=0.6cm]{geometry}
+\usepackage{fontspec}
+
+\usepackage[english, bidi=basic, provide=*]{babel}
+\babelprovide[import, onchar=ids fonts]{english}
+\babelfont{rm}{Noto Sans}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tabularx}
+
+% Section formatting
+\titleformat{\section}{\large\bfseries\color{black}}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\itshape}{\thesubsubsection}{1em}{}
+
+\begin{document}
+
+\section{Dataset}
 
 \subsection{Corpus Description}
-We frame the task as cross-lingual abstractive summarization. The input is a raw doctor-patient conversational transcript in a source Indic language, and the target output is a structured English clinical note. 
+The dataset consists of doctor-patient dialogues paired with reference clinical summaries (gold summaries), stored in JSONL format. Each record encodes the original multilingual dialogue, the target language label, and the corresponding ground-truth summary authored by clinical experts. The dialogues capture realistic clinical interactions and exhibit features typical of clinical discourse: domain-specific terminology, code-switching, elliptical constructions, and turn-taking artifacts. To ensure rigorous evaluation across languages, we curated a highly verified, parallel test set comprising exactly 60 scenarios per language. 
 
-Our dataset comprises parallel clinical scenarios translated across 10 languages: Assamese, Bangla, Dogri, English, Gujarati, Hindi, Kannada, Marathi, Tamil, and Telugu. To ensure a rigorous and balanced evaluation, we curated a uniform test set of exactly 60 verified clinical encounters per language (stored in JSONL format). Because these 60 scenarios are parallel across all languages, we can isolate a model's cross-lingual reasoning ability from variations in underlying medical complexity.
+\subsection{Language Distribution}
+The corpus spans ten languages, reflecting the linguistic diversity of the Indian subcontinent. These languages vary substantially in their morphological complexity and the availability of pre-trained language resources (Table \ref{tab:languages}).
+
+\begin{table}[h]
+\centering
+\caption{Language distribution and resource levels in the evaluation corpus.}
+\label{tab:languages}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{lllc}
+\toprule
+\textbf{Language} & \textbf{Script} & \textbf{Language Family} & \textbf{Resource} \\
+\midrule
+English & Latin & Indo-European & High \\
+Hindi & Devanagari & Indo-Aryan & High \\
+Marathi & Devanagari & Indo-Aryan & Medium \\
+Bangla & Bengali & Indo-Aryan & Medium \\
+Tamil & Tamil & Dravidian & Medium \\
+Kannada & Kannada & Dravidian & Medium \\
+Gujarati & Gujarati & Indo-Aryan & Medium \\
+Telugu & Telugu & Dravidian & Medium \\
+Dogri & Devanagari & Indo-Aryan & Low \\
+Assamese & Bengali & Indo-Aryan & Low \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsection{Data Format}
+Each entry encapsulates the dialogue as an array of turns, accompanied by the target summary. During inference, we explicitly preserve the speaker tags (e.g., \textit{Patient:, Health Worker:}) to ensure the model accurately attributes clinical statements to the correct individual.
 
 \section{Models and Hardware Constraints}
-Data privacy is a primary concern in healthcare. Sending protected health information (PHI) to cloud APIs is often legally prohibitive, requiring hospitals to rely on local deployments. To reflect realistic hospital IT budget constraints, we restricted our experiments to what can run locally on a single legacy enterprise GPU (NVIDIA V100, 32GB VRAM). 
+Deploying AI in clinical settings necessitates strict adherence to data privacy regulations. Because patient transcripts contain Protected Health Information (PHI), relying on external, proprietary cloud APIs is often prohibited. To ensure our findings are ecologically valid for real-world, on-premise hospital IT infrastructure, we constrain our experiments to hardware equivalent to a single legacy enterprise GPU (NVIDIA V100, 32GB VRAM). Consequently, we evaluate two 7-billion parameter (7B) open-weights models.
 
-Given this strict constraint, we evaluate two 7-billion parameter (7B) open-weights models:
-\begin{itemize}
-    \item \textbf{Mistral-7B-Instruct (v0.2):} Chosen for its highly optimized attention mechanisms and strong baseline English instruction-following capabilities.
-    \item \textbf{Qwen2.5-7B-Instruct:} Selected for its exceptionally broad multilingual pre-training corpus, which includes significant exposure to Indic scripts.
-\end{itemize}
+\subsection{Mistral-7B-Instruct}
+Mistral-7B is a highly optimized transformer developed by Mistral AI, employing Grouped Query Attention (GQA) for efficient inference and Sliding Window Attention (SWA). Despite its compact parameter count, it demonstrates competitive reasoning capabilities. We utilize the instruction-tuned variant (v0.2) as our baseline for complex formatting and instruction adherence.
 
-\section{Experimental Pipelines}
-We test these models across four distinct pipelines to determine the optimal strategy for bridging the language barrier. 
+\subsection{Qwen2.5-7B-Instruct}
+Qwen2.5-7B is trained on a substantially larger and more diverse multilingual corpus compared to many Western-centric LLMs. Its pre-training data provides enhanced coverage of Asian languages, making it a strong candidate for cross-lingual clinical summarization, particularly for the Dravidian and Indo-Aryan languages underrepresented in standard models.
+
+\section{Methodology}
+We systematically evaluate four distinct experimental paradigms for cross-lingual clinical dialogue summarization. Our core objective is generating a structured English clinical note from a source Indic dialogue.
 
 \subsection{Zero-Shot Prompting}
-The model receives the Indic transcript and is prompted to generate an English summary directly. No in-context examples are provided. This establishes a baseline for the model's native cross-lingual alignment.
+Zero-shot prompting evaluates the inherent multilingual capability of each model without task-specific demonstrations. A system prompt instructs the model to act as a clinical assistant, generating a concise summary from the dialogue covering chief complaints, assessments, and recommended treatments. No in-context examples are provided.
 
 \subsection{Few-Shot Prompting}
-We augment the prompt with in-context learning demonstrations. We provide the model with examples mapping native-language dialogues to ideal English summaries, conditioning the model on the desired output formatting and clinical structure.
+Few-shot prompting augments the prompt with $k=3$ demonstration examples drawn from the training set. We employ a bilingual demonstration strategy, exposing the model to the desired structural English output while referencing native-language inputs. To manage the context window, lengthy dialogues are truncated from the middle, preserving the opening context (symptoms) and closing discussion (treatments), which carry the highest density of clinical entities.
 
 \subsection{Translation-Augmented Inference (TTS)}
-As a comparative baseline, we utilize a Translate-then-Summarize cascade. Source transcripts are first translated into English using \textbf{IndicTrans2}, the current state-of-the-art open-source machine translation model for Indian languages. The LLM then performs a standard, monolingual English-to-English summarization.
+A well-established strategy for low-resource NLP is the translate-then-process cascade. We explore whether routing non-English dialogues through a high-quality Neural Machine Translation (NMT) system before summarization yields improvements over direct multilingual inference. 
+
+We utilize \textbf{IndicTrans2}, a state-of-the-art NMT model developed specifically for Indian languages. The pipeline operates as follows:
+\begin{enumerate}
+    \item Non-English dialogues are translated to English via IndicTrans2.
+    \item The translated English dialogue is passed to the LLM (Mistral/Qwen) using the zero-shot prompt.
+    \item The LLM generates the final English clinical summary.
+\end{enumerate}
 
 \subsection{Supervised Fine-Tuning (SFT)}
-Finally, we adapt the model weights directly to the task using Parameter-Efficient Fine-Tuning (LoRA) on paired Indic-to-English clinical data. This allows the model to internalize the structural norms of clinical documentation while remaining within our 32GB VRAM training limits.
+To adapt the pre-trained models directly to the domain without exceeding our 32GB VRAM limit, we employ Parameter-Efficient Fine-Tuning (PEFT) via Low-Rank Adaptation (LoRA). Training is conducted on paired Indic-to-English examples to internalize stylistic and structural clinical norms (Table \ref{tab:hyperparams}).
+
+\begin{table}[h]
+\centering
+\caption{LoRA Fine-tuning Hyperparameters for 7B Models.}
+\label{tab:hyperparams}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{lcc}
+\toprule
+\textbf{Hyperparameter} & \textbf{Mistral-7B} & \textbf{Qwen2.5-7B} \\
+\midrule
+Method & LoRA (PEFT) & LoRA (PEFT) \\
+Rank ($r$) & 16 & 16 \\
+LoRA Alpha & 32 & 32 \\
+Target Modules & q, v, k, o\_proj & q, v, k, o\_proj \\
+Learning Rate & 2e-4 & 2e-4 \\
+Epochs & 3 & 3 \\
+Optimizer & AdamW (8-bit) & AdamW (8-bit) \\
+Precision & float16 & float16 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\section{Experimental Matrix}
+The full experimental design produces eight primary conditions (Table \ref{tab:exp_matrix}), evaluated across 10 languages.
+
+\begin{table}[h]
+\centering
+\caption{The Primary Experimental Matrix.}
+\label{tab:exp_matrix}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{cllc}
+\toprule
+\textbf{ID} & \textbf{Model} & \textbf{Paradigm} & \textbf{Translation} \\
+\midrule
+E1 & Mistral-7B & Zero-Shot & No \\
+E2 & Mistral-7B & Few-Shot ($k=3$) & No \\
+E3 & Mistral-7B & TTS (IndicTrans2) & Yes \\
+E4 & Mistral-7B & SFT (LoRA) & No \\
+\midrule
+E5 & Qwen2.5-7B & Zero-Shot & No \\
+E6 & Qwen2.5-7B & Few-Shot ($k=3$) & No \\
+E7 & Qwen2.5-7B & TTS (IndicTrans2) & Yes \\
+E8 & Qwen2.5-7B & SFT (LoRA) & No \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
 
 \section{Evaluation Framework}
-Evaluating clinical text generation requires far stricter scrutiny than standard NLP tasks. We designed a three-tiered evaluation framework to independently measure general text alignment, strict clinical extraction, and qualitative safety.
+We employ a three-tier framework to assess surface-level text similarity, strict clinical entity fidelity, and holistic safety.
 
-\subsection{Tier 1: Automated Text Similarity}
-We calculate ROUGE (1, 2, L) and BERTScore against human-authored reference summaries. While ROUGE measures surface-level n-gram overlap, BERTScore provides a more robust measure of semantic similarity. These metrics establish a baseline for conversational fluency and structural coherence.
+\subsection{Tier 1: Automated Text Similarity Metrics}
+We compute ROUGE (1, 2, L) for structural n-gram overlap and BERTScore for contextual token-embedding similarity. While BERTScore is robust to lexical variation and paraphrase, achieving high semantic overlap does not guarantee clinical factuality. An LLM may accurately capture conversational flow while simultaneously hallucinating a critical medication.
 
-\subsection{Tier 2: Clinical Entity Verification (NER)}
-A summary can achieve a high BERTScore while still hallucinating a dangerous medication dosage. To measure exact clinical accuracy, we focus explicitly on Hallucination Rates (False Positives) and Omission Rates (False Negatives). 
+\subsection{Tier 2: Clinical Entity-Level Analysis (NER)}
+To measure clinical accuracy, we perform a fine-grained analysis of entity coverage across five categories: \textit{Symptoms, Diagnoses/Conditions, Substances/Habits, Procedures/Tests,} and \textit{Treatments.}
 
-We define five clinically salient entity categories: \textit{Symptoms, Diagnoses and Conditions, Substances and Habits, Procedures and Tests,} and \textit{Treatments.}
+\subsubsection{Master Ground Truth Extraction}
+To prevent translation artifacts from skewing evaluation across 10 languages, entities are extracted from the original English gold dialogues using Azure OpenAI's GPT-5 deployment. This yields a canonical ``Master English Ground Truth'' for each of the 60 parallel scenarios.
 
-\paragraph{The Master Ground Truth.} To prevent translation artifacts from skewing the evaluation across our 10 languages, we utilized GPT-5 (via Azure OpenAI) to extract a ``Master English Ground Truth'' directly from the original English source dialogues. 
+\subsubsection{Matching and Metrics}
+Generated summaries undergo the same GPT-5 extraction. We then compare the generated entities against the gold entities. Notably, we abandoned programmatic fuzzy string matching (e.g., Gestalt pattern matching) because it falsely penalized models for valid clinical synonyms (e.g., ``hydration'' vs. ``stay hydrated'') and hierarchical abstractions. 
 
-\paragraph{The LLM-as-a-Judge Protocol.} We evaluated every generated summary against this master ground truth. Initially, we utilized a programmatic Python script based on fuzzy string matching. However, this approach falsely penalized models for valid semantic synonyms (e.g., matching ``hydration'' to ``stay hydrated''). To resolve this, we deployed GPT-5 as a clinical auditor. The judge processes the ground truth and the generated summary side-by-side, semantically mapping concepts to output the exact counts of true positives, hallucinations, and omissions. From these counts, we calculate the clinical F1-score.
-
-\subsection{Tier 3: Qualitative Safety Assessment}
-Because clinical readiness extends beyond entity extraction, we employ GPT-5 to score the holistic quality of the summaries across four critical dimensions:
+Instead, we utilize an \textbf{LLM-as-a-Judge semantic mapping protocol}. The judge determines True Positives (TP), False Positives (FP), and False Negatives (FN). From these, we compute:
 \begin{itemize}
-    \item \textbf{Factual Faithfulness:} Does the timeline and severity of the summary accurately reflect the source dialogue?
-    \item \textbf{Safety:} Does the summary contain contraindicated recommendations or dangerous omissions?
-    \item \textbf{Trustworthiness:} Is the clinical tone objective, verifiable, and appropriate for medical records?
-    \item \textbf{Explainability:} Is the reasoning for the diagnoses clearly mapped to the patient's stated symptoms?
+    \item \textbf{Precision:} $TP / (TP + FP)$ (Anti-Hallucination)
+    \item \textbf{Recall:} $TP / (TP + FN)$ (Anti-Omission)
+    \item \textbf{F1 Score:} Harmonic mean of Precision and Recall.
+    \item \textbf{Hallucination Rate:} $FP / (TP + FP)$
+    \item \textbf{Omission Rate:} $FN / (TP + FN)$
 \end{itemize}
+
+\subsection{Tier 3: LLM-as-a-Judge Quality Assessment}
+Finally, we employ a structured LLM judge to assess holistic quality dimensions critical to clinical settings (Table \ref{tab:quality_dim}). Each dimension is scored on a Likert scale (1–5) based on an explicit scoring rubric.
+
+\begin{table}[h]
+\centering
+\caption{Holistic Quality Dimensions for Clinical Evaluation.}
+\label{tab:quality_dim}
+\begin{tabularx}{\columnwidth}{lX}
+\toprule
+\textbf{Dimension} & \textbf{Description \& Key Questions} \\
+\midrule
+\textbf{Trustworthiness} & Degree to which the summary is a verifiable account. \textit{Is every claim grounded in the dialogue?} \\
+\addlinespace
+\textbf{Safety} & Absence of errors leading to patient harm. \textit{Are there contraindicated recommendations or dangerous omissions?} \\
+\addlinespace
+\textbf{Explainability} & Clarity and coherence for a clinical reader. \textit{Is clinical reasoning clear without the source text?} \\
+\addlinespace
+\textbf{Faithfulness} & Factual content matches the dialogue's timeline without distortion. \textit{Are all stated facts correct?} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}
 
 ```
