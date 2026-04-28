@@ -22,6 +22,7 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
+```python
 import json
 from pathlib import Path
 from openai import AzureOpenAI
@@ -31,10 +32,16 @@ GT_BASE_DIR = Path("data_eval/NER_extracted/GPT")
 SUMMARIES_DIR = Path("data_eval/NER_extracted/Experiment_Summaries_GPT")
 OUTPUT_DIR = Path("data_eval/NER_extracted/LLM_Judge_Verdicts/Translated")
 
+# ADDED: Only process these specific experiment folders
+TARGET_EXPERIMENTS = [
+    "Mistral_Translated",
+    "Qwen_Translated"
+]
+
 endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
 model_name = "gpt-5"
 deployment = "gpt-5"
-subscription_key = ""  # Add your Azure key here
+subscription_key = "YOUR_API_KEY_HERE"  # Add your Azure key here
 api_version = "2024-12-01-preview"
 
 client = AzureOpenAI(
@@ -79,7 +86,7 @@ def call_llm_judge(ground_truth_json, summary_json):
                 {"role": "user", "content": user_prompt}
             ],
             response_format={ "type": "json_object" },
-            # temperature=0.0
+            temperature=0.0
         )
         return json.loads(response.choices[0].message.content)
     except Exception as e:
@@ -88,7 +95,7 @@ def call_llm_judge(ground_truth_json, summary_json):
 
 # --- 3. EXECUTION ---
 def run_llm_judge():
-    print("\n--- Starting LLM-as-a-Judge Evaluation ---")
+    print("\n--- Starting LLM-as-a-Judge Evaluation (Translated Only) ---")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
     skipped_files = 0
@@ -96,6 +103,14 @@ def run_llm_judge():
     for exp_folder in SUMMARIES_DIR.iterdir():
         if not exp_folder.is_dir() or exp_folder.name.startswith('.'): continue
         experiment_name = exp_folder.name
+        
+        # ADDED: Filter out experiments not in our target list
+        if experiment_name not in TARGET_EXPERIMENTS:
+            continue
+            
+        print(f"\n==================================================")
+        print(f"   Processing Target Experiment: {experiment_name}")
+        print(f"==================================================")
         
         for lang_folder in exp_folder.iterdir():
             if not lang_folder.is_dir() or lang_folder.name.startswith('.'): continue
@@ -158,3 +173,6 @@ def run_llm_judge():
     print("==================================================")
 
 run_llm_judge()
+
+
+```
