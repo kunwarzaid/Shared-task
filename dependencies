@@ -28,7 +28,7 @@ from pathlib import Path
 from openai import AzureOpenAI
 
 # --- 1. CONFIGURATION ---
-# IMPORTANT: Point this to the new folder containing the raw .jsonl files you just uploaded
+# IMPORTANT: Point this to the new folder containing the raw .jsonl conversation files
 RAW_GT_DIR = Path("data_eval/YOUR_NEW_TEST_FOLDER_NAME_HERE") 
 
 SUMMARIES_DIR = Path("data_eval/NER_extracted/Experiment_Summaries_GPT")
@@ -51,39 +51,48 @@ client = AzureOpenAI(
 )
 
 # --- 2. HELPER FUNCTIONS ---
-def safe_read_jsonl_summary(filepath):
-    """Extracts the human 'summary' string directly from the raw .jsonl file."""
+def extract_conversation_from_jsonl(filepath):
+    """Reconstructs the full Patient-Doctor conversation from the JSONL file."""
+    dialogue_parts = []
     try:
         with open(filepath, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
-                data = json.loads(line.strip())
-                # Grab the ground truth summary text (usually the first line has the full summary)
-                if "summary" in data:
-                    return data["summary"]
+                try:
+                    r = json.loads(line.strip())
+                    speaker = r.get("speaker", "Unknown")
+                    # Safely grab either the English translation or the native dialogue
+                    text = r.get("translated_dialogue", r.get("dialogue", ""))
+                    if text:
+                        dialogue_parts.append(f"{speaker}: {text}")
+                except:
+                    continue
+                    
+        conversation_text = "\n".join(dialogue_parts)
+        return conversation_text
     except Exception as e:
         print(f"Error reading JSONL: {e}")
     return None
 
-def call_llm_judge_direct(gt_text, summary_json):
+def call_llm_judge_direct(conversation_text, summary_json):
     system_prompt = """
     You are an expert clinical auditor evaluating a medical AI system.
     You will be provided with:
-    1. A 'Ground Truth Summary' (raw text) written by a human clinical expert.
-    2. An 'AI Extracted Entities' JSON representing the clinical terms the AI generated.
+    1. A 'Ground Truth Conversation' (the raw, actual transcript of the doctor-patient encounter).
+    2. An 'AI Extracted Entities' JSON representing the medical facts an AI generated based on a summary of this encounter.
 
-    Your job is to compare the AI's JSON entities directly against the Ground Truth text. Account for clinical synonyms (e.g., 'Hypertension' = 'High Blood Pressure').
+    Your job is to compare the AI's JSON entities directly against the Ground Truth Conversation. Account for clinical synonyms (e.g., 'Hypertension' = 'High Blood Pressure').
     
-    Output your findings strictly using this JSON schema.
+    Output your findings strictly using this JSON schema. Ensure your integer counts match your arrays perfectly!
     {
-        "Clinical_Hallucinations": ["List entities in the AI JSON that are NOT supported by the Ground Truth text."],
-        "Clinical_Omissions": ["List critical medical facts (symptoms, diagnoses, treatments) from the Ground Truth text that are MISSING from the AI JSON."],
+        "Clinical_Hallucinations": ["List entities in the AI JSON that were NEVER mentioned or implied in the Ground Truth Conversation."],
+        "Clinical_Omissions": ["List critical medical facts (symptoms, diagnoses, treatments) discussed in the Conversation that are MISSING from the AI JSON."],
         "Valid_Matches": ["List items correctly identified in both."],
         "Total_Hallucination_Count": <integer count of the Clinical_Hallucinations array>,
         "Total_Omission_Count": <integer count of the Clinical_Omissions array>
     }
     """
     
-    user_prompt = f"GROUND TRUTH SUMMARY TEXT:\n{gt_text}\n\nAI EXTRACTED ENTITIES (JSON):\n{json.dumps(summary_json)}"
+    user_prompt = f"GROUND TRUTH CONVERSATION:\n{conversation_text}\n\nAI EXTRACTED ENTITIES (JSON):\n{json.dumps(summary_json)}"
 
     try:
         response = client.chat.completions.create(
@@ -121,8 +130,7 @@ def run_fast_llm_judge():
             # The new GT directory structure
             gt_lang_dir = RAW_GT_DIR / language / "Dialogues"
             if not gt_lang_dir.exists():
-                # Fallback if there is no "Dialogues" subfolder
-                gt_lang_dir = RAW_GT_DIR / language
+                gt_lang_dir = RAW_GT_DIR / language # Fallback
             
             dest_lang_dir = OUTPUT_DIR / experiment_name / language
             dest_lang_dir.mkdir(parents=True, exist_ok=True)
@@ -133,6 +141,7 @@ def run_fast_llm_judge():
             print(f"[{experiment_name} | {language}] Judging {len(files_to_process)} cases...")
             
             for count, summary_file in enumerate(files_to_process, 1):
+                # Clean up the case ID
                 case_id = summary_file.name.replace("_gpt_ner.json", "").replace("_summary", "")
                 
                 output_file = dest_lang_dir / f"{case_id}_judge.json"
@@ -146,17 +155,17 @@ def run_fast_llm_judge():
                     continue
                     
                 # 2. Extract Data
-                gt_text = safe_read_jsonl_summary(gt_file)
+                conversation_text = extract_conversation_from_jsonl(gt_file)
                 with open(summary_file, 'r', encoding='utf-8') as sf:
                     summary_json_content = json.load(sf)
                     summary_data = summary_json_content.get("Entities", {})
                 
-                if not gt_text or len(gt_text.strip()) < 10:
-                    print(f"  ⚠️ EMPTY GT TEXT: File {gt_file.name}")
+                if not conversation_text or len(conversation_text.strip()) < 10:
+                    print(f"  ⚠️ EMPTY CONVERSATION: File {gt_file.name}")
                     continue
 
                 # 3. Call Direct Judge
-                judge_verdict = call_llm_judge_direct(gt_text, summary_data)
+                judge_verdict = call_llm_judge_direct(conversation_text, summary_data)
                 
                 if judge_verdict:
                     final_record = {
@@ -172,5 +181,6 @@ def run_fast_llm_judge():
                     print(f"  ...judged {count}/{len(files_to_process)}")
 
 run_fast_llm_judge()
+
 
 ```
