@@ -1,173 +1,160 @@
-```python
-import os
-import json
-import random
-from pathlib import Path
-from openai import AzureOpenAI
+# Native Experiments Analysis: Telugu (Case: scenario_52_8ed9ba9f7193475aa476f2bae08f83fb_IDX_05_2)
+ 
+ Evaluation of a Telugu Clinical Conversation
+ 
+Scope and Materials
+- Source: A Telugu patient–health worker follow-up conversation focused on throat symptoms, behavioral risk factors, evaluation plans (possible fiber‑optic laryngoscopy), multidisciplinary care (MDT), supportive therapies (diet, speech/swallow rehab), tele-consultation, government schemes, and follow-up cadence.
+ 
+ 
+Key Ground Truth Anchors (selected)
+- Symptoms/time course: “గొంతులో నాలుగు వారాలుగా అసౌకర్యం… వాయిస్ కొద్దిగా మారేలా కనిపిస్తోంది” (“Throat discomfort for four weeks; the voice seems to change”).
+- Risk factors: “Pane Makh 2–3 సార్లు రోజూ… సిగరెట్ అరుదు; ఆల్కహాల్ వారానికి 3–4 సార్లు” (“Pane Makh 2–3 times daily; cigarettes rare; alcohol 3–4 times per week”).
+- Workup plan: “ఫైబర్-ఓప్తిక్ లారింగో స్కోపీ… ఫలితాలు వచ్చిన తర్వాత బయోప్సీ లేదా ఇమేజ్ ప్లాన్” (“Fiber-optic laryngoscopy if needed; after results, decide on biopsy or imaging plan”).
+- Follow-up cadence: “ప్రతి మూడు నెలలకు ఫాలో-అప్… మొదటి ఏడాదిలో… మూడేళ్లపాటు ఫాలో-అప్ కొనసాగుతాం” (“Follow-up every three months… during the first year… we will continue follow-up for three years”).
+- Supportive care (examples):
+  - Diet: “soft high-protein… ఖిచ్డీ, దాల్-రోటి, పెరుగు, పాలు, గుడ్లు, ప్రోటీన్ షేక్‌లు” (“Soft high-protein diet: khichdi, dal-roti, curd, milk, eggs, protein shakes”).
+  - Exercises: “Neck, jaw, swallowing… రోజుకి రెండు మూడు సార్లు… ప్రతి సెట్ 5–10 సెకన్లు” (“Neck, jaw, and swallowing exercises 2–3 times daily, each set 5–10 seconds”).
+  - Radiation effects/dry mouth: dental hygiene and hydration; salivary substitutes if needed.
+  - MDT composition: surgeon, radiation oncologist, medical oncologist, dietitian, speech therapist, dentist.
+  - Tele-consultation available; government schemes (Aadhaar/PAN; Ayushman Bharat); cessation support.
+ 
+1) Factual Fidelity & Attention
+ 
+Zero-Shot
+- Major hallucinations and distortions:
+  - “post-falloff-apnea treatment,” “four days of apnea,” “worsens when he works and improves when resting” — None of these concepts (apnea, days-long course, work/rest pattern) appear in the conversation. Ground truth specifies 4 weeks of throat discomfort and voice change, not “apnea” or a work–rest modulation.
+  - Follow-up interval misreported as “every three days” and “success in recovery within three days,” contradicting “ప్రతి మూడు నెలలకు ఫాలో-అప్” (“every three months”) and ongoing three-year follow-up.
+  - Nuance loss in behavioral counseling: It states “advises against increasing Pane Makh usage,” whereas the clinician recommends reduction or complete cessation.
+- Partial concordance:
+  - Recommends examination and imaging if needed; mentions soft high-protein diet, feeding tube if necessary, exercises, speech therapy, dry mouth management, and subsidies/paperwork — all broadly align, albeit superficially.
+- Omissions:
+  - MDT membership, detailed follow-up plan across year(s), tele-consultation modalities, and explicit cessation program support receive minimal or no attention.
+- Verdict: Low fidelity. The model substitutes invented pathologies and timelines, diverting from anchor facts. Attention to salient details is inconsistent.
+ 
+Few-Shot
+- Extensive “attention dilution” with template-driven, non-evidenced insertions:
+  - Invented demographics/social history: “25-year history of smoking (8–12 cigarettes/day)” and “occasional alcohol use,” contradicting “సిగరెట్ అరుదు; ఆల్కహాల్ వారానికి 3–4 సార్లు” (“cigarettes rare; alcohol 3–4 times/week”).
+  - Fabricated caregiver: “wife Evelyn,” no such person is mentioned.
+  - Added symptoms not reported: “mild dysphagia.” The patient only notes voice change and discomfort; no dysphagia was endorsed.
+  - Management plan escalation: “CT or MRI,” “biopsy,” “results within 1–3 days,” “radiotherapy typically lasts 6–7 weeks,” “facial changes” — none stated in the transcript. Ground truth frames these as contingent (“if needed”) and does not discuss radiotherapy schedules or facial changes.
+  - Medical comorbidities: “hypertension (controlled with amlodipine)” — absent from the dialogue.
+- Partial concordance:
+  - Mentions laryngoscopy under local anesthesia, MDT review, general advice on hydration/oral care — compatible with the transcript’s themes.
+- Omissions:
+  - Does not reflect key behavioral risk “Pane Makh” use; omits tele-consultation, detailed government documentation requirements, structured follow-up cadence (3‑monthly), and cessation program offer.
+- Verdict: The Few-Shot output exhibits prototypical “attention dilution,” overlaying a generic head-and-neck oncology template onto the case, with numerous unsupported specifics. Factual fidelity is poor.
+ 
+Comparative Summary
+- Zero-Shot: Fewer different types of clinical elements than Few-Shot but still introduces serious inaccuracies (apnea, 3‑day follow-ups).
+- Few-Shot: More structured and comprehensive-sounding but systematically hallucinates core clinical and social details, likely due to long prompt priming and template overfitting.
+ 
+2) Negation Handling and Affirmative Bias
+ 
+Ground Truth Context
+- The clinician probes for additional symptoms: “ఊపిరి తీసుకునేటప్పుడు బాధ ఉందా… గట్టిగా మాట్లాడినప్పుడు ఇబ్బంది?” (“Is there pain when breathing… is there difficulty when speaking loudly?”). The patient does not affirm dyspnea or pain; he reiterates voice change and fear.
+ 
+Zero-Shot
+- Displays affirmative bias by asserting “apnea” and a four-day course, despite no endorsement. It also implies symptom fluctuation with work/rest — not present. This is not a simple negation error but a stronger tendency to conjure positive findings absent from the record.
+ 
+Few-Shot
+- Affirmative bias manifests as adding “mild dysphagia” and a heavy smoking history, despite no such admissions (and in fact a contrary statement: cigarettes rare). It also asserts “occasional alcohol use,” minimizing the stated 3–4 times/week. This not only invents positives but distorts frequency directionally, suggesting bias toward presumed, not stated, comorbidities.
+ 
+Conclusion on Negation/Affirmative Bias
+- Both methodologies show affirmative bias (adding unmentioned positives). While explicit negation handling cannot be fully assessed due to limited denials in the ground truth, both outputs fail to respect the absence of certain symptoms/history elements and introduce fictitious positives.
+ 
+3) Structural Formatting and Clinical Tone
+ 
+Zero-Shot
+- Structure: Loose, narrative paragraph with mixed topics; limited signposting.
+- Tone: Informal and inconsistent. Clinical reasoning is shallow; sequencing of evaluation steps is vague.
+- Rigor: Lacks clear sections (history, exam plan, counseling, follow-up).
+ 
+Few-Shot
+- Structure: More disciplined, resembling a problem list or mini-consult note. It organizes into presentation, history, plan, and MDT coordination.
+- Tone: Formally clinical with specific-sounding details and timelines.
+- Caveat: The structural discipline appears to have encouraged insertion of templated but unsupported details (e.g., smoking pack-years, antihypertensive therapy, radiotherapy duration). Thus, while format is stronger, content reliability is weaker.
+ 
+4) Lexical Nuance and Medical Terminology
+ 
+Zero-Shot
+- Uses general terms: “imaging,” “feeding tubes,” “speech therapy,” “dry mouth.”
+- Misuse: “post-falloff-apnea treatment” is a nonstandard phrase; “apnea” is contextually irrelevant.
+- Overall: Basic lexicon acceptable but marred by misuse and ill-fitted terms.
+ 
+Few-Shot
+- Richer medical vocabulary: “laryngoscopy under local anesthesia,” “CT or MRI,” “biopsy,” “peri-procedural safety,” “radiotherapy 6–7 weeks,” “MDT.”
+- Appropriateness: Terminology is medically accurate in general oncology contexts but not grounded in this specific transcript. The lexicon, though fluent, drives unsupported assertions.
+ 
+Overall Judgement
+- Factual Fidelity: Both methods perform poorly; Zero-Shot misstates core timelines and conditions; Few-Shot superimposes a generic oncology script, inventing multiple comorbidities and plans.
+- Attention and Dilution: Few-Shot shows clear attention dilution, with the long prompt likely cueing domain defaults that override case-specific facts (e.g., heavy smoking, dysphagia, antihypertensives, radiotherapy course).
+- Negation/Affirmative Bias: Both introduce unendorsed positives; Few-Shot additionally inverts reported frequencies (alcohol, cigarettes).
+- Structure and Tone: Few-Shot achieves a more clinical structure but at the cost of truthfulness; Zero-Shot is less structured but also inaccurate.
+- Lexical Handling: Few-Shot demonstrates stronger medical lexicon but misapplies it; Zero-Shot’s lexicon is simpler, with notable misuse.
+ 
+ 
+In sum, while the Few-Shot method presents a more polished clinical narrative, it is less faithful to the Telugu transcript than the Zero-Shot, which itself contains significant hallucinations. For safe clinical summarization, fidelity must supersede stylistic structure.
 
-# --- 1. CONFIGURATION ---
-# IMPORTANT: Point this to the folder that contains the full dataset JSONLs
-# so it can find the Ground Truth for the random files Zero/Few/SFT generated!
-RAW_GT_DIR = Path("data_eval/YOUR_FULL_DATASET_FOLDER_HERE") 
 
-MODEL_BASE = "Qwen_exp" # Or Mistral_exp
-EXP_PATHS = {
-    "Zero-Shot": Path(f"data_eval/{MODEL_BASE}/zeroshot/qwen"),
-    "Few-Shot": Path(f"data_eval/{MODEL_BASE}/fewshot/qwen"),
-    "SFT": Path(f"data_eval/{MODEL_BASE}/finetune/qwen") 
-}
+#Translation
+# Objective Deep Dive Analysis: Telugu (Case: scenario_1_c5d7e4e20467460d90ae3ba4a6ab2ba9_IDX_04_3)
 
-OUTPUT_DIR = Path("data_eval/Deep_Dive_Analysis/Native_Comparisons")
+Clinical NLP Evaluation Report (Single-Method Comparison)
 
-endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
-deployment = "gpt-5"
-subscription_key = ""  # Add your Azure key here
-api_version = "2024-12-01-preview"
+Scope and methods compared
+- Available methods: Only Method 3 (Translated Output) was provided. Zero-shot, Few-shot, and SFT outputs were missing. Therefore, this report critically evaluates the Translated Output against the Ground Truth transcript.
 
-client = AzureOpenAI(
-    api_version=api_version,
-    azure_endpoint=endpoint,
-    api_key=subscription_key,
-)
+1) Factual Fidelity
 
-# --- 2. HELPER FUNCTIONS ---
-def get_conversation(filepath):
-    dialogue_parts = []
-    try:
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                try:
-                    r = json.loads(line.strip())
-                    speaker = r.get("speaker", "Unknown")
-                    text = r.get("translated_dialogue", r.get("dialogue", ""))
-                    if text: dialogue_parts.append(f"{speaker}: {text}")
-                except: continue
-        return "\n".join(dialogue_parts)
-    except: return None
+Strengths (limited):
+- The summary correctly identifies core demographics and context: “A 46-year-old patient is undergoing radiotherapy for head and neck cancer.” This aligns with the ground truth: “నేను రాజ కుమార్, 46 సంవత్సరాలు. హెడ్ అండ్ నెక్ క్యాన్సర్ కోసం radiotherapy జరుగుతోంది.” (Translation: I am Raj Kumar, 46. Radiotherapy is ongoing for head and neck cancer.)
+- It references ordered labs, albeit imprecisely: “CBC and ESR Immunofunction tests,” aligning with “CBC, ESR, ఇమ్యూన్ ఫంక్షన్ టెస్ట్‌లు అవసరం.” (Translation: CBC, ESR, and immune function tests are needed.)
+- It notes an HPV-related inquiry and mentions counseling/eligibility in general terms, which corresponds to the dialogue.
 
-def read_txt(filepath):
-    try:
-        if filepath.exists():
-            with open(filepath, 'r', encoding='utf-8') as f:
-                return f.read().strip()
-        else:
-            return "<MISSING_FILE>"
-    except: return "<ERROR_READING>"
+Major inaccuracies and omissions:
+- Omission of explicit side effects. The summary asserts: “The side effects of radiotherapy are not explicitly stated,” which is contradicted by the patient’s clear list: “గొంతు నొప్పి, తినడంలో ఇబ్బంది, అలసట” (Translation: throat pain, difficulty eating, fatigue) and later “కొన్నిసార్ల ఊపిరితిత్తి కష్టం పెరుగుతుందని” (Translation: sometimes breathing difficulty increases), and “మాటలు మసకగా వినిపిస్తాయి” (Translation: speech sounds muffled).
+- Misattribution of clinician advice to the patient. The summary says “the patient mentions the importance of maintaining ... hydration, hygiene, and oral care,” whereas the clinician stated “hydration బాగా కాపాడుకోవాలి; mouth care చాలా ముఖ్యం.” (Translation: maintain hydration; mouth care is very important.)
+- False claims about diagnostic uncertainty. The summary states: “The patient is unsure about the specific diagnosis.” The ground truth is explicit that the patient is aware: “హెడ్ అండ్ నెక్ క్యాన్సర్ కోసం radiotherapy జరుగుతోంది.” (Translation: receiving radiotherapy for head and neck cancer.)
+- HPV eligibility misrepresented as counts of people rather than age. The summary claims “an eligibility of 45 individuals typically considered” and “Vaccination eligibility is for up to 45 people per month.” The ground truth specifies age-based criteria: “వయసు సాధారణంగా 45 వరకు eligibility ఉంటుంది, కానీ ప్రత్యేక సందర్భాల్లో డాక్టర్ నిర్ణయిస్తాడు.” (Translation: eligibility is generally up to age 45; in special cases the doctor decides.) There is no mention of “per month” or quotas of people.
+- Unsupported claim about provider availability. The summary introduces: “doctors not always available in private clinics,” which is not present in the conversation; this is a hallucination.
+- Tobacco use mistranslated and omitted. The patient says: “పొగాకు వాడకం నాకు ఉంది; దీన్ని తగ్గించుకోవాలని vraiment కష్టం.” (Translation: I use tobacco; reducing it is really difficult.) The summary’s “reduce their space” is a clear mistranslation and loses the salient behavioral risk factor and counseling need.
+- Misattribution and overstatement of procedures. The summary says: “The patient also mentions the necessity of ENT procedures, laryngoscopy, and biopsy,” whereas the clinician stated conditional planning: “ENT పరీక్షలు, లారింకోస్కోపీ అవసరమైతే చేస్తాము, అవసరమైతే biopsy కూడా చూస్తాము.” (Translation: we will do ENT exams, laryngoscopy if needed, and biopsy if needed.)
+- Timeline omission. The clinician’s concrete timeline “ఫలితాలు సాధారణంగా 1–3 రోజుల মধ্যে వస్తాయి.” (Translation: results generally come within 1–3 days) is not captured.
+- Nuanced self-assessment lost. The patient’s nuance “బలంగా ఉన్నాను కానీ ఆరోగ్యం పక్కాగా కాదు.” (Translation: I feel strong but my health is not perfect) is not preserved.
 
-def get_case_ids(base_path, lang):
-    summary_dir = base_path / lang / "Summary_Text"
-    if not summary_dir.exists(): return []
-    return [f.name.replace("_summary.txt", "") for f in summary_dir.glob("*_summary.txt")]
+Net assessment: Significant factual errors, multiple hallucinations, misattributions of speaker roles, and omission of clinically relevant symptoms and timelines.
 
-def call_gpt_researcher(language, conversation, zero, few, sft):
-    system_prompt = """
-    You are an objective Clinical NLP Analyst reviewing AI-generated medical summaries.
-    You will be provided with a Ground Truth patient-doctor conversation and up to 3 summaries generated by the SAME language model operating natively, using different methodologies: Zero-Shot, Few-Shot, and Supervised Fine-Tuning (SFT).
-    (Note: If a methodology says "<MISSING_FILE>", simply ignore it).
+2) Negation Handling (CRITICAL)
 
-    Conduct an unbiased, qualitative evaluation of how these native prompting/training methodologies handled the exact same clinical transcript. 
+- False negation of explicitly stated side effects. The summary’s claim “The side effects of radiotherapy are not explicitly stated” directly contradicts the explicit symptom list in the ground truth. This is a critical misread of negation and presence/absence of facts.
+- Conditionality collapsed into certainty (affirmative bias). The clinician’s conditional phrasing “అవసరమైతే ... చేస్తాము” (Translation: if needed, we will do ...) was summarized as “the necessity of ENT procedures, laryngoscopy, and biopsy,” turning a contingent plan into a definite requirement.
+- Exception-handling for HPV eligibility distorted. The ground truth notes a general age cap with exceptions: “సాధారణంగా 45 వరకు ... కానీ ప్రత్యేక సందర్భాల్లో డాక్టర్ నిర్ణయిస్తాడు.” (Translation: generally up to 45; in special cases the doctor decides.) The summary erases the exception nuance and instead hallucinates a negative about provider availability in private clinics, which is not a negation present in the transcript.
+- No patient denials were present in the transcript; thus, classic denial-to-affirmation errors are not testable here. However, the method did introduce a fabricated negation (“not explicitly stated”) where the opposite is true, demonstrating unreliable handling of presence/absence statements.
 
-    Structure your academic report around the following key axes:
-    1. Factual Fidelity & Attention: Did any methodology hallucinate facts or omit details? For Few-Shot, explicitly look for "Attention Dilution" (did the model get confused by the long prompt and hallucinate symptoms not present in the Ground Truth?).
-    2. Negation Handling: Analyze how each methodology processes negations (e.g., a patient denying a symptom). Did any suffer from "affirmative bias"?
-    3. Structural Formatting: Compare organization and clinical tone. Did Few-Shot or SFT successfully force a rigid clinical structure compared to Zero-Shot?
-    4. Lexical Nuance: How is native medical terminology handled directly by the LLM? 
+3) Structural Formatting
 
-    CRITICAL RULE: You MUST write your entire analysis and report strictly in ENGLISH. Provide English translations of the quotes you use to prove your points.
-    Output a rich, readable Markdown report. Keep the tone highly academic.
-    """
-    
-    user_prompt = f"""
-    LANGUAGE: {language}
-    
-    === GROUND TRUTH CONVERSATION ===
-    {conversation}
-    
-    === 1. ZERO-SHOT OUTPUT ===
-    {zero}
-    
-    === 2. FEW-SHOT OUTPUT ===
-    {few}
-    
-    === 3. SFT OUTPUT ===
-    {sft}
-    """
+- Organization: The summary is a single, free-text paragraph within “[Summary] ... <summary> ...” tags. It lacks standard clinical structuring (e.g., Chief Complaint, History of Present Illness, ROS, Assessment/Plan). This hinders rapid clinical scanning.
+- Clinical tone: The tone is inconsistent. Phrases like “reduce their space” are non-clinical and reflect translation failure. The inclusion of a meta-disclaimer—“does not include any inferred or assumed details”—is incongruent with the content, which in fact contains inferences and hallucinations.
+- Speaker attributions: Multiple misattributions (patient vs clinician statements) undermine structural clarity about who reported symptoms versus who provided counseling or plans.
 
-    try:
-        response = client.chat.completions.create(
-            model=deployment, 
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.1 
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        print(f"API Error: {e}")
-        return None
+4) Lexical Choice & Nuance
 
-# --- 3. EXECUTION ---
-def run_native_deep_dive():
-    print("\n--- Starting Native Experiments Qualitative Deep Dive ---")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    
-    if not EXP_PATHS["Zero-Shot"].exists():
-        print("ERROR: Could not find the Zero-Shot folder. Please check MODEL_BASE and paths.")
-        return
-        
-    langs = [d.name for d in EXP_PATHS["Zero-Shot"].iterdir() if d.is_dir() and not d.name.startswith('.')]
-    
-    for language in langs:
-        print(f"\nAnalyzing: {language}...")
-        
-        # Gather Case IDs
-        zero_cases = set(get_case_ids(EXP_PATHS["Zero-Shot"], language))
-        few_cases = set(get_case_ids(EXP_PATHS["Few-Shot"], language))
-        sft_cases = set(get_case_ids(EXP_PATHS["SFT"], language))
-        
-        # Find the intersection! We want a case that exists in all 3 if possible
-        common_cases = zero_cases.intersection(few_cases, sft_cases)
-        
-        # Fallback if no perfect 3-way match exists: just pick from Zero-Shot
-        if common_cases:
-            case_id = random.choice(list(common_cases))
-            print(f"  Found a perfect match across Zero, Few, and SFT!")
-        elif zero_cases:
-            case_id = random.choice(list(zero_cases))
-            print(f"  No perfect 3-way match. Defaulting to a Zero-Shot case...")
-        else:
-            print(f"  [SKIPPED] No Zero-Shot text files found for {language}.")
-            continue
-        
-        # Gather the Ground Truth Conversation
-        gt_file = RAW_GT_DIR / language / "Dialogues" / f"{case_id}.jsonl"
-        if not gt_file.exists(): 
-            gt_file = RAW_GT_DIR / language / f"{case_id}.jsonl"
-            
-        conversation = get_conversation(gt_file)
-        if not conversation:
-            print(f"  [SKIPPED] Could not find raw JSONL Ground Truth for {case_id}")
-            continue
-            
-        # Read the Summaries
-        zero_txt = read_txt(EXP_PATHS["Zero-Shot"] / language / "Summary_Text" / f"{case_id}_summary.txt")
-        few_txt = read_txt(EXP_PATHS["Few-Shot"] / language / "Summary_Text" / f"{case_id}_summary.txt")
-        sft_txt = read_txt(EXP_PATHS["SFT"] / language / "Summary_Text" / f"{case_id}_summary.txt")
-        
-        found_count = sum(1 for x in [zero_txt, few_txt, sft_txt] if x != "<MISSING_FILE>")
-        print(f"  Found {found_count}/3 experiments for Case ID: {case_id}...")
-        
-        print(f"  Generating English researcher report...")
-        report = call_gpt_researcher(language, conversation, zero_txt, few_txt, sft_txt)
-        
-        if report:
-            out_file = OUTPUT_DIR / f"Native_DeepDive_{language}.md"
-            with open(out_file, "w", encoding="utf-8") as f:
-                f.write(f"# Native Experiments Analysis: {language} (Case: {case_id})\n\n")
-                f.write(report)
-            print(f"  ✓ Saved report to {out_file.name}")
+- Medical terminology: Some terms are preserved (radiotherapy; CBC, ESR, immune function tests; HPV counseling). However, there are notable lexical errors:
+  - “Immunofunction” instead of “immune function.”
+  - “45 individuals” and “45 people per month” instead of “up to age 45 years,” distorting eligibility criteria.
+  - “Reduce their space” for “reduce tobacco use” (from “పొగాకు వాడకం ... తగ్గించుకోవాలని”), a severe mistranslation that removes a key risk behavior and the associated counseling topic.
+- Symptom descriptors lost:
+  - “మాటలు మసకగా వినిపిస్తాయి” (Translation: speech sounds muffled) not represented.
+  - “తింటే గొంతులో సున్నితమైన బాధ” (Translation: tender pain in throat when eating) not represented.
+  - “కొన్నిసార్ల ఊపిరితిత్తి కష్టం పెరుగుతుంది” (Translation: sometimes shortness of breath worsens) omitted.
+- Clinical nuance and pragmatics:
+  - The patient’s time constraints (“నా షెడ్యూల్ చాలా బిజీగా ఉంది.” Translation: my schedule is very busy) and the clinician’s timeline (1–3 days for results) are omitted, losing actionable logistics.
+  - The conditionality and safety framing (“శ్వాస సురక్షితంగా ఉందో లేదో చూద్దాం.” Translation: let’s ensure breathing is safe) are not conveyed.
+  - The exception clause for HPV eligibility (“but in special cases the doctor decides”) is lost, and replaced by an unrelated, unsupported claim about provider availability.
 
-run_native_deep_dive()
+Conclusions
 
-```
+- The Translated Output demonstrates substantial deficits in factual fidelity, frequent hallucinations, poor handling of conditionality (introducing affirmative bias), and critical mistranslations that erase key clinical content (symptoms, tobacco use) and logistics (result timeline).
+- Negation/conditional processing is especially problematic: a fabricated negation (“not explicitly stated”) is introduced, while genuine conditionals (“if needed”) are converted into certainties.
+- Structurally, the output lacks clinical formatting and misattributes statements, confounding the clinical narrative.
+- Lexically, important medical nuances (age-based eligibility; symptom specificity; safety checks; patient’s schedule constraints) are not preserved, and at times are replaced by unrelated content.
