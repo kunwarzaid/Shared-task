@@ -1,0 +1,175 @@
+```python
+import os
+import json
+import random
+from pathlib import Path
+from openai import AzureOpenAI
+
+# --- 1. CONFIGURATION ---
+# Base directories for your text files
+RAW_GT_DIR = Path("data_eval/YOUR_NEW_TEST_FOLDER_NAME_HERE") 
+
+# Point these to the base folder of the specific model you want to analyze (e.g., Qwen_exp)
+MODEL_BASE = "Qwen_exp" 
+EXP_PATHS = {
+    "Zero-Shot": Path(f"data_eval/{MODEL_BASE}/zeroshot/qwen"),
+    "Few-Shot": Path(f"data_eval/{MODEL_BASE}/fewshot/qwen"),
+    "Translated": Path(f"data_eval/{MODEL_BASE}/translated/qwen"),
+    "SFT": Path(f"data_eval/{MODEL_BASE}/finetune/qwen") 
+}
+
+OUTPUT_DIR = Path("data_eval/Deep_Dive_Analysis")
+
+endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
+deployment = "gpt-5"
+subscription_key = ""  # Add your Azure key here
+api_version = "2024-12-01-preview"
+
+client = AzureOpenAI(
+    api_version=api_version,
+    azure_endpoint=endpoint,
+    api_key=subscription_key,
+)
+
+# --- 2. HELPER FUNCTIONS ---
+def get_conversation(filepath):
+    dialogue_parts = []
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                try:
+                    r = json.loads(line.strip())
+                    speaker = r.get("speaker", "Unknown")
+                    text = r.get("translated_dialogue", r.get("dialogue", ""))
+                    if text: dialogue_parts.append(f"{speaker}: {text}")
+                except: continue
+        return "\n".join(dialogue_parts)
+    except: return None
+
+def read_txt(filepath):
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except: return "[FILE NOT FOUND OR EMPTY]"
+
+def get_case_ids(base_path, lang):
+    """Returns a set of Case IDs present in the given experiment folder."""
+    summary_dir = base_path / lang / "Summary_Text"
+    if not summary_dir.exists():
+        return set()
+    return {f.name.replace("_summary.txt", "") for f in summary_dir.glob("*_summary.txt")}
+
+def call_gpt_researcher(language, conversation, zero, few, trans, sft):
+    system_prompt = """
+    You are an expert Clinical NLP Researcher analyzing the outputs of a 7B parameter language model across four different prompting/training paradigms.
+    
+    You will be given:
+    1. A raw Ground Truth patient-doctor conversation.
+    2. The English summary generated via Zero-Shot prompting.
+    3. The English summary generated via Few-Shot prompting (3 examples in context).
+    4. The English summary generated via Translate-then-Summarize (translated via NMT, then summarized).
+    5. The English summary generated via Supervised Fine-Tuning (LoRA).
+
+    Write a detailed, qualitative academic analysis comparing these four outputs. 
+    Look specifically for these phenomena:
+    - Zero-Shot: Does it capture the native language semantics but lack formatting?
+    - Few-Shot (Attention Dilution): Did the model hallucinate facts from the prompt examples, or forget details because the context was too long?
+    - Translation (Cascading Errors): Did the translation step lose cultural nuance, drop medical terms, or create grammatical gibberish?
+    - SFT: Did fine-tuning balance accurate fact extraction with perfect clinical formatting?
+
+    Output a rich, readable Markdown report. Use specific quotes from the provided texts to prove your points. Keep the tone highly academic.
+    """
+    
+    user_prompt = f"""
+    LANGUAGE: {language}
+    
+    === GROUND TRUTH CONVERSATION ===
+    {conversation}
+    
+    === 1. ZERO-SHOT OUTPUT ===
+    {zero}
+    
+    === 2. FEW-SHOT OUTPUT ===
+    {few}
+    
+    === 3. TRANSLATED OUTPUT ===
+    {trans}
+    
+    === 4. SFT OUTPUT ===
+    {sft}
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model=deployment, 
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2 # Lower temperature for analytical rigor
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"API Error: {e}")
+        return None
+
+# --- 3. EXECUTION ---
+def run_deep_dive():
+    print("\n--- Starting Qualitative Deep Dive ---")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Get all language folders from the base directory
+    langs = [d.name for d in EXP_PATHS["Zero-Shot"].iterdir() if d.is_dir() and not d.name.startswith('.')]
+    
+    for language in langs:
+        print(f"\nAnalyzing: {language}...")
+        
+        # 1. Gather Sets of Case IDs for all 4 experiments
+        zero_cases = get_case_ids(EXP_PATHS["Zero-Shot"], language)
+        few_cases = get_case_ids(EXP_PATHS["Few-Shot"], language)
+        trans_cases = get_case_ids(EXP_PATHS["Translated"], language)
+        sft_cases = get_case_ids(EXP_PATHS["SFT"], language)
+        
+        # 2. Find the intersection (cases that successfully generated in ALL 4)
+        common_cases = zero_cases.intersection(few_cases, trans_cases, sft_cases)
+        
+        if not common_cases:
+            print(f"  [SKIPPED] No common Case IDs found across all 4 experiments for {language}.")
+            continue
+            
+        print(f"  Found {len(common_cases)} cases common across all 4 pipelines.")
+        
+        # 3. Pick one random case from the intersection
+        case_id = random.choice(list(common_cases))
+        
+        # 4. Gather the Ground Truth Conversation
+        gt_file = RAW_GT_DIR / language / "Dialogues" / f"{case_id}.jsonl"
+        if not gt_file.exists(): 
+            gt_file = RAW_GT_DIR / language / f"{case_id}.jsonl"
+            
+        conversation = get_conversation(gt_file)
+        if not conversation:
+            print(f"  [SKIPPED] Could not find raw JSONL for {case_id}")
+            continue
+            
+        # 5. Read the 4 Summaries
+        zero_txt = read_txt(EXP_PATHS["Zero-Shot"] / language / "Summary_Text" / f"{case_id}_summary.txt")
+        few_txt = read_txt(EXP_PATHS["Few-Shot"] / language / "Summary_Text" / f"{case_id}_summary.txt")
+        trans_txt = read_txt(EXP_PATHS["Translated"] / language / "Summary_Text" / f"{case_id}_summary.txt")
+        sft_txt = read_txt(EXP_PATHS["SFT"] / language / "Summary_Text" / f"{case_id}_summary.txt")
+        
+        # 6. Call GPT
+        print(f"  Generating researcher report for Case ID: {case_id}...")
+        report = call_gpt_researcher(language, conversation, zero_txt, few_txt, trans_txt, sft_txt)
+        
+        if report:
+            out_file = OUTPUT_DIR / f"DeepDive_{language}.md"
+            with open(out_file, "w", encoding="utf-8") as f:
+                f.write(f"# Deep Dive Analysis: {language} (Case: {case_id})\n\n")
+                f.write(report)
+            print(f"  ✓ Saved report to {out_file.name}")
+
+run_deep_dive()
+
+
+```
