@@ -22,165 +22,151 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
-```python
-import json
-from pathlib import Path
-from openai import AzureOpenAI
 
-# --- 1. CONFIGURATION ---
-# IMPORTANT: Point this to the new folder containing the raw .jsonl conversation files
-RAW_GT_DIR = Path("data_eval/YOUR_NEW_TEST_FOLDER_NAME_HERE") 
+# CONVERSATION
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"डॉक्टर साहब, मैं रवि कुमार हूँ, 30 साल का, दिल्ली से. होटल में बेलमैन हूँ, धूम्रपान करके नहीं हूँ अब, पान मसाला के बारे में सोच रहा था, गला थोड़ा भराव सा लग रहा है."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"तो आपकी आवाज थोड़ी बदली है और गले में fullness भी है. बीमारी के संकेत देखने के लिए पहले exam कर लेते हैं, फिर जरूरत पर biopsy का प्लान बनाएंगे."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"हाँ, कभी-कभी गला खुजला सा लगता है और खाने के साथ असहजता भी, खासकर hard या spicy खाने पर. वजन स्थिर है, पर ये हल्का-फुल्का बदला लगता है."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"सबसे पहले मैं मुँह और गरदन की पूरी Exam करूँगा, फिर आवाज़ की नली (larynx) देखने के लिए एक छोटा Endoscope भेज सकता हूँ."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"Endoscope? क्या यह दर्द देगा या गला में नस्ल लगेगा? मैं डर रहा हूँ कि कुछ बड़ा हो."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Endoscope से सब साफ़ दिख जाएगा, दर्द कम है, क्योंकि ये छोटा ट्यूब है. हम बिना चिरफाड़ के देखने की कोशिश करते हैं."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"मैं Rashmi, Ravi की पत्नी हूँ. मैं भी साथ आऊँगी. मुझे समझना है कि अगर biopsy जरूरी हो तो क्या देखना होगा."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Rashmi ji, आपकी मदद से हमें ज़रूरी जानकारी मिल जाएगी. biopsy एकदम जरूरी हो सकता है, ताकि cancer की पुष्टि हो सके."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"Biopsy? वो कैसे होगा और कितना समय लगेगा? अगर यह cancer नहीं हुआ तो?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Biopsy के लिए एक छोटा tissue का टुकड़ा लिया जाता है. सामान्यतः थोड़ी देर में फाइनल रिपोर्ट आ जाती है, पर कभी-कभी कुछ दिन भी लग सकते हैं."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"अगर गले के क्षेत्र में स्पष्ट न हो, तो मैं एक पतली needle FNAC से नमूना ले सकता हूँ."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"FNAC? वो क्या है और क्या दर्द होगा? मैं डर रहा हूँ कि neck lump से हो."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"FNAC neck lump के लिए एक पतली नलीदार सुई से कोशिकाएँ निकालने का तरीका है; दर्द बहुत कम रहता है और यह cancer की पुष्टि के लिए त्वरित शुरुआत है."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"अगर biopsy से कैंसर की पुष्टि हो जाए, तो आगे क्या कदम होते हैं? कहाँ होने चाहिए, कितने दिन चाहिए?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"कैंसर की पुष्टि के बाद हम size, location और spread देखने के लिए CT या MRI कराते हैं, ताकि staging सही हो सके."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"क्यों न हम पहले गला और गरदन की जाँच और ultrasound करवा लें? अच्छा होगा अगर पिछले हफ्ते से शुरू किया जाए."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"ठीक, अगले हफ्ते के स्लॉट में गला-गरदन जाँच, neck ultrasound और बेसिक लैब्स की व्यवस्था कर देते हैं."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"Rashmi आप समझाइए, ultrasound में क्या दिखेगा? क्या यह बिना biopsy के भी कैंसर दिखा देता है?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Ultrasound से गले के नोड्स और टिश्यू की हालत पता चलेगी, पर कैंसर की पुख्ता पुष्टि biopsy से ही होती है."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"अगर biopsy से कैंसर मिला, स्टेजिंग कैसे होती है? TNM सिस्टम क्या-क्या बताता है?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"TNM से T-ट्यूमर का आकार, N- लिम्फ नोड्स की स्थिति, M- metastasis। फिर Stage I-IV तय होता है, भारत में कुछ केस III-IV होते हैं."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"तहसील में जाकर फॉर्म भरना होगा क्या? क्या यह सब सरकारी सुविधाओं के हिसाब से चलेगा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हाँ, फॉर्म, पहचान, और आय-सम्पन्न की जानकारी लेकर आगे बढ़ते हैं; पेमेंट प्लान और financial assistance भी बताएंगे."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"HPV वैक्सीन भी चर्चा में आया था. अगर कैंसर नहीं हुआ, तो क्या vaccination मदद कर सकती है?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"HPV वैक्सीन कैंसर के कुछ प्रकार रोक सकती है, लेकिन मौजूदा HNC के लिए vaccination से सीधे असर कम है; फिर भी सुरक्षा और infection prevention के लिए अच्छा है."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"सरकारी अस्पताल में vaccinate कर सकते हैं? कितना खर्च होगा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"कई centers पर HPV vaccine मिलते हैं, कुछ जगह मुफ्त भी मिलती है; खर्च लगभग 1000-2000 रुपये प्रति डोज हो सकता है."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"अच्छा, अगर biopsy positive हो, फिर surgery या radiotherapy में से क्या-क्या विकल्प होते हैं?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"विकल्प में surgery, radiotherapy या chemoradiation शामिल होते हैं; ट्यूमर के size और location के आधार पर MDT टीम निर्णय लेती है."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"MDT से मतलब डॉक्टरों की टीम? कौन-कौन सा स्पेशलिस्ट जुड़ेंगे?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"MDT में ENT सर्जन, Radiation oncologist, Medical oncologist, Radiologist, Pathologist शामिल होते हैं; कभी nutritionist भी शामिल होता है."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"क्या मौसम भी इलाज पर असर डालता है? दिल्ली pollution से सांस और recovery पर फर्क पड़ेगा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हाँ साफ हवा और hydration से tolerance बेहतर होती है; pollution के कारण respiratory symptoms बढ़ सकते हैं, masks इस्तेमाल और indoor air quality सुधार जरूरी है."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"घर लौटकर मुझे क्या चीज़ें खास तौर पर तैयार रखना चाहिए पहले biopsy के लिए?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Biopsy के लिए आप पहचान कार्ड, आय-सम्पन्न प्रमाण और appointment के दस्तावेज साथ रखें; फॉर्म्स और लेबल सही तरह से भरे हों."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"समझ गया. अगर रिपोर्ट बढ़े, तो मैं क्या-क्या सोचूं? क्या आप हर दिन मुझे दिखाते रहेंगे?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हमारी टीम समय-समय पर परिणाम साझा करेगी; अगर treatment शुरू हो, तो MDT से plan सुनाने के साथ आपको सहयोग मिलेगा."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"मैं बच्चों के स्कूल के लिए schedule कैसे बनाऊँ? क्या online consultation भी होगा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हां, online consultations और tele-steps भी हो सकते हैं; हम डिजिटल appointment slips और test lists भेज देंगे."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"अगर biopsy में कोई complications हो जाएं, जैसे infection या bleeding?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Complications rare होते हैं; फिर भी अगर कुछ हो, antibiotics या supportive care दिया जाएगा; आपको घर पर सावधानियाँ दे दी जाएंगी."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"Rashmi चाहती हूँ कि गला पूरी तरह से चेक हो ताकि हर चीज़ साफ़ हो जाए; वो कब तक होगा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Next week गला और गरदन की जाँच और ultrasound होंगे; रिपोर्ट मिलने तक कुछ दिनों का समय लगेगा."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"MRI बनाम CT के बारे में एक बार साफ़ बताओ। कौन सा कब, क्या फायदा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"CT जल्दी हो जाता है और ऊपरी हिस्से की detail दिखाता है; MRI गले के टिश्यू की detail साफ दिखाता है; MDT तय करेगा कौन सा उपयुक्त है."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"बचपन से मैं MRI में claustrophobic महसूस करता हूँ. अगर MRI जरूरी हुआ तो क्या दवाई दे देंगे?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"अगर ज़रूरत हो, sedation या anti-anxiety medicines दिए जा सकते हैं; पर आम तौर पर non-contrast MRI में आसानी से हो जाता है."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"प्री-ऑप के दिन क्या-क्या खाना पीना ठीक रहता है? कोई खानपान restrictions?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"प्री-ऑप के दिन हल्का आहार रखें; डॉक्टर की सलाह अनुसार nothing to eat or drink कई घंटे पहले; hydration बनी रहे."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"दिल्ली में कौन-कौन सी क्लिनिकल टेस्ट सबसे अहम होते हैं? CBC, metabolic panel आदि?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"CBC, metabolic panel, LFT/renal tests, kidney function, hepatitis/HIV screenings कभी-कभी; baseline tests MDT कहे."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"अगर मैं अभी गम-धुम्रपान छोड़ दूँ, क्या स्टेजिंग में फर्क पड़ेगा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Smoking cessation बढ़िया कदम है; कई हालात में tumor progression धीमी हो सकता है; पर स्टेजिंग biopsy और imaging से तय होती है."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"अगर स्टेज III-IV हुआ तो prognosis क्या होती है? survival rate कितना है?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"Prognosis tumor size, location, spread पर निर्भर है; कुल मिलाकर 5-वर्षीय-survival vary करता है; MDT से plan मिलने से outcome बेहतर होता है."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"मैं डरता हूँ कि इसकी लागत बहुत बढ़ जाए. क्या सरकारी सहायता मिलती है?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हाँ, subsidized उपचार, यात्रा सहायता, insurance support जैसे विकल्प हैं; हम सभी विकल्प एक साथ देखेंगे."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"तय है कि Rashmi हर स्टेप में साथ आएंगी. क्या translation support मिल सकेगी?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हाँ translation support, सरल भाषा में स्पष्टीकरण और patient navigator मदद करेंगे."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"ठीक है, क्या अगला कदम अभी हमें क्या करना है? मैं biopsy के लिए तैयार महसूस कर रहा हूँ?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हाँ, अगले सप्ताह throat examen, गरदन की जाँच और लैब्स confirm के लिए होंगे; biopsy plan MDT से finalize होगा."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"हम तैयार हैं; किसी भी देरी से पहले बताइए ताकि हम मैनेज कर सकें."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"ध्यान दें: अगर कोई नया lump, तेज़ weight loss, या swallowing में कठिनाई हो, तुरंत क्लिनिक आएँ."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"मैं अभी से throat exercises भी सीख लूँ ताकि vocal cords मजबूत रहें?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"थroat exercises मददगार हो सकते हैं, पर मुख्य ध्येय biopsy और imaging ही है; डॉक्टर से exercise plan भी ले लेंगे."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"मैं अपने काम के शेड्यूल से टाइम निकाल दूँगी."}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"बहुत अच्छा. हम हर कदम एक-एक करके समझाकर चलते हैं."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"धन्यवाद, डॉक्टर. मैं खुद को तैयार महसूस कर रहा हूँ. अगला संदेश कब मिलेगा?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"अगला संदेश appointment confirmation और test list के साथ अगले 2-3 दिनों में भेज दूँगा."}
+{"speaker": "Patient's Relative", "date":"2025-09-02", "dialogue":"तब तक मैं घर पर दोनों को सपोर्ट करता रहूँगा. कोई urgent contact हो तो?"}
+{"speaker": "Health Worker", "date":"2025-09-02", "dialogue":"हमारा helpline नंबर रहेगा; urgent cases में immediate guidance देंगे."}
+{"speaker": "Patient", "date":"2025-09-02", "dialogue":"चलो, ठीक है. मैं तैयार हूँ. फिर मिलते हैं."}
 
-SUMMARIES_DIR = Path("data_eval/NER_extracted/Experiment_Summaries_GPT")
-OUTPUT_DIR = Path("data_eval/NER_extracted/LLM_Judge_Verdicts/Translated_FastTrack")
+# Mistra FewShot
+Rajesh Kumar, a 30-year-old resident of Delhi, presented with a sore throat, hoarseness, fullness in the throat, and a lump sensation. He has stopped consuming belaman and pan but continues to consume paan occasionally. He also mentioned experiencing hard or spicy food intolerance, slight weight loss, and a change in voice tone. The initial assessment involved a thorough examination of the mouth and neck, potentially followed by a laryngoscopy and biopsy if necessary. The patient expressed concern about the discomfort and potential pain associated with these procedures. The doctor explained that the endoscope would provide clear visuals without causing significant discomfort due to its small size. The patient's wife, Rashmi, was also present and asked about what could be expected from a biopsy. The doctor clarified that a biopsy involves removing a small tissue sample under local anesthesia, which usually causes minimal discomfort. They also discussed the possibility of performing a fine needle aspiration (FNAC) if a clear image of the area wasn't obtained through the initial examination. The doctor further explained that if a biopsy confirmed cancer, they would proceed with staging using CT or MRI scans to determine the size, location, and spread of the tumor. The patient inquired about the necessity of conducting a thorough examination and ultrasound before biopsy and imaging. The doctor agreed that it was appropriate if the previous week's examination hadn't been comprehensive enough. Rashmi asked about what could be observed through an ultrasound and whether it could reveal cancer without a biopsy. The doctor explained that while an ultrasound could detect nodes and tissues, a definitive diagnosis required a biopsy. The patient asked about the staging system and how it was determined. The doctor explained that the TNM system evaluates tumor size, node involvement, and metastasis to determine the stage of the cancer. The patient inquired about the importance of filling out forms for the hospital and whether they were government-related. The doctor assured them that the forms included identification, insurance, and other relevant information, along with financial assistance and payment plans. The topic of HPV vaccination came up, and the doctor explained that it could prevent some types of head and neck cancer but was less effective for existing cases. They also discussed the importance of protection against infections and injury prevention. The patient asked about vaccinations being available in government hospitals and their costs. The doctor suggested that various centers offered HPV vaccines, some of which were free. The patient inquired about surgical and radiotherapeutic options if a biopsy confirmed cancer. The doctor explained that the choice of treatment depended on the tumor's size and location, with MDT teams making the decision. The patient wanted to know if pollution affected treatment and recovery. The doctor advised maintaining good indoor air quality, wearing masks, and staying hydrated to improve tolerance and reduce respiratory symptoms. The patient asked about what they should prepare for the biopsy procedure and when they might receive results. The doctor recommended keeping identification, insurance information, and appointment details handy for the biopsy. They also suggested bringing forms and labels properly filled out. The patient asked about what they should do if the biopsy report showed complications such as infection or bleeding. The doctor reassured them that complications were rare but, if they occurred, antibiotics or supportive care would be administered. Rashmi requested a thorough examination to ensure all aspects were covered. The doctor explained that the next week would involve throat examination, neck examination, and lab tests. They also mentioned that the final biopsy plan would be determined through MDT consultation. The patient and Rashmi were prepared and asked about what to expect if a new lump, weight loss, or swallowing difficulties emerged. The doctor urged them to come in immediately if any such symptoms appeared. The patient also inquired about learning throat exercises to strengthen their vocal cords. The doctor suggested that throat exercises could help but emphasized that the primary focus should be on the biopsy and imaging. They also promised to provide an exercise plan. The patient asked about managing their work schedule around the appointments and procedures. The doctor assured them that they would receive advance notice for appointments and tests. They also provided a helpline number for urgent cases. The patient thanked the doctor and asked when they could expect further communication. The doctor promised to send appointment confirmations and test lists within the next 2-3 days. They also pledged to support both the patient and Rashmi throughout the process.
+# Mistral ZeroShot
+The patient, Ravi Kumar, is a 30-year-old individual from Delhi who has been experiencing hoarseness and fullness in the throat without coughing. He underwent a throat examination, and further investigations such as an endoscopy and biopsy are planned. Ravi also mentioned feeling a swelling sensation in the neck and having difficulty swallowing, especially with hard or spicy food. His weight remains stable. The initial examinations will focus on the mouth and larynx, and an endoscope will be used for better visualization. The patient expressed fear about potential discomfort or pain but was assured that the procedure would be minimally invasive. Rashmi, the patient's wife, was present during the conversation and asked about what ultrasound would reveal and whether it could detect cancer without a biopsy. The doctor explained that while ultrasound can identify nodes and thyroid conditions, a definitive diagnosis requires a biopsy. The biopsy process involves taking a small tissue sample, which may take some time for the final report to come out. If the biopsy is positive for cancer, further tests like CT or MRI scans will be conducted for staging purposes. The patient also inquired about the forms and procedures required for the biopsy and whether they were government-assisted. The discussion touched upon HPV vaccination and its effectiveness against certain types of cancer, even if the patient does not have cancer yet. The team will follow up with more information regarding the vaccination and financial assistance. The patient and Rashmi were informed about the importance of proper preparation before the biopsy, including bringing identification cards, forms, and appointments. They were also advised to follow instructions carefully to ensure accurate results. The conversation included discussions on complications, such as infections or bleeding, and the need for precautions like antibiotics or supportive care if necessary. Rashmi requested that the entire process be explained thoroughly so she could understand each step clearly. The team agreed to provide detailed explanations and translation support if needed. The next steps involve throat examination, lab confirmations, and finalizing the biopsy plan through MDT. The team emphasized the importance of reporting any new symptoms, such as lumps, excessive weight loss, or swallowing difficulties, promptly. The patient also shared that they were learning throat exercises to strengthen their vocal cords in preparation for the biopsy. The team encouraged them to focus primarily on the biopsy and imaging procedures, as throat exercises were secondary. The patient requested clarification on their work schedule to manage their appointments effectively. The team promised to provide clear instructions and timely communication. They also provided emergency contact information for urgent cases. The patient expressed readiness to proceed and thanked the doctor for their guidance. The next update would be provided within the next 2-3 days with appointment confirmation and test lists. The patient promised to support both themselves and their spouse throughout the process.
+#Qwen FewShot
+Ravi Kumar, 30 years old, hotel bellman from Delhi, presents with a sore throat, voice change, and throat fullness. He smokes occasionally but has stopped recently and considers quitting pan masala. Symptoms include occasional discomfort while eating hard or spicy food, slight weight fluctuation, and no significant systemic symptoms. Initial plan involves an ENT examination followed by possible biopsy if suspicious findings are noted. ENT examination scheduled for next day or evening, including laryngoscopy and endoscopy. Endoscopy will be painless and uses a small tube to examine without discomfort. Ultrasound of neck may also be done if necessary. If biopsy is required, a small tissue sample will be taken, and results will be available within a few days. For suspected nodules, fine needle aspiration cytology (FNAC) can be performed, causing minimal discomfort. Further steps depend on biopsy results, which may indicate cancer staging through TNM system (Tumor, Node, Metastasis).
 
-TARGET_EXPERIMENTS = [
-    "Mistral_Translated",
-    "Qwen_Translated"
-]
+Follow-up includes CT or MRI for staging, depending on MDT recommendation. Forms and documents need to be prepared for government screening programs or subsidies. HPV vaccination discussion included, though less effective for existing conditions but still beneficial for prevention.
 
-endpoint = "https://ctonpncuaaiopenai.openai.azure.com/"
-deployment = "gpt-5"
-subscription_key = ""  # Add your Azure key here
-api_version = "2024-12-01-preview"
+Treatment options post-biopsy include surgery, radiotherapy, or chemoradiotherapy, decided by MDT based on tumor characteristics. Seasonal allergies and pollution in Delhi may impact recovery, so maintaining good hydration and air quality indoors advised.
 
-client = AzureOpenAI(
-    api_version=api_version,
-    azure_endpoint=endpoint,
-    api_key=subscription_key,
-)
+Preparation before biopsy includes bringing identification, income proof, and appointment documents. Detailed instructions given for pre-op dietary restrictions. Important clinic tests include CBC, metabolic panels, liver/kidney functions, and HIV/hepatitis screenings.
 
-# --- 2. HELPER FUNCTIONS ---
-def extract_conversation_from_jsonl(filepath):
-    """Reconstructs the full Patient-Doctor conversation from the JSONL file."""
-    dialogue_parts = []
-    try:
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                try:
-                    r = json.loads(line.strip())
-                    speaker = r.get("speaker", "Unknown")
-                    # Safely grab either the English translation or the native dialogue
-                    text = r.get("translated_dialogue", r.get("dialogue", ""))
-                    if text:
-                        dialogue_parts.append(f"{speaker}: {text}")
-                except:
-                    continue
-                    
-        conversation_text = "\n".join(dialogue_parts)
-        return conversation_text
-    except Exception as e:
-        print(f"Error reading JSONL: {e}")
-    return None
+Stopping smoking improves prognosis even in advanced stages, though staging depends on biopsy and imaging results. Survival rates vary by stage, with better outcomes following MDT plans.
 
-def call_llm_judge_direct(conversation_text, summary_json):
-    system_prompt = """
-    You are an expert clinical auditor evaluating a medical AI system.
-    You will be provided with:
-    1. A 'Ground Truth Conversation' (the raw, actual transcript of the doctor-patient encounter).
-    2. An 'AI Extracted Entities' JSON representing the medical facts an AI generated based on a summary of this encounter.
+Cost concerns addressed via government support and subsidies. Translation support available for non-native speakers. Next steps include confirming appointment and preparing for biopsy, with clear communication throughout the process.
 
-    Your job is to compare the AI's JSON entities directly against the Ground Truth Conversation. Account for clinical synonyms (e.g., 'Hypertension' = 'High Blood Pressure').
-    
-    Output your findings strictly using this JSON schema. Ensure your integer counts match your arrays perfectly!
-    {
-        "Clinical_Hallucinations": ["List entities in the AI JSON that were NEVER mentioned or implied in the Ground Truth Conversation."],
-        "Clinical_Omissions": ["List critical medical facts (symptoms, diagnoses, treatments) discussed in the Conversation that are MISSING from the AI JSON."],
-        "Valid_Matches": ["List items correctly identified in both."],
-        "Total_Hallucination_Count": <integer count of the Clinical_Hallucinations array>,
-        "Total_Omission_Count": <integer count of the Clinical_Omissions array>
-    }
-    """
-    
-    user_prompt = f"GROUND TRUTH CONVERSATION:\n{conversation_text}\n\nAI EXTRACTED ENTITIES (JSON):\n{json.dumps(summary_json)}"
+Regular follow-up and reporting any new symptoms like lumps or swallowing difficulties. Throat exercises may help vocal cord strength but secondary to biopsy and imaging. Time will be allocated from work schedule accordingly.
 
-    try:
-        response = client.chat.completions.create(
-            model=deployment, 
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={ "type": "json_object" },
-            temperature=0.0
-        )
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"API Error: {e}")
-        return None
+Next message will be sent within 2-3 days with appointment confirmation and test list. Support will continue until then. Emergency contact number provided for urgent cases.
 
-# --- 3. EXECUTION ---
-def run_fast_llm_judge():
-    print("\n--- Starting FAST-TRACK LLM-as-a-Judge Evaluation ---")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    
-    for exp_folder in SUMMARIES_DIR.iterdir():
-        if not exp_folder.is_dir() or exp_folder.name.startswith('.') or exp_folder.name not in TARGET_EXPERIMENTS: 
-            continue
-            
-        experiment_name = exp_folder.name
-        print(f"\n==================================================")
-        print(f"   Processing: {experiment_name}")
-        print(f"==================================================")
-        
-        for lang_folder in exp_folder.iterdir():
-            if not lang_folder.is_dir() or lang_folder.name.startswith('.'): continue
-            language = lang_folder.name
-            
-            # The new GT directory structure
-            gt_lang_dir = RAW_GT_DIR / language / "Dialogues"
-            if not gt_lang_dir.exists():
-                gt_lang_dir = RAW_GT_DIR / language # Fallback
-            
-            dest_lang_dir = OUTPUT_DIR / experiment_name / language
-            dest_lang_dir.mkdir(parents=True, exist_ok=True)
-            
-            files_to_process = list(lang_folder.glob("*_gpt_ner.json"))
-            if not files_to_process: continue
-                
-            print(f"[{experiment_name} | {language}] Judging {len(files_to_process)} cases...")
-            
-            for count, summary_file in enumerate(files_to_process, 1):
-                # Clean up the case ID
-                case_id = summary_file.name.replace("_gpt_ner.json", "").replace("_summary", "")
-                
-                output_file = dest_lang_dir / f"{case_id}_judge.json"
-                if output_file.exists(): continue 
-                
-                # 1. Locate Raw Ground Truth .jsonl
-                gt_file = gt_lang_dir / f"{case_id}.jsonl"
-                
-                if not gt_file.exists():
-                    print(f"  ❌ MISSING GT: Could not find raw JSONL for Case ID: {case_id}")
-                    continue
-                    
-                # 2. Extract Data
-                conversation_text = extract_conversation_from_jsonl(gt_file)
-                with open(summary_file, 'r', encoding='utf-8') as sf:
-                    summary_json_content = json.load(sf)
-                    summary_data = summary_json_content.get("Entities", {})
-                
-                if not conversation_text or len(conversation_text.strip()) < 10:
-                    print(f"  ⚠️ EMPTY CONVERSATION: File {gt_file.name}")
-                    continue
+#Qwen ZeroShot
+Dr. and Mr. Kumar had an initial examination for Mr. Kumar's reported throat discomfort and fullness in the throat. The doctor plans to perform a throat examination first, followed by an endoscopy if needed. Mr. Kumar expressed fear about the procedure but was reassured that it would be minimally invasive and less painful. A biopsy may be required if cancer is suspected, with results typically available within a few days. Other diagnostic procedures such as ultrasound and possibly MRI might be conducted depending on the findings. Treatment options including surgery, radiation therapy, or chemoradiation will depend on the tumor characteristics determined by the multidisciplinary team (MDT). Kumar also asked about the impact of quitting smoking on his condition and prognosis, which depends on various factors including tumor stage. Financial assistance from the government and other resources were discussed, along with potential online consultations and home care instructions. Follow-up appointments and further testing were scheduled for the next week.
 
-                # 3. Call Direct Judge
-                judge_verdict = call_llm_judge_direct(conversation_text, summary_data)
-                
-                if judge_verdict:
-                    final_record = {
-                        "Case_ID": case_id,
-                        "Experiment": experiment_name,
-                        "Language": language,
-                        "Judge_Verdict": judge_verdict
-                    }
-                    with open(output_file, 'w', encoding='utf-8') as out:
-                        json.dump(final_record, out, indent=4)
-                        
-                if count % 10 == 0:
-                    print(f"  ...judged {count}/{len(files_to_process)}")
+Results
+Qwen-2.5-7B	Zeroshot	Truthfulness	Safety	Explainability	ROUGE-L	BERT-Score	Factual faithfulness-NLI	Precision	Hallucination	Recall	Omission	F1
+	bn	3.7600	2.8780	3.7600	0.1319	0.8541		0.6253	0.3747	0.5176	0.4824	0.5664
+	en	4.0400	3.0410	3.9400	0.1619	0.8631		0.6943	0.3057	0.6107	0.3893	0.6498
+	hi	3.8000	2.5900	3.8200	0.1276	0.8563		0.6761	0.3239	0.4645	0.5355	0.5507
+	mr	3.2600	2.5310	3.1600	0.1378	0.8524		0.5735	0.4265	0.4885	0.5115	0.5276
+	te	2.5800	2.1600	2.7600	0.1139	0.8524		0.5366	0.4634	0.3876	0.6124	0.4501
+	ta	3.0600	2.3000	3.3000	0.1310	0.8562		0.574	0.426	0.4128	0.5872	0.4802
+	kn	2.4200	2.2400	2.7400	0.1307	0.8565		0.4551	0.5449	0.4271	0.5729	0.4407
+	gu	3.0000	2.4600	3.1600	0.1426	0.8580		0.3075	0.6925	0.547	0.453	0.3937
+	do	3.7400	2.7600	3.6800	0.1175	0.8534		0.6638	0.3362	0.5	0.5	0.5704
+	as	3.5200	2.6400	3.5600	0.1234	0.8549		0.6511	0.3489	0.4811	0.5189	0.5533
 
-run_fast_llm_judge()
+Qwen-2.5-7B	Fewshot	Truthfulness	Safety	Explainability	ROUGE-L	BERT-Score	Factual faithfulness-NLI	Precision	Hallucination	Recall	Omission
+	bn	3.6600	2.7400	3.5510	0.1201	0.8531		0.587	0.413	0.5501	0.4499
+	en	3.8600	2.8600	3.8400	0.1697	0.8610		0.6758	0.3242	0.6111	0.3889
+	hi	3.6000	2.7600	3.5000	0.1243	0.8598		0.552	0.448	0.4572	0.5428
+	mr	3.5200	2.6200	3.4600	0.1389	0.8551		0.5346	0.4654	0.4523	0.5477
+	te	2.4800	2.0600	2.5400	0.1002	0.8508		0.4482	0.5518	0.3261	0.6739
+	ta	3.2000	2.5510	3.4000	0.1279	0.8561		0.5179	0.4821	0.4238	0.5762
+	kn	3.1000	2.3600	2.6600	0.0821	0.8493		0.3791	0.6209	0.4182	0.5818
+	gu	3.3800	2.5400	3.2800	0.1086	0.8500		0.6052	0.3948	0.4678	0.5322
+	do	3.3800	2.5200	3.2400	0.1202	0.8541		0.6173	0.3827	0.4443	0.5557
+	as	3.5200	2.7400	3.5510	0.1139	0.8545		0.5006	0.4994	0.5119	0.4881
 
+Mistral	Zeroshot	Truthfulness	Safety	Explainability	ROUGE-L	BERT-Score	Factual faithfulness-NLI	Precision	Hallucination	Recall	Omission	F1
+	bn	3.1400	2.5400	3.0200	0.1408	0.8476		0.5542	0.4458	0.3804	0.6196	0.4511
+	en	4.1000	3.0800	3.9200	0.1750	0.8617		0.7045	0.2955	0.6061	0.3939	0.6516
+	hi	3.1000	2.3400	3.1400	0.1434	0.8522		0.5644	0.4356	0.3739	0.6261	0.4498
+	mr	2.8200	2.3600	2.7400	0.1300	0.8410		0.4581	0.5419	0.3871	0.6129	0.4196
+	te	2.8200	2.5400	2.7600	0.1179	0.8409		0.2824	0.7176	0.282	0.7180	0.2822
+	ta	2.9600	2.1800	2.8600	0.1432	0.8490		0.487	0.513	0.3829	0.6171	0.4287
+	kn	3.4400	2.8400	3.5600	0.1379	0.8474		0.4105	0.5895	0.4369	0.5631	0.4233
+	gu	2.2800	2.3200	2.2800	0.1168	0.8435		0.4339	0.5661	0.3196	0.6804	0.3681
+	do	3.2000	2.2800	3.1400	0.1205	0.8481		0.5733	0.4267	0.3452	0.6548	0.4309
+	as	3.0600	2.4800	3.1000	0.1269	0.8466		0.4325	0.5675	0.4031	0.5969	0.4173
 
-```
+Mistral	Fewshot	Truthfulness	Safety	Explainability	ROUGE-L	BERT-Score	Factual faithfulness-NLI	Precision	Hallucination	Recall	Omission	F1
+	bn	3.1400	2.4400	3.0400	0.1315	0.8463		0.4711	0.5289	0.27	0.7300	0.3433
+	en	4.1000	3.0200	3.9200	0.1726	0.8596		0.6241	0.3759	0.5038	0.4962	0.5575
+	hi	2.5600	2.1000	2.4200	0.1240	0.8522		0.4011	0.5989	0.3231	0.6769	0.3579
+	mr	3.6200	2.5800	3.3600	0.1269	0.8432		0.4013	0.5987	0.3131	0.6869	0.3518
+	te	3.1000	2.3000	2.9200	0.1303	0.8492		0.3713	0.6287	0.3852	0.6148	0.3781
+	ta	2.8600	2.2600	2.9400	0.1323	0.8517		0.4456	0.5544	0.3697	0.6303	0.4041
+	kn	3.2200	2.1800	2.9000	0.1366	0.8503		0.4551	0.5449	0.3153	0.6847	0.3725
+	gu	1.7200	1.8800	1.7800	0.1114	0.8428		0.3075	0.6925	0.2453	0.7547	0.2729
+	do	3.0890	2.3400	2.9000	0.1229	0.8517		0.4753	0.5247	0.3708	0.6292	0.4166
+	as	3.2600	2.4400	3.1400	0.1107	0.8482		0.4846	0.5154	0.3367	0.6633	0.3973
+												
