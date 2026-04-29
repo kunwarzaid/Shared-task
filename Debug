@@ -67,9 +67,9 @@ def call_gpt_researcher(language, conversation, zero, few, trans, sft):
 
     Structure your academic report around the following key axes:
     1. Factual Fidelity: Objectively identify if any methodology hallucinated facts (invented symptoms/medications) or omitted critical clinical details present in the ground truth.
-    2. Structural Formatting: Compare how the organization and clinical tone differ across the methods. Which produce standard clinical notes vs. conversational recaps?
-    3. Lexical Choice & Nuance: How is specific medical terminology handled? Are nuanced patient sentiments preserved, or abstracted into generic terms?
-    4. Methodological Divergence: Highlight the most significant differences in how the four models interpreted ambiguous or complex parts of the dialogue.
+    2. Negation Handling (CRITICAL): Carefully analyze how each methodology processes negations from the transcript (e.g., when a patient denies a symptom or a doctor rules out a condition). Did any method suffer from "affirmative bias" by recording a denied symptom as present? Did translation alter the scope of the negation?
+    3. Structural Formatting: Compare how the organization and clinical tone differ across the methods. Which produce standard clinical notes vs. conversational recaps?
+    4. Lexical Choice & Nuance: How is specific medical terminology handled? Are nuanced patient sentiments preserved, or abstracted into generic terms?
 
     Output a rich, readable Markdown report. You MUST cite specific, short quotes from the provided texts to justify your comparisons. Keep the tone highly academic and strictly data-driven.
     """
