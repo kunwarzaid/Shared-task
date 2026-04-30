@@ -1,24 +1,56 @@
-4.2 Few-Shot Prompting
-4.2.1 Setup and Motivation
-Few-shot prompting augments the zero-shot prompt with a small number of demonstration examples drawn from the training set. The objective is to condition the model on the desired output format and clinical content structure, thereby reducing the ambiguity inherent in open-ended summarization tasks. We hypothesize that few-shot examples improve output consistency and adherence to clinical documentation norms.
-4.2.2 Example Selection
-For each test instance, demonstration examples are selected using a stratified strategy. We include one example from the same language as the test instance (when available in the training set) to expose the model to target-language output patterns, and one example from English to provide a high-quality structural reference. This bilingual demonstration strategy is designed to balance linguistic fidelity with clinical structure quality.
-The number of shots is set to k = 3, empirically balancing informativeness against context length limitations. All demonstrations are formatted as complete dialogue-summary pairs using the same prompt template as in the zero-shot condition, prepended before the target dialogue.
-4.2.3 Context Window Management
-Clinical dialogues can be lengthy. To ensure that all demonstrations and the target dialogue fit within the model's context window (4,096 tokens for Mistral-7B; 8,192 tokens for Qwen2.5-7B), dialogues exceeding a token threshold are truncated from the middle, preserving the opening clinical context and the closing diagnostic/treatment discussion, which carry the highest density of clinically relevant information.
-4.3 Translation-Augmented Inference (IndicTrans2 Pipeline)
-4.3.1 Motivation
-A well-established strategy for low-resource NLP is translate-then-process: translate the source text into a high-resource language, apply the NLP pipeline in that language, and optionally back-translate the output. Given the strong English clinical summarization capabilities of both target models, we explore whether routing non-English dialogues through a high-quality neural machine translation (NMT) system before summarization yields improvements over direct multilingual inference.
-4.3.2 IndicTrans2
-Translation is performed using IndicTrans2, a state-of-the-art multilingual NMT model developed by AI4Bharat, specifically designed for Indian languages. IndicTrans2 supports translation between English and 22 scheduled Indian languages, covering all ten languages in our dataset. It achieves competitive BLEU scores on standard benchmarks for Indic language translation and has been shown to substantially outperform general-purpose translation systems (e.g., Google Translate) on low-resource Indian language pairs.
-4.3.3 Pipeline Architecture
-The translation pipeline operates as follows:
-• Non-English dialogues are translated to English using IndicTrans2 (source-to-English direction).
-• The translated English dialogue is passed to the summarization model (Mistral-7B or Qwen2.5-7B) using the zero-shot English prompt.
-• The generated English summary is translated back to the original source language using IndicTrans2 (English-to-source direction), producing the final multilingual summary.
-• English dialogues bypass the translation step entirely and are processed directly.
+Following recent work on using large language models as evaluation proxies for text generation tasks, we employ a structured LLM-as-judge pipeline to assess four holistic quality dimensions that are particularly critical in clinical settings. Each dimension is scored on a Likert scale (1–5) by a judge LLM presented with the source dialogue, the generated summary, and a structured scoring rubric.
+Dimension
+Description
+Key Questions
+Trustworthiness
+The degree to which the summary can be relied upon as an accurate and verifiable account of the clinical encounter.
+Is every claim in the summary grounded in the dialogue? Are there statements that cannot be verified from the source?
+Safety
+The absence of clinical errors, misleading statements, or omissions that could lead to patient harm if the summary were used in clinical decision-making.
+Does the summary contain any contraindicated recommendations, incorrect dosages, or dangerous omissions?
+Explainability
+The clarity, coherence, and comprehensibility of the summary for a clinical reader.
+Is the summary logically organized? Is the clinical reasoning clear? Would a clinician understand the summary without referring to the original dialogue?
+Factual Faithfulness
+The degree to which the factual content of the summary (symptoms, diagnoses, medications, dosages, test results) accurately reflects the source dialogue without hallucination or distortion.
+Are all stated facts correct relative to the dialogue? Are there any hallucinated details?
  
-This end-to-end pipeline isolates the summarization step from cross-lingual generation challenges, allowing the model to operate in its strongest inference language (English) while delivering output in the patient's native language.
-4.4 Supervised Fine-Tuning (SFT)
-4.4.1 Motivation and Approach
-Supervised fine-tuning adapts the pre-trained models directly to the target task and domain using labeled training examples. Fine-tuning allows the model to internalize the stylistic, structural, and clinical norms of the target summaries, and to develop stronger representations for low-resource languages encountered in training. We employ Parameter-Efficient Fine-Tuning (PEFT) via Low-Rank Adaptation (LoRA) to make training computationally feasible on 7B-parameter models.
+
+
+The judge LLM is provided with explicit scoring rubrics for each dimension, including anchored descriptions of each scale point (1 = very poor, 3 = acceptable, 5 = excellent). To mitigate positional bias and ensure robustness, each summary is evaluated independently without comparison to other system outputs in the same judge call.
+
+The judge LLM is provided with explicit scoring rubrics for each dimension, including anchored descriptions of each scale point (1 = very poor, 3 = acceptable, 5 = excellent). To mitigate positional bias and ensure robustness, each summary is evaluated independently without comparison to other system outputs in the same judge call.
+6.3 Tier 3: Clinical Entity-Level Analysis
+6.3.1 Entity Categories
+The third evaluation tier performs a fine-grained analysis of clinical entity coverage and accuracy. We define five entity categories that are clinically salient and collectively represent the core informational content of a clinical encounter summary:
+• Symptoms: Patient-reported symptoms and signs observed or elicited during the encounter.
+• Diagnoses and Conditions: Confirmed, suspected, or ruled-out diagnoses and clinical conditions.
+• Substances and Habits: Medications, supplements, substances of abuse, dietary habits, and lifestyle factors.
+• Procedures and Tests: Diagnostic procedures, laboratory tests, imaging studies, and physical examinations ordered or discussed.
+• Treatments: Prescribed treatments, therapeutic interventions, surgical procedures, and management plans.
+6.3.2 Entity Extraction with GPT-4.1
+Entities are extracted from both generated summaries and gold summaries using GPT-4.1 (OpenAI), which is prompted to output structured JSON listing all entities in each of the five categories. GPT-4.1 is selected for its strong multilingual entity recognition capabilities and its reliability for structured information extraction from clinical text. A consistent extraction prompt is applied to both generated and gold summaries to ensure comparability.
+The extraction prompt instructs GPT-4.1 to identify entities at the concept level, normalizing morphological variants and synonyms to a canonical form. For example, "fever" and "high temperature" would be normalized to the same concept. This normalization is critical for multilingual evaluation, where the same clinical concept may be expressed differently across languages or due to translation artifacts.
+6.3.3 Matching and Metrics
+Extracted entities from generated summaries are compared to entities extracted from gold summaries using fuzzy semantic matching. A generated entity is considered a true positive (TP) if a semantically equivalent entity is present in the gold entity set; a false positive (FP) if no such match exists in the gold set; and a false negative (FN) if a gold entity is absent from the generated entity set. From these counts, the following metrics are computed per entity category and in aggregate:
+ 
+Metric
+Formula
+Clinical Interpretation
+Precision
+TP / (TP + FP)
+Fraction of generated entities that are correct (anti-hallucination measure)
+Recall
+TP / (TP + FN)
+Fraction of gold entities captured in the generated summary (anti-omission measure)
+F1 Score
+2 × (P × R) / (P + R)
+Harmonic mean of precision and recall
+Omission Rate
+FN / (TP + FN)
+Proportion of important clinical entities missed by the model
+Hallucination Rate
+FP / (TP + FP)
+Proportion of generated entities not supported by the gold summary
+ 
+Omission rate and hallucination rate are of particular clinical importance. In a safety-critical clinical summarization system, a high omission rate may result in important diagnoses or treatments being overlooked, while a high hallucination rate could lead to incorrect clinical decisions. These two error types are therefore analyzed separately in addition to the aggregate F1 score.
