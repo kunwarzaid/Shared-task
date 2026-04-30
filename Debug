@@ -1,39 +1,107 @@
-Following recent work on using large language models as evaluation proxies for text generation tasks, we employ a structured LLM-as-judge pipeline to assess four holistic quality dimensions that are particularly critical in clinical settings. Each dimension is scored on a Likert scale (1–5) by a judge LLM presented with the source dialogue, the generated summary, and a structured scoring rubric.
-Dimension
-Description
-Key Questions
-Trustworthiness
-The degree to which the summary can be relied upon as an accurate and verifiable account of the clinical encounter.
-Is every claim in the summary grounded in the dialogue? Are there statements that cannot be verified from the source?
-Safety
-The absence of clinical errors, misleading statements, or omissions that could lead to patient harm if the summary were used in clinical decision-making.
-Does the summary contain any contraindicated recommendations, incorrect dosages, or dangerous omissions?
-Explainability
-The clarity, coherence, and comprehensibility of the summary for a clinical reader.
-Is the summary logically organized? Is the clinical reasoning clear? Would a clinician understand the summary without referring to the original dialogue?
-Factual Faithfulness
-The degree to which the factual content of the summary (symptoms, diagnoses, medications, dosages, test results) accurately reflects the source dialogue without hallucination or distortion.
-Are all stated facts correct relative to the dialogue? Are there any hallucinated details?
- 
+<mxGraphModel background="#0F1117">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
 
+    <!-- STAGE 1: Dataset -->
+    <mxCell id="2" value="10-Language Clinical Dialogue Corpus" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#4F8EF7;fontColor=#4F8EF7;
+             fontSize=11;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="80" y="40" width="640" height="80" as="geometry"/>
+    </mxCell>
 
-The judge LLM is provided with explicit scoring rubrics for each dimension, including anchored descriptions of each scale point (1 = very poor, 3 = acceptable, 5 = excellent). To mitigate positional bias and ensure robustness, each summary is evaluated independently without comparison to other system outputs in the same judge call.
+    <!-- Arrow 1→2 -->
+    <mxCell id="3" value="5 scripts · 3 families" 
+      style="edgeStyle=orthogonalEdgeStyle;strokeColor=#5A6585;fontColor=#5A6585;
+             fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" 
+      edge="1" source="2" target="4" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
 
-The judge LLM is provided with explicit scoring rubrics for each dimension, including anchored descriptions of each scale point (1 = very poor, 3 = acceptable, 5 = excellent). To mitigate positional bias and ensure robustness, each summary is evaluated independently without comparison to other system outputs in the same judge call.
-6.3 Tier 3: Clinical Entity-Level Analysis
-6.3.1 Entity Categories
-The third evaluation tier performs a fine-grained analysis of clinical entity coverage and accuracy. We define five entity categories that are clinically salient and collectively represent the core informational content of a clinical encounter summary:
-• Symptoms: Patient-reported symptoms and signs observed or elicited during the encounter.
-• Diagnoses and Conditions: Confirmed, suspected, or ruled-out diagnoses and clinical conditions.
-• Substances and Habits: Medications, supplements, substances of abuse, dietary habits, and lifestyle factors.
-• Procedures and Tests: Diagnostic procedures, laboratory tests, imaging studies, and physical examinations ordered or discussed.
-• Treatments: Prescribed treatments, therapeutic interventions, surgical procedures, and management plans.
-6.3.2 Entity Extraction with GPT-4.1
-Entities are extracted from both generated summaries and gold summaries using GPT-4.1 (OpenAI), which is prompted to output structured JSON listing all entities in each of the five categories. GPT-4.1 is selected for its strong multilingual entity recognition capabilities and its reliability for structured information extraction from clinical text. A consistent extraction prompt is applied to both generated and gold summaries to ensure comparability.
-The extraction prompt instructs GPT-4.1 to identify entities at the concept level, normalizing morphological variants and synonyms to a canonical form. For example, "fever" and "high temperature" would be normalized to the same concept. This normalization is critical for multilingual evaluation, where the same clinical concept may be expressed differently across languages or due to translation artifacts.
-6.3.3 Matching and Metrics
-Extracted entities from generated summaries are compared to entities extracted from gold summaries using fuzzy semantic matching. A generated entity is considered a true positive (TP) if a semantically equivalent entity is present in the gold entity set; a false positive (FP) if no such match exists in the gold set; and a false negative (FN) if a gold entity is absent from the generated entity set. From these counts, the following metrics are computed per entity category and in aggregate:
- 
+    <!-- STAGE 2: Models -->
+    <mxCell id="4" value="Mistral-7B-Instruct" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#34C98B;fontColor=#34C98B;
+             fontSize=11;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="80" y="180" width="300" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="5" value="Qwen2.5-7B-Instruct" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#34C98B;fontColor=#34C98B;
+             fontSize=11;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="420" y="180" width="300" height="70" as="geometry"/>
+    </mxCell>
+
+    <!-- STAGE 3: Paradigms -->
+    <mxCell id="10" value="Zero-Shot" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#F5A623;fontColor=#F5A623;
+             fontSize=10;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="80" y="320" width="140" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="11" value="Few-Shot (k=1)" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#F87171;fontColor=#F87171;
+             fontSize=10;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="240" y="320" width="140" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="12" value="Translation (IndicTrans2)" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#38BDF8;fontColor=#38BDF8;
+             fontSize=10;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="400" y="320" width="140" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="13" value="Fine-Tuning (LoRA)" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#34C98B;fontColor=#34C98B;
+             fontSize=10;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="560" y="320" width="140" height="100" as="geometry"/>
+    </mxCell>
+
+    <!-- STAGE 4: Evaluation -->
+    <mxCell id="20" value="Tier 1: ROUGE-L + BERTScore" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#38BDF8;fontColor=#38BDF8;
+             fontSize=10;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="80" y="490" width="190" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="21" value="Tier 2: LLM-as-Judge&#xa;Safety · Truthfulness&#xa;Explainability · Faithfulness" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#A78BFA;fontColor=#A78BFA;
+             fontSize=10;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="295" y="490" width="210" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="22" value="Tier 3: Entity Analysis&#xa;Precision · Recall · F1&#xa;Hallucination · Omission" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#E05C5C;fontColor=#E05C5C;
+             fontSize=10;fontStyle=1;arcSize=5;" 
+      vertex="1" parent="1">
+      <mxGeometry x="530" y="490" width="190" height="90" as="geometry"/>
+    </mxCell>
+
+    <!-- STAGE 5: Findings -->
+    <mxCell id="30" value="Few-shot degrades in 18/20 pairs" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#F87171;fontColor=#E2E8F0;
+             fontSize=9;arcSize=8;" 
+      vertex="1" parent="1">
+      <mxGeometry x="80" y="650" width="190" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="31" value="Safety &lt;3.0/5.0 across ALL conditions" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#A78BFA;fontColor=#E2E8F0;
+             fontSize=9;arcSize=8;" 
+      vertex="1" parent="1">
+      <mxGeometry x="295" y="650" width="190" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="32" value="Dravidian avg F1 &lt;0.44 at zero-shot" 
+      style="rounded=1;fillColor=#161B27;strokeColor=#38BDF8;fontColor=#E2E8F0;
+             fontSize=9;arcSize=8;" 
+      vertex="1" parent="1">
+      <mxGeometry x="510" y="650" width="190" height="50" as="geometry"/>
+    </mxCell>
+
+  </root>
+</mxGraphModel>
+
 Metric
 Formula
 Clinical Interpretation
