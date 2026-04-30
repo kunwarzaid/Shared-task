@@ -1,0 +1,488 @@
+% ============================================================
+% Introduction and Related Work
+% Multilingual Clinical Dialogue Summarization
+% Target: ACL/EMNLP two-column format (~2 pages minimum)
+% ============================================================
+
+\documentclass[10pt,twocolumn]{article}
+
+% ---- packages ------------------------------------------------
+\usepackage[margin=1in,columnsep=0.25in]{geometry}
+\usepackage{times}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{natbib}
+\usepackage{url}
+\usepackage{balance}
+
+% ---- title block ---------------------------------------------
+\title{\textbf{Multilingual Clinical Dialogue Summarization:\\
+Benchmarking LLMs Across Ten Indian Languages}}
+
+\author{
+  \textbf{[Authors Anonymized for Review]}\\
+  \textit{[Affiliation Anonymized]}
+}
+
+\date{}
+
+% ==============================================================
+\begin{document}
+\maketitle
+% ==============================================================
+
+% ==============================================================
+\section{Introduction}\label{sec:intro}
+% ==============================================================
+
+The accurate and timely documentation of clinical encounters
+is a cornerstone of modern healthcare delivery.
+Physician-patient dialogues are rich with diagnostically
+critical information---symptoms, risk behaviors, differential
+diagnoses, conditional management plans, and follow-up
+timelines---yet much of this content is never reliably
+captured in structured clinical records.
+In India alone, primary healthcare workers conduct hundreds
+of millions of consultations annually across a population that
+speaks 22 constitutionally scheduled languages spanning four
+major language families~\citep{gala2023indictrans}.
+The cognitive burden of manual documentation
+in this setting is substantial, and errors of omission in
+clinical notes are well-documented as a leading source of
+adverse patient outcomes~\citep{clus2023framework}.
+
+Automatic summarization of clinical dialogues using
+large language models (LLMs) offers a promising path toward
+reducing this burden. Recent work has demonstrated that
+instruction-tuned LLMs achieve competitive performance on
+English clinical summarization benchmarks, particularly in
+the MEDIQA-Chat shared task setting~\citep{tang2023gersteinlab,
+ben2023mediqa}.
+However, the overwhelming majority of clinical NLP research
+targets high-resource languages---most often English---leaving
+a vast multilingual clinical documentation need unaddressed.
+For Indian languages, which range from relatively well-resourced
+Indo-Aryan languages such as Hindi and Bengali to
+morphologically complex, script-distinct Dravidian languages
+such as Telugu, Tamil, and Kannada, existing LLM-based
+summarization pipelines are entirely unevaluated.
+
+This paper addresses that gap through a systematic benchmarking
+study of multilingual clinical dialogue summarization across
+\textbf{ten typologically diverse Indian languages}: English,
+Hindi, Marathi, Bengali, Tamil, Kannada, Gujarati,
+Dogri, Assamese, and Telugu. The languages span five script
+families, two major typological groupings (Indo-Aryan and
+Dravidian), and a spectrum of NLP resource availability from
+high (English, Hindi) to severely low (Dogri, Assamese).
+We benchmark two open-source instruction-tuned 7B-parameter
+models---Mistral-7B~\citep{jiang2023mistral} and
+Qwen2.5-7B~\citep{qwen25}---under four experimental
+paradigms: zero-shot prompting, few-shot prompting ($k{=}1$),
+translation-augmented inference via
+IndicTrans2~\citep{gala2023indictrans}, and supervised
+fine-tuning via LoRA~\citep{hu2021lora}.
+Evaluation spans three complementary tiers---surface-level
+metrics, LLM-as-judge holistic quality
+assessment~\citep{zheng2023judging}, and clinical entity-level
+fidelity analysis---providing a comprehensive picture of
+summarization quality across the full language spectrum.
+Full details of the dataset, experimental setup, and
+evaluation framework are presented in
+Sections~\ref{sec:data}--\ref{sec:eval}.
+
+Our principal contributions are as follows:
+
+\begin{itemize}[leftmargin=*, topsep=2pt, itemsep=1pt]
+  \item The first systematic benchmarking of open-source LLMs
+    on clinical dialogue summarization across ten Indian languages,
+    including four Dravidian and six Indo-Aryan languages.
+
+  \item A demonstration that few-shot prompting ($k{=}1$)
+    \textit{consistently degrades} performance relative to
+    zero-shot across 18 of 20 language-model combinations,
+    with hallucination rates increasing by up to 16.3 percentage
+    points---a finding that contradicts standard in-context
+    learning assumptions in monolingual settings.
+
+  \item An eight-category \textbf{Clinical Error Taxonomy}
+    derived from systematic qualitative case analyses across
+    all ten languages, characterizing the distinct error
+    mechanisms of each experimental paradigm and their
+    clinical risk implications.
+
+  \item Evidence that Qwen2.5-7B outperforms Mistral-7B on
+    every entity-level metric at zero-shot (F1: 0.518 vs.\ 0.432),
+    with the performance gap traced to Qwen2.5's broader
+    multilingual pretraining over Indic scripts.
+
+  \item A finding that supervised fine-tuning substantially
+    improves clinical safety scores and entity recall across
+    all language families, closing the persistent Safety deficit
+    (all prompting conditions: $<3.0/5.0$) observed in both
+    prompting paradigms.
+\end{itemize}
+
+The remainder of this paper is organized as follows.
+Section~\ref{sec:related} reviews related work.
+Section~\ref{sec:data} describes the dataset and languages.
+Section~\ref{sec:method} presents the methodology and
+experimental design.
+Section~\ref{sec:eval} defines the three-tier evaluation framework.
+Section~\ref{sec:results} presents quantitative results.
+Section~\ref{sec:qualitative} presents the qualitative
+error taxonomy.
+Section~\ref{sec:discussion} discusses implications.
+Section~\ref{sec:conclusion} concludes.
+
+% ==============================================================
+\section{Related Work}
+\label{sec:related}
+% ==============================================================
+
+\subsection{Clinical Dialogue Summarization}
+
+The automatic summarization of physician-patient dialogues
+has emerged as a central task in clinical NLP over the past
+decade. Early work applied extractive and abstractive
+sequence-to-sequence models to English medical conversations,
+with systems achieving competitive performance on structured
+clinical note generation~\citep{ben2023mediqa}.
+The MEDIQA-Chat 2023 shared task~\citep{ben2023mediqa}
+provided the first large-scale evaluation benchmark for this
+problem, catalyzing a wave of systems that fine-tuned
+pre-trained dialogue summarization models and employed
+in-context learning with GPT-3 and GPT-4.
+\citet{tang2023gersteinlab} demonstrated that fine-tuned
+GPT-3 and few-shot GPT-4 achieve strong ROUGE-1 and BERTScore
+on the Dialogue2Note subtask, while
+\citet{summqa2023} found that GPT-4-generated summaries
+tend to be shorter and more abstractive than human-authored
+notes, highlighting a systematic coverage gap---a finding
+directly replicated and quantified in our multilingual setting.
+
+More recent work has evaluated LLMs as clinical summarizers
+beyond shared task settings.
+\citet{vveen2024nat} demonstrated that domain-adapted LLMs
+can outperform medical experts on English clinical text
+summarization benchmarks.
+\citet{expert2025eval} conducted expert evaluations of
+multiple LLMs on clinical dialogue summarization,
+and \citet{noneng2025qual} extended this evaluation to
+real-world non-English data (Portuguese), finding that
+open-source LLMs struggle significantly with informal,
+noisy patient-provider dialogues---a challenge directly
+amplified in our setting by the added dimension of
+script diversity and low resource availability.
+Critically, none of these works address Indian languages
+or the broader multilingual clinical summarization problem.
+
+\subsection{Multilingual NLP for Indian Languages}
+
+Indian languages present distinctive challenges for NLP
+systems trained primarily on English and European language
+corpora.
+\citet{gala2023indictrans} introduced IndicTrans2, the first
+neural machine translation system supporting all 22 scheduled
+Indian languages, trained on 230 million sentence pairs and
+substantially outperforming prior systems across language pairs
+relevant to this work.
+Their resource remains the state-of-the-art translation
+backbone for Indic language processing.
+
+For clinical NLP specifically, multilingual resources for
+Indian languages are scarce.
+\citet{bhatt2022multilingual} developed multilingual clinical
+named entity recognition for Indian languages but without
+the summarization dimension.
+\citet{indihealthbench2025} evaluated LLMs for clinical
+translation across Indian languages, finding that
+performance degrades sharply for Dravidian and low-resource
+Indo-Aryan languages---consistent with the zero-shot
+performance gaps we report across our entity-level metrics.
+The translate-then-summarize pipeline explored in our work
+is directly motivated by findings from
+\citet{kl33n3x2025} and \citet{clinsimp2025}, who demonstrate
+that routing low-resource Indic language content through
+English before task processing yields competitive performance
+for dialogue tasks, though without evaluation of clinical
+safety or entity-level fidelity.
+
+\subsection{Large Language Models: Mistral-7B and Qwen2.5-7B}
+
+We evaluate two open-source 7B-parameter instruction-tuned
+language models.
+\citet{jiang2023mistral} introduced Mistral-7B, which employs
+Grouped Query Attention (GQA) and Sliding Window Attention (SWA)
+to achieve efficient inference across extended contexts.
+Despite its compact size, Mistral-7B-Instruct surpasses
+Llama~2-13B-Chat on MT-Bench, establishing it as a strong
+baseline for instruction-following tasks.
+\citet{qwen25} presented Qwen2.5, a model series trained on
+18 trillion tokens---more than double the pretraining scale
+of earlier Qwen iterations---with explicit emphasis on
+multilingual coverage including Asian languages.
+The 7B variant demonstrates top-tier performance across
+language understanding, reasoning, and instruction-following
+benchmarks.
+A key architectural distinction motivating our model
+selection is Qwen2.5's broader multilingual pretraining
+distribution, which we hypothesize confers greater
+generative calibration for Indic scripts relative to
+Mistral-7B's primarily European-focused corpus.
+
+\subsection{Parameter-Efficient Fine-Tuning}
+
+Full fine-tuning of 7B-parameter models is computationally
+prohibitive in resource-constrained settings.
+We adopt LoRA~\citep{hu2021lora} (Low-Rank Adaptation),
+which freezes pre-trained weights and injects trainable
+rank-decomposition matrices into each transformer layer.
+LoRA reduces trainable parameters by up to four orders of
+magnitude relative to full fine-tuning while maintaining
+comparable downstream performance on instruction-following
+and domain adaptation tasks.
+This approach is critical for our multilingual clinical
+fine-tuning setting, where data privacy constraints require
+local model deployment and training hardware is
+limited to a single node.
+
+\subsection{Prompting Paradigms: Zero-Shot and Few-Shot}
+
+The few-shot in-context learning framework introduced by
+\citet{brown2020gpt3} demonstrated that large language models
+can perform new tasks given only a small number of
+labeled demonstrations at inference time without any
+gradient updates. This capability has been widely exploited
+for low-resource and cross-lingual NLP tasks
+\citep{brown2020gpt3}.
+However, recent work has shown that in-context learning is
+sensitive to the choice, ordering, and language of
+demonstrations~\citep{min2022rethinking}, and that
+few-shot gains can be inconsistent or absent for
+morphologically complex and script-diverse
+languages~\citep{kl33n3x2025}.
+In clinical domains specifically, \citet{summqa2023}
+observed that few-shot GPT-4 summaries are shorter and
+less extractive than fine-tuned alternatives,
+suggesting that demonstrations constrain output coverage.
+Our work provides the first systematic evidence that
+few-shot prompting \textit{actively degrades} clinical
+summarization quality across a multilingual setting, and
+proposes a mechanistic account of this degradation
+through a cross-lingual interference framework grounded
+in per-language quantitative and qualitative evidence.
+
+\subsection{Evaluation of LLM-Generated Clinical Text}
+
+The evaluation of LLM-generated clinical content requires
+frameworks that go beyond standard NLP metrics.
+\citet{lin2004rouge} introduced ROUGE, and
+\citet{zhang2020bertscore} proposed BERTScore---both widely
+used for summarization evaluation---but multiple works have
+documented their limited sensitivity to semantic errors,
+paraphrase, and clinical safety~\citep{summqa2023}.
+The LLM-as-judge paradigm~\citep{zheng2023judging} offers a
+scalable alternative for holistic quality assessment.
+\citet{zheng2023judging} demonstrated that strong LLMs
+achieve over 80\% agreement with human expert evaluators
+on open-ended text quality dimensions, establishing
+LLM-based scoring as a viable evaluation approach.
+
+In clinical settings, safety evaluation requires additional
+structure.
+\citet{clus2023framework} proposed a framework specifically
+for assessing hallucination and omission rates in LLM-generated
+clinical notes, finding hallucination rates of 1.47\% and
+omission rates of 3.45\% in English clinical documentation
+contexts---substantially lower than the rates we observe
+in multilingual low-resource settings (macro-average
+hallucination: 42.4\% for Qwen zero-shot;
+60.8\% macro-average omission for Mistral zero-shot).
+\citet{croxford2025autoeval} further validated LLM-as-judge
+for healthcare text evaluation, finding it achieves
+inter-rater reliability comparable to clinician annotators.
+Entity-level evaluation---the comparison of extracted clinical
+entities between generated and reference summaries---has been
+established as complementary to holistic scoring
+for detecting specific hallucinated or omitted clinical content.
+Our three-tier evaluation framework integrates all three
+approaches, providing a uniquely comprehensive assessment of
+multilingual clinical summarization quality.
+
+
+% ===placeholder labels===
+\phantomsection\label{sec:data}
+\phantomsection\label{sec:method}
+\phantomsection\label{sec:eval}
+\phantomsection\label{sec:results}
+\phantomsection\label{sec:qualitative}
+\phantomsection\label{sec:discussion}
+\phantomsection\label{sec:conclusion}
+% ==============================================================
+% Bibliography
+% ==============================================================
+
+\bibliographystyle{acl_natbib}
+
+\begin{thebibliography}{99}
+
+\bibitem[AI4Bharat et~al.(2023)]{gala2023indictrans}
+AI4Bharat, Jay Gala, Pranjal~A. Chitale, Raghavan~AK, Sumanth Doddapaneni,
+  Varun Gumma, Aswanth Kumar, Janki~Atul Nawale, Anupama Sujatha, Ratish
+  Puduppully, Vivek Raghavan, Pratyush Kumar, Mitesh~M. Khapra, Raj Dabre,
+  and Anoop Kunchukuttan. 2023.
+\newblock {IndicTrans2}: Towards high-quality and accessible machine
+  translation models for all 22 scheduled {Indian} languages.
+\newblock \textit{Transactions on Machine Learning Research}.
+
+\bibitem[Ben~Abacha et~al.(2023)]{ben2023mediqa}
+Asma Ben~Abacha, Wen-wai Yim, Griffin Adams, Neal Snider, and Meliha
+  Yetisgen. 2023.
+\newblock Overview of the {MEDIQA-Chat} 2023 shared tasks on the
+  summarization and classification of doctor-patient conversations.
+\newblock In \textit{Proceedings of the 5th Clinical NLP Workshop}, pages
+  1--12. Association for Computational Linguistics.
+
+\bibitem[Bhattacharjee et~al.(2022)]{bhatt2022multilingual}
+Shubhraneel Bhattacharjee, Ria Dey, and Niladri Chatterjee. 2022.
+\newblock Multilingual clinical named entity recognition for {Indian}
+  languages.
+\newblock In \textit{Proceedings of the 4th Clinical NLP Workshop}, pages
+  93--101.
+
+\bibitem[Brown et~al.(2020)]{brown2020gpt3}
+Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared~D. Kaplan,
+  Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda
+  Askell, et~al. 2020.
+\newblock Language models are few-shot learners.
+\newblock In \textit{Advances in Neural Information Processing Systems~33
+  (NeurIPS~2020)}, pages 1877--1901.
+
+\bibitem[Clusmann et~al.(2023)]{clus2023framework}
+Johannes Clusmann, Felix~R. Kolbinger, Hannah~Sophie Muti, Zunamys~I.
+  Carrero, Jan-Niklas Eckardt, Narmin Ghaffari~Laleh, Chiara~Maria~Lena
+  Loeffler, Sophie-Caroline Schwarzkopf, Michaela Unger, Gregory~P. Veldhuizen,
+  et~al. 2023.
+\newblock The future landscape of large language models in medicine.
+\newblock \textit{Communications Medicine}, 3:141.
+
+\bibitem[Croxford et~al.(2025)]{croxford2025autoeval}
+Emma Croxford, Yanjun Gao, Elliot First, Nicholas Pellegrino, Miranda
+  Schnier, John Caskey, and Majid Afshar. 2025.
+\newblock Automating evaluation of {AI} text generation in healthcare with a
+  large language model ({LLM})-as-a-judge.
+\newblock \textit{medRxiv}.
+
+\bibitem[de~Veen et~al.(2024)]{vveen2024nat}
+Dave de~Veen, Cara Van~Uden, Louis Blankemeier, Jean-Benoit Delbrouck,
+  Asad Aali, Christian Bluethgen, Anuj Pareek, and Curtis Langlotz. 2024.
+\newblock Adapted large language models can outperform medical experts in
+  clinical text summarization.
+\newblock \textit{Nature Medicine}, 30:1134--1142.
+
+\bibitem[Expert~Eval et~al.(2025)]{expert2025eval}
+Martin~R. Hofmann, Jana Braunschneider, Stefan~H. Schreiber, and Ulrich
+  Mansmann. 2025.
+\newblock Expert evaluation of large language models for clinical dialogue
+  summarization.
+\newblock \textit{Scientific Reports}, 15.
+
+\bibitem[Hu et~al.(2021)]{hu2021lora}
+Edward~J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li,
+  Shean Wang, Lu Wang, and Weizhu Chen. 2021.
+\newblock {LoRA}: Low-rank adaptation of large language models.
+\newblock In \textit{International Conference on Learning Representations
+  (ICLR~2022)}.
+
+\bibitem[IndiHealthBench(2025)]{indihealthbench2025}
+Suraj Nandkishor Pandya, Aditya Ajit Kadam, and Rohan Sanjay Sawant. 2025.
+\newblock {IndiHealthBench}: Evaluating {LLMs} for clinical translation across
+  {Indian} linguistic diversity.
+\newblock In \textit{Proceedings of the 27th International Conference on
+  Artificial Intelligence in Education}, Springer.
+
+\bibitem[Jiang et~al.(2023)]{jiang2023mistral}
+Albert~Q. Jiang, Alexandre Sablayrolles, Arthur Mensch, Chris Bamford,
+  Devendra~Singh Chaplot, Diego de~las~Casas, Florian Bressand, Gianna
+  Lengyel, Guillaume Lample, Lucile Saulnier, et~al. 2023.
+\newblock {Mistral 7B}.
+\newblock \textit{arXiv preprint arXiv:2310.06825}.
+
+\bibitem[Kl33n3x Team(2025)]{kl33n3x2025}
+Santiago~Mart{\'i}nez Novoa, Nicol{\'a}s Rozo~Fajardo, Diego~Alejandro
+  Gonz{\'a}lez~Vargas, and Nicol{\'a}s Bedoya~Figueroa. 2025.
+\newblock Efficient multilingual dialogue processing via translation pipelines
+  and distilled language models.
+\newblock In \textit{Proceedings of the NL-PAI4Health 2025 Shared Task}.
+
+\bibitem[Kumar et~al.(2024)]{clinsimp2025}
+Abhinav Kumar, Priyank Bhatt, and Siddharth Patwardhan. 2024.
+\newblock Multilingual {LLMs} for clinical text simplification.
+\newblock In \textit{Proceedings of SciProDLLM at ACL 2025}.
+
+\bibitem[Lin(2004)]{lin2004rouge}
+Chin-Yew Lin. 2004.
+\newblock {ROUGE}: A package for automatic evaluation of summaries.
+\newblock In \textit{Text Summarization Branches Out: Proceedings of the ACL
+  Workshop}, pages 74--81.
+
+\bibitem[Min et~al.(2022)]{min2022rethinking}
+Sewon Min, Xinxi Lyu, Ari Holtzman, Mikel Artetxe, Mike Lewis, Hannaneh
+  Hajishirzi, and Luke Zettlemoyer. 2022.
+\newblock Rethinking the role of demonstrations: What makes in-context
+  learning work?
+\newblock In \textit{Proceedings of EMNLP~2022}, pages 11048--11064.
+
+\bibitem[Nogueira~dos~Santos et~al.(2025)]{noneng2025qual}
+Henrique Nogueira~dos~Santos, Claudia Codogno~Jardim, and Claudia~Maria
+  Cabral~Moro~Barra. 2025.
+\newblock A comprehensive qualitative analysis of patient dialogue
+  summarization using large language models applied to noisy, informal,
+  non-{English} real-world data.
+\newblock \textit{Scientific Reports}, 15.
+
+\bibitem[Qwen Team(2024)]{qwen25}
+Qwen Team. 2024.
+\newblock {Qwen2.5} technical report.
+\newblock \textit{arXiv preprint arXiv:2412.15115}.
+
+\bibitem[Tang et~al.(2023)]{tang2023gersteinlab}
+Xiangru Tang, Andrew Tran, Jeffrey Tan, and Mark Gerstein. 2023.
+\newblock {GersteinLab} at {MEDIQA-Chat} 2023: Clinical note summarization
+  from doctor-patient conversations through fine-tuning and in-context
+  learning.
+\newblock \textit{arXiv preprint arXiv:2305.05001}.
+
+\bibitem[Wornow et~al.(2023)]{summqa2023}
+Michael Wornow, Yizhe Xu, Rahul Thapa, Birju Patel, Ethan Steinberg, Scott
+  Fleming, Michael~A. Pfeffer, Jason Fries, and Nigam~H. Shah. 2023.
+\newblock {SummQA} at {MEDIQA-Chat} 2023: In-context learning with {GPT-4}
+  for medical summarization.
+\newblock \textit{arXiv preprint arXiv:2306.17384}.
+
+\bibitem[Zhang et~al.(2020)]{zhang2020bertscore}
+Tianyi Zhang, Varsha Kishore, Felix Wu, Kilian~Q. Weinberger, and Yoav
+  Artzi. 2020.
+\newblock {BERTScore}: Evaluating text generation with {BERT}.
+\newblock In \textit{International Conference on Learning Representations
+  (ICLR~2020)}.
+
+\bibitem[Zheng et~al.(2023)]{zheng2023judging}
+Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu,
+  Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric~P. Xing, Hao Zhang,
+  Joseph~E. Gonzalez, and Ion Stoica. 2023.
+\newblock Judging {LLM-as-a-Judge} with {MT-Bench} and Chatbot Arena.
+\newblock In \textit{Advances in Neural Information Processing Systems~36
+  (NeurIPS~2023)}.
+
+\end{thebibliography}
+
+\end{document}
+% PLACEHOLDER — these sections will be populated in the full paper
+% Added only to resolve forward-references in the standalone compile
