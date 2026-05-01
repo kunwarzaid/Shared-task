@@ -2,28 +2,29 @@
 \centering
 \resizebox{\linewidth}{!}{
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{lcccccccc}
+\begin{tabular}{lccccccc}
 \hline
-\textbf{Language} & \textbf{Qwen ZS F1} & \textbf{Qwen SFT F1} & \textbf{Qwen $\Delta$ F1} & \textbf{Qwen SFT Hall} & \textbf{Mistral ZS F1} & \textbf{Mistral SFT F1} & \textbf{Mistral $\Delta$ F1} & \textbf{Mistral SFT Hall} \\
-\hline
-
-Bengali  & 0.5664 & \textcolor{green}{0.7204} & \textcolor{green}{+0.154} & 0.122 & 0.4511 & \textcolor{green}{0.7081} & \textcolor{green}{+0.257} & 0.109 \\
-\textbf{English}  & 0.6498 & \textcolor{green}{0.7767} & \textcolor{green}{+0.127} & 0.085 & 0.6516 & \textcolor{green}{0.7681} & \textcolor{green}{+0.117} & 0.085 \\
-Hindi    & 0.5507 & \textcolor{green}{0.7695} & \textcolor{green}{+0.219} & 0.088 & 0.4498 & \textcolor{green}{0.7632} & \textcolor{green}{+0.313} & 0.087 \\
-Marathi  & 0.5276 & \textcolor{green}{0.7741} & \textcolor{green}{+0.246} & 0.088 & 0.4196 & \textcolor{green}{0.7679} & \textcolor{green}{+0.348} & 0.062 \\
-\textbf{Telugu}   & 0.4501 & \textcolor{green}{0.8083} & \textcolor{green}{+0.358} & 0.120 & 0.2822 & \textcolor{green}{0.7691} & \textcolor{green}{+0.487} & 0.070 \\
-Tamil    & 0.4802 & \textcolor{green}{0.7224} & \textcolor{green}{+0.242} & 0.144 & 0.4287 & \textcolor{green}{0.7684} & \textcolor{green}{+0.340} & 0.097 \\
-\textbf{Kannada}  & 0.4407 & \textcolor{green}{0.8115} & \textcolor{green}{+0.371} & 0.070 & 0.4233 & \textcolor{green}{0.7793} & \textcolor{green}{+0.356} & 0.106 \\
-\textbf{Gujarati} & 0.3937 & \textcolor{green}{0.7996} & \textcolor{green}{+0.406} & 0.110 & 0.3681 & \textcolor{green}{0.7686} & \textcolor{green}{+0.401} & 0.092 \\
-Dogri    & 0.5704 & \textcolor{green}{0.7763} & \textcolor{green}{+0.206} & 0.120 & 0.4309 & \textcolor{green}{0.7572} & \textcolor{green}{+0.326} & 0.135 \\
-Assamese & 0.5533 & \textcolor{green}{0.7858} & \textcolor{green}{+0.233} & 0.108 & 0.4173 & \textcolor{green}{0.7546} & \textcolor{green}{+0.337} & 0.136 \\
-
-\hline
-\textbf{Macro Avg} & \textbf{0.5183} & \textcolor{green}{\textbf{0.7745}} & \textcolor{green}{\textbf{+0.256}} & \textcolor{green}{0.105} & \textbf{0.4323} & \textcolor{green}{\textbf{0.7604}} & \textcolor{green}{\textbf{+0.328}} & \textcolor{green}{0.098} \\
+\textbf{Language Family} & \textbf{Qwen ZS F1} & \textbf{Qwen SFT F1} & \textbf{Qwen $\Delta$} & \textbf{Mistral ZS F1} & \textbf{Mistral SFT F1} & \textbf{Mistral $\Delta$} & \textbf{Gap closed?} \\
 \hline
 
+\textbf{Dravidian (TE,TA,KN)} 
+& \textcolor{red}{0.457} & 0.781 & \textcolor{green}{+0.324} 
+& \textcolor{red}{0.378} & 0.772 & \textcolor{green}{+0.394} 
+& \textcolor{green}{\textbf{YES $\rightarrow$ parity}} \\
+
+IA Low-res (GU,DO,AS,MR) 
+& 0.511 & 0.784 & \textcolor{green}{+0.273} 
+& 0.409 & 0.762 & \textcolor{green}{+0.353} 
+& \textcolor{green}{\textbf{YES $\rightarrow$ parity}} \\
+
+IA High-res (HI,BN,EN) 
+& 0.589 & 0.756 & \textcolor{green}{+0.167} 
+& 0.518 & 0.747 & \textcolor{green}{+0.229} 
+& Baseline elevated \\
+
+\hline
 \end{tabular}
 }
-\caption{SFT vs. Zero-Shot per language. Hallucination column shows SFT hallucination rate (all substantially below prompting baselines). Macro $\Delta$ = SFT minus zero-shot F1.}
-\label{tab:sft_vs_zs}
+\caption{Language family F1 comparison: zero-shot vs. SFT. Fine-tuning eliminates the Dravidian performance gap, bringing all three language families to near-parity at SFT.}
+\label{tab:language_family}
 \end{table*}
