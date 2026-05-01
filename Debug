@@ -28,3 +28,37 @@ IA High-res (HI,BN,EN)
 \caption{Language family F1 comparison: zero-shot vs. SFT. Fine-tuning eliminates the Dravidian performance gap, bringing all three language families to near-parity at SFT.}
 \label{tab:language_family}
 \end{table*}
+
+\begin{table*}[t]
+\centering
+\resizebox{\linewidth}{!}{
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccccc}
+\hline
+\textbf{Language Family} & \textbf{Qwen ZS F1} & \textbf{Qwen SFT F1} & \textbf{Qwen $\Delta$} & \textbf{Mistral ZS F1} & \textbf{Mistral SFT F1} & \textbf{Mistral $\Delta$} & \textbf{Gap closed?} \\
+\hline
+
+\textbf{Dravidian (TE,TA,KN)} 
+& \textcolor{red}{0.457} & 0.781 & \textcolor{green}{+0.324} 
+& \textcolor{red}{0.378} & 0.772 & \textcolor{green}{+0.394} 
+& \textcolor{green}{\textbf{YES $\rightarrow$ parity}} \\
+
+IA Low-res (GU,DO,AS,MR) 
+& 0.511 & 0.784 & \textcolor{green}{+0.273} 
+& 0.409 & 0.762 & \textcolor{green}{+0.353} 
+& \textcolor{green}{\textbf{YES $\rightarrow$ parity}} \\
+
+IA High-res (HI,BN,EN) 
+& 0.589 & 0.756 & \textcolor{green}{+0.167} 
+& 0.518 & 0.747 & \textcolor{green}{+0.229} 
+& Baseline elevated \\
+
+\hline
+\end{tabular}
+}
+\caption{Language family F1 comparison: zero-shot vs. SFT. Fine-tuning eliminates the Dravidian performance gap, bringing all three language families to near-parity at SFT.}
+\label{tab:language_family}
+\end{table*}
+
+
+
