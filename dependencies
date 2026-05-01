@@ -23,99 +23,35 @@ premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
 
-4. Results
+\begin{table*}[t]
+\centering
+\resizebox{\linewidth}{!}{
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llcccccc}
+\hline
+\textbf{Language} & \textbf{Script Family} & \textbf{Qwen ZS F1} & \textbf{Qwen Trans F1} & \textbf{Qwen $\Delta$} & \textbf{Mistral ZS F1} & \textbf{Mistral Trans F1} & \textbf{Mistral $\Delta$} \\
+\hline
 
-We evaluate multilingual clinical summarization across ten languages under four settings: zero-shot, few-shot, translation-based, and fine-tuned models using Mistral and Qwen-2.5-7B. Performance is assessed using a three-tier framework comprising lexical similarity, LLM-based evaluation, and entity-level factual consistency.
+Bengali   & Bengali (IA-High)        & 0.5664 & \textcolor{red}{0.3692} & \textcolor{red}{-0.197} & 0.4511 & \textcolor{red}{0.2953} & \textcolor{red}{-0.156} \\
+Hindi     & Devanagari (IA-High)     & 0.5507 & \textcolor{green}{0.5714} & \textcolor{green}{+0.021} & 0.4498 & \textcolor{green}{0.5605} & \textcolor{green}{+0.111} \\
+Marathi   & Devanagari (IA-Med)      & 0.5276 & \textcolor{green}{0.6353} & \textcolor{green}{+0.108} & 0.4196 & \textcolor{green}{0.5696} & \textcolor{green}{+0.150} \\
 
-⸻
+\hline
+\textbf{Telugu}   & Telugu (Dravidian)  & 0.4501 & \textcolor{red}{0.2414} & \textcolor{red}{-0.209} & 0.2822 & \textcolor{red}{0.2000} & \textcolor{red}{-0.082} \\
+Tamil     & Tamil (Dravidian)        & 0.4802 & \textcolor{red}{0.4600} & \textcolor{red}{-0.020} & 0.4287 & \textcolor{green}{0.4728} & \textcolor{green}{+0.044} \\
+\textbf{Kannada} & Kannada (Dravidian) & 0.4407 & \textcolor{red}{0.3185} & \textcolor{red}{-0.122} & 0.4233 & \textcolor{red}{0.2953} & \textcolor{red}{-0.128} \\
 
-4.1 Overall Performance Trends
+\hline
+\textbf{Gujarati} & Gujarati (IA-Low)   & 0.3937 & \textcolor{green}{0.4946} & \textcolor{green}{+0.101} & 0.3681 & \textcolor{green}{0.5389} & \textcolor{green}{+0.171} \\
+Dogri     & Devanagari (IA-Low)      & 0.5704 & \textcolor{red}{0.4972} & \textcolor{red}{-0.073} & 0.4309 & \textcolor{green}{0.5670} & \textcolor{green}{+0.136} \\
+\textbf{Assamese} & Bengali (IA-Low)   & 0.5533 & \textcolor{red}{0.3506} & \textcolor{red}{-0.203} & 0.4173 & \textcolor{red}{0.2753} & \textcolor{red}{-0.142} \\
 
-Across both models and all languages, we observe that few-shot prompting does not consistently outperform zero-shot prompting. While lexical metrics such as ROUGE-L and BERTScore remain comparable between the two settings, entity-level metrics reveal consistent degradation under few-shot prompting.
+\hline
+\textbf{Macro Avg} & -- & 0.5058$^{*}$ & 0.4376$^{*}$ & \textcolor{red}{-0.068$^{*}$} & 0.4243$^{*}$ & 0.4194$^{*}$ & \textcolor{red}{-0.005$^{*}$} \\
+\hline
 
-In particular:
-
-* Precision decreases across most languages under few-shot prompting
-* Hallucination rates increase correspondingly
-* F1 scores decline, indicating an overall drop in factual quality
-
-These trends are consistent across both Mistral and Qwen-2.5-7B, although the magnitude varies.
-
-⸻
-
-4.2 Few-shot vs Zero-shot
-
-A direct comparison between zero-shot and few-shot prompting reveals a consistent pattern:
-
-* Hallucination increases significantly under few-shot prompting
-* Precision decreases across nearly all languages
-* Recall shows mixed behavior, with slight improvements in some cases but often accompanied by higher omission rates
-
-For example, in Hindi:
-
-* Under Mistral, hallucination increases substantially while precision drops sharply
-* Under Qwen-2.5-7B, a similar but slightly less pronounced trend is observed
-
-Overall, we observe hallucination increases of up to +16.3 percentage points for Mistral and +12.4 percentage points for Qwen under few-shot prompting.
-
-⸻
-
-4.3 Metric Discrepancy Across Evaluation Tiers
-
-A key observation is the divergence between lexical metrics and factual evaluation:
-
-* ROUGE-L and BERTScore remain relatively stable across zero-shot and few-shot settings
-* In contrast, entity-level precision and hallucination show significant variation
-
-For instance:
-
-* ROUGE-L differences between zero-shot and few-shot are often marginal (<0.02 absolute change)
-* However, precision drops by large margins, and hallucination increases substantially
-
-This indicates that lexical overlap metrics fail to capture clinically relevant factual errors, particularly hallucinated or fabricated information.
-
-⸻
-
-4.4 Language-wise Variability
-
-Performance degradation under few-shot prompting is not uniform across languages.
-
-We observe:
-
-* Larger drops in precision and higher hallucination in morphologically rich and lower-resource languages
-* More stable performance in higher-resource or structurally simpler languages
-
-For example:
-
-* Languages such as Gujarati and Kannada show high hallucination and low precision under both models
-* Hindi exhibits clear degradation under few-shot prompting despite moderate baseline performance
-
-These results suggest that prompt-based adaptation is sensitive to linguistic characteristics, and improvements do not transfer uniformly across languages.
-
-⸻
-
-4.5 Model-wise Comparison
-
-Both models exhibit similar qualitative trends, but with differences in magnitude:
-
-* Mistral shows:
-    * Larger increases in hallucination
-    * Greater drops in precision under few-shot prompting
-* Qwen-2.5-7B shows:
-    * More stable behavior overall
-    * Smaller but still consistent degradation
-
-This suggests that models differ in their sensitivity to prompting strategies, although the overall pattern remains consistent.
-
-⸻
-
-4.6 Summary of Findings
-
-Across models and languages, we observe:
-
-1. Few-shot prompting does not reliably improve performance
-2. Hallucination increases significantly under few-shot settings
-3. Precision and F1 decrease despite stable lexical scores
-4. Performance varies across languages, with larger degradation in lower-resource settings
-
-These results highlight a critical gap between surface-level fluency and factual correctness, motivating further analysis in the next section.
+\end{tabular}
+}
+\caption{Translation vs. Zero-Shot entity F1 per language. * = averaged over 9 non-English languages. English is excluded as it is the pivot language (no translation applied).}
+\label{tab:translation_vs_zs}
+\end{table*}
