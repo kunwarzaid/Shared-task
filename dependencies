@@ -27,24 +27,25 @@ test_action_mismatch_rate: 0.18
 \centering
 \resizebox{\linewidth}{!}{
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{lcccccc}
+\begin{tabular}{lcccccccc}
 \hline
-\textbf{Metric} & \textbf{Qwen Zero} & \textbf{Qwen Few} & \textbf{$\Delta$ Qwen} & \textbf{Mistral Zero} & \textbf{Mistral Few} & \textbf{$\Delta$ Mistral} \\
+\textbf{Metric} & \textbf{Qwen ZS} & \textbf{Qwen FS} & \textbf{Qwen Trans} & \textbf{Qwen SFT} & \textbf{Mistral ZS} & \textbf{Mistral FS} & \textbf{Mistral Trans} & \textbf{Mistral SFT} \\
 \hline
 
-Truthfulness        & 3.318  & 3.370  & \textcolor{green}{+0.052} & 3.092  & 3.067  & \textcolor{red}{-0.025} \\
-Safety              & 2.560  & 2.575  & \textcolor{green}{+0.015} & 2.496  & 2.354  & \textcolor{red}{-0.142} \\
-Explainability      & 3.388  & 3.302  & \textcolor{red}{-0.086}   & 3.052  & 2.932  & \textcolor{red}{-0.120} \\
-ROUGE-L             & 0.1318 & 0.1206 & \textcolor{red}{-0.0112}  & 0.1352 & 0.1299 & \textcolor{red}{-0.0053} \\
-BERTScore           & 0.8557 & 0.8544 & \textcolor{red}{-0.0013}  & 0.8478 & 0.8495 & \textcolor{green}{+0.0017} \\
-Precision           & 0.5757 & 0.5418 & \textcolor{red}{-0.0340}  & 0.4901 & 0.4437 & \textcolor{red}{-0.0464} \\
-Recall              & 0.4837 & 0.4663 & \textcolor{red}{-0.0174}  & 0.3917 & 0.3433 & \textcolor{red}{-0.0484} \\
-Hallucination Rate  & 0.4243 & 0.4582 & \textcolor{red}{+0.0340}  & 0.5099 & 0.5563 & \textcolor{red}{+0.0464} \\
-Omission Rate       & 0.5163 & 0.5337 & \textcolor{red}{+0.0174}  & 0.6083 & 0.6567 & \textcolor{red}{+0.0484} \\
+Truthfulness   & 3.318 & 3.370 & 2.811 & \textcolor{green}{\textbf{4.156}} & 3.092 & 3.067 & 2.777 & \textcolor{green}{\textbf{4.084}} \\
+Safety         & 2.560 & 2.575 & \textcolor{red}{\textbf{2.217}} & 2.962 & 2.496 & 2.354 & \textcolor{red}{\textbf{2.197}} & 2.916 \\
+Explainability & 3.388 & 3.302 & 2.676 & \textcolor{green}{\textbf{3.838}} & 3.052 & 2.932 & 2.716 & \textcolor{green}{\textbf{3.828}} \\
+ROUGE-L        & 0.1318 & 0.1206 & 0.1478 & \textcolor{green}{\textbf{0.2276}} & 0.1352 & 0.1299 & 0.1476 & \textcolor{green}{\textbf{0.2262}} \\
+BERTScore      & 0.8557 & 0.8544 & 0.8501 & \textcolor{green}{\textbf{0.8828}} & 0.8478 & 0.8495 & 0.8501 & \textcolor{green}{\textbf{0.8796}} \\
+Precision      & 0.5757 & 0.5418 & 0.4625 & \textcolor{green}{\textbf{0.8946}} & 0.4901 & 0.4437 & 0.4545 & \textcolor{green}{\textbf{0.9021}} \\
+Hallucination  & 0.4243 & 0.4582 & \textcolor{red}{\textbf{0.5375}} & \textcolor{green}{0.1054} & 0.5099 & 0.5563 & \textcolor{red}{\textbf{0.5455}} & \textcolor{green}{0.0979} \\
+Recall         & 0.4837 & 0.4663 & 0.4359 & \textcolor{green}{\textbf{0.6843}} & 0.3917 & 0.3433 & 0.4012 & \textcolor{green}{\textbf{0.6579}} \\
+Omission       & 0.5163 & 0.5337 & \textcolor{red}{\textbf{0.5641}} & \textcolor{green}{0.3157} & 0.6083 & 0.6567 & \textcolor{red}{\textbf{0.5988}} & \textcolor{green}{0.3421} \\
+Entity F1      & 0.5183 & 0.4992 & 0.4376 & \textcolor{green}{\textbf{0.7745}} & 0.4323 & 0.3852 & 0.4194 & \textcolor{green}{\textbf{0.7604}} \\
 
 \hline
 \end{tabular}
 }
-\caption{Macro-averaged metrics across all 10 languages. $\Delta$ = few-shot minus zero-shot. Red = degradation, green = improvement.}
-\label{tab:macro_metrics}
+\caption{Macro-averaged results across all 10 languages for all eight conditions. Bold green = best per metric; bold red = worst. Hallucination and Omission: lower is better.}
+\label{tab:macro_all_conditions}
 \end{table*}
