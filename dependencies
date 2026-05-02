@@ -24,171 +24,222 @@ test_action_mismatch_rate: 0.18
 
 
 
-# Native Experiments Analysis: Telugu (Case: scenario_52_8ed9ba9f7193475aa476f2bae08f83fb_IDX_05_2)
- 
- Evaluation of a Telugu Clinical Conversation
- 
-Scope and Materials
-- Source: A Telugu patient–health worker follow-up conversation focused on throat symptoms, behavioral risk factors, evaluation plans (possible fiber‑optic laryngoscopy), multidisciplinary care (MDT), supportive therapies (diet, speech/swallow rehab), tele-consultation, government schemes, and follow-up cadence.
- 
- 
-Key Ground Truth Anchors (selected)
-- Symptoms/time course: “గొంతులో నాలుగు వారాలుగా అసౌకర్యం… వాయిస్ కొద్దిగా మారేలా కనిపిస్తోంది” (“Throat discomfort for four weeks; the voice seems to change”).
-- Risk factors: “Pane Makh 2–3 సార్లు రోజూ… సిగరెట్ అరుదు; ఆల్కహాల్ వారానికి 3–4 సార్లు” (“Pane Makh 2–3 times daily; cigarettes rare; alcohol 3–4 times per week”).
-- Workup plan: “ఫైబర్-ఓప్తిక్ లారింగో స్కోపీ… ఫలితాలు వచ్చిన తర్వాత బయోప్సీ లేదా ఇమేజ్ ప్లాన్” (“Fiber-optic laryngoscopy if needed; after results, decide on biopsy or imaging plan”).
-- Follow-up cadence: “ప్రతి మూడు నెలలకు ఫాలో-అప్… మొదటి ఏడాదిలో… మూడేళ్లపాటు ఫాలో-అప్ కొనసాగుతాం” (“Follow-up every three months… during the first year… we will continue follow-up for three years”).
-- Supportive care (examples):
-  - Diet: “soft high-protein… ఖిచ్డీ, దాల్-రోటి, పెరుగు, పాలు, గుడ్లు, ప్రోటీన్ షేక్‌లు” (“Soft high-protein diet: khichdi, dal-roti, curd, milk, eggs, protein shakes”).
-  - Exercises: “Neck, jaw, swallowing… రోజుకి రెండు మూడు సార్లు… ప్రతి సెట్ 5–10 సెకన్లు” (“Neck, jaw, and swallowing exercises 2–3 times daily, each set 5–10 seconds”).
-  - Radiation effects/dry mouth: dental hygiene and hydration; salivary substitutes if needed.
-  - MDT composition: surgeon, radiation oncologist, medical oncologist, dietitian, speech therapist, dentist.
-  - Tele-consultation available; government schemes (Aadhaar/PAN; Ayushman Bharat); cessation support.
- 
-1) Factual Fidelity & Attention
- 
-Zero-Shot
-- Major hallucinations and distortions:
-  - “post-falloff-apnea treatment,” “four days of apnea,” “worsens when he works and improves when resting” — None of these concepts (apnea, days-long course, work/rest pattern) appear in the conversation. Ground truth specifies 4 weeks of throat discomfort and voice change, not “apnea” or a work–rest modulation.
-  - Follow-up interval misreported as “every three days” and “success in recovery within three days,” contradicting “ప్రతి మూడు నెలలకు ఫాలో-అప్” (“every three months”) and ongoing three-year follow-up.
-  - Nuance loss in behavioral counseling: It states “advises against increasing Pane Makh usage,” whereas the clinician recommends reduction or complete cessation.
-- Partial concordance:
-  - Recommends examination and imaging if needed; mentions soft high-protein diet, feeding tube if necessary, exercises, speech therapy, dry mouth management, and subsidies/paperwork — all broadly align, albeit superficially.
-- Omissions:
-  - MDT membership, detailed follow-up plan across year(s), tele-consultation modalities, and explicit cessation program support receive minimal or no attention.
-- Verdict: Low fidelity. The model substitutes invented pathologies and timelines, diverting from anchor facts. Attention to salient details is inconsistent.
- 
-Few-Shot
-- Extensive “attention dilution” with template-driven, non-evidenced insertions:
-  - Invented demographics/social history: “25-year history of smoking (8–12 cigarettes/day)” and “occasional alcohol use,” contradicting “సిగరెట్ అరుదు; ఆల్కహాల్ వారానికి 3–4 సార్లు” (“cigarettes rare; alcohol 3–4 times/week”).
-  - Fabricated caregiver: “wife Evelyn,” no such person is mentioned.
-  - Added symptoms not reported: “mild dysphagia.” The patient only notes voice change and discomfort; no dysphagia was endorsed.
-  - Management plan escalation: “CT or MRI,” “biopsy,” “results within 1–3 days,” “radiotherapy typically lasts 6–7 weeks,” “facial changes” — none stated in the transcript. Ground truth frames these as contingent (“if needed”) and does not discuss radiotherapy schedules or facial changes.
-  - Medical comorbidities: “hypertension (controlled with amlodipine)” — absent from the dialogue.
-- Partial concordance:
-  - Mentions laryngoscopy under local anesthesia, MDT review, general advice on hydration/oral care — compatible with the transcript’s themes.
-- Omissions:
-  - Does not reflect key behavioral risk “Pane Makh” use; omits tele-consultation, detailed government documentation requirements, structured follow-up cadence (3‑monthly), and cessation program offer.
-- Verdict: The Few-Shot output exhibits prototypical “attention dilution,” overlaying a generic head-and-neck oncology template onto the case, with numerous unsupported specifics. Factual fidelity is poor.
- 
-Comparative Summary
-- Zero-Shot: Fewer different types of clinical elements than Few-Shot but still introduces serious inaccuracies (apnea, 3‑day follow-ups).
-- Few-Shot: More structured and comprehensive-sounding but systematically hallucinates core clinical and social details, likely due to long prompt priming and template overfitting.
- 
-2) Negation Handling and Affirmative Bias
- 
-Ground Truth Context
-- The clinician probes for additional symptoms: “ఊపిరి తీసుకునేటప్పుడు బాధ ఉందా… గట్టిగా మాట్లాడినప్పుడు ఇబ్బంది?” (“Is there pain when breathing… is there difficulty when speaking loudly?”). The patient does not affirm dyspnea or pain; he reiterates voice change and fear.
- 
-Zero-Shot
-- Displays affirmative bias by asserting “apnea” and a four-day course, despite no endorsement. It also implies symptom fluctuation with work/rest — not present. This is not a simple negation error but a stronger tendency to conjure positive findings absent from the record.
- 
-Few-Shot
-- Affirmative bias manifests as adding “mild dysphagia” and a heavy smoking history, despite no such admissions (and in fact a contrary statement: cigarettes rare). It also asserts “occasional alcohol use,” minimizing the stated 3–4 times/week. This not only invents positives but distorts frequency directionally, suggesting bias toward presumed, not stated, comorbidities.
- 
-Conclusion on Negation/Affirmative Bias
-- Both methodologies show affirmative bias (adding unmentioned positives). While explicit negation handling cannot be fully assessed due to limited denials in the ground truth, both outputs fail to respect the absence of certain symptoms/history elements and introduce fictitious positives.
- 
-3) Structural Formatting and Clinical Tone
- 
-Zero-Shot
-- Structure: Loose, narrative paragraph with mixed topics; limited signposting.
-- Tone: Informal and inconsistent. Clinical reasoning is shallow; sequencing of evaluation steps is vague.
-- Rigor: Lacks clear sections (history, exam plan, counseling, follow-up).
- 
-Few-Shot
-- Structure: More disciplined, resembling a problem list or mini-consult note. It organizes into presentation, history, plan, and MDT coordination.
-- Tone: Formally clinical with specific-sounding details and timelines.
-- Caveat: The structural discipline appears to have encouraged insertion of templated but unsupported details (e.g., smoking pack-years, antihypertensive therapy, radiotherapy duration). Thus, while format is stronger, content reliability is weaker.
- 
-4) Lexical Nuance and Medical Terminology
- 
-Zero-Shot
-- Uses general terms: “imaging,” “feeding tubes,” “speech therapy,” “dry mouth.”
-- Misuse: “post-falloff-apnea treatment” is a nonstandard phrase; “apnea” is contextually irrelevant.
-- Overall: Basic lexicon acceptable but marred by misuse and ill-fitted terms.
- 
-Few-Shot
-- Richer medical vocabulary: “laryngoscopy under local anesthesia,” “CT or MRI,” “biopsy,” “peri-procedural safety,” “radiotherapy 6–7 weeks,” “MDT.”
-- Appropriateness: Terminology is medically accurate in general oncology contexts but not grounded in this specific transcript. The lexicon, though fluent, drives unsupported assertions.
- 
-Overall Judgement
-- Factual Fidelity: Both methods perform poorly; Zero-Shot misstates core timelines and conditions; Few-Shot superimposes a generic oncology script, inventing multiple comorbidities and plans.
-- Attention and Dilution: Few-Shot shows clear attention dilution, with the long prompt likely cueing domain defaults that override case-specific facts (e.g., heavy smoking, dysphagia, antihypertensives, radiotherapy course).
-- Negation/Affirmative Bias: Both introduce unendorsed positives; Few-Shot additionally inverts reported frequencies (alcohol, cigarettes).
-- Structure and Tone: Few-Shot achieves a more clinical structure but at the cost of truthfulness; Zero-Shot is less structured but also inaccurate.
-- Lexical Handling: Few-Shot demonstrates stronger medical lexicon but misapplies it; Zero-Shot’s lexicon is simpler, with notable misuse.
- 
- 
-In sum, while the Few-Shot method presents a more polished clinical narrative, it is less faithful to the Telugu transcript than the Zero-Shot, which itself contains significant hallucinations. For safe clinical summarization, fidelity must supersede stylistic structure.
+\section{Qualitative Case Analyses: Telugu}
+\label{sec:qualitative_appendix}
 
+We present two detailed case analyses for Telugu, one covering
+zero-shot and few-shot conditions and one covering the translation
+condition. These cases are representative of the error patterns
+described in the Clinical Error Taxonomy (Section~6). Telugu was
+selected as the primary case language because it exhibits the widest
+range of error types across conditions and the largest absolute
+performance gap between zero-shot and SFT.
 
-# Objective Deep Dive Analysis: Telugu (Case: scenario_1_c5d7e4e20467460d90ae3ba4a6ab2ba9_IDX_04_3)
+\subsection*{Case A: Zero-Shot vs.\ Few-Shot (scenario\_52)}
 
-Clinical NLP Evaluation Report (Single-Method Comparison)
+\noindent\textbf{Clinical context.}
+A follow-up consultation focused on throat symptoms (four weeks of
+discomfort, voice change), behavioral risk factors (Pane Makh
+2--3\,/\,day, alcohol 3--4\,/\,week, rare cigarettes), evaluation
+planning (fiber-optic laryngoscopy if needed, followed by biopsy or
+imaging), MDT coordination, and a structured three-year follow-up cadence.
 
-Scope and methods compared
-- Available methods: Only Method 3 (Translated Output) was provided. Zero-shot, Few-shot, and SFT outputs were missing. Therefore, this report critically evaluates the Translated Output against the Ground Truth transcript.
+\begin{table*}[h!]
+\centering
+\caption{Zero-shot vs.\ few-shot analysis for Telugu Case A. GT\,=\,ground
+truth. Error type codes refer to the taxonomy in Section~6.}
+\label{tab:case_a}
+\resizebox{\linewidth}{!}{%
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{p{2.8cm} p{4.5cm} p{4.5cm} p{2.2cm} p{1.6cm}}
+\toprule
+\textbf{Dimension} & \textbf{Zero-Shot Output} & \textbf{Few-Shot Output}
+  & \textbf{Ground Truth} & \textbf{Error Type} \\
+\midrule
+\textit{Symptom / timeline}
+  & ``post-falloff-apnea treatment,'' ``four \textbf{days} of apnea,''
+    ``worsens when he works''
+  & Mild dysphagia added; no apnea
+  & 4 \textbf{weeks} throat discomfort; voice change; no apnea
+  & T1, T2 \\
+\midrule
+\textit{Follow-up cadence}
+  & ``every three \textbf{days},'' ``success in recovery within three days''
+  & Structured follow-up mentioned but not quantified
+  & Every three \textbf{months}; three-year plan
+  & T1 \\
+\midrule
+\textit{Smoking / tobacco}
+  & ``advises against \textit{increasing} Pane Makh usage''
+  & ``25-year history of smoking (8--12 cigarettes/day)''
+  & Cigarettes rare; Pane Makh 2--3/day; cessation advised
+  & T4, T3 \\
+\midrule
+\textit{Alcohol use}
+  & Broadly mentioned
+  & ``occasional alcohol use''
+  & 3--4 times per week
+  & T4 \\
+\midrule
+\textit{Caregiver}
+  & Not mentioned
+  & ``wife Evelyn'' (fabricated)
+  & No caregiver mentioned
+  & T3 \\
+\midrule
+\textit{Comorbidities}
+  & None fabricated
+  & ``hypertension controlled with amlodipine''
+  & No comorbidities mentioned
+  & T3 \\
+\midrule
+\textit{Management plan}
+  & Exam and imaging if needed (broadly correct)
+  & ``CT or MRI,'' ``biopsy,'' ``radiotherapy 6--7 weeks,''
+    ``results within 1--3 days''
+  & Laryngoscopy if needed; biopsy/imaging contingent on results
+  & T5, T3 \\
+\midrule
+\textit{Behavioral counseling direction}
+  & Inverted: ``against increasing'' (not cessation)
+  & Pane Makh not mentioned; smoking history fabricated
+  & Reduction or cessation strongly advised
+  & T4 \\
+\midrule
+\textit{MDT, tele-consult,}
+\textit{government schemes}
+  & Minimal attention
+  & MDT mentioned; tele-consult and schemes omitted
+  & Full MDT composition; tele-consult; Ayushman Bharat
+  & Omission \\
+\midrule
+\textit{Structural tone}
+  & Loose narrative; no sections; shallow clinical reasoning
+  & Disciplined structure (history / plan / MDT) but content unreliable
+  & Structured clinical note with all domains
+  & --- \\
+\midrule
+\textit{Overall fidelity}
+  & \multicolumn{2}{l}{Low (both conditions). Few-shot is more polished but less faithful.}
+  & ---
+  & --- \\
+\bottomrule
+\end{tabular}}
+\end{table*}
 
-1) Factual Fidelity
+\noindent\textbf{Key observation.}
+The few-shot output is structurally superior to zero-shot---it reads
+like a real consult note---but is substantially less faithful.
+Adding same-language demonstrations introduced four fabricated
+entities (caregiver name, comorbidity, drug name, smoking history)
+and inverted the frequency of two stated risk factors.
+The zero-shot output hallucinated pathologies (apnea) and timelines
+(three days), but did not invent a different patient's clinical history.
+This illustrates the entity-bleed mechanism (T3): the demonstrations
+introduced a structural prior \emph{and} specific clinical content
+that contaminated the test summary.
 
-Strengths (limited):
-- The summary correctly identifies core demographics and context: “A 46-year-old patient is undergoing radiotherapy for head and neck cancer.” This aligns with the ground truth: “నేను రాజ కుమార్, 46 సంవత్సరాలు. హెడ్ అండ్ నెక్ క్యాన్సర్ కోసం radiotherapy జరుగుతోంది.” (Translation: I am Raj Kumar, 46. Radiotherapy is ongoing for head and neck cancer.)
-- It references ordered labs, albeit imprecisely: “CBC and ESR Immunofunction tests,” aligning with “CBC, ESR, ఇమ్యూన్ ఫంక్షన్ టెస్ట్‌లు అవసరం.” (Translation: CBC, ESR, and immune function tests are needed.)
-- It notes an HPV-related inquiry and mentions counseling/eligibility in general terms, which corresponds to the dialogue.
+\subsection*{Case B: Translation Condition (scenario\_1)}
 
-Major inaccuracies and omissions:
-- Omission of explicit side effects. The summary asserts: “The side effects of radiotherapy are not explicitly stated,” which is contradicted by the patient’s clear list: “గొంతు నొప్పి, తినడంలో ఇబ్బంది, అలసట” (Translation: throat pain, difficulty eating, fatigue) and later “కొన్నిసార్ల ఊపిరితిత్తి కష్టం పెరుగుతుందని” (Translation: sometimes breathing difficulty increases), and “మాటలు మసకగా వినిపిస్తాయి” (Translation: speech sounds muffled).
-- Misattribution of clinician advice to the patient. The summary says “the patient mentions the importance of maintaining ... hydration, hygiene, and oral care,” whereas the clinician stated “hydration బాగా కాపాడుకోవాలి; mouth care చాలా ముఖ్యం.” (Translation: maintain hydration; mouth care is very important.)
-- False claims about diagnostic uncertainty. The summary states: “The patient is unsure about the specific diagnosis.” The ground truth is explicit that the patient is aware: “హెడ్ అండ్ నెక్ క్యాన్సర్ కోసం radiotherapy జరుగుతోంది.” (Translation: receiving radiotherapy for head and neck cancer.)
-- HPV eligibility misrepresented as counts of people rather than age. The summary claims “an eligibility of 45 individuals typically considered” and “Vaccination eligibility is for up to 45 people per month.” The ground truth specifies age-based criteria: “వయసు సాధారణంగా 45 వరకు eligibility ఉంటుంది, కానీ ప్రత్యేక సందర్భాల్లో డాక్టర్ నిర్ణయిస్తాడు.” (Translation: eligibility is generally up to age 45; in special cases the doctor decides.) There is no mention of “per month” or quotas of people.
-- Unsupported claim about provider availability. The summary introduces: “doctors not always available in private clinics,” which is not present in the conversation; this is a hallucination.
-- Tobacco use mistranslated and omitted. The patient says: “పొగాకు వాడకం నాకు ఉంది; దీన్ని తగ్గించుకోవాలని vraiment కష్టం.” (Translation: I use tobacco; reducing it is really difficult.) The summary’s “reduce their space” is a clear mistranslation and loses the salient behavioral risk factor and counseling need.
-- Misattribution and overstatement of procedures. The summary says: “The patient also mentions the necessity of ENT procedures, laryngoscopy, and biopsy,” whereas the clinician stated conditional planning: “ENT పరీక్షలు, లారింకోస్కోపీ అవసరమైతే చేస్తాము, అవసరమైతే biopsy కూడా చూస్తాము.” (Translation: we will do ENT exams, laryngoscopy if needed, and biopsy if needed.)
-- Timeline omission. The clinician’s concrete timeline “ఫలితాలు సాధారణంగా 1–3 రోజుల মধ্যে వస్తాయి.” (Translation: results generally come within 1–3 days) is not captured.
-- Nuanced self-assessment lost. The patient’s nuance “బలంగా ఉన్నాను కానీ ఆరోగ్యం పక్కాగా కాదు.” (Translation: I feel strong but my health is not perfect) is not preserved.
+\noindent\textbf{Clinical context.}
+A 46-year-old patient undergoing radiotherapy for head and neck cancer.
+Consultation covers side effects, laboratory investigations (CBC, ESR,
+immune function), HPV vaccination eligibility (up to age 45, with
+clinician discretion for exceptions), tobacco use and cessation,
+conditional procedure planning, and result timelines.
 
-Net assessment: Significant factual errors, multiple hallucinations, misattributions of speaker roles, and omission of clinically relevant symptoms and timelines.
+\begin{table*}[h!]
+\centering
+\caption{Translation-condition analysis for Telugu Case B.
+Errors arise from the IndicTrans2 translation step cascading into
+the English summarizer. GT\,=\,ground truth (original Telugu dialogue).}
+\label{tab:case_b}
+\resizebox{\linewidth}{!}{%
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{p{2.8cm} p{5.2cm} p{4.5cm} p{1.8cm}}
+\toprule
+\textbf{Dimension} & \textbf{Translation Output} & \textbf{Ground Truth (Telugu)}
+  & \textbf{Error Type} \\
+\midrule
+\textit{Side effects}
+  & ``The side effects of radiotherapy are \textbf{not explicitly stated}''
+  & Patient lists: throat pain, difficulty eating, fatigue, worsening
+    breathlessness, muffled speech
+  & T7 \\
+\midrule
+\textit{Tobacco use}
+  & ``reduce their space'' (nonsensical)
+  & ``I use tobacco; reducing it is really difficult''
+  & T8 \\
+\midrule
+\textit{HPV eligibility}
+  & ``eligibility of 45 \textbf{individuals}'' /
+    ``up to 45 \textbf{people per month}''
+  & Eligibility generally up to \textbf{age 45}; exceptions at
+    clinician discretion
+  & T8, T1 \\
+\midrule
+\textit{Speaker attribution}
+  & ``the patient mentions importance of maintaining hydration,
+    hygiene, and oral care''
+  & Clinician stated: ``maintain hydration; mouth care is very important''
+  & T6 \\
+\midrule
+\textit{Diagnostic awareness}
+  & ``patient is unsure about the specific diagnosis''
+  & Patient explicitly states: receiving radiotherapy for head and
+    neck cancer
+  & T7 \\
+\midrule
+\textit{Provider availability}
+  & ``doctors not always available in private clinics'' (fabricated)
+  & Not present in the conversation
+  & T2 \\
+\midrule
+\textit{Procedure conditionality}
+  & ``the \textbf{necessity} of ENT procedures, laryngoscopy, and biopsy''
+  & ``laryngoscopy \textbf{if needed}; biopsy \textbf{if needed}''
+  & T5 \\
+\midrule
+\textit{Result timeline}
+  & Not captured
+  & Results generally within 1--3 days
+  & Omission \\
+\midrule
+\textit{Self-assessment nuance}
+  & Not captured
+  & ``I feel strong but my health is not perfect''
+  & Omission \\
+\midrule
+\textit{Structural quality}
+  & Single unstructured paragraph; meta-disclaimer incongruent with
+    hallucinated content; no speaker attribution
+  & Structured multi-domain consultation
+  & --- \\
+\midrule
+\textit{Root cause}
+  & \multicolumn{2}{p{9.7cm}}{Most errors traceable to IndicTrans2
+    translation failures: semantic collapse (tobacco), unit
+    misrendering (age$\to$people), speaker-marker loss (attribution),
+    and partial omission of symptom passages.}
+  & T6, T7, T8 \\
+\bottomrule
+\end{tabular}}
+\end{table*}
 
-2) Negation Handling (CRITICAL)
-
-- False negation of explicitly stated side effects. The summary’s claim “The side effects of radiotherapy are not explicitly stated” directly contradicts the explicit symptom list in the ground truth. This is a critical misread of negation and presence/absence of facts.
-- Conditionality collapsed into certainty (affirmative bias). The clinician’s conditional phrasing “అవసరమైతే ... చేస్తాము” (Translation: if needed, we will do ...) was summarized as “the necessity of ENT procedures, laryngoscopy, and biopsy,” turning a contingent plan into a definite requirement.
-- Exception-handling for HPV eligibility distorted. The ground truth notes a general age cap with exceptions: “సాధారణంగా 45 వరకు ... కానీ ప్రత్యేక సందర్భాల్లో డాక్టర్ నిర్ణయిస్తాడు.” (Translation: generally up to 45; in special cases the doctor decides.) The summary erases the exception nuance and instead hallucinates a negative about provider availability in private clinics, which is not a negation present in the transcript.
-- No patient denials were present in the transcript; thus, classic denial-to-affirmation errors are not testable here. However, the method did introduce a fabricated negation (“not explicitly stated”) where the opposite is true, demonstrating unreliable handling of presence/absence statements.
-
-3) Structural Formatting
-
-- Organization: The summary is a single, free-text paragraph within “[Summary] ... <summary> ...” tags. It lacks standard clinical structuring (e.g., Chief Complaint, History of Present Illness, ROS, Assessment/Plan). This hinders rapid clinical scanning.
-- Clinical tone: The tone is inconsistent. Phrases like “reduce their space” are non-clinical and reflect translation failure. The inclusion of a meta-disclaimer—“does not include any inferred or assumed details”—is incongruent with the content, which in fact contains inferences and hallucinations.
-- Speaker attributions: Multiple misattributions (patient vs clinician statements) undermine structural clarity about who reported symptoms versus who provided counseling or plans.
-
-4) Lexical Choice & Nuance
-
-- Medical terminology: Some terms are preserved (radiotherapy; CBC, ESR, immune function tests; HPV counseling). However, there are notable lexical errors:
-  - “Immunofunction” instead of “immune function.”
-  - “45 individuals” and “45 people per month” instead of “up to age 45 years,” distorting eligibility criteria.
-  - “Reduce their space” for “reduce tobacco use” (from “పొగాకు వాడకం ... తగ్గించుకోవాలని”), a severe mistranslation that removes a key risk behavior and the associated counseling topic.
-- Symptom descriptors lost:
-  - “మాటలు మసకగా వినిపిస్తాయి” (Translation: speech sounds muffled) not represented.
-  - “తింటే గొంతులో సున్నితమైన బాధ” (Translation: tender pain in throat when eating) not represented.
-  - “కొన్నిసార్ల ఊపిరితిత్తి కష్టం పెరుగుతుంది” (Translation: sometimes shortness of breath worsens) omitted.
-- Clinical nuance and pragmatics:
-  - The patient’s time constraints (“నా షెడ్యూల్ చాలా బిజీగా ఉంది.” Translation: my schedule is very busy) and the clinician’s timeline (1–3 days for results) are omitted, losing actionable logistics.
-  - The conditionality and safety framing (“శ్వాస సురక్షితంగా ఉందో లేదో చూద్దాం.” Translation: let’s ensure breathing is safe) are not conveyed.
-  - The exception clause for HPV eligibility (“but in special cases the doctor decides”) is lost, and replaced by an unrelated, unsupported claim about provider availability.
-
-Conclusions
-
-- The Translated Output demonstrates substantial deficits in factual fidelity, frequent hallucinations, poor handling of conditionality (introducing affirmative bias), and critical mistranslations that erase key clinical content (symptoms, tobacco use) and logistics (result timeline).
-- Negation/conditional processing is especially problematic: a fabricated negation (“not explicitly stated”) is introduced, while genuine conditionals (“if needed”) are converted into certainties.
-- Structurally, the output lacks clinical formatting and misattributes statements, confounding the clinical narrative.
-- Lexically, important medical nuances (age-based eligibility; symptom specificity; safety checks; patient’s schedule constraints) are not preserved, and at times are replaced by unrelated content.
-
-Recommendations for improvement
-- Implement role-aware summarization to maintain speaker attribution (patient-reported symptoms vs clinician advice/plan).
-- Enforce explicit extraction of symptom lists and temporal qualifiers; avoid unverifiable inferences (e.g., “extended period,” “private clinics” availability).
-- Introduce a negation/conditionality checklist:
-  - Verify whether symptoms are present or denied in the source before summarizing.
-  - Preserve conditional language (“if needed,” “generally,” “exceptions”) verbatim or with equivalent hedging.
-- Standardize clinical structure (e.g., CC, HPI, PE/ROS, Labs/Diagnostics, Counseling/Plan, Follow-up/timeline) to improve readability and reduce misattribution.
-- Use controlled vocabularies for key entities (e.g., HPV vaccine eligibility: “up to age 45 years, with clinician discretion for exceptions”) and avoid numerical misrendering (people vs years).
+\noindent\textbf{Key observation.}
+Unlike the zero-shot and few-shot cases, most errors in the translation
+output are traceable to specific IndicTrans2 translation failures
+rather than to the summarizer. The tobacco use phrase was semantically
+collapsed to ``reduce their space,'' eliminating a key behavioral
+risk factor entirely. The age-based HPV eligibility criterion was
+rendered such that the numeral 45 survived translation but its
+governing unit (``years'') was lost, and the summarizer filled the
+gap by hallucinating a per-person or per-month quota. The
+speaker-role markers encoded in Telugu verb morphology were
+neutralized in the English rendering, causing clinician advice to
+be attributed to the patient. These are not errors the summarizer
+can recover from; they reflect fundamental limitations of the current
+IndicTrans2 translation quality for Telugu clinical text.
