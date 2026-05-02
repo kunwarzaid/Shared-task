@@ -23,627 +23,172 @@ premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
 
-Table 1 presents macro-averaged results across all 10 languages for all eight experimental conditions. Four paradigms (zero-shot, few-shot, translation, and SFT) × two models (Qwen2.5-7B and Mistral-7B) yield a comprehensive performance matrix. The table immediately establishes the main hierarchy: supervised fine-tuning dominates all prompting-based methods on every metric; translation-augmented inference is the weakest strategy on most metrics; and few-shot prompting degrades below zero-shot across both models. Detailed analysis follows in Sections 2–5.
- 
-Metric
-Qwen ZS
-Qwen FS
-Qwen Trans
-Qwen SFT
-Mistral ZS
-Mistral FS
-Mistral Trans
-Mistral SFT
-Truthfulness
-3.318
-3.370
-2.811
-4.156
-3.092
-3.067
-2.777
-4.084
-Safety
-2.560
-2.575
-2.217
-2.962
-2.496
-2.354
-2.197
-2.916
-Explainability
-3.388
-3.302
-2.676
-3.838
-3.052
-2.932
-2.716
-3.828
-ROUGE-L
-0.1318
-0.1206
-0.1478
-0.2276
-0.1352
-0.1299
-0.1476
-0.2262
-BERTScore
-0.8557
-0.8544
-0.8501
-0.8828
-0.8478
-0.8495
-0.8501
-0.8796
-Precision
-0.5757
-0.5418
-0.4625
-0.8946
-0.4901
-0.4437
-0.4545
-0.9021
-Hallucination
-0.4243
-0.4582
-0.5375
-0.1054
-0.5099
-0.5563
-0.5455
-0.0979
-Recall
-0.4837
-0.4663
-0.4359
-0.6843
-0.3917
-0.3433
-0.4012
-0.6579
-Omission
-0.5163
-0.5337
-0.5641
-0.3157
-0.6083
-0.6567
-0.5988
-0.3421
-Entity F1
-0.5183
-0.4992
-0.4376
-0.7745
-0.4323
-0.3852
-0.4194
-0.7604
-Table 1. Macro-averaged results across all 10 languages for all eight conditions. Bold green = best per metric; bold red = worst. Hallucination and Omission: lower is better.
- 
-2. Zero-Shot and Few-Shot Prompting
 
-The zero-shot and few-shot results have been analysed in detail in the preceding section. We briefly summarise the key findings here for completeness within the full results narrative. Qwen2.5-7B zero-shot achieves macro-averaged entity F1 of 0.518 and establishes the strongest prompting baseline. Few-shot prompting (k = 1, full dialogues) degrades F1 to 0.499 for Qwen and from 0.432 to 0.385 for Mistral, with hallucination rates increasing by 3.4 and 4.6 percentage points respectively. Safety scores remain below 3.0/5.0 under both prompting conditions for both models. Zero-shot Qwen2.5-7B is adopted as the primary prompting reference point against which translation and fine-tuning results are compared.
+# Native Experiments Analysis: Telugu (Case: scenario_52_8ed9ba9f7193475aa476f2bae08f83fb_IDX_05_2)
  
-3. Translation-Augmented Inference (IndicTrans2)
+ Evaluation of a Telugu Clinical Conversation
+ 
+Scope and Materials
+- Source: A Telugu patient–health worker follow-up conversation focused on throat symptoms, behavioral risk factors, evaluation plans (possible fiber‑optic laryngoscopy), multidisciplinary care (MDT), supportive therapies (diet, speech/swallow rehab), tele-consultation, government schemes, and follow-up cadence.
+ 
+ 
+Key Ground Truth Anchors (selected)
+- Symptoms/time course: “గొంతులో నాలుగు వారాలుగా అసౌకర్యం… వాయిస్ కొద్దిగా మారేలా కనిపిస్తోంది” (“Throat discomfort for four weeks; the voice seems to change”).
+- Risk factors: “Pane Makh 2–3 సార్లు రోజూ… సిగరెట్ అరుదు; ఆల్కహాల్ వారానికి 3–4 సార్లు” (“Pane Makh 2–3 times daily; cigarettes rare; alcohol 3–4 times per week”).
+- Workup plan: “ఫైబర్-ఓప్తిక్ లారింగో స్కోపీ… ఫలితాలు వచ్చిన తర్వాత బయోప్సీ లేదా ఇమేజ్ ప్లాన్” (“Fiber-optic laryngoscopy if needed; after results, decide on biopsy or imaging plan”).
+- Follow-up cadence: “ప్రతి మూడు నెలలకు ఫాలో-అప్… మొదటి ఏడాదిలో… మూడేళ్లపాటు ఫాలో-అప్ కొనసాగుతాం” (“Follow-up every three months… during the first year… we will continue follow-up for three years”).
+- Supportive care (examples):
+  - Diet: “soft high-protein… ఖిచ్డీ, దాల్-రోటి, పెరుగు, పాలు, గుడ్లు, ప్రోటీన్ షేక్‌లు” (“Soft high-protein diet: khichdi, dal-roti, curd, milk, eggs, protein shakes”).
+  - Exercises: “Neck, jaw, swallowing… రోజుకి రెండు మూడు సార్లు… ప్రతి సెట్ 5–10 సెకన్లు” (“Neck, jaw, and swallowing exercises 2–3 times daily, each set 5–10 seconds”).
+  - Radiation effects/dry mouth: dental hygiene and hydration; salivary substitutes if needed.
+  - MDT composition: surgeon, radiation oncologist, medical oncologist, dietitian, speech therapist, dentist.
+  - Tele-consultation available; government schemes (Aadhaar/PAN; Ayushman Bharat); cessation support.
+ 
+1) Factual Fidelity & Attention
+ 
+Zero-Shot
+- Major hallucinations and distortions:
+  - “post-falloff-apnea treatment,” “four days of apnea,” “worsens when he works and improves when resting” — None of these concepts (apnea, days-long course, work/rest pattern) appear in the conversation. Ground truth specifies 4 weeks of throat discomfort and voice change, not “apnea” or a work–rest modulation.
+  - Follow-up interval misreported as “every three days” and “success in recovery within three days,” contradicting “ప్రతి మూడు నెలలకు ఫాలో-అప్” (“every three months”) and ongoing three-year follow-up.
+  - Nuance loss in behavioral counseling: It states “advises against increasing Pane Makh usage,” whereas the clinician recommends reduction or complete cessation.
+- Partial concordance:
+  - Recommends examination and imaging if needed; mentions soft high-protein diet, feeding tube if necessary, exercises, speech therapy, dry mouth management, and subsidies/paperwork — all broadly align, albeit superficially.
+- Omissions:
+  - MDT membership, detailed follow-up plan across year(s), tele-consultation modalities, and explicit cessation program support receive minimal or no attention.
+- Verdict: Low fidelity. The model substitutes invented pathologies and timelines, diverting from anchor facts. Attention to salient details is inconsistent.
+ 
+Few-Shot
+- Extensive “attention dilution” with template-driven, non-evidenced insertions:
+  - Invented demographics/social history: “25-year history of smoking (8–12 cigarettes/day)” and “occasional alcohol use,” contradicting “సిగరెట్ అరుదు; ఆల్కహాల్ వారానికి 3–4 సార్లు” (“cigarettes rare; alcohol 3–4 times/week”).
+  - Fabricated caregiver: “wife Evelyn,” no such person is mentioned.
+  - Added symptoms not reported: “mild dysphagia.” The patient only notes voice change and discomfort; no dysphagia was endorsed.
+  - Management plan escalation: “CT or MRI,” “biopsy,” “results within 1–3 days,” “radiotherapy typically lasts 6–7 weeks,” “facial changes” — none stated in the transcript. Ground truth frames these as contingent (“if needed”) and does not discuss radiotherapy schedules or facial changes.
+  - Medical comorbidities: “hypertension (controlled with amlodipine)” — absent from the dialogue.
+- Partial concordance:
+  - Mentions laryngoscopy under local anesthesia, MDT review, general advice on hydration/oral care — compatible with the transcript’s themes.
+- Omissions:
+  - Does not reflect key behavioral risk “Pane Makh” use; omits tele-consultation, detailed government documentation requirements, structured follow-up cadence (3‑monthly), and cessation program offer.
+- Verdict: The Few-Shot output exhibits prototypical “attention dilution,” overlaying a generic head-and-neck oncology template onto the case, with numerous unsupported specifics. Factual fidelity is poor.
+ 
+Comparative Summary
+- Zero-Shot: Fewer different types of clinical elements than Few-Shot but still introduces serious inaccuracies (apnea, 3‑day follow-ups).
+- Few-Shot: More structured and comprehensive-sounding but systematically hallucinates core clinical and social details, likely due to long prompt priming and template overfitting.
+ 
+2) Negation Handling and Affirmative Bias
+ 
+Ground Truth Context
+- The clinician probes for additional symptoms: “ఊపిరి తీసుకునేటప్పుడు బాధ ఉందా… గట్టిగా మాట్లాడినప్పుడు ఇబ్బంది?” (“Is there pain when breathing… is there difficulty when speaking loudly?”). The patient does not affirm dyspnea or pain; he reiterates voice change and fear.
+ 
+Zero-Shot
+- Displays affirmative bias by asserting “apnea” and a four-day course, despite no endorsement. It also implies symptom fluctuation with work/rest — not present. This is not a simple negation error but a stronger tendency to conjure positive findings absent from the record.
+ 
+Few-Shot
+- Affirmative bias manifests as adding “mild dysphagia” and a heavy smoking history, despite no such admissions (and in fact a contrary statement: cigarettes rare). It also asserts “occasional alcohol use,” minimizing the stated 3–4 times/week. This not only invents positives but distorts frequency directionally, suggesting bias toward presumed, not stated, comorbidities.
+ 
+Conclusion on Negation/Affirmative Bias
+- Both methodologies show affirmative bias (adding unmentioned positives). While explicit negation handling cannot be fully assessed due to limited denials in the ground truth, both outputs fail to respect the absence of certain symptoms/history elements and introduce fictitious positives.
+ 
+3) Structural Formatting and Clinical Tone
+ 
+Zero-Shot
+- Structure: Loose, narrative paragraph with mixed topics; limited signposting.
+- Tone: Informal and inconsistent. Clinical reasoning is shallow; sequencing of evaluation steps is vague.
+- Rigor: Lacks clear sections (history, exam plan, counseling, follow-up).
+ 
+Few-Shot
+- Structure: More disciplined, resembling a problem list or mini-consult note. It organizes into presentation, history, plan, and MDT coordination.
+- Tone: Formally clinical with specific-sounding details and timelines.
+- Caveat: The structural discipline appears to have encouraged insertion of templated but unsupported details (e.g., smoking pack-years, antihypertensive therapy, radiotherapy duration). Thus, while format is stronger, content reliability is weaker.
+ 
+4) Lexical Nuance and Medical Terminology
+ 
+Zero-Shot
+- Uses general terms: “imaging,” “feeding tubes,” “speech therapy,” “dry mouth.”
+- Misuse: “post-falloff-apnea treatment” is a nonstandard phrase; “apnea” is contextually irrelevant.
+- Overall: Basic lexicon acceptable but marred by misuse and ill-fitted terms.
+ 
+Few-Shot
+- Richer medical vocabulary: “laryngoscopy under local anesthesia,” “CT or MRI,” “biopsy,” “peri-procedural safety,” “radiotherapy 6–7 weeks,” “MDT.”
+- Appropriateness: Terminology is medically accurate in general oncology contexts but not grounded in this specific transcript. The lexicon, though fluent, drives unsupported assertions.
+ 
+Overall Judgement
+- Factual Fidelity: Both methods perform poorly; Zero-Shot misstates core timelines and conditions; Few-Shot superimposes a generic oncology script, inventing multiple comorbidities and plans.
+- Attention and Dilution: Few-Shot shows clear attention dilution, with the long prompt likely cueing domain defaults that override case-specific facts (e.g., heavy smoking, dysphagia, antihypertensives, radiotherapy course).
+- Negation/Affirmative Bias: Both introduce unendorsed positives; Few-Shot additionally inverts reported frequencies (alcohol, cigarettes).
+- Structure and Tone: Few-Shot achieves a more clinical structure but at the cost of truthfulness; Zero-Shot is less structured but also inaccurate.
+- Lexical Handling: Few-Shot demonstrates stronger medical lexicon but misapplies it; Zero-Shot’s lexicon is simpler, with notable misuse.
+ 
+ 
+In sum, while the Few-Shot method presents a more polished clinical narrative, it is less faithful to the Telugu transcript than the Zero-Shot, which itself contains significant hallucinations. For safe clinical summarization, fidelity must supersede stylistic structure.
 
-The translation pipeline routes non-English dialogues through IndicTrans2 for source-to-English translation, applies zero-shot English summarization using the target model, and back-translates the English summary to the source language. English dialogues are processed directly without translation. Table 2 presents per-language F1 results comparing translation to zero-shot, alongside hallucination rates.
- 
-Language
-Script Family
-Qwen ZS F1
-Qwen Trans F1
-Qwen Δ
-Mistral ZS F1
-Mistral Trans F1
-Mistral Δ
-Bengali
-Bengali (IA-High)
-0.5664
-0.3692
-−0.197
-0.4511
-0.2953
-−0.156
-Hindi
-Devanagari (IA-High)
-0.5507
-0.5714
-+0.021
-0.4498
-0.5605
-+0.111
-Marathi
-Devanagari (IA-Med)
-0.5276
-0.6353
-+0.108
-0.4196
-0.5696
-+0.150
-Telugu
-Telugu (Dravidian)
-0.4501
-0.2414
-−0.209
-0.2822
-0.2000
-−0.082
-Tamil
-Tamil (Dravidian)
-0.4802
-0.4600
-−0.020
-0.4287
-0.4728
-+0.044
-Kannada
-Kannada (Dravidian)
-0.4407
-0.3185
-−0.122
-0.4233
-0.2953
-−0.128
-Gujarati
-Gujarati (IA-Low)
-0.3937
-0.4946
-+0.101
-0.3681
-0.5389
-+0.171
-Dogri
-Devanagari (IA-Low)
-0.5704
-0.4972
-−0.073
-0.4309
-0.5670
-+0.136
-Assamese
-Bengali (IA-Low)
-0.5533
-0.3506
-−0.203
-0.4173
-0.2753
-−0.142
-Macro Avg
-—
-0.5058*
-0.4376*
-−0.068*
-0.4243*
-0.4194*
-−0.005*
-Table 2. Translation vs. Zero-Shot entity F1 per language. * = averaged over 9 non-English languages. English is excluded as it is the pivot language (no translation applied).
- 
-3.1  The Indo-Aryan / Dravidian Divide
-The translation results reveal a sharp and linguistically meaningful split. For Indo-Aryan languages with Devanagari or closely related scripts—Hindi, Marathi, and Gujarati—translation consistently improves over zero-shot for both models. Mistral-Marathi gains +0.150 F1 (0.420 → 0.570), Mistral-Gujarati gains +0.171 (0.368 → 0.539), and Mistral-Hindi gains +0.111 (0.450 → 0.561). These are the largest absolute F1 gains observed in the translation condition. The mechanism is direct: IndicTrans2 achieves high translation quality for Indo-Aryan pairs given their structural proximity to Hindi, the best-represented Indic language in NMT training corpora. High-quality English input enables both models to summarize in their strongest generation language, recovering the substantial English advantage (F1 = 0.650–0.652) for these languages.
-Dravidian languages tell an entirely different story. Translation ​extit{harms} performance relative to zero-shot for Telugu and Kannada under both models, and produces only marginal gains or neutral results for Tamil. Telugu is the worst-affected: Qwen-Telugu F1 falls from 0.450 to 0.241 (−0.209), with hallucination rising from 0.463 to 0.774. Mistral-Telugu falls from 0.282 to 0.200, reaching the lowest single result in the translation condition. The qualitative analysis explains this: IndicTrans2 translation quality for Telugu, Tamil, and Kannada is substantially lower than for Indo-Aryan pairs—morphologically complex verb forms, conditional structures, and clinical terminology are frequently mistranslated or semantically collapsed, producing degraded English that the summarizer cannot recover from. The translation pipeline does not just fail to help; it actively introduces new error types (T8: Mistranslation Cascade; T7: Fabricated Presence/Absence Assertions) that are absent from direct zero-shot inference.
- 
-Language Group
-Qwen: Trans helps?
-Avg Qwen Δ F1
-Mistral: Trans helps?
-Avg Mistral Δ F1
-Verdict
-Dravidian (TE,TA,KN)
-1/3 languages
-−0.117
-1/3 languages
-−0.055
-Translation harmful
-IA Low-res (GU,DO,AS,MR)
-2/4 languages
-−0.014
-3/4 languages
-+0.114
-Mixed; Mistral benefits
-IA High-res (HI,BN)
-1/2 languages
-−0.088
-2/2 languages
-+0.133
-Mistral benefits; Qwen mixed
-Table 3. Translation benefit analysis by language family. 'Trans helps' = translation F1 > zero-shot F1. Note: Assamese and Bengali show consistent degradation across both models.
- 
-3.2  Assamese and Bengali: The Low-Resource Translation Failure
-Beyond Dravidian languages, two Indo-Aryan languages—Assamese and Bengali—show severe translation degradation that warrants specific discussion. Qwen-Assamese falls from 0.553 to 0.351 (−0.203) and Mistral-Assamese falls from 0.417 to 0.275 (−0.142). Qwen-Bengali falls from 0.566 to 0.369 (−0.197). These are not Dravidian translation failures; they reflect a different problem: Bengali and Assamese share a script but have substantially different morphological and lexical properties. IndicTrans2’s Bengali-script model appears to generalize imperfectly to Assamese, producing lower-quality translations that cascade into poor summarization. For Bengali, the translation hallucination rate rises from 0.375 to 0.676—nearly doubling—suggesting the English output of the translation step is distorted, overlong, or incoherent for this language.
-The practical implication is that script family does not reliably predict translation quality in the IndicTrans2 pipeline. Bengali-script languages require language-specific rather than script-generic translation models, and Assamese in particular benefits more from direct fine-tuning than from translation routing.
-3.3  Translation Safety: The Lowest Safety Scores in the Evaluation
-Translation-augmented inference produces the lowest safety scores of any condition across both models, with macro-averaged safety of 2.217 (Qwen) and 2.197 (Mistral)—substantially below the already-concerning prompting baselines of 2.560 and 2.496. Telugu translation safety reaches 1.72/5.0 (Qwen) and 1.65/5.0 (Mistral), and Assamese translation safety falls to 1.46/5.0 (Mistral)—the lowest safety score in the entire evaluation matrix. These scores are consistent with the qualitative analysis: translation pipeline errors (mistranslation cascades, conditionality collapse, fabricated absence assertions, speaker misattribution) accumulate across the two-stage pipeline and produce summaries with systematic clinical errors that a safety evaluator correctly penalizes. For languages where IndicTrans2 translation quality is low, the pipeline amplifies errors rather than suppressing them.
-Translation-augmented inference is counter-indicated for Dravidian languages, Assamese, and Bengali under the current IndicTrans2 quality level. Deploying this pipeline for these languages would produce clinical summaries with safety scores below 2.0/5.0—lower than any prompting-based approach—and hallucination rates above 65%. Zero-shot direct inference is safer for these languages in the absence of fine-tuning.
- 
-4. Supervised Fine-Tuning (LoRA)
 
-Supervised fine-tuning with LoRA adapters on the full multilingual training set produces the strongest results across all metrics for both models and all 10 languages. Table 4 presents per-language SFT results alongside zero-shot baselines to quantify the improvement attributable to fine-tuning.
- 
-Language
-Qwen ZS F1
-Qwen SFT F1
-Qwen Δ F1
-Qwen SFT Hall
-Mistral ZS F1
-Mistral SFT F1
-Mistral Δ F1
-Mistral SFT Hall
-Bengali
-0.5664
-0.7204
-+0.154
-0.122
-0.4511
-0.7081
-+0.257
-0.109
-English
-0.6498
-0.7767
-+0.127
-0.085
-0.6516
-0.7681
-+0.117
-0.085
-Hindi
-0.5507
-0.7695
-+0.219
-0.088
-0.4498
-0.7632
-+0.313
-0.087
-Marathi
-0.5276
-0.7741
-+0.246
-0.088
-0.4196
-0.7679
-+0.348
-0.062
-Telugu
-0.4501
-0.8083
-+0.358
-0.120
-0.2822
-0.7691
-+0.487
-0.070
-Tamil
-0.4802
-0.7224
-+0.242
-0.144
-0.4287
-0.7684
-+0.340
-0.097
-Kannada
-0.4407
-0.8115
-+0.371
-0.070
-0.4233
-0.7793
-+0.356
-0.106
-Gujarati
-0.3937
-0.7996
-+0.406
-0.110
-0.3681
-0.7686
-+0.401
-0.092
-Dogri
-0.5704
-0.7763
-+0.206
-0.120
-0.4309
-0.7572
-+0.326
-0.135
-Assamese
-0.5533
-0.7858
-+0.233
-0.108
-0.4173
-0.7546
-+0.337
-0.136
-Macro Avg
-0.5183
-0.7745
-+0.256
-0.105
-0.4323
-0.7604
-+0.328
-0.098
-Table 4. SFT vs. Zero-Shot per language. Hallucination column shows SFT hallucination rate (all substantially below prompting baselines). Macro Δ = SFT minus zero-shot F1.
- 
-4.1  Magnitude of SFT Gains
-The absolute F1 improvements from zero-shot to SFT are large and consistent across all languages. Qwen SFT gains range from +0.127 (English) to +0.406 (Gujarati), with a macro-average improvement of +0.256. Mistral SFT gains are even larger, ranging from +0.117 (English) to +0.487 (Telugu), with a macro-average of +0.328. The larger Mistral gains reflect both the lower Mistral zero-shot baseline and the greater headroom available for improvement. After fine-tuning, the Qwen and Mistral performance gap narrows substantially: at zero-shot, Qwen leads Mistral by 0.086 F1 points; at SFT, the gap closes to 0.014 (0.775 vs. 0.760), suggesting that fine-tuning is highly effective at closing model-level performance gaps driven by pretraining differences.
-4.2  SFT Delivers the Largest Gains for the Most Challenging Languages
-A critical and clinically important finding is that SFT gains are largest precisely where zero-shot performance was worst. The five largest Qwen SFT gains are: Gujarati (+0.406), Kannada (+0.371), Telugu (+0.358), Tamil (+0.242), and Marathi (+0.246). The five largest Mistral SFT gains are: Telugu (+0.487), Gujarati (+0.401), Kannada (+0.356), Tamil (+0.340), and Assamese (+0.337). In every case, the languages with the largest gains are the same languages that showed the worst zero-shot performance—Dravidian languages and low-resource Indo-Aryan languages.
-This is not merely a ceiling effect. The absolute SFT F1 values for these languages are among the highest in the matrix: Qwen-Kannada SFT reaches 0.812, Qwen-Telugu SFT reaches 0.808, and Qwen-Gujarati SFT reaches 0.800. These are competitive with or exceeding the English zero-shot baseline (0.650). The fine-tuning process effectively eliminates the language-family performance gap that was stark at zero-shot: the Dravidian language group, which averaged 0.457 F1 at Qwen zero-shot (versus 0.589 for IA high-resource), averages 0.781 at Qwen SFT—nearly identical to the IA high-resource SFT average of 0.756.
- 
-Language Family
-Qwen ZS F1
-Qwen SFT F1
-Qwen Δ
-Mistral ZS F1
-Mistral SFT F1
-Mistral Δ
-Gap closed?
-Dravidian (TE,TA,KN)
-0.457
-0.781
-+0.324
-0.378
-0.772
-+0.394
-YES → parity
-IA Low-res (GU,DO,AS,MR)
-0.511
-0.784
-+0.273
-0.409
-0.762
-+0.353
-YES → parity
-IA High-res (HI,BN,EN)
-0.589
-0.756
-+0.167
-0.518
-0.747
-+0.229
-Baseline elevated
-Table 5. Language family F1 comparison: zero-shot vs. SFT. Fine-tuning eliminates the Dravidian performance gap, bringing all three language families to near-parity at SFT.
- 
-Fine-tuning achieves language-family parity: Dravidian and low-resource Indo-Aryan languages, which lagged IA high-resource languages by 0.13–0.18 F1 points at zero-shot, reach equivalent or higher performance at SFT. This has direct implications for equitable multilingual clinical AI deployment.
-4.3  Hallucination Reduction: The Most Clinically Significant SFT Effect
-The most clinically significant consequence of fine-tuning is a dramatic reduction in hallucination rates. At zero-shot, macro-average hallucination rates were 0.424 (Qwen) and 0.510 (Mistral). After SFT, these fall to 0.105 and 0.098 respectively—reductions of 31.9 and 41.2 percentage points. This is not uniform across languages: the largest reductions occur for the languages with the highest zero-shot hallucination rates.
- 
-Language
-Qwen ZS Hall
-Qwen SFT Hall
-Δ
-Mistral ZS Hall
-Mistral SFT Hall
-Δ
-Gujarati
-0.693
-0.110
-−0.582
-0.566
-0.092
-−0.474
-Kannada
-0.545
-0.070
-−0.475
-0.590
-0.106
-−0.484
-Telugu
-0.463
-0.120
-−0.344
-0.718
-0.070
-−0.648
-Marathi
-0.427
-0.088
-−0.339
-0.542
-0.062
-−0.480
-Tamil
-0.426
-0.144
-−0.282
-0.513
-0.097
-−0.416
-Assamese
-0.349
-0.108
-−0.241
-0.568
-0.136
-−0.432
-Dogri
-0.336
-0.120
-−0.216
-0.427
-0.135
-−0.292
-Bengali
-0.375
-0.122
-−0.253
-0.446
-0.109
-−0.337
-Hindi
-0.324
-0.088
-−0.236
-0.436
-0.087
-−0.349
-English
-0.306
-0.085
-−0.221
-0.296
-0.085
-−0.211
-Macro Avg
-0.424
-0.105
-−0.319
-0.510
-0.098
-−0.412
-Table 6. Hallucination rate: zero-shot vs. SFT. Sorted by Qwen zero-shot hallucination rate. All languages show dramatic reductions; the largest absolute reductions occur for the highest-hallucination zero-shot languages.
- 
-Mistral-Telugu zero-shot had the highest hallucination rate in the entire evaluation matrix at 0.718. SFT reduces this to 0.070—a 64.8 percentage point reduction, bringing it below the English zero-shot hallucination rate of 0.296. Qwen-Gujarati zero-shot hallucination of 0.693 is reduced to 0.110 (−58.2 pp). These are not marginal improvements: they represent a fundamental shift from clinically unreliable generation to generation with competitive precision. Post-SFT, every language for both models achieves a hallucination rate below 0.145—a threshold that would be considered clinically meaningful.
-4.4  Safety After Fine-Tuning: Approaching but Not Crossing 3.0
-Fine-tuning substantially improves Safety scores across all languages, raising the macro-average from 2.560 to 2.962 (Qwen) and from 2.496 to 2.916 (Mistral). However, the macro-average does not cross 3.0/5.0 for either model, and the per-language picture reveals that only a minority of languages individually exceed this threshold.
-Qwen SFT exceeds Safety = 3.0 for Bengali (3.06), English (3.06), Marathi (3.02), and Kannada (3.08). Mistral SFT exceeds 3.0 for English (3.04) and Gujarati (3.00) only. The majority of languages remain just below 3.0 despite substantial safety improvement from the fine-tuning process. Two languages are consistently below 3.0 across both models at SFT: Hindi (Qwen 2.86, Mistral 2.90) and Dogri (Qwen 2.84, Mistral 2.74). This persistent Safety deficit—which is present across all eight experimental conditions—suggests that the clinical safety dimension captures a quality facet that current training objectives and architectures do not fully optimize for, even under supervised fine-tuning on domain-matched data.
-Despite dramatic improvements from SFT, Safety remains below 3.0/5.0 on average for both models. The safety gap between Truthfulness and Safety—which measures the dissociation between factual plausibility and clinical actionability—actually widens under SFT (Qwen: +1.19; Mistral: +1.17) compared to zero-shot (Qwen: +0.76; Mistral: +0.60). Models become more truthful faster than they become safer, indicating that safety-specific training objectives (beyond standard instruction fine-tuning) are required for clinical deployment readiness.
-4.5  ROUGE-L and BERTScore Under SFT
-SFT produces substantial improvements on surface-level metrics as well. Macro-average ROUGE-L rises from 0.1318 to 0.2276 (+0.0958) for Qwen and from 0.1352 to 0.2262 (+0.0910) for Mistral—both representing approximately 70% relative improvement. BERTScore rises from 0.8557 to 0.8828 (+0.0271) for Qwen and from 0.8478 to 0.8796 (+0.0318) for Mistral. These gains indicate that SFT summaries are not merely more entity-complete but also structurally closer to gold summaries in both lexical surface form and semantic content. The joint improvement across all three evaluation tiers—surface metrics, holistic quality dimensions, and entity-level fidelity—confirms that fine-tuning generalizes across the multiple dimensions of clinical summary quality rather than optimizing one at the expense of others.
- 
-5. Comprehensive Cross-Paradigm Comparison
+# Objective Deep Dive Analysis: Telugu (Case: scenario_1_c5d7e4e20467460d90ae3ba4a6ab2ba9_IDX_04_3)
 
-5.1  Ranking All Eight Conditions
-Table 7 ranks all eight experimental conditions by macro-averaged entity F1 and places each in clinical deployment context.
- 
-Rank
-Condition
-Entity F1
-Hallucination
-Omission
-Safety
-Deployment Assessment
-1
-Qwen SFT
-0.775
-0.105
-0.316
-2.962
-Strongest; safety still developing
-2
-Mistral SFT
-0.760
-0.098
-0.342
-2.916
-Close second; marginal safety edge on hall.
-3
-Qwen Zero-Shot
-0.518
-0.424
-0.516
-2.560
-Best prompting baseline
-4
-Mistral Zero-Shot
-0.432
-0.510
-0.608
-2.496
-Acceptable for high-res languages only
-5
-Qwen Translation
-0.438
-0.538
-0.564
-2.217
-Harms low-resource + Dravidian
-6
-Mistral Translation
-0.419
-0.546
-0.599
-2.197
-Weakest on safety; language-dependent
-7
-Qwen Few-Shot
-0.499
-0.458
-0.534
-2.575
-Degrades below zero-shot
-8
-Mistral Few-Shot
-0.385
-0.556
-0.657
-2.354
-Worst overall; avoid
-Table 7. All eight conditions ranked by macro-averaged entity F1. Note: Translation rank vs. few-shot varies by language—translation outperforms few-shot for Indo-Aryan languages but is worse for Dravidian.
- 
-5.2  Best Result Per Language
-Across all eight conditions, Qwen SFT achieves the best entity F1 in 9 of 10 languages. The single exception is Tamil, where Mistral SFT (0.768) marginally outperforms Qwen SFT (0.722). This dominance of Qwen SFT is consistent and not driven by any single language or language family. The best F1 results per language span from 0.720 (Tamil, Mistral SFT) to 0.812 (Kannada, Qwen SFT), with all languages achieving F1 > 0.70 under SFT. This represents a dramatic improvement from the zero-shot range of 0.282 (Mistral-Telugu) to 0.652 (Mistral-English).
- 
-Language
-Best F1
-Best Condition
-Zero-Shot F1 (best model)
-Improvement
-Bengali
-0.720
-Qwen SFT
-0.566 (Qwen ZS)
-+0.154
-English
-0.777
-Qwen SFT
-0.652 (Mistral ZS)
-+0.125
-Hindi
-0.770
-Qwen SFT
-0.551 (Qwen ZS)
-+0.219
-Marathi
-0.774
-Qwen SFT
-0.528 (Qwen ZS)
-+0.246
-Telugu
-0.808
-Qwen SFT
-0.282 (Mistral ZS)
-+0.526 — largest gain
-Tamil
-0.768
-Mistral SFT
-0.480 (Qwen ZS)
-+0.288
-Kannada
-0.812
-Qwen SFT
-0.441 (Qwen ZS)
-+0.371
-Gujarati
-0.800
-Qwen SFT
-0.394 (Qwen ZS)
-+0.406
-Dogri
-0.776
-Qwen SFT
-0.570 (Qwen ZS)
-+0.206
-Assamese
-0.786
-Qwen SFT
-0.553 (Qwen ZS)
-+0.233
-Table 8. Best entity F1 per language across all eight conditions. Telugu achieves the largest absolute improvement (+0.526 from worst-to-best), illustrating the exceptional SFT gains available for severely under-resourced Dravidian languages.
- 
-5.3  The Safety Ceiling: A Cross-Paradigm Finding
-One finding is consistent across all eight experimental conditions, both models, and all 10 languages: Safety does not reach 3.0/5.0 as a macro-average in any condition. This is a cross-paradigm result that cannot be attributed to a specific prompting weakness or training limitation. The best macro-average safety score in the entire evaluation is 2.962 (Qwen SFT), which falls 0.038 points below the 3.0 threshold. The safety trend across conditions is: Translation (2.217) < Few-Shot (2.354–2.575) < Zero-Shot (2.496–2.560) < SFT (2.916–2.962).
-The safety gap—the difference between Truthfulness and Safety scores—provides additional insight. Under SFT, Truthfulness improves dramatically (to 4.084–4.156) while Safety improves more modestly (to 2.916–2.962), causing the gap to widen from approximately 0.60–0.76 at zero-shot to 1.17–1.19 at SFT. Models learn to produce factually coherent summaries rapidly under fine-tuning, but the safety dimension—which penalizes actionable clinical errors, omitted contraindications, and incomplete treatment plans—requires additional targeted optimization beyond standard next-token prediction on gold summaries. This finding motivates future work on safety-specific fine-tuning objectives, reinforcement learning from clinical expert feedback, and automated safety evaluation frameworks tailored to the multilingual clinical summarization domain.
- 
+Clinical NLP Evaluation Report (Single-Method Comparison)
+
+Scope and methods compared
+- Available methods: Only Method 3 (Translated Output) was provided. Zero-shot, Few-shot, and SFT outputs were missing. Therefore, this report critically evaluates the Translated Output against the Ground Truth transcript.
+
+1) Factual Fidelity
+
+Strengths (limited):
+- The summary correctly identifies core demographics and context: “A 46-year-old patient is undergoing radiotherapy for head and neck cancer.” This aligns with the ground truth: “నేను రాజ కుమార్, 46 సంవత్సరాలు. హెడ్ అండ్ నెక్ క్యాన్సర్ కోసం radiotherapy జరుగుతోంది.” (Translation: I am Raj Kumar, 46. Radiotherapy is ongoing for head and neck cancer.)
+- It references ordered labs, albeit imprecisely: “CBC and ESR Immunofunction tests,” aligning with “CBC, ESR, ఇమ్యూన్ ఫంక్షన్ టెస్ట్‌లు అవసరం.” (Translation: CBC, ESR, and immune function tests are needed.)
+- It notes an HPV-related inquiry and mentions counseling/eligibility in general terms, which corresponds to the dialogue.
+
+Major inaccuracies and omissions:
+- Omission of explicit side effects. The summary asserts: “The side effects of radiotherapy are not explicitly stated,” which is contradicted by the patient’s clear list: “గొంతు నొప్పి, తినడంలో ఇబ్బంది, అలసట” (Translation: throat pain, difficulty eating, fatigue) and later “కొన్నిసార్ల ఊపిరితిత్తి కష్టం పెరుగుతుందని” (Translation: sometimes breathing difficulty increases), and “మాటలు మసకగా వినిపిస్తాయి” (Translation: speech sounds muffled).
+- Misattribution of clinician advice to the patient. The summary says “the patient mentions the importance of maintaining ... hydration, hygiene, and oral care,” whereas the clinician stated “hydration బాగా కాపాడుకోవాలి; mouth care చాలా ముఖ్యం.” (Translation: maintain hydration; mouth care is very important.)
+- False claims about diagnostic uncertainty. The summary states: “The patient is unsure about the specific diagnosis.” The ground truth is explicit that the patient is aware: “హెడ్ అండ్ నెక్ క్యాన్సర్ కోసం radiotherapy జరుగుతోంది.” (Translation: receiving radiotherapy for head and neck cancer.)
+- HPV eligibility misrepresented as counts of people rather than age. The summary claims “an eligibility of 45 individuals typically considered” and “Vaccination eligibility is for up to 45 people per month.” The ground truth specifies age-based criteria: “వయసు సాధారణంగా 45 వరకు eligibility ఉంటుంది, కానీ ప్రత్యేక సందర్భాల్లో డాక్టర్ నిర్ణయిస్తాడు.” (Translation: eligibility is generally up to age 45; in special cases the doctor decides.) There is no mention of “per month” or quotas of people.
+- Unsupported claim about provider availability. The summary introduces: “doctors not always available in private clinics,” which is not present in the conversation; this is a hallucination.
+- Tobacco use mistranslated and omitted. The patient says: “పొగాకు వాడకం నాకు ఉంది; దీన్ని తగ్గించుకోవాలని vraiment కష్టం.” (Translation: I use tobacco; reducing it is really difficult.) The summary’s “reduce their space” is a clear mistranslation and loses the salient behavioral risk factor and counseling need.
+- Misattribution and overstatement of procedures. The summary says: “The patient also mentions the necessity of ENT procedures, laryngoscopy, and biopsy,” whereas the clinician stated conditional planning: “ENT పరీక్షలు, లారింకోస్కోపీ అవసరమైతే చేస్తాము, అవసరమైతే biopsy కూడా చూస్తాము.” (Translation: we will do ENT exams, laryngoscopy if needed, and biopsy if needed.)
+- Timeline omission. The clinician’s concrete timeline “ఫలితాలు సాధారణంగా 1–3 రోజుల মধ্যে వస్తాయి.” (Translation: results generally come within 1–3 days) is not captured.
+- Nuanced self-assessment lost. The patient’s nuance “బలంగా ఉన్నాను కానీ ఆరోగ్యం పక్కాగా కాదు.” (Translation: I feel strong but my health is not perfect) is not preserved.
+
+Net assessment: Significant factual errors, multiple hallucinations, misattributions of speaker roles, and omission of clinically relevant symptoms and timelines.
+
+2) Negation Handling (CRITICAL)
+
+- False negation of explicitly stated side effects. The summary’s claim “The side effects of radiotherapy are not explicitly stated” directly contradicts the explicit symptom list in the ground truth. This is a critical misread of negation and presence/absence of facts.
+- Conditionality collapsed into certainty (affirmative bias). The clinician’s conditional phrasing “అవసరమైతే ... చేస్తాము” (Translation: if needed, we will do ...) was summarized as “the necessity of ENT procedures, laryngoscopy, and biopsy,” turning a contingent plan into a definite requirement.
+- Exception-handling for HPV eligibility distorted. The ground truth notes a general age cap with exceptions: “సాధారణంగా 45 వరకు ... కానీ ప్రత్యేక సందర్భాల్లో డాక్టర్ నిర్ణయిస్తాడు.” (Translation: generally up to 45; in special cases the doctor decides.) The summary erases the exception nuance and instead hallucinates a negative about provider availability in private clinics, which is not a negation present in the transcript.
+- No patient denials were present in the transcript; thus, classic denial-to-affirmation errors are not testable here. However, the method did introduce a fabricated negation (“not explicitly stated”) where the opposite is true, demonstrating unreliable handling of presence/absence statements.
+
+3) Structural Formatting
+
+- Organization: The summary is a single, free-text paragraph within “[Summary] ... <summary> ...” tags. It lacks standard clinical structuring (e.g., Chief Complaint, History of Present Illness, ROS, Assessment/Plan). This hinders rapid clinical scanning.
+- Clinical tone: The tone is inconsistent. Phrases like “reduce their space” are non-clinical and reflect translation failure. The inclusion of a meta-disclaimer—“does not include any inferred or assumed details”—is incongruent with the content, which in fact contains inferences and hallucinations.
+- Speaker attributions: Multiple misattributions (patient vs clinician statements) undermine structural clarity about who reported symptoms versus who provided counseling or plans.
+
+4) Lexical Choice & Nuance
+
+- Medical terminology: Some terms are preserved (radiotherapy; CBC, ESR, immune function tests; HPV counseling). However, there are notable lexical errors:
+  - “Immunofunction” instead of “immune function.”
+  - “45 individuals” and “45 people per month” instead of “up to age 45 years,” distorting eligibility criteria.
+  - “Reduce their space” for “reduce tobacco use” (from “పొగాకు వాడకం ... తగ్గించుకోవాలని”), a severe mistranslation that removes a key risk behavior and the associated counseling topic.
+- Symptom descriptors lost:
+  - “మాటలు మసకగా వినిపిస్తాయి” (Translation: speech sounds muffled) not represented.
+  - “తింటే గొంతులో సున్నితమైన బాధ” (Translation: tender pain in throat when eating) not represented.
+  - “కొన్నిసార్ల ఊపిరితిత్తి కష్టం పెరుగుతుంది” (Translation: sometimes shortness of breath worsens) omitted.
+- Clinical nuance and pragmatics:
+  - The patient’s time constraints (“నా షెడ్యూల్ చాలా బిజీగా ఉంది.” Translation: my schedule is very busy) and the clinician’s timeline (1–3 days for results) are omitted, losing actionable logistics.
+  - The conditionality and safety framing (“శ్వాస సురక్షితంగా ఉందో లేదో చూద్దాం.” Translation: let’s ensure breathing is safe) are not conveyed.
+  - The exception clause for HPV eligibility (“but in special cases the doctor decides”) is lost, and replaced by an unrelated, unsupported claim about provider availability.
+
+Conclusions
+
+- The Translated Output demonstrates substantial deficits in factual fidelity, frequent hallucinations, poor handling of conditionality (introducing affirmative bias), and critical mistranslations that erase key clinical content (symptoms, tobacco use) and logistics (result timeline).
+- Negation/conditional processing is especially problematic: a fabricated negation (“not explicitly stated”) is introduced, while genuine conditionals (“if needed”) are converted into certainties.
+- Structurally, the output lacks clinical formatting and misattributes statements, confounding the clinical narrative.
+- Lexically, important medical nuances (age-based eligibility; symptom specificity; safety checks; patient’s schedule constraints) are not preserved, and at times are replaced by unrelated content.
+
+Recommendations for improvement
+- Implement role-aware summarization to maintain speaker attribution (patient-reported symptoms vs clinician advice/plan).
+- Enforce explicit extraction of symptom lists and temporal qualifiers; avoid unverifiable inferences (e.g., “extended period,” “private clinics” availability).
+- Introduce a negation/conditionality checklist:
+  - Verify whether symptoms are present or denied in the source before summarizing.
+  - Preserve conditional language (“if needed,” “generally,” “exceptions”) verbatim or with equivalent hedging.
+- Standardize clinical structure (e.g., CC, HPI, PE/ROS, Labs/Diagnostics, Counseling/Plan, Follow-up/timeline) to improve readability and reduce misattribution.
+- Use controlled vocabularies for key entities (e.g., HPV vaccine eligibility: “up to age 45 years, with clinician discretion for exceptions”) and avoid numerical misrendering (people vs years).
