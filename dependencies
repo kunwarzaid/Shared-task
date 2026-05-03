@@ -24,194 +24,813 @@ test_action_mismatch_rate: 0.18
 
 
 
-%%%%%%%% ICML 2026 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+\paragraph{Supervised fine-tuning (SFT).}
+% We fine-tune both models using LoRA~\citep{hu2021lora} on the full
+% multilingual training set. We use rank $r{=}8$, $\alpha{=}32$, dropout $0.05$, applied to the query, key, value, and output projection layers. Training uses AdamW (8-bit), learning rate
+% $2{\times}10^{-4}$ with cosine decay and warmup, effective batch size 1, for 3 epochs in bfloat16. At inference, models use the same prompt template as zero-shot.
 
-\documentclass[table]{article}
+Qwen code
+import os, json, torch, inspect, traceback
+from datasets import Dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    Trainer,
+    TrainingArguments,
+    BitsAndBytesConfig,
+    TrainerCallback
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
-% Recommended, but optional, packages for figures and better typesetting:
-\usepackage{microtype}
-\usepackage{graphicx}
-\usepackage{subcaption}
-\usepackage{booktabs} % for professional tables
-\usepackage{tabularx}
-\usepackage{svg} 
-% hyperref makes hyperlinks in the resulting PDF.
-% If your build breaks (sometimes temporarily if a hyperlink spans a page)
-% please comment out the following usepackage line and replace
-% \usepackage{icml2026} with \usepackage[nohyperref]{icml2026} above.
-\usepackage{hyperref}
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+def accelerate_compat_shim():
+    try:
+        import accelerate
+        sig = inspect.signature(accelerate.Accelerator.unwrap_model)
+        if "keep_torch_compile" not in sig.parameters:
+            _orig = accelerate.Accelerator.unwrap_model
+
+            def _shim(self, model, *a, **kw):
+                kw.pop("keep_torch_compile", None)
+                return _orig(self, model, *a, **kw)
+
+            accelerate.Accelerator.unwrap_model = _shim
+            print("[shim] unwrap_model patched for Accelerate.")
+        else:
+            print("[shim] No patch needed.")
+    except Exception as e:
+        print("[shim] Accelerate shim failed:", e)
+        traceback.print_exc()
 
 
-% Attempt to make hyperref and algorithmic work together better:
-\newcommand{\theHalgorithm}{\arabic{algorithm}}
+accelerate_compat_shim()
 
-% Use the following line for the initial blind version submitted for review:
-\usepackage{icml2026}
 
-% For preprint, use
-% \usepackage[preprint]{icml2026}
+# ============================================================
+# CONFIGURATION
+# ============================================================
+DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set"               
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"   
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/qwen_2.5_7b_finetune_split"            
 
-% If accepted, instead use the following line for the camera-ready submission:
-% \usepackage[accepted]{icml2026}
+CTX_MAX = 8192
 
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{mathtools}
-\usepackage{amsthm}
+LR = 2e-5
+EPOCHS = 3
 
-\usepackage{array}
-%\usepackage[table]{xcolor}
+BATCH_SIZE = 1
+GRAD_ACCUM = 8
 
-\definecolor{bestgreen}{RGB}{0,140,60}
-\definecolor{worstred}{RGB}{185,30,30}
-\definecolor{dravidianrow}{RGB}{255,245,220}
-\definecolor{sectiongray}{RGB}{246,246,246}
-\definecolor{midgray}{RGB}{100,100,100}
+torch.manual_seed(42)
 
-\newcommand{\best}[1]{\textcolor{bestgreen}{\textbf{#1}}}
-\newcommand{\worst}[1]{\textcolor{worstred}{\textbf{#1}}}
 
-\setlength{\tabcolsep}{4pt}
-\captionsetup{font=small,labelfont=bf,skip=4pt}
-%\setlist{topsep=2pt,itemsep=1pt,leftmargin=*}
+# =========================================================
+# TOKENIZER
+# =========================================================
 
-% if you use cleveref..
-\usepackage[capitalize,noabbrev]{cleveref}
+tokenizer = AutoTokenizer.from_pretrained(
+    BASE_MODEL,
+    trust_remote_code=True
+)
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% THEOREMS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\theoremstyle{plain}
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Corollary}
-\theoremstyle{definition}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{assumption}[theorem]{Assumption}
-\theoremstyle{remark}
-\newtheorem{remark}[theorem]{Remark}
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
 
-% Todonotes is useful during development; simply uncomment the next line
-%    and comment out the line below the next line to turn off comments
-%\usepackage[disable,textsize=tiny]{todonotes}
-\usepackage[textsize=tiny]{todonotes}
+tokenizer.padding_side = "right"
 
-% \usepackage{fancyhdr}
 
-% The \icmltitle you define below is probably too long as a header.
-% Therefore, a short form for the running title is supplied here:
-\icmltitlerunning{Trustworthiness in Cross-Lingual Clinical Summarization}
+# =========================================================
+# SAFE JSON LOADER
+# =========================================================
 
-\begin{document}
+def load_dialogue_file(path):
 
-\twocolumn[
-  \icmltitle{Evaluating Trustworthiness in Cross-Lingual Clinical Conversation Summarization}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read().strip()
 
-  % It is OKAY to include author information, even for blind submissions: the
-  % style file will automatically remove it for you unless you've provided
-  % the [accepted] option to the icml2026 package.
+        # case 1: JSON array
+        if text.startswith("["):
+            data = json.loads(text)
 
-  % List of affiliations: The first argument should be a (short) identifier you
-  % will use later to specify author affiliations Academic affiliations
-  % should list Department, University, City, Region, Country Industry
-  % affiliations should list Company, City, Region, Country
+        # case 2: JSONL
+        else:
+            data = []
+            for line in text.splitlines():
+                try:
+                    data.append(json.loads(line))
+                except:
+                    continue
 
-  % You can specify symbols, otherwise they are numbered in order. Ideally, you
-  % should not use this facility. Affiliations will be numbered in order of
-  % appearance and this is the preferred way.
-  \icmlsetsymbol{equal}{*}
+    except Exception:
+        print("⚠️ Skipping corrupted file:", path)
+        return []
 
-  \begin{icmlauthorlist}
-    \icmlauthor{Firstname1 Lastname1}{equal,yyy}
-    \icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
-    \icmlauthor{Firstname3 Lastname3}{comp}
-    \icmlauthor{Firstname4 Lastname4}{sch}
-    \icmlauthor{Firstname5 Lastname5}{yyy}
-    \icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
-    \icmlauthor{Firstname7 Lastname7}{comp}
-    %\icmlauthor{}{sch}
-    \icmlauthor{Firstname8 Lastname8}{sch}
-    \icmlauthor{Firstname8 Lastname8}{yyy,comp}
-    %\icmlauthor{}{sch}
-    %\icmlauthor{}{sch}
-  \end{icmlauthorlist}
+    rows = []
 
-  \icmlaffiliation{yyy}{Department of XXX, University of YYY, Location, Country}
-  \icmlaffiliation{comp}{Company Name, Location, Country}
-  \icmlaffiliation{sch}{School of ZZZ, Institute of WWW, Location, Country}
+    for item in data:
+        if isinstance(item, dict):
+            rows.append(item)
 
-  \icmlcorrespondingauthor{Firstname1 Lastname1}{first1.last1@xxx.edu}
-  \icmlcorrespondingauthor{Firstname2 Lastname2}{first2.last2@www.uk}
+    return rows
 
-  % You may provide any keywords that you find helpful for describing your
-  % paper; these are used to populate the "keywords" metadata in the PDF but
-  % will not be shown in the document
-  \icmlkeywords{Machine Learning, ICML}
 
-  \vskip 0.3in
-]
+# =========================================================
+# JOIN DIALOGUE
+# =========================================================
 
-% this must go after the closing bracket ] following \twocolumn[ ...
+def join_dialogue(rows):
 
-% This command actually creates the footnote in the first column listing the
-% affiliations and the copyright notice. The command takes one argument, which
-% is text to display at the start of the footnote. The \icmlEqualContribution
-% command is standard text for equal contribution. Remove it (just {}) if you
-% do not need this facility.
+    parts = []
 
-% Use ONE of the following lines. DO NOT remove the command.
-% If you have no special notice, KEEP empty braces:
-\printAffiliationsAndNotice{}  % no special notice (required even if empty)
-% Or, if applicable, use the standard equal contribution text:
-% \printAffiliationsAndNotice{\icmlEqualContribution}
-\input{Sections/0.Abstract}
+    for r in rows:
 
-\input{Sections/1.Introduction}
+        try:
 
-\input{Sections/2.RelatedWork}
-\input{Sections/3.Approach}
-\input{Sections/4.Experiments}
-\input{Sections/5.Discussion}
-\input{Sections/6.Conclusion}
+            speaker = r.get("speaker", "")
+            text = r.get("dialogue", "")
 
-\section*{Acknowledgements}
+            if speaker:
+                parts.append(f"[{speaker}] {text}")
+            else:
+                parts.append(text)
 
-\section*{Impact Statement}
+        except:
+            continue
 
-% In the unusual situation where you want a paper to appear in the
-% references without citing it in the main text, use \nocite
-\nocite{langley00}
+    return "\n".join(parts).strip()
 
-\bibliography{example_paper}
-\bibliographystyle{icml2026}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% APPENDIX
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newpage
-\appendix
-\onecolumn
-\input{Sections/appendix}
-%\section{You \emph{can} have an appendix here.}
+# =========================================================
+# BUILD DATASET
+# =========================================================
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+def build_examples(split_dir):
 
-\end{document}
+    examples = []
 
-% This document was modified from the file originally made available by
-% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
-% by Iain Murray in 2018, and modified by Alexandre Bouchard in
-% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
-% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
-% Previous contributors include Dan Roy, Lise Getoor and Tobias
-% Scheffer, which was slightly modified from the 2010 version by
-% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
-% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
-% slightly modified from Prasad Tadepalli's 2007 version which is a
-% lightly changed version of the previous year's version by Andrew
-% Moore, which was in turn edited from those of Kristian Kersting and
-% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
+    for lang in os.listdir(split_dir):
+
+        lang_dir = os.path.join(split_dir, lang)
+
+        dlg_dir = os.path.join(lang_dir, "Dialogues")
+        sum_dir = os.path.join(lang_dir, "Summary_Text")
+
+        if not os.path.isdir(dlg_dir):
+            continue
+
+        for fn in os.listdir(dlg_dir):
+
+            if not fn.endswith(".jsonl"):
+                continue
+
+            path = os.path.join(dlg_dir, fn)
+
+            rows = load_dialogue_file(path)
+
+            if not rows:
+                continue
+
+            dialogue = join_dialogue(rows)
+
+            if not dialogue:
+                continue
+
+            sum_path = os.path.join(
+                sum_dir,
+                fn.replace(".jsonl", "_summary.txt")
+            )
+
+            if not os.path.exists(sum_path):
+                continue
+
+            try:
+                summary = open(sum_path).read().strip()
+            except:
+                continue
+
+            if not summary:
+                continue
+
+            examples.append(
+                {
+                    "dialogue": dialogue,
+                    "summary": summary
+                }
+            )
+
+    return examples
+
+
+# =========================================================
+# LOAD DATA
+# =========================================================
+
+train_raw = build_examples(os.path.join(DATA_DIR, "train_split"))
+dev_raw = build_examples(os.path.join(DATA_DIR, "dev"))
+
+print("Train examples:", len(train_raw))
+print("Dev examples:", len(dev_raw))
+
+train_dataset = Dataset.from_list(train_raw)
+dev_dataset = Dataset.from_list(dev_raw)
+
+
+# =========================================================
+# PROMPT
+# =========================================================
+
+def build_prompt(dialogue):
+
+    return f"""
+Below is a doctor–patient conversation.
+
+The dialogue may be written in Hindi, Marathi, Bangla, or English.
+
+Write a concise and faithful clinical summary in English.
+
+Rules:
+- Only include information explicitly mentioned.
+- Do not infer diagnoses or medications.
+- Preserve negations such as "denies fever".
+
+Dialogue:
+{dialogue}
+"""
+
+
+# =========================================================
+# TOKENIZATION
+# =========================================================
+
+def tokenize(example):
+
+    try:
+        prompt_text = build_prompt(example["dialogue"])
+
+        messages = [
+            {"role": "system", "content": "You are a clinical documentation assistant."},
+            {"role": "user", "content": prompt_text}
+        ]
+
+        prompt = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+
+        summary = example["summary"] + tokenizer.eos_token
+
+        prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+        summary_ids = tokenizer.encode(summary, add_special_tokens=False)
+
+        if len(prompt_ids) + len(summary_ids) > CTX_MAX:
+            return {
+                "input_ids": [],
+                "attention_mask": [],
+                "labels": []
+            }
+
+        input_ids = prompt_ids + summary_ids
+
+        labels = [-100] * len(prompt_ids) + summary_ids
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": [1] * len(input_ids),
+            "labels": labels
+        }
+
+    except Exception:
+        return {
+            "input_ids": [],
+            "attention_mask": [],
+            "labels": []
+        }
+
+        
+train_dataset = train_dataset.map(tokenize, remove_columns=train_dataset.column_names)
+dev_dataset = dev_dataset.map(tokenize, remove_columns=dev_dataset.column_names)
+
+train_dataset = train_dataset.filter(lambda x: "input_ids" in x and len(x["input_ids"]) > 0)
+dev_dataset = dev_dataset.filter(lambda x: "input_ids" in x and len(x["input_ids"]) > 0)
+
+
+
+# =========================================================
+# COLLATOR
+# =========================================================
+
+def collate(batch):
+
+    max_len = max(len(x["input_ids"]) for x in batch)
+
+    input_ids = []
+    attention_mask = []
+    labels = []
+
+    for x in batch:
+
+        pad = max_len - len(x["input_ids"])
+
+        input_ids.append(
+            x["input_ids"] + [tokenizer.pad_token_id] * pad
+        )
+
+        attention_mask.append(
+            x["attention_mask"] + [0] * pad
+        )
+
+        labels.append(
+            x["labels"] + [-100] * pad
+        )
+
+    return {
+        "input_ids": torch.tensor(input_ids),
+        "attention_mask": torch.tensor(attention_mask),
+        "labels": torch.tensor(labels)
+    }
+
+
+# =========================================================
+# MODEL
+# =========================================================
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL,
+    device_map="auto",
+    quantization_config=bnb_config,
+    trust_remote_code=True
+)
+model.config.use_cache = False
+model = prepare_model_for_kbit_training(model)
+model.gradient_checkpointing_enable()
+
+
+lora_config = LoraConfig(
+
+    r=8,
+    lora_alpha=32,
+    lora_dropout=0.05,
+
+    target_modules=[
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+    ],
+
+    task_type="CAUSAL_LM"
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+
+
+# =========================================================
+# TRAINING
+# =========================================================
+
+training_args = TrainingArguments(
+
+    output_dir=OUTPUT_DIR,
+
+    per_device_train_batch_size=BATCH_SIZE,
+    gradient_accumulation_steps=GRAD_ACCUM,
+
+    num_train_epochs=EPOCHS,
+
+    learning_rate=LR,
+
+    fp16=True,
+
+    logging_steps=50,
+
+    eval_strategy="no",
+    #eval_steps=500,
+
+    save_steps=2000,
+    save_total_limit=2,
+
+    report_to="none"
+)
+
+
+trainer = Trainer(
+
+    model=model,
+
+    args=training_args,
+
+    train_dataset=train_dataset,
+    eval_dataset=dev_dataset,
+
+    data_collator=collate
+)
+
+
+trainer.train()
+
+trainer.save_model(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
+
+mistral code
+import os, json, torch, inspect, traceback
+from datasets import Dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    Trainer,
+    TrainingArguments,
+    BitsAndBytesConfig
+)
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+def accelerate_compat_shim():
+    try:
+        import accelerate
+        sig = inspect.signature(accelerate.Accelerator.unwrap_model)
+        if "keep_torch_compile" not in sig.parameters:
+            _orig = accelerate.Accelerator.unwrap_model
+
+            def _shim(self, model, *a, **kw):
+                kw.pop("keep_torch_compile", None)
+                return _orig(self, model, *a, **kw)
+
+            accelerate.Accelerator.unwrap_model = _shim
+            print("[shim] unwrap_model patched for Accelerate.")
+        else:
+            print("[shim] No patch needed.")
+    except Exception as e:
+        print("[shim] Accelerate shim failed:", e)
+        traceback.print_exc()
+
+
+accelerate_compat_shim()
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+DATA_DIR   = "/workspace/data/KZ_2117574/SharedTask_NLPAI4Health_Train&dev_set/SharedTask_NLPAI4Health_Train&dev_set"
+BASE_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
+OUTPUT_DIR = "/workspace/data/KZ_2117574/EACL/mistral_7b_finetune"
+
+CTX_MAX = 16384
+
+LR = 2e-5
+EPOCHS = 3
+
+BATCH_SIZE = 1
+GRAD_ACCUM = 8
+
+torch.manual_seed(42)
+
+# =========================================================
+# TOKENIZER
+# =========================================================
+
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+tokenizer.padding_side = "left"
+
+# =========================================================
+# SAFE JSON LOADER
+# =========================================================
+
+def load_dialogue_file(path):
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read().strip()
+
+        if text.startswith("["):
+            data = json.loads(text)
+        else:
+            data = []
+            for line in text.splitlines():
+                try:
+                    data.append(json.loads(line))
+                except:
+                    continue
+
+    except Exception:
+        print("Skipping corrupted file:", path)
+        return []
+
+    rows = []
+
+    for item in data:
+        if isinstance(item, dict):
+            rows.append(item)
+
+    return rows
+
+# =========================================================
+# JOIN DIALOGUE
+# =========================================================
+
+def join_dialogue(rows):
+
+    parts = []
+
+    for r in rows:
+
+        try:
+            speaker = r.get("speaker", "")
+            text = r.get("dialogue", "")
+
+            if speaker:
+                parts.append(f"[{speaker}] {text}")
+            else:
+                parts.append(text)
+
+        except:
+            continue
+
+    return "\n".join(parts).strip()
+
+# =========================================================
+# BUILD DATASET
+# =========================================================
+
+def build_examples(split_dir):
+
+    examples = []
+
+    for lang in os.listdir(split_dir):
+
+        lang_dir = os.path.join(split_dir, lang)
+
+        dlg_dir = os.path.join(lang_dir, "Dialogues")
+        sum_dir = os.path.join(lang_dir, "Summary_Text")
+
+        if not os.path.isdir(dlg_dir):
+            continue
+
+        for fn in os.listdir(dlg_dir):
+
+            if not fn.endswith(".jsonl"):
+                continue
+
+            path = os.path.join(dlg_dir, fn)
+
+            rows = load_dialogue_file(path)
+
+            if not rows:
+                continue
+
+            dialogue = join_dialogue(rows)
+
+            if not dialogue:
+                continue
+
+            sum_path = os.path.join(
+                sum_dir,
+                fn.replace(".jsonl", "_summary.txt")
+            )
+
+            if not os.path.exists(sum_path):
+                continue
+
+            try:
+                summary = open(sum_path).read().strip()
+            except:
+                continue
+
+            if not summary:
+                continue
+
+            examples.append(
+                {
+                    "dialogue": dialogue,
+                    "summary": summary
+                }
+            )
+
+    return examples
+
+# =========================================================
+# LOAD DATA
+# =========================================================
+
+train_raw = build_examples(os.path.join(DATA_DIR, "train_split"))
+dev_raw = build_examples(os.path.join(DATA_DIR, "dev"))
+
+print("Train examples:", len(train_raw))
+print("Dev examples:", len(dev_raw))
+
+train_dataset = Dataset.from_list(train_raw)
+dev_dataset = Dataset.from_list(dev_raw)
+
+# =========================================================
+# PROMPT
+# =========================================================
+
+def build_prompt(dialogue):
+
+    return f"""
+You are an expert clinical documentation assistant.
+
+Below is a doctor–patient conversation. The dialogue may be written in Hindi,
+Marathi, Bangla, or English.
+
+Your task is to generate a **faithful clinical summary in English**.
+
+STRICT RULES:
+
+1. Use ONLY information explicitly stated in the dialogue.
+2. Do NOT infer diagnoses, medications, or conditions.
+3. Do NOT add medical knowledge not present in the dialogue.
+4. Preserve negations (e.g., "denies fever").
+5. If a detail is not mentioned, do NOT include it.
+6. The summary must be written strictly in English.
+
+Dialogue:
+{dialogue}
+
+SUMMARY:
+"""
+
+# =========================================================
+# TOKENIZATION
+# =========================================================
+
+def tokenize(example):
+
+    try:
+
+        prompt_text = build_prompt(example["dialogue"])
+
+        prompt = f"<s>[INST] {prompt_text} [/INST]\nSUMMARY:\n"
+
+        summary = example["summary"] + "</s>"
+
+        prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+        summary_ids = tokenizer.encode(summary, add_special_tokens=False)
+
+        if len(prompt_ids) + len(summary_ids) > CTX_MAX:
+            return {
+                "input_ids": [],
+                "attention_mask": [],
+                "labels": []
+            }
+
+        input_ids = prompt_ids + summary_ids
+
+        labels = [-100] * len(prompt_ids) + summary_ids
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": [1] * len(input_ids),
+            "labels": labels
+        }
+
+    except Exception:
+        return {
+            "input_ids": [],
+            "attention_mask": [],
+            "labels": []
+        }
+
+train_dataset = train_dataset.map(tokenize, remove_columns=train_dataset.column_names)
+dev_dataset = dev_dataset.map(tokenize, remove_columns=dev_dataset.column_names)
+
+train_dataset = train_dataset.filter(lambda x: len(x["input_ids"]) > 0)
+dev_dataset = dev_dataset.filter(lambda x: len(x["input_ids"]) > 0)
+
+# =========================================================
+# COLLATOR
+# =========================================================
+
+def collate(batch):
+
+    max_len = max(len(x["input_ids"]) for x in batch)
+
+    input_ids = []
+    attention_mask = []
+    labels = []
+
+    for x in batch:
+
+        pad = max_len - len(x["input_ids"])
+
+        input_ids.append(
+            x["input_ids"] + [tokenizer.pad_token_id] * pad
+        )
+
+        attention_mask.append(
+            x["attention_mask"] + [0] * pad
+        )
+
+        labels.append(
+            x["labels"] + [-100] * pad
+        )
+
+    return {
+        "input_ids": torch.tensor(input_ids),
+        "attention_mask": torch.tensor(attention_mask),
+        "labels": torch.tensor(labels)
+    }
+
+# =========================================================
+# MODEL
+# =========================================================
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL,
+    device_map="auto",
+    quantization_config=bnb_config
+)
+
+model.config.use_cache = False
+model = prepare_model_for_kbit_training(model)
+model.gradient_checkpointing_enable()
+
+# =========================================================
+# LORA
+# =========================================================
+
+lora_config = LoraConfig(
+
+    r=16,
+    lora_alpha=32,
+    lora_dropout=0.1,
+
+    target_modules=[
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj"
+    ],
+
+    task_type="CAUSAL_LM"
+)
+
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
+
+# =========================================================
+# TRAINING
+# =========================================================
+
+training_args = TrainingArguments(
+
+    output_dir=OUTPUT_DIR,
+
+    per_device_train_batch_size=BATCH_SIZE,
+    gradient_accumulation_steps=GRAD_ACCUM,
+
+    num_train_epochs=EPOCHS,
+
+    learning_rate=LR,
+
+    fp16=True,
+
+    logging_steps=50,
+
+    eval_strategy="no",
+
+    save_steps=2000,
+    save_total_limit=2,
+
+    report_to="none"
+)
+
+trainer = Trainer(
+
+    model=model,
+
+    args=training_args,
+
+    train_dataset=train_dataset,
+    eval_dataset=dev_dataset,
+
+    data_collator=collate
+)
+
+trainer.train()
+
+trainer.save_model(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
