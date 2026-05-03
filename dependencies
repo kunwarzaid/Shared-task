@@ -24,5 +24,19 @@ test_action_mismatch_rate: 0.18
 
 
 
-\paragraph{Supervised Fine-Tuning (SFT).}
-We fine-tune both the \texttt{Mistral-7B-Instruct-v0.2} and \texttt{Qwen2.5-7B-Instruct} models using Low-Rank Adaptation (LoRA) on the full multilingual training set. For \texttt{Qwen2.5-7B}, we employ a rank $r=8$, $\alpha=32$, and dropout $0.05$, targeting the \texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}, and \texttt{down\_proj} layers. For \texttt{Mistral-7B}, we utilize a configuration with $r=16$, $\alpha=32$, and dropout $0.1$, targeting the attention projection layers (\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}). Both models are trained using 4-bit NormalFloat (NF4) quantization. Training is conducted for $3$ epochs using the AdamW optimizer with a learning rate of $2 \times 10^{-5}$ and a per-device batch size of $1$. We use gradient accumulation with $8$ steps to achieve an effective batch size of $8$. To optimize memory, we enable gradient checkpointing and use the \texttt{expandable\_segments} configuration for the CUDA memory allocator. At inference, models utilize the same chat templates and clinical prompting constraints as established in the zero-shot experiments.
+\section{Related Work}
+%Clinical text summarization/ Clinical note generation/ Clinical dialogue summarization
+
+%Multilingual trustworthiness and healthcare
+%Trustworthiness in clinical note generation
+
+The automatic summarization of doctor-patient conversation has emerged as a central task in clinical NLP over the past decade. Early work applied extractive and abstractive
+sequence-to-sequence models to English medical conversations, with systems achieving competitive performance on structured clinical note generation\textcolor{red}{A reference is needed here}. The MEDIQA-Chat 2023 shared task~\citep{abacha2023overview}
+provided a large-scale evaluation benchmark for this problem, catalyzing a wave of systems that fine-tuned pre-trained dialogue summarization models and employed in-context learning with GPT-3 and GPT-4 \textcolor{red}{Is it cross-lingual summarization? Which languages, needs to be specified here}.
+\citet{tang2023gersteinlab} demonstrated that fine-tuned GPT-3 and few-shot GPT-4 achieve strong ROUGE-1 and BERTScore on the Dialogue2Note subtask \textcolor{red}{from the same challenge?}, while \citet{mathur2023summqa} found that GPT-4 generated summaries tend to be shorter and more abstractive than human-authored notes, highlighting a systematic coverage gap, a finding directly replicated and quantified in our multilingual setting.
+
+
+Missing related works:
+https://aclanthology.org/2025.findings-emnlp.356.pdf (Provides a broad taxonomy of trustworthiness)
+https://arxiv.org/pdf/2511.10768
+The participants in the task in last year (there wont be trustworthiness evaluation but in-general about the approaches explored?)
