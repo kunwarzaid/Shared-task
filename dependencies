@@ -24,7 +24,6 @@ test_action_mismatch_rate: 0.18
 
 
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -39,10 +38,9 @@ test_action_mismatch_rate: 0.18
   .fig-header .sub { font-size:10px; color:#9baac8; margin-top:2px; }
   .hbadge { background:#2e4070; border:1px solid #4a6090; border-radius:4px; padding:3px 9px; font-size:9px; color:#aabfde; font-family:'JetBrains Mono',monospace; margin-left:7px; }
   .panels { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid #e8e4dc; }
-  .panel { padding:16px 18px 14px; border-right:1px solid #e8e4dc; }
+  .panel { padding:16px 14px 14px; border-right:1px solid #e8e4dc; }
   .panel:last-child { border-right:none; }
   .panel-title { font-size:11px; font-weight:600; color:#1a2744; margin-bottom:10px; }
-  .panel-sub { font-size:9.5px; color:#777; font-weight:400; margin-left:4px; }
   .fig-footer { background:#f0ede8; border-top:1px solid #d8d4cc; padding:8px 24px; }
   .fig-caption { font-family:'Source Serif 4',serif; font-size:10px; color:#444; line-height:1.5; }
   .fig-caption strong { color:#1a2744; }
@@ -50,236 +48,291 @@ test_action_mismatch_rate: 0.18
 </head>
 <body>
 <div class="figure">
-
   <div class="fig-header">
     <div>
-      <h1>Safety Scores Across All Conditions &amp; Language-Family Performance Comparison</h1>
-      <div class="sub">Left: Safety (1–5) per language, all 8 conditions &nbsp;·&nbsp; Right: Entity F1 by language family across paradigms</div>
+      <h1>Safety Scores Across All Conditions &amp; Language-Family F1 Comparison</h1>
+      <div class="sub">Left: Safety (1–5) colour-coded grid, all 8 conditions · Right: Entity F1 averaged by language family</div>
     </div>
     <div>
-      <span class="hbadge">Safety persistent &lt; 3.0</span>
+      <span class="hbadge">Safety &lt; 3.0 everywhere</span>
       <span class="hbadge">Dravidian gap closes at SFT</span>
     </div>
   </div>
 
   <div class="panels">
+    <!-- LEFT: Safety heatmap -->
+    <div class="panel">
+      <div class="panel-title">Safety Score per Language &amp; Condition&nbsp;&nbsp;<span style="font-size:9px;color:#777;font-weight:400;">(dashed line = 3.0 acceptable threshold)</span></div>
+      <svg width="490" height="340" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
 
-```
-<!-- LEFT: Safety heatmap-style dot plot -->
-<div class="panel">
-  <div class="panel-title">Safety Score per Language &amp; Condition<span class="panel-sub">(1=dangerous, 3=acceptable, 5=excellent)</span></div>
+        <!-- colour scale: <1.8 red, 1.8-2.5 orange, 2.5-3.0 yellow, 3.0-3.5 light green, >=3.5 green -->
+        <!-- columns: Q-ZS Q-FS Q-Tr Q-SFT | M-ZS M-FS M-Tr M-SFT -->
+        <!-- rows: BN EN HI MR TE TA KN GU DO AS -->
 
-  <svg width="490" height="370" viewBox="0 0 490 370">
-    <style>
-      .slabel { font-size:9px; fill:#444; }
-      .scol { font-size:8.5px; fill:#888; }
-      .sgrid { stroke:#eeebe5; stroke-width:0.7; }
-      .sthr  { stroke:#e05050; stroke-width:1; stroke-dasharray:3,2; }
-    </style>
-    <script>
-      // [lang, family, qzs, qfs, qtr, qsft, mzs, mfs, mtr, msft]
-      const safeData = [
-        ["BN","ia", 2.878,2.74,1.90,3.06, 2.54,2.44,1.94,2.92],
-        ["EN","ia", 3.041,2.86,3.14,3.06, 3.08,3.02,2.98,3.04],
-        ["HI","ia", 2.59,2.76,2.60,2.86,  2.34,2.10,2.68,2.90],
-        ["MR","ia", 2.531,2.62,2.78,3.02, 2.36,2.58,2.72,2.96],
-        ["TE","dr", 2.16,2.06,1.72,2.98,  2.54,2.30,1.653,2.92],
-        ["TA","dr", 2.30,2.551,1.88,2.84,  2.18,2.26,1.86,2.90],
-        ["KN","dr", 2.24,2.36,1.88,3.08,  2.84,2.18,1.86,2.88],
-        ["GU","ia", 2.46,2.54,2.18,2.92,  2.32,1.88,2.26,3.00],
-        ["DO","ia", 2.76,2.52,2.63,2.84,  2.28,2.34,2.593,2.74],
-        ["AS","ia", 2.64,2.74,1.46,2.96,  2.48,2.44,1.42,2.90],
-      ];
+        <!-- grid background -->
+        <rect x="46" y="44" width="420" height="280" fill="#fafaf8" rx="2"/>
 
-      const cols8 = ["Q-ZS","Q-FS","Q-Tr","Q-SFT","M-ZS","M-FS","M-Tr","M-SFT"];
-      const colColors = ["#4a7fd4","#f0a040","#50b070","#9060c0","#4a7fd4","#f0a040","#50b070","#9060c0"];
-      // Qwen cols solid, Mistral cols hatched/lighter
-      const colOpacity = [1,1,1,1,0.5,0.5,0.5,0.5];
+        <!-- column headers -->
+        <text x="68"  y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-ZS</text>
+        <text x="120" y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-FS</text>
+        <text x="172" y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-Tr</text>
+        <text x="224" y="20" text-anchor="middle" font-size="8" fill="#9060c0" font-weight="600">Q-SFT</text>
+        <text x="276" y="20" text-anchor="middle" font-size="8" fill="#666">M-ZS</text>
+        <text x="328" y="20" text-anchor="middle" font-size="8" fill="#666">M-FS</text>
+        <text x="380" y="20" text-anchor="middle" font-size="8" fill="#666">M-Tr</text>
+        <text x="432" y="20" text-anchor="middle" font-size="8" fill="#888" font-weight="600">M-SFT</text>
 
-      const mL=36, mT=30, rowH=30, colW=46;
-      const nCols=8, nRows=safeData.length;
+        <!-- Qwen / Mistral model labels -->
+        <text x="146" y="34" text-anchor="middle" font-size="8.5" fill="#1a2744" font-weight="600">── Qwen2.5-7B ──</text>
+        <text x="354" y="34" text-anchor="middle" font-size="8.5" fill="#666" font-weight="600">── Mistral-7B ──</text>
+        <line x1="46" y1="38" x2="466" y2="38" stroke="#e8e4dc" stroke-width="1"/>
+        <!-- divider between Qwen and Mistral -->
+        <line x1="250" y1="38" x2="250" y2="324" stroke="#bbb" stroke-width="1" stroke-dasharray="3,2"/>
 
-      // colour by value: 1=red, 2=orange, 3=yellow-green, 4+=green
-      function safeColor(v){
-        if(v<1.8) return "#e05050";
-        if(v<2.5) return "#f08040";
-        if(v<3.0) return "#f0c040";
-        if(v<3.5) return "#80c060";
-        return "#40a040";
-      }
+        <!-- helper macro: cell(x,y,val,is_dravidian) -->
+        <!-- BN row y=44 -->
+        <text x="42" y="61" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">BN</text>
+        <rect x="48" y="46" width="40" height="26" rx="3" fill="#f0c040"/><text x="68"  y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.88</text>
+        <rect x="100" y="46" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.74</text>
+        <rect x="152" y="46" width="40" height="26" rx="3" fill="#e05050"/><text x="172" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.90</text>
+        <rect x="204" y="46" width="40" height="26" rx="3" fill="#80c060"/><text x="224" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.06</text>
+        <rect x="256" y="46" width="40" height="26" rx="3" fill="#f0c040"/><text x="276" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.54</text>
+        <rect x="308" y="46" width="40" height="26" rx="3" fill="#f0c040"/><text x="328" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.44</text>
+        <rect x="360" y="46" width="40" height="26" rx="3" fill="#e05050"/><text x="380" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.94</text>
+        <rect x="412" y="46" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.92</text>
 
-      // Column headers
-      cols8.forEach((c,i)=>{
-        const x = mL + i*colW + colW/2;
-        const bold = i < 4 ? "font-weight:600;" : "";
-        document.write(`<text x="${x}" y="${mT-8}" text-anchor="middle" style="font-size:8px;fill:#555;${bold}">${c}</text>`);
-        // Qwen/Mistral divider
-      });
-      // Model labels
-      document.write(`<text x="${mL+2*colW}" y="${mT-20}" style="font-size:8.5px;fill:#1a2744;font-weight:600;">Qwen2.5-7B</text>`);
-      document.write(`<text x="${mL+6*colW}" y="${mT-20}" style="font-size:8.5px;fill:#666;font-weight:600;">Mistral-7B</text>`);
-      // vertical divider between Qwen and Mistral
-      document.write(`<line x1="${mL+4*colW}" y1="${mT-24}" x2="${mL+4*colW}" y2="${mT+nRows*rowH}" stroke="#aaa" stroke-width="1"/>`);
+        <!-- EN row y=74 -->
+        <text x="42" y="91" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">EN</text>
+        <rect x="48" y="76" width="40" height="26" rx="3" fill="#80c060"/><text x="68"  y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.04</text>
+        <rect x="100" y="76" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.86</text>
+        <rect x="152" y="76" width="40" height="26" rx="3" fill="#80c060"/><text x="172" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.14</text>
+        <rect x="204" y="76" width="40" height="26" rx="3" fill="#80c060"/><text x="224" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.06</text>
+        <rect x="256" y="76" width="40" height="26" rx="3" fill="#80c060"/><text x="276" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.08</text>
+        <rect x="308" y="76" width="40" height="26" rx="3" fill="#80c060"/><text x="328" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.02</text>
+        <rect x="360" y="76" width="40" height="26" rx="3" fill="#f0c040"/><text x="380" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.98</text>
+        <rect x="412" y="76" width="40" height="26" rx="3" fill="#80c060"/><text x="432" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.04</text>
 
-      // threshold line at 3.0
-      const thrY_val = 3.0;
+        <!-- HI row y=104 -->
+        <text x="42" y="121" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">HI</text>
+        <rect x="48"  y="106" width="40" height="26" rx="3" fill="#f0c040"/><text x="68"  y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.59</text>
+        <rect x="100" y="106" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.76</text>
+        <rect x="152" y="106" width="40" height="26" rx="3" fill="#f0c040"/><text x="172" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.60</text>
+        <rect x="204" y="106" width="40" height="26" rx="3" fill="#f0c040"/><text x="224" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.86</text>
+        <rect x="256" y="106" width="40" height="26" rx="3" fill="#f08040"/><text x="276" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.34</text>
+        <rect x="308" y="106" width="40" height="26" rx="3" fill="#f08040"/><text x="328" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.10</text>
+        <rect x="360" y="106" width="40" height="26" rx="3" fill="#f0c040"/><text x="380" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.68</text>
+        <rect x="412" y="106" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.90</text>
 
-      // cells
-      safeData.forEach(([lang,fam,...vals],ri)=>{
-        const y = mT + ri*rowH;
-        const dotColor = fam==="dr" ? "#d46030" : "#4a7fd4";
-        // lang label
-        document.write(`<text x="${mL-4}" y="${y+rowH/2+3}" text-anchor="end" style="font-size:9px;fill:${dotColor};font-weight:600;">${lang}</text>`);
-        vals.forEach((v,ci)=>{
-          const x = mL + ci*colW;
-          const bg = safeColor(v);
-          const alpha = ci<4 ? "1" : "0.7";
-          document.write(`<rect x="${x+3}" y="${y+4}" width="${colW-6}" height="${rowH-8}" rx="3" fill="${bg}" opacity="${alpha}"/>`);
-          document.write(`<text x="${x+colW/2}" y="${y+rowH/2+3.5}" text-anchor="middle" style="font-size:9px;fill:#fff;font-weight:600;">${v.toFixed(2)}</text>`);
-        });
-      });
+        <!-- MR row y=134 -->
+        <text x="42" y="151" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">MR</text>
+        <rect x="48"  y="136" width="40" height="26" rx="3" fill="#f0c040"/><text x="68"  y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.53</text>
+        <rect x="100" y="136" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.62</text>
+        <rect x="152" y="136" width="40" height="26" rx="3" fill="#f0c040"/><text x="172" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.78</text>
+        <rect x="204" y="136" width="40" height="26" rx="3" fill="#80c060"/><text x="224" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.02</text>
+        <rect x="256" y="136" width="40" height="26" rx="3" fill="#f08040"/><text x="276" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.36</text>
+        <rect x="308" y="136" width="40" height="26" rx="3" fill="#f0c040"/><text x="328" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.58</text>
+        <rect x="360" y="136" width="40" height="26" rx="3" fill="#f0c040"/><text x="380" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.72</text>
+        <rect x="412" y="136" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.96</text>
 
-      // horizontal grid lines
-      for(let r=0;r<=nRows;r++){
-        document.write(`<line x1="${mL}" y1="${mT+r*rowH}" x2="${mL+nCols*colW}" y2="${mT+r*rowH}" class="sgrid"/>`);
-      }
+        <!-- TE row y=164 dravidian -->
+        <text x="42" y="181" text-anchor="end" font-size="9" fill="#d46030" font-weight="700">TE</text>
+        <rect x="48"  y="166" width="40" height="26" rx="3" fill="#f08040"/><text x="68"  y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.16</text>
+        <rect x="100" y="166" width="40" height="26" rx="3" fill="#f08040"/><text x="120" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.06</text>
+        <rect x="152" y="166" width="40" height="26" rx="3" fill="#e05050"/><text x="172" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.72</text>
+        <rect x="204" y="166" width="40" height="26" rx="3" fill="#f0c040"/><text x="224" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.98</text>
+        <rect x="256" y="166" width="40" height="26" rx="3" fill="#f0c040"/><text x="276" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.54</text>
+        <rect x="308" y="166" width="40" height="26" rx="3" fill="#f08040"/><text x="328" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.30</text>
+        <rect x="360" y="166" width="40" height="26" rx="3" fill="#e05050"/><text x="380" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.65</text>
+        <rect x="412" y="166" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.92</text>
 
-      // colour legend
-      const ly = mT + nRows*rowH + 18;
-      const legItems = [
-        ["#e05050","< 1.8 Dangerous"],
-        ["#f08040","1.8–2.5 Poor"],
-        ["#f0c040","2.5–3.0 Below acceptable"],
-        ["#80c060","3.0–3.5 Acceptable"],
-        ["#40a040","≥ 3.5 Good"],
-      ];
-      legItems.forEach(([col,lbl],i)=>{
-        const x = mL + i*80;
-        document.write(`<rect x="${x}" y="${ly}" width="10" height="10" rx="2" fill="${col}"/>`);
-        document.write(`<text x="${x+13}" y="${ly+8}" style="font-size:8px;fill:#555;">${lbl}</text>`);
-      });
-    </script>
-  </svg>
-</div>
+        <!-- TA row y=194 dravidian -->
+        <text x="42" y="211" text-anchor="end" font-size="9" fill="#d46030" font-weight="700">TA</text>
+        <rect x="48"  y="196" width="40" height="26" rx="3" fill="#f08040"/><text x="68"  y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.30</text>
+        <rect x="100" y="196" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.55</text>
+        <rect x="152" y="196" width="40" height="26" rx="3" fill="#e05050"/><text x="172" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.88</text>
+        <rect x="204" y="196" width="40" height="26" rx="3" fill="#f0c040"/><text x="224" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.84</text>
+        <rect x="256" y="196" width="40" height="26" rx="3" fill="#f08040"/><text x="276" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.18</text>
+        <rect x="308" y="196" width="40" height="26" rx="3" fill="#f08040"/><text x="328" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.26</text>
+        <rect x="360" y="196" width="40" height="26" rx="3" fill="#e05050"/><text x="380" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.86</text>
+        <rect x="412" y="196" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.90</text>
 
-<!-- RIGHT: Language family grouped comparison -->
-<div class="panel">
-  <div class="panel-title">Language-Family Performance: Dravidian vs. Indo-Aryan<span class="panel-sub"></span></div>
+        <!-- KN row y=224 dravidian -->
+        <text x="42" y="241" text-anchor="end" font-size="9" fill="#d46030" font-weight="700">KN</text>
+        <rect x="48"  y="226" width="40" height="26" rx="3" fill="#f08040"/><text x="68"  y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.24</text>
+        <rect x="100" y="226" width="40" height="26" rx="3" fill="#f08040"/><text x="120" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.36</text>
+        <rect x="152" y="226" width="40" height="26" rx="3" fill="#e05050"/><text x="172" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.88</text>
+        <rect x="204" y="226" width="40" height="26" rx="3" fill="#80c060"/><text x="224" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.08</text>
+        <rect x="256" y="226" width="40" height="26" rx="3" fill="#f0c040"/><text x="276" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.84</text>
+        <rect x="308" y="226" width="40" height="26" rx="3" fill="#f08040"/><text x="328" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.18</text>
+        <rect x="360" y="226" width="40" height="26" rx="3" fill="#e05050"/><text x="380" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.86</text>
+        <rect x="412" y="226" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.88</text>
 
-  <svg width="480" height="370" viewBox="0 0 480 370">
-    <script>
-      // Average F1 by family and condition
-      // Dravidian: TE,TA,KN
-      // IA Low: GU,DO,AS,MR
-      // IA High: HI,BN,EN
+        <!-- GU row y=254 -->
+        <text x="42" y="271" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">GU</text>
+        <rect x="48"  y="256" width="40" height="26" rx="3" fill="#f0c040"/><text x="68"  y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.46</text>
+        <rect x="100" y="256" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.54</text>
+        <rect x="152" y="256" width="40" height="26" rx="3" fill="#f08040"/><text x="172" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.18</text>
+        <rect x="204" y="256" width="40" height="26" rx="3" fill="#f0c040"/><text x="224" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.92</text>
+        <rect x="256" y="256" width="40" height="26" rx="3" fill="#f08040"/><text x="276" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.32</text>
+        <rect x="308" y="256" width="40" height="26" rx="3" fill="#e05050"/><text x="328" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.88</text>
+        <rect x="360" y="256" width="40" height="26" rx="3" fill="#f08040"/><text x="380" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.26</text>
+        <rect x="412" y="256" width="40" height="26" rx="3" fill="#80c060"/><text x="432" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.00</text>
 
-      const famData = {
-        // [qzs, qfs, qtr, qsft, mzs, mfs, mtr, msft]
-        "Dravidian\n(TE,TA,KN)": [
-          (0.450+0.480+0.441)/3, (0.378+0.466+0.398)/3,
-          (0.241+0.460+0.319)/3, (0.808+0.722+0.812)/3,
-          (0.282+0.429+0.423)/3, (0.378+0.404+0.373)/3,
-          (0.200+0.473+0.295)/3, (0.769+0.768+0.779)/3,
-        ],
-        "IA Low-res\n(GU,DO,AS,MR)": [
-          (0.394+0.570+0.553+0.528)/4, (0.528+0.517+0.506+0.490)/4,
-          (0.495+0.497+0.351+0.635)/4, (0.800+0.776+0.786+0.774)/4,
-          (0.368+0.431+0.417+0.420)/4, (0.273+0.417+0.397+0.352)/4,
-          (0.539+0.567+0.275+0.570)/4, (0.769+0.757+0.755+0.768)/4,
-        ],
-        "IA High-res\n(HI,BN,EN)": [
-          (0.551+0.566+0.650)/3, (0.500+0.568+0.642)/3,
-          (0.571+0.369+0.650)/3, (0.770+0.720+0.777)/3,
-          (0.450+0.451+0.652)/3, (0.358+0.343+0.558)/3,
-          (0.561+0.295+0.652)/3, (0.763+0.708+0.768)/3,
-        ],
-      };
+        <!-- DO row y=284 -->
+        <text x="42" y="301" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">DO</text>
+        <rect x="48"  y="286" width="40" height="26" rx="3" fill="#f0c040"/><text x="68"  y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.76</text>
+        <rect x="100" y="286" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.52</text>
+        <rect x="152" y="286" width="40" height="26" rx="3" fill="#f0c040"/><text x="172" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.63</text>
+        <rect x="204" y="286" width="40" height="26" rx="3" fill="#f0c040"/><text x="224" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.84</text>
+        <rect x="256" y="286" width="40" height="26" rx="3" fill="#f08040"/><text x="276" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.28</text>
+        <rect x="308" y="286" width="40" height="26" rx="3" fill="#f08040"/><text x="328" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.34</text>
+        <rect x="360" y="286" width="40" height="26" rx="3" fill="#f0c040"/><text x="380" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.59</text>
+        <rect x="412" y="286" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.74</text>
 
-      const famNames = Object.keys(famData);
-      const conds = ["ZS","FS","Trans","SFT"];
-      const condColors = ["#4a7fd4","#f0a040","#50b070","#9060c0"];
+        <!-- AS row y=314 -->
+        <text x="42" y="331" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">AS</text>
+        <rect x="48"  y="316" width="40" height="26" rx="3" fill="#f0c040"/><text x="68"  y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.64</text>
+        <rect x="100" y="316" width="40" height="26" rx="3" fill="#f0c040"/><text x="120" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.74</text>
+        <rect x="152" y="316" width="40" height="26" rx="3" fill="#e05050"/><text x="172" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.46</text>
+        <rect x="204" y="316" width="40" height="26" rx="3" fill="#f0c040"/><text x="224" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.96</text>
+        <rect x="256" y="316" width="40" height="26" rx="3" fill="#f0c040"/><text x="276" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.48</text>
+        <rect x="308" y="316" width="40" height="26" rx="3" fill="#f0c040"/><text x="328" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.44</text>
+        <rect x="360" y="316" width="40" height="26" rx="3" fill="#e05050"/><text x="380" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.42</text>
+        <rect x="412" y="316" width="40" height="26" rx="3" fill="#f0c040"/><text x="432" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.90</text>
 
-      const mL=10, mT=22, groupW=220, groupGap=6;
-      const barH=12, barGap=3, groupH=(barH+barGap)*4+10;
-      const xLabel=66, chartStart=xLabel+4;
-      const xMax=0.90, chartW=390;
+        <!-- colour legend -->
+        <rect x="48"  y="350" width="14" height="10" rx="2" fill="#e05050"/>
+        <text x="65"  y="359" font-size="8" fill="#555">&lt;2.0</text>
+        <rect x="100" y="350" width="14" height="10" rx="2" fill="#f08040"/>
+        <text x="117" y="359" font-size="8" fill="#555">2.0–2.5</text>
+        <rect x="165" y="350" width="14" height="10" rx="2" fill="#f0c040"/>
+        <text x="182" y="359" font-size="8" fill="#555">2.5–3.0</text>
+        <rect x="230" y="350" width="14" height="10" rx="2" fill="#80c060"/>
+        <text x="247" y="359" font-size="8" fill="#555">≥3.0</text>
+        <text x="290" y="359" font-size="8" fill="#d46030" font-weight="600">Bold = Dravidian</text>
+      </svg>
+    </div>
 
-      function xp(v){ return chartStart + (v/xMax)*chartW; }
+    <!-- RIGHT: Language family grouped bars -->
+    <div class="panel">
+      <div class="panel-title">Entity F1 Averaged by Language Family</div>
+      <svg width="470" height="370" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
 
-      // Title rows
-      document.write(`<text x="${xp(0.25)}" y="14" text-anchor="middle" style="font-size:9px;fill:#1a2744;font-weight:600;">Qwen2.5-7B</text>`);
-      document.write(`<text x="${xp(0.70)}" y="14" text-anchor="middle" style="font-size:9px;fill:#666;font-weight:600;">Mistral-7B</text>`);
+        <!-- axes -->
+        <!-- x = 4 conditions, y = F1 0..0.9 -->
+        <!-- mL=55, mT=20, chartW=380, chartH=280 -->
+        <!-- bar groups: Drav, IA-Low, IA-High for Qwen and Mistral -->
 
-      let yOff = mT;
-      famNames.forEach((fam, fi) => {
-        const vals = famData[fam];
-        // fam label
-        const lines = fam.split('\n');
-        lines.forEach((l,li)=>{
-          document.write(`<text x="${xLabel-2}" y="${yOff+groupH/2-4+(li-0.5)*11}" text-anchor="end" style="font-size:8.5px;fill:${fi===0?'#d46030':'#4a7fd4'};font-weight:600;">${l}</text>`);
-        });
+        <!-- y gridlines -->
+        <line x1="55" y1="20"  x2="55"  y2="300" stroke="#ccc" stroke-width="1"/>
+        <line x1="55" y1="300" x2="450" y2="300" stroke="#ccc" stroke-width="1"/>
 
-        // Qwen bars (conds 0-3)
-        conds.forEach((c,ci)=>{
-          const v = vals[ci];
-          const y = yOff + ci*(barH+barGap);
-          // bar
-          document.write(`<rect x="${chartStart}" y="${y}" width="${xp(v)-chartStart}" height="${barH}" rx="2" fill="${condColors[ci]}"/>`);
-          document.write(`<text x="${xp(v)+3}" y="${y+barH-2}" style="font-size:8px;fill:#555;font-family:'JetBrains Mono',monospace;">${(v*100).toFixed(0)}%</text>`);
-          // label first group only
-          if(fi===0) document.write(`<text x="${chartStart-2}" y="${y+barH-2}" text-anchor="end" style="font-size:8px;fill:${condColors[ci]};font-weight:600;">${c}</text>`);
-        });
+        <!-- y grid -->
+        <line x1="55" y1="233" x2="450" y2="233" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        <line x1="55" y1="167" x2="450" y2="167" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        <line x1="55" y1="100" x2="450" y2="100" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        <line x1="55" y1="33"  x2="450" y2="33"  stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        <text x="50" y="303"  text-anchor="end" font-size="8" fill="#aaa">0.0</text>
+        <text x="50" y="236"  text-anchor="end" font-size="8" fill="#aaa">0.2</text>
+        <text x="50" y="170"  text-anchor="end" font-size="8" fill="#aaa">0.4</text>
+        <text x="50" y="103"  text-anchor="end" font-size="8" fill="#aaa">0.6</text>
+        <text x="50" y="36"   text-anchor="end" font-size="8" fill="#aaa">0.8</text>
 
-        // Mistral bars (conds 4-7) — offset to right
-        const xOffset = chartW*0.48;
-        conds.forEach((c,ci)=>{
-          const v = vals[ci+4];
-          const y = yOff + ci*(barH+barGap);
-          const bx = chartStart + xOffset;
-          document.write(`<rect x="${bx}" y="${y}" width="${(v/xMax)*chartW*0.48}" height="${barH}" rx="2" fill="${condColors[ci]}" opacity="0.65"/>`);
-          document.write(`<text x="${bx+(v/xMax)*chartW*0.48+3}" y="${y+barH-2}" style="font-size:8px;fill:#555;font-family:'JetBrains Mono',monospace;">${(v*100).toFixed(0)}%</text>`);
-        });
+        <!-- scale: y = 300 - val*333 -->
+        <!-- Dravidian: Qwen ZS=0.457 FS=0.414 Tr=0.340 SFT=0.781 -->
+        <!--            Mistral ZS=0.378 SFT=0.772 -->
+        <!-- IA Low: Qwen ZS=0.511 FS=0.510 Tr=0.495 SFT=0.784 -->
+        <!--          Mistral ZS=0.409 SFT=0.762 -->
+        <!-- IA High: Qwen ZS=0.589 FS=0.570 Tr=0.529 SFT=0.756 -->
+        <!--           Mistral ZS=0.518 SFT=0.747 -->
 
-        // horizontal separator
-        yOff += groupH + 8;
-        if(fi < famNames.length-1){
-          document.write(`<line x1="${chartStart}" y1="${yOff-4}" x2="${chartStart+chartW}" y2="${yOff-4}" stroke="#e8e4dc" stroke-width="1"/>`);
-        }
-      });
+        <!-- Group layout: x positions for 4 conditions -->
+        <!-- Each condition group has 3 bars (Drav/IA-Low/IA-High) x 2 models, width 8px each -->
+        <!-- condition x centers: ZS=100, FS=195, Tr=290, SFT=385 -->
+        <!-- within each group: 6 bars spaced 10px, centered -->
 
-      // x-axis ticks
-      [0,0.2,0.4,0.6,0.8].forEach(v=>{
-        document.write(`<text x="${xp(v)}" y="${yOff+2}" text-anchor="middle" style="font-size:8px;fill:#aaa;">${v.toFixed(1)}</text>`);
-      });
-      document.write(`<text x="${xp(0.45)}" y="${yOff+14}" text-anchor="middle" style="font-size:8.5px;fill:#888;font-style:italic;">Entity F1 →</text>`);
+        <!-- ZS group (x=100): Drav-Q, IAL-Q, IAH-Q, Drav-M, IAL-M, IAH-M -->
+        <!-- Drav-Q: 0.457 → h=152, y=148 -->
+        <rect x="67"  y="148" width="10" height="152" rx="2" fill="#d46030"/>
+        <!-- IAL-Q: 0.511 → h=170, y=130 -->
+        <rect x="79"  y="130" width="10" height="170" rx="2" fill="#4a7fd4" opacity="0.6"/>
+        <!-- IAH-Q: 0.589 → h=196, y=104 -->
+        <rect x="91"  y="104" width="10" height="196" rx="2" fill="#4a7fd4"/>
+        <!-- Drav-M: 0.378 → h=126, y=174 -->
+        <rect x="105" y="174" width="10" height="126" rx="2" fill="#d46030" opacity="0.5"/>
+        <!-- IAH-M: 0.518 → h=173, y=127 -->
+        <rect x="117" y="127" width="10" height="173" rx="2" fill="#4a7fd4" opacity="0.35"/>
+        <text x="96" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">ZS</text>
 
-      // legend at bottom
-      const ly2 = yOff + 22;
-      conds.forEach((c,i)=>{
-        document.write(`<rect x="${chartStart+i*80}" y="${ly2}" width="11" height="11" rx="2" fill="${condColors[i]}"/>`);
-        document.write(`<text x="${chartStart+i*80+14}" y="${ly2+8.5}" style="font-size:9px;fill:#444;">${c}</text>`);
-      });
-      document.write(`<rect x="${chartStart+4*80}" y="${ly2}" width="11" height="11" rx="2" fill="#888" opacity="0.65"/>`);
-      document.write(`<text x="${chartStart+4*80+14}" y="${ly2+8.5}" style="font-size:9px;fill:#666;">Mistral (lighter)</text>`);
-    </script>
-  </svg>
-</div>
-```
+        <!-- FS group (x=195) -->
+        <!-- Drav-Q: 0.414 -->
+        <rect x="163" y="162" width="10" height="138" rx="2" fill="#d46030"/>
+        <!-- IAL-Q: 0.510 -->
+        <rect x="175" y="130" width="10" height="170" rx="2" fill="#4a7fd4" opacity="0.6"/>
+        <!-- IAH-Q: 0.570 -->
+        <rect x="187" y="110" width="10" height="190" rx="2" fill="#4a7fd4"/>
+        <!-- Drav-M: 0.385 -->
+        <rect x="200" y="172" width="10" height="128" rx="2" fill="#d46030" opacity="0.5"/>
+        <!-- IAH-M: 0.420 -->
+        <rect x="212" y="160" width="10" height="140" rx="2" fill="#4a7fd4" opacity="0.35"/>
+        <text x="190" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">FS</text>
 
+        <!-- Tr group (x=285) -->
+        <!-- Drav-Q: 0.340 -->
+        <rect x="258" y="187" width="10" height="113" rx="2" fill="#50b070"/>
+        <!-- IAL-Q: 0.495 -->
+        <rect x="270" y="135" width="10" height="165" rx="2" fill="#4a7fd4" opacity="0.6"/>
+        <!-- IAH-Q: 0.529 -->
+        <rect x="282" y="124" width="10" height="176" rx="2" fill="#4a7fd4"/>
+        <!-- Drav-M: 0.323 -->
+        <rect x="295" y="192" width="10" height="108" rx="2" fill="#50b070" opacity="0.5"/>
+        <!-- IAH-M: 0.505 -->
+        <rect x="307" y="132" width="10" height="168" rx="2" fill="#4a7fd4" opacity="0.35"/>
+        <text x="284" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">Trans</text>
+
+        <!-- SFT group (x=380) -->
+        <!-- Drav-Q: 0.781 -->
+        <rect x="353" y="40" width="10" height="260" rx="2" fill="#9060c0"/>
+        <!-- IAL-Q: 0.784 -->
+        <rect x="365" y="39" width="10" height="261" rx="2" fill="#9060c0" opacity="0.7"/>
+        <!-- IAH-Q: 0.756 -->
+        <rect x="377" y="48" width="10" height="252" rx="2" fill="#9060c0" opacity="0.5"/>
+        <!-- Drav-M: 0.772 -->
+        <rect x="390" y="43" width="10" height="257" rx="2" fill="#9060c0" opacity="0.4"/>
+        <!-- IAH-M: 0.747 -->
+        <rect x="402" y="51" width="10" height="249" rx="2" fill="#9060c0" opacity="0.3"/>
+        <text x="379" y="315" text-anchor="middle" font-size="9" fill="#9060c0" font-weight="600">SFT</text>
+
+        <!-- y axis label -->
+        <text x="20" y="165" text-anchor="middle" font-size="9" fill="#888" transform="rotate(-90,20,165)">Entity F1</text>
+
+        <!-- legend -->
+        <rect x="58"  y="328" width="10" height="10" rx="2" fill="#d46030"/>
+        <text x="71"  y="337" font-size="8.5" fill="#444">Dravidian</text>
+        <rect x="128" y="328" width="10" height="10" rx="2" fill="#4a7fd4" opacity="0.6"/>
+        <text x="141" y="337" font-size="8.5" fill="#444">IA Low-res</text>
+        <rect x="205" y="328" width="10" height="10" rx="2" fill="#4a7fd4"/>
+        <text x="218" y="337" font-size="8.5" fill="#444">IA High-res</text>
+        <rect x="282" y="328" width="10" height="10" rx="2" fill="#9060c0"/>
+        <text x="295" y="337" font-size="8.5" fill="#444">SFT (all)</text>
+        <text x="58" y="352" font-size="8" fill="#888" font-style="italic">Solid = Qwen · Faded = Mistral</text>
+
+        <!-- parity annotation for SFT -->
+        <text x="379" y="28" text-anchor="middle" font-size="8" fill="#9060c0" font-weight="600">Parity!</text>
+        <line x1="353" y1="43" x2="412" y2="53" stroke="#9060c0" stroke-dasharray="2,2" stroke-width="0.8"/>
+      </svg>
+    </div>
   </div>
 
   <div class="fig-footer">
     <div class="fig-caption">
       <strong>Figure 4.</strong>
-      <em>Left</em>: Safety scores (1–5) for all 10 languages across all 8 conditions, colour-coded by score range.
-      Red/orange cells indicate scores below 2.5; yellow indicates scores in the 2.5–3.0 range (below acceptable).
-      No condition achieves a macro-average above 3.0; the Translation condition produces the most red cells, particularly for Dravidian languages and Assamese.
-      &nbsp;
-      <em>Right</em>: Entity F1 averaged by language family across all conditions. Dravidian (orange) lags Indo-Aryan high-resource by 0.13–0.14 F1 points at zero-shot but reaches near-parity after SFT.
-      Translation (Trans) helps IA low-resource but hurts Dravidian on average. SFT (purple) is the only condition that closes the cross-lingual gap consistently.
+      <em>Left</em>: Safety scores for all 10 languages across all 8 conditions, colour-coded red (dangerous &lt;2.0) through orange, yellow (2.5–3.0), to green (≥3.0).
+      No condition achieves a macro-average safety above 3.0. Translation produces the most red cells, especially for Dravidian languages and Assamese (AS).
+      <em>Right</em>: Entity F1 averaged by language family. Dravidian (orange) lags Indo-Aryan by 0.13–0.14 F1 at zero-shot but converges to near-parity at SFT (all bars reach 0.75+).
+      Translation helps IA languages but hurts Dravidian on average.
     </div>
   </div>
-
 </div>
 </body>
 </html>
