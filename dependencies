@@ -28,7 +28,7 @@ test_action_mismatch_rate: 0.18
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Results Figure 3 - Data Driven</title>
+<title>Results Figure 3 - Screen Fit</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -48,8 +48,8 @@ test_action_mismatch_rate: 0.18
       border:1.5px solid #d0ccc4; 
       border-radius:6px; 
       overflow:hidden; 
-      width: 100%; 
-      max-width: 1100px; 
+      width: 96vw; /* FIXED: Now stretches to fill your screen! */
+      max-width: 1600px; /* Safe upper limit for ultra-wide monitors */
       box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
   }
   
@@ -126,10 +126,10 @@ test_action_mismatch_rate: 0.18
         <!-- legend -->
         <rect x="55"  y="340" width="12" height="10" rx="2" fill="#e05050"/>
         <text x="70"  y="349" font-size="8.5" fill="#444">Qwen (negative)</text>
-        <rect x="175" y="340" width="12" height="10" rx="2" fill="#e05050" opacity="0.65"/>
+        <rect x="175" y="340" width="12" height="10" rx="2" fill="#e05050" opacity="0.4"/>
         <text x="190" y="349" font-size="8.5" fill="#444">Mistral (negative)</text>
-        <rect x="300" y="340" width="12" height="10" rx="2" fill="#40a040"/>
-        <text x="315" y="349" font-size="8.5" fill="#444">Positive (rare)</text>
+        <rect x="290" y="340" width="12" height="10" rx="2" fill="#40a040"/>
+        <text x="305" y="349" font-size="8.5" fill="#444">Positive (improves)</text>
         <text x="55" y="362" font-size="8" fill="#888" font-style="italic">Bold orange = Dravidian · Exceptions: GU (Qwen), TE (Mistral)</text>
       </svg>
     </div>
@@ -167,20 +167,18 @@ test_action_mismatch_rate: 0.18
         <!-- Dynamic SFT Bars Container -->
         <g id="sft-bars"></g>
 
-        <!-- legend -->
-        <rect x="52"  y="336" width="11" height="11" rx="2" fill="#4a7fd4" opacity="0.5"/>
-        <text x="66"  y="345" font-size="8.5" fill="#444">Qwen ZS</text>
-        <rect x="126" y="336" width="11" height="11" rx="2" fill="#9060c0"/>
-        <text x="140" y="345" font-size="8.5" fill="#444">Qwen SFT</text>
-        <rect x="210" y="336" width="11" height="11" rx="2" fill="#4a7fd4" opacity="0.25"/>
-        <text x="224" y="345" font-size="8.5" fill="#444">Mistral ZS</text>
-        <rect x="298" y="336" width="11" height="11" rx="2" fill="#9060c0" opacity="0.5"/>
-        <text x="312" y="345" font-size="8.5" fill="#444">Mistral SFT</text>
+        <!-- FIXED LEGEND: Clean, unified, perfectly matched to Figure 4 -->
+        <rect x="52"  y="336" width="10" height="10" rx="2" fill="#4a7fd4"/>
+        <text x="66"  y="345" font-size="8.5" fill="#444">Indo-Aryan ZS</text>
+        
+        <rect x="146" y="336" width="10" height="10" rx="2" fill="#d46030"/>
+        <text x="160" y="345" font-size="8.5" fill="#444">Dravidian ZS</text>
+        
+        <rect x="236" y="336" width="10" height="10" rx="2" fill="#9060c0"/>
+        <text x="250" y="345" font-size="8.5" fill="#444">SFT (All)</text>
+        
+        <text x="52" y="360" font-size="8" fill="#888" font-style="italic">Solid = Qwen · Faded = Mistral</text>
 
-        <rect x="52"  y="354" width="11" height="11" rx="2" fill="#d46030" opacity="0.6"/>
-        <text x="66"  y="363" font-size="8.5" fill="#d46030">Dravidian ZS</text>
-        <line x1="180" y1="358" x2="200" y2="358" stroke="#9060c0" stroke-dasharray="4,2" stroke-width="1.2"/>
-        <text x="204" y="363" font-size="8.5" fill="#9060c0">0.70 threshold (all SFT bars exceed this)</text>
       </svg>
     </div>
 
@@ -194,9 +192,9 @@ test_action_mismatch_rate: 0.18
       16 of 20 language–model pairs show degradation even with same-language demonstrations,
       confirming that demonstrations introduce template lock and entity bleed rather than providing useful signal.
       Gujarati (Qwen) and Telugu (Mistral) are the two exceptions, both starting from pathologically high zero-shot hallucination rates (&gt;69%).
-      <em>Right</em>: Entity F1 before (zero-shot, light bars) and after (SFT, dark bars) fine-tuning.
+      <em>Right</em>: Entity F1 before (zero-shot, blue/orange bars) and after (SFT, purple bars) fine-tuning.
       Every language surpasses F1 = 0.70 (dashed line) after SFT for both models.
-      Dravidian languages (TE, TA, KN — orange) show the steepest absolute gains: Qwen-Telugu +0.358, Qwen-Kannada +0.371.
+      Dravidian languages (TE, TA, KN) show the steepest absolute gains: Qwen-Telugu +0.358, Qwen-Kannada +0.371.
     </div>
   </div>
 
@@ -258,7 +256,7 @@ test_action_mismatch_rate: 0.18
         let dQ = deltaData[lang].Q;
         let wQ = Math.abs(dQ) * scaleDelta;
         let xQ = dQ >= 0 ? centerX : centerX - wQ;
-        let cQ = dQ >= 0 ? '#40a040' : '#e05050'; // Green if positive, Red if negative
+        let cQ = dQ >= 0 ? '#40a040' : '#e05050'; 
         let signQ = dQ > 0 ? '+' : '';
         let tXQ = dQ >= 0 ? xQ + wQ + 6 : xQ - 6;
         let anchorQ = dQ >= 0 ? 'start' : 'end';
@@ -266,7 +264,7 @@ test_action_mismatch_rate: 0.18
         dHtml += `<rect x="${xQ}" y="${y + 2}" width="${wQ}" height="10" rx="1" fill="${cQ}"/>`;
         dHtml += `<text x="${tXQ}" y="${y + 11}" text-anchor="${anchorQ}" font-size="7.5" fill="${cQ}" font-family="'JetBrains Mono',monospace">${signQ}${(dQ*100).toFixed(1)}%</text>`;
 
-        // Mistral Bar (Bottom)
+        // Mistral Bar (Bottom, FIXED Opacity to 0.4 to match Figure 4)
         let dM = deltaData[lang].M;
         let wM = Math.abs(dM) * scaleDelta;
         let xM = dM >= 0 ? centerX : centerX - wM;
@@ -275,7 +273,7 @@ test_action_mismatch_rate: 0.18
         let tXM = dM >= 0 ? xM + wM + 6 : xM - 6;
         let anchorM = dM >= 0 ? 'start' : 'end';
 
-        dHtml += `<rect x="${xM}" y="${y + 14}" width="${wM}" height="10" rx="1" fill="${cM}" opacity="0.65"/>`;
+        dHtml += `<rect x="${xM}" y="${y + 14}" width="${wM}" height="10" rx="1" fill="${cM}" opacity="0.4"/>`;
         dHtml += `<text x="${tXM}" y="${y + 23}" text-anchor="${anchorM}" font-size="7.5" fill="${cM}" font-family="'JetBrains Mono',monospace">${signM}${(dM*100).toFixed(1)}%</text>`;
     });
     deltaSvg.innerHTML = dHtml;
@@ -293,34 +291,35 @@ test_action_mismatch_rate: 0.18
     langs.forEach((lang, i) => {
         let x = startX + (i * gapGroup);
         let isDrav = ['TE', 'TA', 'KN'].includes(lang);
-        let zsc = isDrav ? '#d46030' : '#4a7fd4'; // Orange for Dravidian, Blue for Indo-Aryan
-        let sftc = '#9060c0'; // SFT is always Purple to show parity
+        let zsc = isDrav ? '#d46030' : '#4a7fd4'; // Orange for Dravidian ZS, Blue for Indo-Aryan ZS
+        let sftc = '#9060c0'; // Purple for all SFT bars
 
         // Language Label
-        sHtml += `<text x="${x + 15}" y="324" text-anchor="middle" font-size="8.5" fill="${zsc}" font-weight="${isDrav ? '700' : '600'}">${lang}</text>`;
+        sHtml += `<text x="${x + 8}" y="324" text-anchor="middle" font-size="8.5" fill="${zsc}" font-weight="${isDrav ? '700' : '600'}">${lang}</text>`;
 
         let data = sftData[lang];
         
-        // Qwen ZS (Faded)
+        // Qwen ZS (Solid Blue/Orange)
         let hQZS = data.QZS * sftScale;
-        sHtml += `<rect x="${x - 8}" y="${floorY - hQZS}" width="9" height="${hQZS}" rx="1" fill="${zsc}" opacity="0.5"/>`;
+        sHtml += `<rect x="${x - 8}" y="${floorY - hQZS}" width="9" height="${hQZS}" rx="1" fill="${zsc}"/>`;
         
         // Qwen SFT (Solid Purple)
         let hQSFT = data.QSFT * sftScale;
         sHtml += `<rect x="${x + 2}" y="${floorY - hQSFT}" width="9" height="${hQSFT}" rx="1" fill="${sftc}"/>`;
         
-        // Mistral ZS (More Faded)
+        // Mistral ZS (Faded Blue/Orange, 40% Opacity)
         let hMZS = data.MZS * sftScale;
-        sHtml += `<rect x="${x + 13}" y="${floorY - hMZS}" width="9" height="${hMZS}" rx="1" fill="${zsc}" opacity="0.25"/>`;
+        sHtml += `<rect x="${x + 13}" y="${floorY - hMZS}" width="9" height="${hMZS}" rx="1" fill="${zsc}" opacity="0.4"/>`;
         
-        // Mistral SFT (Faded Purple)
+        // Mistral SFT (Faded Purple, 40% Opacity)
         let hMSFT = data.MSFT * sftScale;
-        sHtml += `<rect x="${x + 23}" y="${floorY - hMSFT}" width="9" height="${hMSFT}" rx="1" fill="${sftc}" opacity="0.5"/>`;
+        sHtml += `<rect x="${x + 23}" y="${floorY - hMSFT}" width="9" height="${hMSFT}" rx="1" fill="${sftc}" opacity="0.4"/>`;
     });
     sftSvg.innerHTML = sHtml;
 
 </script>
 </body>
 </html>
+
 
 ```
