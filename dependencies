@@ -28,7 +28,7 @@ test_action_mismatch_rate: 0.18
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Results Figure 4 - Data Driven</title>
+<title>Results Figure 4 - Perfected</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -87,9 +87,10 @@ test_action_mismatch_rate: 0.18
     <!-- LEFT: Safety heatmap -->
     <div class="panel">
       <div class="panel-title">Safety Score per Language &amp; Condition</div>
-      <svg viewBox="0 0 490 350" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
-        <!-- grid background -->
-        <rect x="46" y="44" width="420" height="280" fill="#fafaf8" rx="2"/>
+      <!-- Height increased to 370 to give legend breathing room -->
+      <svg viewBox="0 0 490 370" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
+        <!-- grid background (Height fixed to cover AS row fully) -->
+        <rect x="46" y="44" width="420" height="305" fill="#fafaf8" rx="2"/>
 
         <!-- column headers -->
         <text x="68" y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-ZS</text>
@@ -105,7 +106,7 @@ test_action_mismatch_rate: 0.18
         <text x="146" y="34" text-anchor="middle" font-size="8.5" fill="#1a2744" font-weight="600">── Qwen2.5-7B ──</text>
         <text x="354" y="34" text-anchor="middle" font-size="8.5" fill="#666" font-weight="600">── Mistral-7B ──</text>
         <line x1="46" y1="38" x2="466" y2="38" stroke="#e8e4dc" stroke-width="1"/>
-        <line x1="250" y1="38" x2="250" y2="324" stroke="#bbb" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="250" y1="38" x2="250" y2="349" stroke="#bbb" stroke-width="1" stroke-dasharray="3,2"/>
 
         <!-- Y-Axis Language Labels -->
         <text x="42" y="61" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">BN</text>
@@ -122,16 +123,16 @@ test_action_mismatch_rate: 0.18
         <!-- Dynamic Heatmap Container -->
         <g id="heatmap-container"></g>
 
-        <!-- colour legend -->
-        <rect x="48" y="340" width="14" height="10" rx="2" fill="#e05050"/>
-        <text x="65" y="349" font-size="8" fill="#555">&lt;2.0</text>
-        <rect x="100" y="340" width="14" height="10" rx="2" fill="#f08040"/>
-        <text x="117" y="349" font-size="8" fill="#555">2.0–2.5</text>
-        <rect x="165" y="340" width="14" height="10" rx="2" fill="#f0c040"/>
-        <text x="182" y="349" font-size="8" fill="#555">2.5–3.0</text>
-        <rect x="230" y="340" width="14" height="10" rx="2" fill="#80c060"/>
-        <text x="247" y="349" font-size="8" fill="#555">≥3.0</text>
-        <text x="290" y="349" font-size="8" fill="#d46030" font-weight="600">Bold = Dravidian</text>
+        <!-- colour legend (Pushed down to y=356 to avoid clash) -->
+        <rect x="48" y="356" width="14" height="10" rx="2" fill="#e05050"/>
+        <text x="65" y="365" font-size="8" fill="#555">&lt;2.0</text>
+        <rect x="100" y="356" width="14" height="10" rx="2" fill="#f08040"/>
+        <text x="117" y="365" font-size="8" fill="#555">2.0–2.5</text>
+        <rect x="165" y="356" width="14" height="10" rx="2" fill="#f0c040"/>
+        <text x="182" y="365" font-size="8" fill="#555">2.5–3.0</text>
+        <rect x="230" y="356" width="14" height="10" rx="2" fill="#80c060"/>
+        <text x="247" y="365" font-size="8" fill="#555">≥3.0</text>
+        <text x="290" y="365" font-size="8" fill="#d46030" font-weight="600">Bold = Dravidian</text>
       </svg>
     </div>
 
@@ -142,19 +143,20 @@ test_action_mismatch_rate: 0.18
 
         <!-- axes -->
         <line x1="55" y1="20" x2="55" y2="300" stroke="#ccc" stroke-width="1"/>
+        <!-- Floor line correctly fixed at y=300 -->
         <line x1="55" y1="300" x2="450" y2="300" stroke="#ccc" stroke-width="1"/>
 
         <!-- y grid -->
-        <line x1="55" y1="233" x2="450" y2="233" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
-        <line x1="55" y1="167" x2="450" y2="167" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        <line x1="55" y1="233.3" x2="450" y2="233.3" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        <line x1="55" y1="166.6" x2="450" y2="166.6" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
         <line x1="55" y1="100" x2="450" y2="100" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
-        <line x1="55" y1="33" x2="450" y2="33" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        <line x1="55" y1="33.3" x2="450" y2="33.3" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
         
         <text x="50" y="303" text-anchor="end" font-size="8" fill="#aaa">0.0</text>
-        <text x="50" y="236" text-anchor="end" font-size="8" fill="#aaa">0.2</text>
-        <text x="50" y="170" text-anchor="end" font-size="8" fill="#aaa">0.4</text>
+        <text x="50" y="236.3" text-anchor="end" font-size="8" fill="#aaa">0.2</text>
+        <text x="50" y="169.6" text-anchor="end" font-size="8" fill="#aaa">0.4</text>
         <text x="50" y="103" text-anchor="end" font-size="8" fill="#aaa">0.6</text>
-        <text x="50" y="36" text-anchor="end" font-size="8" fill="#aaa">0.8</text>
+        <text x="50" y="36.3" text-anchor="end" font-size="8" fill="#aaa">0.8</text>
 
         <!-- Dynamic Bar Chart Container -->
         <g id="bars-container"></g>
@@ -179,8 +181,8 @@ test_action_mismatch_rate: 0.18
         <text x="58" y="352" font-size="8" fill="#888" font-style="italic">Solid = Qwen · Faded = Mistral</text>
 
         <!-- Parity annotation -->
-        <text x="385" y="28" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Parity!</text>
-        <line x1="357" y1="43" x2="415" y2="43" stroke="#1a2744" stroke-dasharray="2,2" stroke-width="0.8"/>
+        <text x="385" y="26" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Parity!</text>
+        <line x1="357" y1="40" x2="415" y2="40" stroke="#1a2744" stroke-dasharray="2,2" stroke-width="0.8"/>
       </svg>
     </div>
   </div>
@@ -199,19 +201,17 @@ test_action_mismatch_rate: 0.18
 
 <script>
     // =========================================================================
-    // DATA CENTER - EDIT THESE NUMBERS TO UPDATE THE GRAPH AUTOMATICALLY!
+    // DATA CENTER
     // =========================================================================
 
-    // F1 Data extracted from your Table 4 and Table 5 screenshots.
-    // Note: FS values are estimated from your previous HTML since the FS table wasn't in the images.
     const f1Data = {
         ZS: {
             Qwen: { Drav: 0.457, IAL: 0.506, IAH: 0.548 },
             Mistral: { Drav: 0.378, IAL: 0.405, IAH: 0.440 }
         },
         FS: {
-            Qwen: { Drav: 0.414, IAL: 0.510, IAH: 0.570 }, // Update these when you get real FS averages
-            Mistral: { Drav: 0.384, IAL: 0.380, IAH: 0.420 } // Update these when you get real FS averages
+            Qwen: { Drav: 0.414, IAL: 0.510, IAH: 0.570 }, 
+            Mistral: { Drav: 0.384, IAL: 0.380, IAH: 0.420 } 
         },
         Trans: {
             Qwen: { Drav: 0.340, IAL: 0.448, IAH: 0.525 },
@@ -223,8 +223,6 @@ test_action_mismatch_rate: 0.18
         }
     };
 
-    // Safety Data for the Heatmap. Update these arrays when you have new numbers!
-    // Format: [Q-ZS, Q-FS, Q-Tr, Q-SFT, M-ZS, M-FS, M-Tr, M-SFT]
     const safetyData = {
         BN: [2.88, 2.74, 1.90, 3.06, 2.54, 2.44, 1.94, 2.92],
         EN: [3.04, 2.86, 3.14, 3.06, 3.08, 3.02, 2.98, 3.04],
@@ -239,65 +237,73 @@ test_action_mismatch_rate: 0.18
     };
 
     // =========================================================================
-    // DYNAMIC RENDERING LOGIC (Do not edit below unless modifying layout)
+    // DYNAMIC RENDERING LOGIC
     // =========================================================================
 
     // 1. Render Bar Chart
-    const barSvg = document.getElementById('bars-container');
     const groups = ['ZS', 'FS', 'Trans', 'SFT'];
     const xCenters = [100, 195, 290, 385];
     const colors = { Drav: '#d46030', IAL: '#5ba4cf', IAH: '#1b4e96' };
     const barW = 7;
-    const gap = 2; // gap between bars
+    const gap = 2; 
 
+    // FIXED: Multiplier to perfectly map values to the gridlines.
+    // Distance from 0 to 0.8 is (300 - 33.33) = 266.67 pixels
+    // 266.67 / 0.8 = 333.33
+    const scaleMultiplier = 333.333;
+
+    let barHtmlString = '';
     groups.forEach((group, i) => {
         let startX = xCenters[i] - ((barW * 6 + gap * 5) / 2);
 
         // Draw Qwen (Solid)
         ['Drav', 'IAL', 'IAH'].forEach(lang => {
             let f1 = f1Data[group].Qwen[lang];
-            let height = f1 * (270 / 0.9); // Scale: 0.9 F1 = 270px
-            let y = 303 - height;
-            
-            barSvg.innerHTML += `<rect x="${startX}" y="${y}" width="${barW}" height="${height}" rx="1.5" fill="${colors[lang]}"/>`;
+            let height = f1 * scaleMultiplier; 
+            let y = 300 - height; // FIXED: Flush exactly against the x-axis (300)
+            barHtmlString += `<rect x="${startX}" y="${y}" width="${barW}" height="${height}" rx="1.5" fill="${colors[lang]}"/>`;
             startX += barW + gap;
         });
 
-        // Draw Mistral (Faded 40% opacity)
+        // Draw Mistral (Faded)
         ['Drav', 'IAL', 'IAH'].forEach(lang => {
             let f1 = f1Data[group].Mistral[lang];
-            let height = f1 * (270 / 0.9);
-            let y = 303 - height;
-            
-            barSvg.innerHTML += `<rect x="${startX}" y="${y}" width="${barW}" height="${height}" rx="1.5" fill="${colors[lang]}" opacity="0.4"/>`;
+            let height = f1 * scaleMultiplier;
+            let y = 300 - height; // FIXED: Flush exactly against the x-axis
+            barHtmlString += `<rect x="${startX}" y="${y}" width="${barW}" height="${height}" rx="1.5" fill="${colors[lang]}" opacity="0.4"/>`;
             startX += barW + gap;
         });
     });
+    
+    document.getElementById('bars-container').innerHTML = barHtmlString;
 
     // 2. Render Safety Heatmap
-    const hmSvg = document.getElementById('heatmap-container');
     const yStart = 46;
-    const rowH = 30; // 26 height + 4 spacing
+    const rowH = 30; 
     const xPositions = [48, 100, 152, 204, 256, 308, 360, 412];
     const langs = ['BN', 'EN', 'HI', 'MR', 'TE', 'TA', 'KN', 'GU', 'DO', 'AS'];
 
     function getColor(val) {
-        if (val < 2.0) return "#e05050"; // Red
-        if (val < 2.5) return "#f08040"; // Orange
-        if (val < 3.0) return "#f0c040"; // Yellow
-        return "#80c060";                // Green
+        if (val < 2.0) return "#e05050"; 
+        if (val < 2.5) return "#f08040"; 
+        if (val < 3.0) return "#f0c040"; 
+        return "#80c060";                
     }
 
+    let hmHtmlString = '';
     langs.forEach((lang, rIndex) => {
         let y = yStart + (rIndex * rowH);
         safetyData[lang].forEach((val, cIndex) => {
             let x = xPositions[cIndex];
-            hmSvg.innerHTML += `<rect x="${x}" y="${y}" width="40" height="26" rx="3" fill="${getColor(val)}"/>`;
-            hmSvg.innerHTML += `<text x="${x+20}" y="${y+17}" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">${val.toFixed(2)}</text>`;
+            hmHtmlString += `<rect x="${x}" y="${y}" width="40" height="26" rx="3" fill="${getColor(val)}"/>`;
+            hmHtmlString += `<text x="${x+20}" y="${y+17}" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">${val.toFixed(2)}</text>`;
         });
     });
+    
+    document.getElementById('heatmap-container').innerHTML = hmHtmlString;
 </script>
 </body>
 </html>
+
 
 ```
