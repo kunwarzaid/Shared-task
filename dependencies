@@ -28,23 +28,47 @@ test_action_mismatch_rate: 0.18
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Results Figure 4</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results Figure 4 - Data Driven</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#f7f6f2; font-family:'IBM Plex Sans',sans-serif; width:1100px; padding: 20px; }
-  .figure { background:#fff; border:1.5px solid #d0ccc4; border-radius:6px; overflow:hidden; width:1100px; }
-  .fig-header { background:#1a2744; padding:13px 24px 11px; display:flex; align-items:center; justify-content:space-between; }
-  .fig-header h1 { font-family:'Source Serif 4',serif; font-size:13.5px; font-weight:600; color:#fff; }
-  .fig-header .sub { font-size:10px; color:#9baac8; margin-top:2px; }
-  .hbadge { background:#2e4070; border:1px solid #4a6090; border-radius:4px; padding:3px 9px; font-size:9px; color:#aabfde; font-family:'JetBrains Mono',monospace; margin-left:7px; }
+  
+  body { 
+      background:#f7f6f2; 
+      font-family:'IBM Plex Sans',sans-serif; 
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2vh 2vw; 
+  }
+
+  .figure { 
+      background:#fff; 
+      border:1.5px solid #d0ccc4; 
+      border-radius:6px; 
+      overflow:hidden; 
+      width: 100%; 
+      max-width: 1100px; 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+  }
+  
+  .fig-header { background:#1a2744; padding:1.5% 2%; display:flex; align-items:center; justify-content:space-between; }
+  .fig-header h1 { font-family:'Source Serif 4',serif; font-size:clamp(12px, 1.5vw, 15px); font-weight:600; color:#fff; }
+  .fig-header .sub { font-size:clamp(9px, 1vw, 11px); color:#9baac8; margin-top:2px; }
+  .hbadge { background:#2e4070; border:1px solid #4a6090; border-radius:4px; padding:3px 9px; font-size:clamp(8px, 0.9vw, 10px); color:#aabfde; font-family:'JetBrains Mono',monospace; margin-left:7px; display:inline-block;}
+  
   .panels { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid #e8e4dc; }
-  .panel { padding:16px 14px 14px; border-right:1px solid #e8e4dc; }
+  .panel { padding:2% 3%; border-right:1px solid #e8e4dc; display: flex; flex-direction: column; justify-content: flex-start;}
   .panel:last-child { border-right:none; }
-  .panel-title { font-size:11px; font-weight:600; color:#1a2744; margin-bottom:10px; }
-  .fig-footer { background:#f0ede8; border-top:1px solid #d8d4cc; padding:8px 24px; }
-  .fig-caption { font-family:'Source Serif 4',serif; font-size:10px; color:#444; line-height:1.5; }
+  .panel-title { font-size:clamp(10px, 1.2vw, 13px); font-weight:600; color:#1a2744; margin-bottom:10px; }
+  
+  .fig-footer { background:#f0ede8; border-top:1px solid #d8d4cc; padding:1.5% 2%; }
+  .fig-caption { font-family:'Source Serif 4',serif; font-size:clamp(9px, 1vw, 11px); color:#444; line-height:1.5; }
   .fig-caption strong { color:#1a2744; }
+
+  svg { width: 100%; height: auto; display: block; }
 </style>
 </head>
 <body>
@@ -54,7 +78,7 @@ test_action_mismatch_rate: 0.18
       <h1>Safety Scores Across All Conditions &amp; Language-Family F1 Comparison</h1>
       <div class="sub">Left: Safety (1–5) colour-coded grid, all 8 conditions · Right: Entity F1 averaged by language family</div>
     </div>
-    <div>
+    <div style="white-space: nowrap;">
       <span class="hbadge">Safety &lt; 3.0 everywhere</span>
       <span class="hbadge">Dravidian gap closes at SFT</span>
     </div>
@@ -63,18 +87,13 @@ test_action_mismatch_rate: 0.18
   <div class="panels">
     <!-- LEFT: Safety heatmap -->
     <div class="panel">
-      <!-- Fixed: Removed phantom dashed line text -->
       <div class="panel-title">Safety Score per Language &amp; Condition</div>
-      <svg width="490" height="340" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
-
-        <!-- Fixed: Colorblind Accessible Scale (Red to Blue) -->
-        <!-- <2.0: #b2182b (Deep Red), 2.0-2.5: #d6604d (Muted Red), 2.5-3.0: #4393c3 (Muted Blue), >=3.0: #2166ac (Deep Blue) -->
-
+      <svg viewBox="0 0 490 350" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
         <!-- grid background -->
         <rect x="46" y="44" width="420" height="280" fill="#fafaf8" rx="2"/>
 
         <!-- column headers -->
-        <text x="68"  y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-ZS</text>
+        <text x="68" y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-ZS</text>
         <text x="120" y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-FS</text>
         <text x="172" y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-Tr</text>
         <text x="224" y="20" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Q-SFT</text>
@@ -87,205 +106,82 @@ test_action_mismatch_rate: 0.18
         <text x="146" y="34" text-anchor="middle" font-size="8.5" fill="#1a2744" font-weight="600">── Qwen2.5-7B ──</text>
         <text x="354" y="34" text-anchor="middle" font-size="8.5" fill="#666" font-weight="600">── Mistral-7B ──</text>
         <line x1="46" y1="38" x2="466" y2="38" stroke="#e8e4dc" stroke-width="1"/>
-        <!-- divider between Qwen and Mistral -->
         <line x1="250" y1="38" x2="250" y2="324" stroke="#bbb" stroke-width="1" stroke-dasharray="3,2"/>
 
-        <!-- BN row y=44 -->
+        <!-- Y-Axis Language Labels -->
         <text x="42" y="61" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">BN</text>
-        <rect x="48" y="46" width="40" height="26" rx="3" fill="#4393c3"/><text x="68"  y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.88</text>
-        <rect x="100" y="46" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.74</text>
-        <rect x="152" y="46" width="40" height="26" rx="3" fill="#b2182b"/><text x="172" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.90</text>
-        <rect x="204" y="46" width="40" height="26" rx="3" fill="#2166ac"/><text x="224" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.06</text>
-        <rect x="256" y="46" width="40" height="26" rx="3" fill="#4393c3"/><text x="276" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.54</text>
-        <rect x="308" y="46" width="40" height="26" rx="3" fill="#d6604d"/><text x="328" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.44</text>
-        <rect x="360" y="46" width="40" height="26" rx="3" fill="#b2182b"/><text x="380" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.94</text>
-        <rect x="412" y="46" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="63" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.92</text>
-
-        <!-- EN row y=74 -->
         <text x="42" y="91" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">EN</text>
-        <rect x="48" y="76" width="40" height="26" rx="3" fill="#2166ac"/><text x="68"  y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.04</text>
-        <rect x="100" y="76" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.86</text>
-        <rect x="152" y="76" width="40" height="26" rx="3" fill="#2166ac"/><text x="172" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.14</text>
-        <rect x="204" y="76" width="40" height="26" rx="3" fill="#2166ac"/><text x="224" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.06</text>
-        <rect x="256" y="76" width="40" height="26" rx="3" fill="#2166ac"/><text x="276" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.08</text>
-        <rect x="308" y="76" width="40" height="26" rx="3" fill="#2166ac"/><text x="328" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.02</text>
-        <rect x="360" y="76" width="40" height="26" rx="3" fill="#4393c3"/><text x="380" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.98</text>
-        <rect x="412" y="76" width="40" height="26" rx="3" fill="#2166ac"/><text x="432" y="93" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.04</text>
-
-        <!-- HI row y=104 -->
         <text x="42" y="121" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">HI</text>
-        <rect x="48"  y="106" width="40" height="26" rx="3" fill="#4393c3"/><text x="68"  y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.59</text>
-        <rect x="100" y="106" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.76</text>
-        <rect x="152" y="106" width="40" height="26" rx="3" fill="#4393c3"/><text x="172" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.60</text>
-        <rect x="204" y="106" width="40" height="26" rx="3" fill="#4393c3"/><text x="224" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.86</text>
-        <rect x="256" y="106" width="40" height="26" rx="3" fill="#d6604d"/><text x="276" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.34</text>
-        <rect x="308" y="106" width="40" height="26" rx="3" fill="#d6604d"/><text x="328" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.10</text>
-        <rect x="360" y="106" width="40" height="26" rx="3" fill="#4393c3"/><text x="380" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.68</text>
-        <rect x="412" y="106" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="123" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.90</text>
-
-        <!-- MR row y=134 -->
         <text x="42" y="151" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">MR</text>
-        <rect x="48"  y="136" width="40" height="26" rx="3" fill="#4393c3"/><text x="68"  y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.53</text>
-        <rect x="100" y="136" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.62</text>
-        <rect x="152" y="136" width="40" height="26" rx="3" fill="#4393c3"/><text x="172" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.78</text>
-        <rect x="204" y="136" width="40" height="26" rx="3" fill="#2166ac"/><text x="224" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.02</text>
-        <rect x="256" y="136" width="40" height="26" rx="3" fill="#d6604d"/><text x="276" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.36</text>
-        <rect x="308" y="136" width="40" height="26" rx="3" fill="#4393c3"/><text x="328" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.58</text>
-        <rect x="360" y="136" width="40" height="26" rx="3" fill="#4393c3"/><text x="380" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.72</text>
-        <rect x="412" y="136" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="153" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.96</text>
-
-        <!-- TE row y=164 dravidian -->
         <text x="42" y="181" text-anchor="end" font-size="9" fill="#d46030" font-weight="700">TE</text>
-        <rect x="48"  y="166" width="40" height="26" rx="3" fill="#d6604d"/><text x="68"  y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.16</text>
-        <rect x="100" y="166" width="40" height="26" rx="3" fill="#d6604d"/><text x="120" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.06</text>
-        <rect x="152" y="166" width="40" height="26" rx="3" fill="#b2182b"/><text x="172" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.72</text>
-        <rect x="204" y="166" width="40" height="26" rx="3" fill="#4393c3"/><text x="224" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.98</text>
-        <rect x="256" y="166" width="40" height="26" rx="3" fill="#4393c3"/><text x="276" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.54</text>
-        <rect x="308" y="166" width="40" height="26" rx="3" fill="#d6604d"/><text x="328" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.30</text>
-        <rect x="360" y="166" width="40" height="26" rx="3" fill="#b2182b"/><text x="380" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.65</text>
-        <rect x="412" y="166" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="183" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.92</text>
-
-        <!-- TA row y=194 dravidian -->
         <text x="42" y="211" text-anchor="end" font-size="9" fill="#d46030" font-weight="700">TA</text>
-        <rect x="48"  y="196" width="40" height="26" rx="3" fill="#d6604d"/><text x="68"  y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.30</text>
-        <rect x="100" y="196" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.55</text>
-        <rect x="152" y="196" width="40" height="26" rx="3" fill="#b2182b"/><text x="172" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.88</text>
-        <rect x="204" y="196" width="40" height="26" rx="3" fill="#4393c3"/><text x="224" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.84</text>
-        <rect x="256" y="196" width="40" height="26" rx="3" fill="#d6604d"/><text x="276" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.18</text>
-        <rect x="308" y="196" width="40" height="26" rx="3" fill="#d6604d"/><text x="328" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.26</text>
-        <rect x="360" y="196" width="40" height="26" rx="3" fill="#b2182b"/><text x="380" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.86</text>
-        <rect x="412" y="196" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="213" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.90</text>
-
-        <!-- KN row y=224 dravidian -->
         <text x="42" y="241" text-anchor="end" font-size="9" fill="#d46030" font-weight="700">KN</text>
-        <rect x="48"  y="226" width="40" height="26" rx="3" fill="#d6604d"/><text x="68"  y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.24</text>
-        <rect x="100" y="226" width="40" height="26" rx="3" fill="#d6604d"/><text x="120" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.36</text>
-        <rect x="152" y="226" width="40" height="26" rx="3" fill="#b2182b"/><text x="172" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.88</text>
-        <rect x="204" y="226" width="40" height="26" rx="3" fill="#2166ac"/><text x="224" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.08</text>
-        <rect x="256" y="226" width="40" height="26" rx="3" fill="#4393c3"/><text x="276" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.84</text>
-        <rect x="308" y="226" width="40" height="26" rx="3" fill="#d6604d"/><text x="328" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.18</text>
-        <rect x="360" y="226" width="40" height="26" rx="3" fill="#b2182b"/><text x="380" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.86</text>
-        <rect x="412" y="226" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="243" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.88</text>
-
-        <!-- GU row y=254 -->
         <text x="42" y="271" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">GU</text>
-        <rect x="48"  y="256" width="40" height="26" rx="3" fill="#4393c3"/><text x="68"  y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.46</text>
-        <rect x="100" y="256" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.54</text>
-        <rect x="152" y="256" width="40" height="26" rx="3" fill="#d6604d"/><text x="172" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.18</text>
-        <rect x="204" y="256" width="40" height="26" rx="3" fill="#4393c3"/><text x="224" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.92</text>
-        <rect x="256" y="256" width="40" height="26" rx="3" fill="#d6604d"/><text x="276" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.32</text>
-        <rect x="308" y="256" width="40" height="26" rx="3" fill="#b2182b"/><text x="328" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.88</text>
-        <rect x="360" y="256" width="40" height="26" rx="3" fill="#d6604d"/><text x="380" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.26</text>
-        <rect x="412" y="256" width="40" height="26" rx="3" fill="#2166ac"/><text x="432" y="273" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">3.00</text>
-
-        <!-- DO row y=284 -->
         <text x="42" y="301" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">DO</text>
-        <rect x="48"  y="286" width="40" height="26" rx="3" fill="#4393c3"/><text x="68"  y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.76</text>
-        <rect x="100" y="286" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.52</text>
-        <rect x="152" y="286" width="40" height="26" rx="3" fill="#4393c3"/><text x="172" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.63</text>
-        <rect x="204" y="286" width="40" height="26" rx="3" fill="#4393c3"/><text x="224" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.84</text>
-        <rect x="256" y="286" width="40" height="26" rx="3" fill="#d6604d"/><text x="276" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.28</text>
-        <rect x="308" y="286" width="40" height="26" rx="3" fill="#d6604d"/><text x="328" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.34</text>
-        <rect x="360" y="286" width="40" height="26" rx="3" fill="#4393c3"/><text x="380" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.59</text>
-        <rect x="412" y="286" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="303" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.74</text>
-
-        <!-- AS row y=314 -->
         <text x="42" y="331" text-anchor="end" font-size="9" fill="#4a7fd4" font-weight="600">AS</text>
-        <rect x="48"  y="316" width="40" height="26" rx="3" fill="#4393c3"/><text x="68"  y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.64</text>
-        <rect x="100" y="316" width="40" height="26" rx="3" fill="#4393c3"/><text x="120" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.74</text>
-        <rect x="152" y="316" width="40" height="26" rx="3" fill="#b2182b"/><text x="172" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.46</text>
-        <rect x="204" y="316" width="40" height="26" rx="3" fill="#4393c3"/><text x="224" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.96</text>
-        <rect x="256" y="316" width="40" height="26" rx="3" fill="#4393c3"/><text x="276" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.48</text>
-        <rect x="308" y="316" width="40" height="26" rx="3" fill="#4393c3"/><text x="328" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.44</text>
-        <rect x="360" y="316" width="40" height="26" rx="3" fill="#b2182b"/><text x="380" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">1.42</text>
-        <rect x="412" y="316" width="40" height="26" rx="3" fill="#4393c3"/><text x="432" y="333" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">2.90</text>
+
+        <!-- Dynamic Heatmap Container -->
+        <g id="heatmap-container"></g>
 
         <!-- colour legend -->
-        <rect x="48"  y="350" width="14" height="10" rx="2" fill="#b2182b"/>
-        <text x="65"  y="359" font-size="8" fill="#555">&lt;2.0</text>
-        <rect x="100" y="350" width="14" height="10" rx="2" fill="#d6604d"/>
-        <text x="117" y="359" font-size="8" fill="#555">2.0–2.5</text>
-        <rect x="165" y="350" width="14" height="10" rx="2" fill="#4393c3"/>
-        <text x="182" y="359" font-size="8" fill="#555">2.5–3.0</text>
-        <rect x="230" y="350" width="14" height="10" rx="2" fill="#2166ac"/>
-        <text x="247" y="359" font-size="8" fill="#555">≥3.0</text>
-        <text x="290" y="359" font-size="8" fill="#d46030" font-weight="600">Bold = Dravidian</text>
+        <rect x="48" y="340" width="14" height="10" rx="2" fill="#e05050"/>
+        <text x="65" y="349" font-size="8" fill="#555">&lt;2.0</text>
+        <rect x="100" y="340" width="14" height="10" rx="2" fill="#f08040"/>
+        <text x="117" y="349" font-size="8" fill="#555">2.0–2.5</text>
+        <rect x="165" y="340" width="14" height="10" rx="2" fill="#f0c040"/>
+        <text x="182" y="349" font-size="8" fill="#555">2.5–3.0</text>
+        <rect x="230" y="340" width="14" height="10" rx="2" fill="#80c060"/>
+        <text x="247" y="349" font-size="8" fill="#555">≥3.0</text>
+        <text x="290" y="349" font-size="8" fill="#d46030" font-weight="600">Bold = Dravidian</text>
       </svg>
     </div>
 
     <!-- RIGHT: Language family grouped bars -->
     <div class="panel">
       <div class="panel-title">Entity F1 Averaged by Language Family</div>
-      <svg width="470" height="370" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
+      <svg viewBox="0 0 470 370" xmlns="http://www.w3.org/2000/svg" style="font-family:'IBM Plex Sans',sans-serif;">
 
         <!-- axes -->
-        <!-- y gridlines -->
-        <line x1="55" y1="20"  x2="55"  y2="300" stroke="#ccc" stroke-width="1"/>
+        <line x1="55" y1="20" x2="55" y2="300" stroke="#ccc" stroke-width="1"/>
         <line x1="55" y1="300" x2="450" y2="300" stroke="#ccc" stroke-width="1"/>
 
         <!-- y grid -->
         <line x1="55" y1="233" x2="450" y2="233" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
         <line x1="55" y1="167" x2="450" y2="167" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
         <line x1="55" y1="100" x2="450" y2="100" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
-        <line x1="55" y1="33"  x2="450" y2="33"  stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
-        <text x="50" y="303"  text-anchor="end" font-size="8" fill="#aaa">0.0</text>
-        <text x="50" y="236"  text-anchor="end" font-size="8" fill="#aaa">0.2</text>
-        <text x="50" y="170"  text-anchor="end" font-size="8" fill="#aaa">0.4</text>
-        <text x="50" y="103"  text-anchor="end" font-size="8" fill="#aaa">0.6</text>
-        <text x="50" y="36"   text-anchor="end" font-size="8" fill="#aaa">0.8</text>
+        <line x1="55" y1="33" x2="450" y2="33" stroke="#eee" stroke-dasharray="3,3" stroke-width="0.8"/>
+        
+        <text x="50" y="303" text-anchor="end" font-size="8" fill="#aaa">0.0</text>
+        <text x="50" y="236" text-anchor="end" font-size="8" fill="#aaa">0.2</text>
+        <text x="50" y="170" text-anchor="end" font-size="8" fill="#aaa">0.4</text>
+        <text x="50" y="103" text-anchor="end" font-size="8" fill="#aaa">0.6</text>
+        <text x="50" y="36" text-anchor="end" font-size="8" fill="#aaa">0.8</text>
 
-        <!-- ZS group (x=100) -->
-        <rect x="67"  y="148" width="10" height="152" rx="2" fill="#d46030"/>
-        <rect x="79"  y="130" width="10" height="170" rx="2" fill="#4a7fd4" opacity="0.6"/>
-        <rect x="91"  y="104" width="10" height="196" rx="2" fill="#4a7fd4"/>
-        <rect x="105" y="174" width="10" height="126" rx="2" fill="#d46030" opacity="0.5"/>
-        <rect x="117" y="127" width="10" height="173" rx="2" fill="#4a7fd4" opacity="0.35"/>
-        <text x="96" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">ZS</text>
+        <!-- Dynamic Bar Chart Container -->
+        <g id="bars-container"></g>
 
-        <!-- FS group (x=195) -->
-        <rect x="163" y="162" width="10" height="138" rx="2" fill="#d46030"/>
-        <rect x="175" y="130" width="10" height="170" rx="2" fill="#4a7fd4" opacity="0.6"/>
-        <rect x="187" y="110" width="10" height="190" rx="2" fill="#4a7fd4"/>
-        <rect x="200" y="172" width="10" height="128" rx="2" fill="#d46030" opacity="0.5"/>
-        <rect x="212" y="160" width="10" height="140" rx="2" fill="#4a7fd4" opacity="0.35"/>
-        <text x="190" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">FS</text>
-
-        <!-- Tr group (x=285) -->
-        <!-- Fixed: Dravidian Trans bars returned to correct orange color mapping -->
-        <rect x="258" y="187" width="10" height="113" rx="2" fill="#d46030"/>
-        <rect x="270" y="135" width="10" height="165" rx="2" fill="#4a7fd4" opacity="0.6"/>
-        <rect x="282" y="124" width="10" height="176" rx="2" fill="#4a7fd4"/>
-        <rect x="295" y="192" width="10" height="108" rx="2" fill="#d46030" opacity="0.5"/>
-        <rect x="307" y="132" width="10" height="168" rx="2" fill="#4a7fd4" opacity="0.35"/>
-        <text x="284" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">Trans</text>
-
-        <!-- SFT group (x=380) -->
-        <!-- Fixed: SFT bars returned to their respective language family colors for visual tracking -->
-        <rect x="353" y="40" width="10" height="260" rx="2" fill="#d46030"/>
-        <rect x="365" y="39" width="10" height="261" rx="2" fill="#4a7fd4" opacity="0.6"/>
-        <rect x="377" y="48" width="10" height="252" rx="2" fill="#4a7fd4"/>
-        <rect x="390" y="43" width="10" height="257" rx="2" fill="#d46030" opacity="0.5"/>
-        <rect x="402" y="51" width="10" height="249" rx="2" fill="#4a7fd4" opacity="0.35"/>
-        <text x="379" y="315" text-anchor="middle" font-size="9" fill="#1a2744" font-weight="600">SFT</text>
+        <!-- X-Axis Labels -->
+        <text x="100" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">ZS</text>
+        <text x="195" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">FS</text>
+        <text x="290" y="315" text-anchor="middle" font-size="9" fill="#888" font-weight="600">Trans</text>
+        <text x="385" y="315" text-anchor="middle" font-size="9" fill="#1a2744" font-weight="600">SFT</text>
 
         <!-- y axis label -->
         <text x="20" y="165" text-anchor="middle" font-size="9" fill="#888" transform="rotate(-90,20,165)">Entity F1</text>
 
         <!-- legend -->
-        <rect x="58"  y="328" width="10" height="10" rx="2" fill="#d46030"/>
-        <text x="71"  y="337" font-size="8.5" fill="#444">Dravidian</text>
-        <rect x="128" y="328" width="10" height="10" rx="2" fill="#4a7fd4" opacity="0.6"/>
+        <rect x="58" y="328" width="10" height="10" rx="2" fill="#d46030"/>
+        <text x="71" y="337" font-size="8.5" fill="#444">Dravidian</text>
+        <rect x="128" y="328" width="10" height="10" rx="2" fill="#5ba4cf"/>
         <text x="141" y="337" font-size="8.5" fill="#444">IA Low-res</text>
-        <rect x="205" y="328" width="10" height="10" rx="2" fill="#4a7fd4"/>
+        <rect x="205" y="328" width="10" height="10" rx="2" fill="#1b4e96"/>
         <text x="218" y="337" font-size="8.5" fill="#444">IA High-res</text>
-        <!-- Removed SFT (all) purple legend item to match the new colored bars -->
         
         <text x="58" y="352" font-size="8" fill="#888" font-style="italic">Solid = Qwen · Faded = Mistral</text>
 
-        <!-- parity annotation for SFT -->
-        <!-- Fixed: Annotation color changed from purple to dark text -->
-        <text x="379" y="28" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Parity!</text>
-        <line x1="353" y1="43" x2="412" y2="53" stroke="#1a2744" stroke-dasharray="2,2" stroke-width="0.8"/>
+        <!-- Parity annotation -->
+        <text x="385" y="28" text-anchor="middle" font-size="8" fill="#1a2744" font-weight="600">Parity!</text>
+        <line x1="357" y1="43" x2="415" y2="43" stroke="#1a2744" stroke-dasharray="2,2" stroke-width="0.8"/>
       </svg>
     </div>
   </div>
@@ -293,8 +189,7 @@ test_action_mismatch_rate: 0.18
   <div class="fig-footer">
     <div class="fig-caption">
       <strong>Figure 4.</strong>
-      <!-- Fixed: Caption text updated to reflect new colour-blind safe palette and added acronyms -->
-      <em>Left</em>: Safety scores for all 10 languages across all 8 conditions, colour-coded deep red (dangerous &lt;2.0), muted red (2.0–2.5), muted blue (2.5–3.0), to deep blue (&ge;3.0). 
+      <em>Left</em>: Safety scores for all 10 languages across all 8 conditions, colour-coded red (&lt;2.0), orange (2.0–2.5), yellow (2.5–3.0), to green (&ge;3.0). 
       (Language codes: BN=Bengali, EN=English, HI=Hindi, MR=Marathi, TE=Telugu, TA=Tamil, KN=Kannada, GU=Gujarati, DO=Dogri, AS=Assamese). 
       No condition achieves a macro-average safety above 3.0. Translation produces the most red cells, especially for Dravidian languages and Assamese (AS).
       <em>Right</em>: Entity F1 averaged by language family. Dravidian (orange) lags Indo-Aryan by 0.13–0.14 F1 at zero-shot but converges to near-parity at SFT (all bars reach 0.75+).
@@ -302,6 +197,107 @@ test_action_mismatch_rate: 0.18
     </div>
   </div>
 </div>
+
+<script>
+    // =========================================================================
+    // DATA CENTER - EDIT THESE NUMBERS TO UPDATE THE GRAPH AUTOMATICALLY!
+    // =========================================================================
+
+    // F1 Data extracted from your Table 4 and Table 5 screenshots.
+    // Note: FS values are estimated from your previous HTML since the FS table wasn't in the images.
+    const f1Data = {
+        ZS: {
+            Qwen: { Drav: 0.457, IAL: 0.506, IAH: 0.548 },
+            Mistral: { Drav: 0.378, IAL: 0.405, IAH: 0.440 }
+        },
+        FS: {
+            Qwen: { Drav: 0.414, IAL: 0.510, IAH: 0.570 }, // Update these when you get real FS averages
+            Mistral: { Drav: 0.384, IAL: 0.380, IAH: 0.420 } // Update these when you get real FS averages
+        },
+        Trans: {
+            Qwen: { Drav: 0.340, IAL: 0.448, IAH: 0.525 },
+            Mistral: { Drav: 0.323, IAL: 0.460, IAH: 0.475 }
+        },
+        SFT: {
+            Qwen: { Drav: 0.781, IAL: 0.787, IAH: 0.755 },
+            Mistral: { Drav: 0.772, IAL: 0.760, IAH: 0.746 }
+        }
+    };
+
+    // Safety Data for the Heatmap. Update these arrays when you have new numbers!
+    // Format: [Q-ZS, Q-FS, Q-Tr, Q-SFT, M-ZS, M-FS, M-Tr, M-SFT]
+    const safetyData = {
+        BN: [2.88, 2.74, 1.90, 3.06, 2.54, 2.44, 1.94, 2.92],
+        EN: [3.04, 2.86, 3.14, 3.06, 3.08, 3.02, 2.98, 3.04],
+        HI: [2.59, 2.76, 2.60, 2.86, 2.34, 2.10, 2.68, 2.90],
+        MR: [2.53, 2.62, 2.78, 3.02, 2.36, 2.58, 2.72, 2.96],
+        TE: [2.16, 2.06, 1.72, 2.98, 2.54, 2.30, 1.65, 2.92],
+        TA: [2.30, 2.55, 1.88, 2.84, 2.18, 2.26, 1.86, 2.90],
+        KN: [2.24, 2.36, 1.88, 3.08, 2.84, 2.18, 1.86, 2.88],
+        GU: [2.46, 2.54, 2.18, 2.92, 2.32, 1.88, 2.26, 3.00],
+        DO: [2.76, 2.52, 2.63, 2.84, 2.28, 2.34, 2.59, 2.74],
+        AS: [2.64, 2.74, 1.46, 2.96, 2.48, 2.44, 1.42, 2.90]
+    };
+
+    // =========================================================================
+    // DYNAMIC RENDERING LOGIC (Do not edit below unless modifying layout)
+    // =========================================================================
+
+    // 1. Render Bar Chart
+    const barSvg = document.getElementById('bars-container');
+    const groups = ['ZS', 'FS', 'Trans', 'SFT'];
+    const xCenters = [100, 195, 290, 385];
+    const colors = { Drav: '#d46030', IAL: '#5ba4cf', IAH: '#1b4e96' };
+    const barW = 7;
+    const gap = 2; // gap between bars
+
+    groups.forEach((group, i) => {
+        let startX = xCenters[i] - ((barW * 6 + gap * 5) / 2);
+
+        // Draw Qwen (Solid)
+        ['Drav', 'IAL', 'IAH'].forEach(lang => {
+            let f1 = f1Data[group].Qwen[lang];
+            let height = f1 * (270 / 0.9); // Scale: 0.9 F1 = 270px
+            let y = 303 - height;
+            
+            barSvg.innerHTML += `<rect x="${startX}" y="${y}" width="${barW}" height="${height}" rx="1.5" fill="${colors[lang]}"/>`;
+            startX += barW + gap;
+        });
+
+        // Draw Mistral (Faded 40% opacity)
+        ['Drav', 'IAL', 'IAH'].forEach(lang => {
+            let f1 = f1Data[group].Mistral[lang];
+            let height = f1 * (270 / 0.9);
+            let y = 303 - height;
+            
+            barSvg.innerHTML += `<rect x="${startX}" y="${y}" width="${barW}" height="${height}" rx="1.5" fill="${colors[lang]}" opacity="0.4"/>`;
+            startX += barW + gap;
+        });
+    });
+
+    // 2. Render Safety Heatmap
+    const hmSvg = document.getElementById('heatmap-container');
+    const yStart = 46;
+    const rowH = 30; // 26 height + 4 spacing
+    const xPositions = [48, 100, 152, 204, 256, 308, 360, 412];
+    const langs = ['BN', 'EN', 'HI', 'MR', 'TE', 'TA', 'KN', 'GU', 'DO', 'AS'];
+
+    function getColor(val) {
+        if (val < 2.0) return "#e05050"; // Red
+        if (val < 2.5) return "#f08040"; // Orange
+        if (val < 3.0) return "#f0c040"; // Yellow
+        return "#80c060";                // Green
+    }
+
+    langs.forEach((lang, rIndex) => {
+        let y = yStart + (rIndex * rowH);
+        safetyData[lang].forEach((val, cIndex) => {
+            let x = xPositions[cIndex];
+            hmSvg.innerHTML += `<rect x="${x}" y="${y}" width="40" height="26" rx="3" fill="${getColor(val)}"/>`;
+            hmSvg.innerHTML += `<text x="${x+20}" y="${y+17}" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">${val.toFixed(2)}</text>`;
+        });
+    });
+</script>
 </body>
 </html>
 
