@@ -38,7 +38,6 @@ class SDPlot:
         for idx, geo in enumerate(self.geographies_list):
             self.geo_id_dict[geo] = idx + 1
 
-    # Demand side
     def get_demand_data(self):
         affected_geo_id_list = []
         for geo in self.affected_geo_info["affected_geographies"]:
@@ -54,8 +53,7 @@ class SDPlot:
         demand_geo_merged_df = demand_geo_merged_df[demand_geo_merged_df["geo_id"].isin(affected_geo_id_list)]
         demand_geo_merged_df["date"] = pd.to_datetime(demand_geo_merged_df["date"])
         
-        # FIXED: Changed "quantity" to "demand_quantity"
-        demand_grouped = demand_geo_merged_df.groupby(["geo_id", demand_geo_merged_df["date"].dt.date])["demand_quantity"].sum()
+        demand_grouped = demand_geo_merged_df.groupby(["geo_id", demand_geo_merged_df["date"].dt.date])["quantity"].sum()
         demand_data = {}
         for (geo_id, date), qty in demand_grouped.items():
             demand_data.setdefault(geo_name_dict[geo_id], {})[date] = qty
@@ -71,7 +69,6 @@ class SDPlot:
             number_of_days_delayed = random.randint(9, 15)
         return sta + pd.Timedelta(days=number_of_days_delayed)
     
-    # return curr eta from the carrier msg
     def sta_in_impact_window(self, row, geo_lookup):
         geo_meta = geo_lookup.get(row["geo_id"])
         if geo_meta is None:
@@ -80,7 +77,6 @@ class SDPlot:
             return self.get_delay_from_carrier(row["supplier_id"], row["STA"])
         return row["STA"]
     
-    # Supply side
     def get_supply_without_disruption(self):
         affected_geo_id_list = []
         for geo in self.affected_geo_info["affected_geographies"]:
@@ -108,8 +104,7 @@ class SDPlot:
         shipments_geo_merged_df = shipments_geo_merged_df[shipments_geo_merged_df["geo_id"].isin(affected_geo_id_list)]
         shipments_geo_merged_df["STA"] = pd.to_datetime(shipments_geo_merged_df["STA"])
 
-        # FIXED: Changed "quantity" to "shipment_quantity"
-        shipments_grouped = shipments_geo_merged_df.groupby(["geo_id", shipments_geo_merged_df["STA"].dt.date])["shipment_quantity"].sum()
+        shipments_grouped = shipments_geo_merged_df.groupby(["geo_id", shipments_geo_merged_df["STA"].dt.date])["quantity"].sum()
 
         supply_without_disruption = {}
         for (geo_id, date), qty in shipments_grouped.items():
@@ -156,8 +151,7 @@ class SDPlot:
             geo_name = geo_lookup[geo_id]["geo_name"]
             date_qty = (
                 group_df
-                # FIXED: Changed "quantity" to "shipment_quantity"
-                .groupby(group_df["CURR_ETA"].dt.date)["shipment_quantity"]
+                .groupby(group_df["CURR_ETA"].dt.date)["quantity"]
                 .sum()
                 .to_dict()
             )
@@ -165,7 +159,6 @@ class SDPlot:
         
         return supply_with_disruption
     
-    # Plot code
     def dict_to_series(self, d):
         if not d:
             return [], []
@@ -194,7 +187,6 @@ class SDPlot:
             vertical_spacing=0.15
         )
 
-        # Add traces for ALL geographies
         for i, geo in enumerate(geographies):
             visible = (i == 0)
 
@@ -207,7 +199,6 @@ class SDPlot:
             tick_vals1, tick_text1 = self.get_tick_vals(all_dates_row1)
             tick_vals2, tick_text2 = self.get_tick_vals(all_dates_row2)
 
-            # Row 1 — Without Disruption
             fig.add_trace(go.Scatter(
                 x=s1_dates, y=s1_qty,
                 name="Original Supply",
@@ -230,7 +221,6 @@ class SDPlot:
                 hovertemplate="<b>Demand</b><br>%{x}<br>Qty: %{y:,}<extra></extra>"
             ), row=1, col=1)
 
-            # Row 2 — With Disruption
             fig.add_trace(go.Scatter(
                 x=s2_dates, y=s2_qty,
                 name="Disrupted Supply",
@@ -259,49 +249,41 @@ class SDPlot:
                 fig.update_xaxes(tickvals=tick_vals1, ticktext=tick_text1, tickangle=-45, row=1, col=1)
                 fig.update_xaxes(tickvals=tick_vals2, ticktext=tick_text2, tickangle=-45, row=2, col=1)
 
-        # --- ON-GRAPH EXPLAINABILITY MODULE ---
-        
         geo_impact = self.affected_geo_info["affected_geographies"][0]
         start_date = geo_impact["impact_start_date"]
         end_date = geo_impact["expected_impact_end_date"]
         
-        # Shade the Threat Window
         fig.add_vrect(
             x0=start_date, x1=end_date,
             fillcolor="red", opacity=0.1,
             layer="below", line_width=1, line_dash="dash", line_color="red",
             row=2, col=1,
-            annotation_text="<b>RANGA API Alert:</b> Maritime Risk",
+            annotation_text="RANGA API Alert: Maritime Risk",
             annotation_position="top left",
             annotation_font_color="red"
         )
 
-        # Callout 1: The Drop
         fig.add_annotation(
             x=start_date, y=0.3,
             xref="x", yref="y2 domain", 
-            text="<b>1. The Shock:</b><br>Shipments scheduled here<br>are delayed 7-15 days.",
+            text="1. The Shock:<br>Shipments scheduled here<br>are delayed 7-15 days.",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#DC2626",
             ax=-80, ay=-40,
             font=dict(color="#F1F5F9", size=11),
             bgcolor="#1E293B", bordercolor="#DC2626"
         )
 
-        # Callout 2: The Spike (Bullwhip)
         recovery_date = (pd.to_datetime(end_date) + pd.Timedelta(days=12)).strftime('%Y-%m-%d')
         fig.add_annotation(
             x=recovery_date, y=0.6,
             xref="x", yref="y2 domain",
-            text="<b>2. The Bullwhip:</b><br>Delayed vessels arrive simultaneously,<br>causing an artificial supply spike.",
+            text="2. The Bullwhip:<br>Delayed vessels arrive simultaneously,<br>causing an artificial supply spike.",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#059669",
             ax=80, ay=-50,
             font=dict(color="#F1F5F9", size=11),
             bgcolor="#1E293B", bordercolor="#059669"
         )
 
-        # --- END EXPLAINABILITY MODULE ---
-
-        # Dropdown buttons 
         buttons = []
         for i, geo in enumerate(geographies):
             visibility = [False] * (len(geographies) * 4)
@@ -377,10 +359,9 @@ class SDPlot:
         fig.show()
 
 if __name__=="__main__":
-    # Pointing to the data_eval folder based on your screenshot
-    loc_df  = pd.read_csv('data_eval/Locations.csv')
-    demand_df = pd.read_csv('data_eval/Demand.csv')
-    shipments_df = pd.read_csv('data_eval/Shipments.csv')
+    loc_df  = pd.read_csv('data/Locations.csv')
+    demand_df = pd.read_csv('data/Demand.csv')
+    shipments_df = pd.read_csv('data/Shipments.csv')
     
     geographies_list = ['North America', 'Middle East', 'Asia', 'Europe']
     
@@ -389,12 +370,12 @@ if __name__=="__main__":
             {
                 'geography': 'Middle East', 
                 'impact_level': 'HIGH', 
-                'reason': 'The Strait of Hormuz/Gulf region is the direct location of elevated maritime security risk.', 
+                'reason': 'The Strait of Hormuz/Gulf region is the direct location of elevated maritime security risk; navigation warnings and vulnerability concerns can immediately affect regional shipping operations and oil export flows even without a confirmed closure.', 
                 'impact_start_date': '2026-02-28',
                 'expected_impact_end_date': '2026-03-15'
             }
         ], 
-        'summary': 'Tensions around the Strait of Hormuz are elevating maritime risk in the Gulf.'
+        'summary': 'Tensions around the Strait of Hormuz are elevating maritime risk in the Gulf; while the strait remains open, the Middle East faces the most immediate exposure due to its direct role as the affected chokepoint region.'
     }
     
     sd_plot = SDPlot(
