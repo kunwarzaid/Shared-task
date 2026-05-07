@@ -23,67 +23,374 @@ premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
 import pandas as pd
-import numpy as np
+import plotly
+import json
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import random
+from explainer import add_explanations
+# from explainer import DisruptionExplainer
 
-def add_explanations(fig, ranga_data, shipments_df):
-    try:
-        geo_info = ranga_data['affected_geographies'][0]
-        start_date = pd.to_datetime(geo_info['impact_start_date'])
-        end_date = pd.to_datetime(geo_info['expected_impact_end_date'])
-        severity = geo_info.get('impact_level', 'HIGH')
-    except:
-        return fig
+class SDPlot:
+    def __init__(self,geographies_list,affected_geo_info,location_df,demand_df,shipments_df):
+        self.geographies_list = geographies_list
+        self.affected_geo_info = affected_geo_info
+        self.location_df = location_df
+        self.demand_df = demand_df
+        self.shipments_df = shipments_df
+        self.geo_id_dict = {}
+        for idx,geo in enumerate(self.geographies_list):
+            self.geo_id_dict[geo]=idx+1
 
-    # --- THE FIX: DYNAMIC DELAY DETECTION ---
-    # We look at shipments in the window and find the actual gap between 
-    # original STA and the final arrival CURR_ETA.
-    if 'CURR_ETA' in shipments_df.columns and 'STA' in shipments_df.columns:
-        shipments_df['actual_delay'] = (pd.to_datetime(shipments_df['CURR_ETA']) - 
-                                        pd.to_datetime(shipments_df['STA'])).dt.days
-        
-        # Only look at shipments that were actually delayed (> 0 days)
-        impacted = shipments_df[shipments_df['actual_delay'] > 0]['actual_delay']
-        
-        if not impacted.empty:
-            low = int(impacted.min())
-            high = int(impacted.max())
+    # Demand side
+    def get_demand_data(self):
+        affected_geo_id_list = []
+        for geo in self.affected_geo_info["affected_geographies"]:
+            affected_geo_id_list.append(self.geo_id_dict[geo["geography"]])
+        demand_geo_merged_df = self.demand_df.merge(
+            self.location_df[["loc_id","geo_id"]],
+            on = "loc_id",
+            how="left"
+        )
+        geo_name_dict = {id:name for name,id in self.geo_id_dict.items()}
+        demand_geo_merged_df = demand_geo_merged_df[demand_geo_merged_df["geo_id"].isin(affected_geo_id_list)]
+        demand_geo_merged_df["date"] = pd.to_datetime(demand_geo_merged_df["date"])
+        demand_grouped = demand_geo_merged_df.groupby(["geo_id",demand_geo_merged_df["date"].dt.date])["demand_quantity"].sum()
+        demand_data = {}
+        for (geo_id,date), qty in demand_grouped.items():
+            demand_data.setdefault(geo_name_dict[geo_id],{})[date]=qty
+
+        return demand_data
+    
+    def get_delay_from_carrier(self,supplier_id,sta):
+        if supplier_id in [1,60]:
+            number_of_days_delayed = random.randint(7,10)
+        elif supplier_id in [60,100]:
+            number_of_days_delayed =  random.randint(8,12)
         else:
-            low, high = 7, 15 # Emergency fallback
-    else:
-        low, high = 7, 15
+            number_of_days_delayed =  random.randint(9,15)
+        return sta+pd.Timedelta(days=number_of_days_delayed)
+    
+    # return curr eta from the carrier msg
+    def sta_in_impact_window(self,row,geo_lookup):
+        geo_meta = geo_lookup.get(row["geo_id"])
+        if geo_meta is None:
+            return row["STA"]
+        if geo_meta["start"] <= row["STA"] <= geo_meta["end"]:
+            return self.get_delay_from_carrier(row["supplier_id"],row["STA"])
+        return row["STA"]
+    
+    # Supply side
+    def get_supply_without_disruption(self):
 
-    # --- DYNAMIC SPIKE DETECTION ---
-    spike_date = end_date.strftime('%Y-%m-%d')
-    for trace in fig.data:
-        if trace.name == "Disrupted Supply" and trace.visible is True:
-            df_trace = pd.DataFrame({'date': pd.to_datetime(trace.x), 'qty': trace.y})
-            post_window = df_trace[df_trace['date'] > end_date]
-            if not post_window.empty:
-                spike_date = post_window.loc[post_window['qty'].idxmax()]['date'].strftime('%Y-%m-%d')
-            break
+        affected_geo_id_list = []
+        for geo in self.affected_geo_info["affected_geographies"]:
+            affected_geo_id_list.append(self.geo_id_dict[geo["geography"]])
 
-    # --- ANNOTATIONS ---
-    # Red Box
-    fig.add_vrect(
-        x0=start_date, x1=end_date, fillcolor="red", opacity=0.1,
-        layer="below", line_dash="dash", line_color="red", row=2, col=1,
-        annotation_text=f"RANGA API Alert", annotation_position="top left"
-    )
+        geo_lookup = {}
+        for geo in self.affected_geo_info["affected_geographies"]:
+            geo_name       = geo["geography"]
+            geo_id         = self.geo_id_dict[geo_name]          
+            start          = pd.to_datetime(geo["impact_start_date"])
+            end            = pd.to_datetime(geo["expected_impact_end_date"])
+            geo_lookup[geo_id] = {
+                "geo_name": geo_name,
+                "start":    start,
+                "end":      end
+            }
 
-    # Shortfall Label (Now uses the {low} and {high} variables we found)
-    fig.add_annotation(
-        x=start_date.strftime('%Y-%m-%d'), y=0.3, xref="x", yref="y2 domain",
-        text=f"<b>Shortfall Onset:</b><br>{low}-{high} day delays applied<br>to orders in this window.",
-        showarrow=True, arrowhead=2, arrowcolor="#DC2626", ax=-70, ay=-40,
-        font=dict(color="#F1F5F9", size=11), bgcolor="#1E293B", bordercolor="#DC2626"
-    )
+        shipments_geo_merged_df = self.shipments_df.merge(
+            self.location_df[["loc_id","geo_id"]],
+            left_on = "dest_loc_id",
+            right_on="loc_id",
+            how="left"
+        )
 
-    # Spike Label
-    fig.add_annotation(
-        x=spike_date, y=0.8, xref="x", yref="y2 domain",
-        text="<b>Inventory Spike:</b><br>Delayed backlog arriving<br>with normal schedule.",
-        showarrow=True, arrowhead=2, arrowcolor="#059669", ax=80, ay=-50,
-        font=dict(color="#F1F5F9", size=11), bgcolor="#1E293B", bordercolor="#059669"
-    )
+        shipments_geo_merged_df = shipments_geo_merged_df[shipments_geo_merged_df["geo_id"].isin(affected_geo_id_list)]
 
-    return fig
+        shipments_geo_merged_df["STA"] = pd.to_datetime(shipments_geo_merged_df["STA"])
+
+        shipments_grouped = shipments_geo_merged_df.groupby(["geo_id",shipments_geo_merged_df["STA"].dt.date])["shipment_quantity"].sum()
+
+        supply_without_disruption = {}
+        for (geo_id,date), qty in shipments_grouped.items():
+            supply_without_disruption.setdefault(geo_lookup[geo_id]["geo_name"],{})[date]=qty
+    
+        return supply_without_disruption
+    
+    def get_supply_with_disruption(self):
+
+        affected_geo_id_list = []
+        for geo in self.affected_geo_info["affected_geographies"]:
+            affected_geo_id_list.append(self.geo_id_dict[geo["geography"]])
+
+        geo_lookup = {}
+        for geo in self.affected_geo_info["affected_geographies"]:
+            geo_name       = geo["geography"]
+            geo_id         = self.geo_id_dict[geo_name]          
+            start          = pd.to_datetime(geo["impact_start_date"])
+            end            = pd.to_datetime(geo["expected_impact_end_date"])
+            geo_lookup[geo_id] = {
+                "geo_name": geo_name,
+                "start":    start,
+                "end":      end
+            }
+
+        shipments_geo_merged_df = self.shipments_df.merge(
+            self.location_df[["loc_id","geo_id"]],
+            left_on = "dest_loc_id",
+            right_on="loc_id",
+            how="left"
+        )
+
+        shipments_geo_merged_df = shipments_geo_merged_df[shipments_geo_merged_df["geo_id"].isin(affected_geo_id_list)]
+
+        shipments_geo_merged_df["STA"] = pd.to_datetime(shipments_geo_merged_df["STA"])
+
+        shipments_geo_merged_df_with_eta = shipments_geo_merged_df.copy()
+        shipments_geo_merged_df_with_eta["CURR_ETA"] = shipments_geo_merged_df_with_eta.apply(
+                                                lambda row: self.sta_in_impact_window(row,geo_lookup),
+                                                axis=1
+                                            )
+        
+        supply_with_disruption = {}
+
+        for geo_id, group_df in shipments_geo_merged_df_with_eta.groupby("geo_id"):
+            geo_name = geo_lookup[geo_id]["geo_name"]
+            date_qty = (
+                group_df
+                .groupby(group_df["CURR_ETA"].dt.date)["shipment_quantity"]
+                .sum()
+                .to_dict()
+            )
+            supply_with_disruption[geo_name] = date_qty
+        
+        return supply_with_disruption
+    
+    #Plot code
+    
+    def dict_to_series(self,d):
+        if not d:
+            return [], []
+        dates = sorted(d.keys())
+        qtys  = [d[dt] for dt in dates]
+        return dates, qtys
+
+    def get_tick_vals(self,all_dates, freq=5):
+        if not all_dates:
+            return [], []
+        sorted_dates = sorted(set(all_dates))
+        tick_vals = sorted_dates[::freq]
+        tick_text = [pd.Timestamp(d).strftime("%b-%d").upper() for d in tick_vals]  
+        return tick_vals, tick_text
+
+
+    def plot_sd_curve(self):
+
+        supply_without_disruption = self.get_supply_without_disruption()
+        supply_with_disruption = self.get_supply_with_disruption()
+        demand_data = self.get_demand_data()
+
+        geographies = list(demand_data.keys())
+
+        fig = make_subplots(
+            rows=2, cols=1,
+            subplot_titles=("Without Disruption", "With Disruption"),
+            vertical_spacing=0.15
+        )
+
+        # Add traces for ALL geographies
+        for i, geo in enumerate(geographies):
+            visible = (i == 0)
+
+            s1_dates, s1_qty = self.dict_to_series(supply_without_disruption.get(geo, {}))
+            s2_dates, s2_qty = self.dict_to_series(supply_with_disruption.get(geo, {}))
+            d_dates,  d_qty  = self.dict_to_series(demand_data.get(geo, {}))
+
+            # Collect all dates for this geo to compute ticks
+            all_dates_row1 = sorted(set(s1_dates) | set(d_dates))
+            all_dates_row2 = sorted(set(s2_dates) | set(d_dates))
+            tick_vals1, tick_text1 = self.get_tick_vals(all_dates_row1)
+            tick_vals2, tick_text2 = self.get_tick_vals(all_dates_row2)
+
+            # Row 1 — Without Disruption
+            fig.add_trace(go.Scatter(
+                x=s1_dates, y=s1_qty,
+                name="Original Supply",
+                line=dict(color="#2563EB", width=2.5),
+                marker=dict(size=5),
+                mode="lines+markers",
+                visible=visible,
+                legendgroup=f"g{i}",
+                hovertemplate="<b>Original Supply</b><br>%{x}<br>Qty: %{y:,}<extra></extra>"
+            ), row=1, col=1)
+
+            fig.add_trace(go.Scatter(
+                x=d_dates, y=d_qty,
+                name="Demand",
+                line=dict(color="#059669", width=2.5, dash="dot"),
+                marker=dict(size=5, symbol="diamond"),
+                mode="lines+markers",
+                visible=visible,
+                legendgroup=f"g{i}",
+                hovertemplate="<b>Demand</b><br>%{x}<br>Qty: %{y:,}<extra></extra>"
+            ), row=1, col=1)
+
+            # Row 2 — With Disruption
+            fig.add_trace(go.Scatter(
+                x=s2_dates, y=s2_qty,
+                name="Disrupted Supply",
+                line=dict(color="#DC2626", width=2.5),
+                marker=dict(size=5),
+                mode="lines+markers",
+                visible=visible,
+                legendgroup=f"g{i}",
+                showlegend=visible,
+                hovertemplate="<b>Disrupted Supply</b><br>%{x}<br>Qty: %{y:,}<extra></extra>"
+            ), row=2, col=1)
+
+            fig.add_trace(go.Scatter(
+                x=d_dates, y=d_qty,
+                name="Demand_data ",
+                line=dict(color="#059669", width=2.5, dash="dot"),
+                marker=dict(size=5, symbol="diamond"),
+                mode="lines+markers",
+                visible=visible,
+                legendgroup=f"g{i}",
+                showlegend=False,
+                hovertemplate="<b>Demand_data</b><br>%{x}<br>Qty: %{y:,}<extra></extra>"
+            ), row=2, col=1)
+
+            # Set tick format
+            if i == 0:
+                fig.update_xaxes(
+                    tickvals=tick_vals1,
+                    ticktext=tick_text1,
+                    tickangle=-45,
+                    row=1, col=1
+                )
+                fig.update_xaxes(
+                    tickvals=tick_vals2,
+                    ticktext=tick_text2,
+                    tickangle=-45,
+                    row=2, col=1
+                )
+
+        # Dropdown buttons 
+        buttons = []
+        for i, geo in enumerate(geographies):
+            visibility = [False] * (len(geographies) * 4)
+            visibility[i*4 : i*4+4] = [True, True, True, True]
+
+            # Recompute ticks for dropdown switch
+            s1_dates, _ = self.dict_to_series(supply_without_disruption.get(geo, {}))
+            s2_dates, _ = self.dict_to_series(supply_with_disruption.get(geo, {}))
+            d_dates,  _ = self.dict_to_series(demand_data.get(geo, {}))
+
+            tick_vals1, tick_text1 = self.get_tick_vals(sorted(set(s1_dates) | set(d_dates)))
+            tick_vals2, tick_text2 = self.get_tick_vals(sorted(set(s2_dates) | set(d_dates)))
+
+            buttons.append(dict(
+                label=geo,
+                method="update",
+                args=[
+                    {"visible": visibility},
+                    {
+                        "title": f"<b>{geo}</b> — Supply vs Demand",
+                        "xaxis.tickvals":  tick_vals1,
+                        "xaxis.ticktext":  tick_text1,
+                        "xaxis2.tickvals": tick_vals2,
+                        "xaxis2.ticktext": tick_text2,
+                    }
+                ]
+            ))
+
+        fig.update_layout(
+            updatemenus=[dict(
+                active=0,
+                buttons=buttons,
+                direction="down",
+                x=0.5, 
+                y=1.12,
+                xanchor="center",
+                showactive=True,
+                bgcolor="#1E293B",
+                bordercolor="#475569",
+                font=dict(color="white", size=12),
+                visible = len(geographies)>1
+
+            )],
+            height=680,
+            title=dict(
+                text=f"<b>{geographies[0]}</b> — Supply vs Demand",
+                font=dict(size=20, color="#F1F5F9"),
+                x=0.03
+            ),
+            paper_bgcolor="#0F172A",
+            plot_bgcolor="#1E293B",
+            font=dict(color="#F1F5F9", family="monospace"),
+            hovermode="x unified",
+            legend=dict(
+                bgcolor="rgba(255,255,255,0.05)",
+                bordercolor="#334155",
+                borderwidth=1,
+                font=dict(size=12),
+                orientation="h",
+                x=0.86,
+                y=1.2,
+                xanchor="left",
+                yanchor="top"
+            ),
+            margin=dict(l=60, r=40, t=100, b=80)
+        )
+
+        fig.update_xaxes(
+            showgrid=True,
+            gridcolor="#334155",
+            tickfont=dict(size=11, color="#94A3B8"),
+            tickangle=-45
+        )
+        fig.update_yaxes(
+            title_text="Quantity",
+            showgrid=True,
+            gridcolor="#334155",
+            tickfont=dict(size=11, color="#94A3B8"),
+            title_font=dict(color="#94A3B8"),
+            range = [0,None],
+            zeroline = False,
+            tickformat = "d"
+        )
+
+        return fig
+        # fig.show()
+
+
+
+
+if __name__=="__main__":
+    loc_df  = pd.read_csv('data_eval/Locations.csv')
+    demand_df = pd.read_csv('data_eval/Demand.csv')
+    shipments_df = pd.read_csv('data_eval/Shipments.csv')
+    geographies_list = ['North America','Middle East','Asia','Europe']
+    geographical_impact = {'affected_geographies': 
+                           [{'geography': 'Middle East', 
+                            'impact_level': 'HIGH', 
+                            'reason': 'The Strait of Hormuz/Gulf region is the direct location of elevated maritime security risk; navigation warnings and vulnerability concerns can immediately affect regional shipping operations and oil export flows even without a confirmed closure.', 
+                            'impact_start_date': '2026-02-28',
+                            'expected_impact_end_date': '2026-03-15'}], 
+                            'summary': 'Tensions around the Strait of Hormuz are elevating maritime risk in the Gulf; while the strait remains open, the Middle East faces the most immediate exposure due to its direct role as the affected chokepoint region.'
+                            }
+    sd_plot = SDPlot(geographies_list=geographies_list,affected_geo_info=geographical_impact,location_df=loc_df,demand_df=demand_df,shipments_df=shipments_df)
+
+    base_fig = sd_plot.plot_sd_curve()
+    # sd_plot.plot_sd_curve()
+    # explainer = DisruptionExplainer(ranga_intelligence=geographical_impact)
+    # final_fig = explainer.add_annotations(base_fig,geographical_impact)
+    final_fig = add_explanations(base_fig,geographical_impact,shipments_df)
+    graph_json = plotly.io.to_json(final_fig,pretty=True)
+    with open('SD_explaination.json','w') as f:
+        f.write(graph_json)
+    
+    print("JSON created")
+    final_fig.show()
+    
