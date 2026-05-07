@@ -22,8 +22,9 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
+import pandas as pd
+
 def add_explanations(fig, ranga_data):
-    # pull only the exact dates provided by the api
     try:
         geo_info = ranga_data['affected_geographies'][0]
         start_date = geo_info['impact_start_date']
@@ -32,7 +33,7 @@ def add_explanations(fig, ranga_data):
     except (KeyError, IndexError):
         return fig
 
-    # shade the exact window defined by the api
+    # 1. Shade the exact threat window defined by the API
     fig.add_vrect(
         x0=start_date, x1=end_date,
         fillcolor="red", opacity=0.1,
@@ -43,7 +44,7 @@ def add_explanations(fig, ranga_data):
         annotation_font_color="red"
     )
 
-    # explain what happens exactly at the start date (based on their carrier delay logic)
+    # 2. Callout: The Initial Drop
     fig.add_annotation(
         x=start_date, y=0.3,
         xref="x", yref="y2 domain", 
@@ -54,13 +55,33 @@ def add_explanations(fig, ranga_data):
         bgcolor="#1E293B", bordercolor="#DC2626"
     )
 
-    # explain what happens exactly at the end date
+    # --- DYNAMIC SPIKE DETECTION ---
+    # Read the data directly from the Plotly figure to find the exact peak
+    spike_date = end_date 
+    
+    for trace in fig.data:
+        # Find the visible 'Disrupted Supply' line (it's in the second row)
+        if trace.name == "Disrupted Supply" and trace.visible != False:
+            # Convert trace data into a temporary pandas dataframe
+            df_trace = pd.DataFrame({'date': pd.to_datetime(trace.x), 'qty': trace.y})
+            
+            # Filter to only look at dates AFTER the disruption window ends
+            post_window = df_trace[df_trace['date'] > pd.to_datetime(end_date)]
+            
+            if not post_window.empty:
+                # Find the exact date where the quantity hits its maximum
+                max_row = post_window.loc[post_window['qty'].idxmax()]
+                spike_date = max_row['date'].strftime('%Y-%m-%d')
+            break
+
+    # 3. Callout: The Spike (Bullwhip)
+    # The arrow now points to the exact mathematical peak found in the data
     fig.add_annotation(
-        x=end_date, y=0.5,
+        x=spike_date, y=0.8, # y is placed high near the peak
         xref="x", yref="y2 domain",
-        text="Window Ends:<br>Normal ETA schedules resume",
+        text="Inventory Spike:<br>Delayed backlog + Normal schedule<br>arrive simultaneously",
         showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#059669",
-        ax=70, ay=-50,
+        ax=80, ay=-30,
         font=dict(color="#F1F5F9", size=11),
         bgcolor="#1E293B", bordercolor="#059669"
     )
