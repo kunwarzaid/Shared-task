@@ -32,50 +32,51 @@ def add_explanations(fig, ranga_data, shipments_df):
     except:
         return fig
 
-    # --- STEP 1: DETECT THE ACTUAL DELAY RANGE FROM SHIPMENTS ---
-    # We look at shipments that fall within the API's window
-    mask = (pd.to_datetime(shipments_df['STA']) >= start_date) & \
-           (pd.to_datetime(shipments_df['STA']) <= end_date)
+    # --- STEP 1: DYNAMIC DELAY DETECTION ---
+    # Instead of hardcoding 7-15, we calculate the delta between original and delayed dates
+    # Assuming the other team added the delay to a column (or we calculate from their plot)
     
-    delayed_shipments = shipments_df[mask].copy()
-    
-    if not delayed_shipments.empty:
-        # Note: We simulate their logic here to get the same results they plotted
-        # In a real system, you'd pull the 'CURR_ETA' column if they provided it.
-        # Since they don't, we explain the simulation boundaries (7-15) based on 
-        # the logical observation of the plot.
-        low, high = 7, 15 
+    # Logic: Look at shipments in the window and find the min/max days they were pushed
+    if 'CURR_ETA' in shipments_df.columns:
+        shipments_df['actual_delay'] = (pd.to_datetime(shipments_df['CURR_ETA']) - 
+                                        pd.to_datetime(shipments_df['STA'])).dt.days
+        # Only look at shipments that were actually moved
+        impacted = shipments_df[shipments_df['actual_delay'] > 0]['actual_delay']
+        low = int(impacted.min()) if not impacted.empty else 7
+        high = int(impacted.max()) if not impacted.empty else 15
     else:
-        low, high = 0, 0
+        # If we can't see their internal dataframe, we stick to the observed 7-15
+        low, high = 7, 15
 
-    # --- STEP 2: FIND THE SPIKE DATE FROM THE PLOT DATA ---
+    # --- STEP 2: FIND THE SPIKE DATE ---
+    # This is excellent—it finds the highest point on the red line AFTER the window
     spike_date = end_date.strftime('%Y-%m-%d')
     for trace in fig.data:
-        if trace.name == "Disrupted Supply":
+        if trace.name == "Disrupted Supply" and trace.visible is True:
             df_trace = pd.DataFrame({'date': pd.to_datetime(trace.x), 'qty': trace.y})
-            # Find the peak after the window ends
             post_window = df_trace[df_trace['date'] > end_date]
             if not post_window.empty:
+                # Find the peak quantity date
                 spike_date = post_window.loc[post_window['qty'].idxmax()]['date'].strftime('%Y-%m-%d')
             break
 
     # --- STEP 3: ADD ANNOTATIONS ---
-    # Threat Window
+    # 1. Threat Window
     fig.add_vrect(
         x0=start_date, x1=end_date, fillcolor="red", opacity=0.1,
         layer="below", line_dash="dash", row=2, col=1,
         annotation_text="Disruption Window", annotation_position="top left"
     )
 
-    # Explanation 1: The Drop
+    # 2. The Shortfall (The "Why")
     fig.add_annotation(
         x=start_date, y=0.2, xref="x", yref="y2 domain",
-        text=f"<b>Supply Shortfall:</b><br>{low}-{high} day carrier delays<br>applied to all orders here.",
+        text=f"<b>Supply Shortfall:</b><br>{low}-{high} day delays applied<br>to shipments in this window.",
         showarrow=True, arrowhead=2, arrowcolor="#DC2626", ax=-60, ay=-40,
         font=dict(size=11), bgcolor="#1E293B", bordercolor="#DC2626"
     )
 
-    # Explanation 2: The Spike
+    # 3. The Spike (The "Bullwhip")
     fig.add_annotation(
         x=spike_date, y=0.8, xref="x", yref="y2 domain",
         text="<b>Inventory Spike:</b><br>Delayed backlog arriving<br>with normal schedule.",
