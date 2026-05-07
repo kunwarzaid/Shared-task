@@ -54,7 +54,8 @@ class SDPlot:
         demand_geo_merged_df = demand_geo_merged_df[demand_geo_merged_df["geo_id"].isin(affected_geo_id_list)]
         demand_geo_merged_df["date"] = pd.to_datetime(demand_geo_merged_df["date"])
         
-        demand_grouped = demand_geo_merged_df.groupby(["geo_id", demand_geo_merged_df["date"].dt.date])["quantity"].sum()
+        # FIXED: Changed "quantity" to "demand_quantity"
+        demand_grouped = demand_geo_merged_df.groupby(["geo_id", demand_geo_merged_df["date"].dt.date])["demand_quantity"].sum()
         demand_data = {}
         for (geo_id, date), qty in demand_grouped.items():
             demand_data.setdefault(geo_name_dict[geo_id], {})[date] = qty
@@ -107,7 +108,8 @@ class SDPlot:
         shipments_geo_merged_df = shipments_geo_merged_df[shipments_geo_merged_df["geo_id"].isin(affected_geo_id_list)]
         shipments_geo_merged_df["STA"] = pd.to_datetime(shipments_geo_merged_df["STA"])
 
-        shipments_grouped = shipments_geo_merged_df.groupby(["geo_id", shipments_geo_merged_df["STA"].dt.date])["quantity"].sum()
+        # FIXED: Changed "quantity" to "shipment_quantity"
+        shipments_grouped = shipments_geo_merged_df.groupby(["geo_id", shipments_geo_merged_df["STA"].dt.date])["shipment_quantity"].sum()
 
         supply_without_disruption = {}
         for (geo_id, date), qty in shipments_grouped.items():
@@ -154,7 +156,8 @@ class SDPlot:
             geo_name = geo_lookup[geo_id]["geo_name"]
             date_qty = (
                 group_df
-                .groupby(group_df["CURR_ETA"].dt.date)["quantity"]
+                # FIXED: Changed "quantity" to "shipment_quantity"
+                .groupby(group_df["CURR_ETA"].dt.date)["shipment_quantity"]
                 .sum()
                 .to_dict()
             )
@@ -374,10 +377,10 @@ class SDPlot:
         fig.show()
 
 if __name__=="__main__":
-    # Ensure these paths point correctly to where you saved your CSV files
-    loc_df  = pd.read_csv('data/Locations.csv')
-    demand_df = pd.read_csv('data/Demand.csv')
-    shipments_df = pd.read_csv('data/Shipments.csv')
+    # Pointing to the data_eval folder based on your screenshot
+    loc_df  = pd.read_csv('data_eval/Locations.csv')
+    demand_df = pd.read_csv('data_eval/Demand.csv')
+    shipments_df = pd.read_csv('data_eval/Shipments.csv')
     
     geographies_list = ['North America', 'Middle East', 'Asia', 'Europe']
     
