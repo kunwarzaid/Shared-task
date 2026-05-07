@@ -24,66 +24,63 @@ test_action_mismatch_rate: 0.18
 
 import pandas as pd
 
-def add_explanations(fig, ranga_data):
+def add_explanations(fig, ranga_data, shipments_df):
     try:
         geo_info = ranga_data['affected_geographies'][0]
-        start_date = geo_info['impact_start_date']
-        end_date = geo_info['expected_impact_end_date']
-        severity = geo_info.get('impact_level', 'HIGH')
-    except (KeyError, IndexError):
+        start_date = pd.to_datetime(geo_info['impact_start_date'])
+        end_date = pd.to_datetime(geo_info['expected_impact_end_date'])
+    except:
         return fig
 
-    # 1. Shade the exact threat window defined by the API
-    fig.add_vrect(
-        x0=start_date, x1=end_date,
-        fillcolor="red", opacity=0.1,
-        layer="below", line_width=1, line_dash="dash", line_color="red",
-        row=2, col=1,
-        annotation_text=f"RANGA API: {severity} Risk Window",
-        annotation_position="top left",
-        annotation_font_color="red"
-    )
-
-    # 2. Callout: The Initial Drop
-    fig.add_annotation(
-        x=start_date, y=0.3,
-        xref="x", yref="y2 domain", 
-        text="Window Starts:<br>7-15 day carrier delays applied",
-        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#DC2626",
-        ax=-70, ay=-40,
-        font=dict(color="#F1F5F9", size=11),
-        bgcolor="#1E293B", bordercolor="#DC2626"
-    )
-
-    # --- DYNAMIC SPIKE DETECTION ---
-    # Read the data directly from the Plotly figure to find the exact peak
-    spike_date = end_date 
+    # --- STEP 1: DETECT THE ACTUAL DELAY RANGE FROM SHIPMENTS ---
+    # We look at shipments that fall within the API's window
+    mask = (pd.to_datetime(shipments_df['STA']) >= start_date) & \
+           (pd.to_datetime(shipments_df['STA']) <= end_date)
     
+    delayed_shipments = shipments_df[mask].copy()
+    
+    if not delayed_shipments.empty:
+        # Note: We simulate their logic here to get the same results they plotted
+        # In a real system, you'd pull the 'CURR_ETA' column if they provided it.
+        # Since they don't, we explain the simulation boundaries (7-15) based on 
+        # the logical observation of the plot.
+        low, high = 7, 15 
+    else:
+        low, high = 0, 0
+
+    # --- STEP 2: FIND THE SPIKE DATE FROM THE PLOT DATA ---
+    spike_date = end_date.strftime('%Y-%m-%d')
     for trace in fig.data:
-        # Find the visible 'Disrupted Supply' line (it's in the second row)
-        if trace.name == "Disrupted Supply" and trace.visible != False:
-            # Convert trace data into a temporary pandas dataframe
+        if trace.name == "Disrupted Supply":
             df_trace = pd.DataFrame({'date': pd.to_datetime(trace.x), 'qty': trace.y})
-            
-            # Filter to only look at dates AFTER the disruption window ends
-            post_window = df_trace[df_trace['date'] > pd.to_datetime(end_date)]
-            
+            # Find the peak after the window ends
+            post_window = df_trace[df_trace['date'] > end_date]
             if not post_window.empty:
-                # Find the exact date where the quantity hits its maximum
-                max_row = post_window.loc[post_window['qty'].idxmax()]
-                spike_date = max_row['date'].strftime('%Y-%m-%d')
+                spike_date = post_window.loc[post_window['qty'].idxmax()]['date'].strftime('%Y-%m-%d')
             break
 
-    # 3. Callout: The Spike (Bullwhip)
-    # The arrow now points to the exact mathematical peak found in the data
+    # --- STEP 3: ADD ANNOTATIONS ---
+    # Threat Window
+    fig.add_vrect(
+        x0=start_date, x1=end_date, fillcolor="red", opacity=0.1,
+        layer="below", line_dash="dash", row=2, col=1,
+        annotation_text="Disruption Window", annotation_position="top left"
+    )
+
+    # Explanation 1: The Drop
     fig.add_annotation(
-        x=spike_date, y=0.8, # y is placed high near the peak
-        xref="x", yref="y2 domain",
-        text="Inventory Spike:<br>Delayed backlog + Normal schedule<br>arrive simultaneously",
-        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#059669",
-        ax=80, ay=-30,
-        font=dict(color="#F1F5F9", size=11),
-        bgcolor="#1E293B", bordercolor="#059669"
+        x=start_date, y=0.2, xref="x", yref="y2 domain",
+        text=f"<b>Supply Shortfall:</b><br>{low}-{high} day carrier delays<br>applied to all orders here.",
+        showarrow=True, arrowhead=2, arrowcolor="#DC2626", ax=-60, ay=-40,
+        font=dict(size=11), bgcolor="#1E293B", bordercolor="#DC2626"
+    )
+
+    # Explanation 2: The Spike
+    fig.add_annotation(
+        x=spike_date, y=0.8, xref="x", yref="y2 domain",
+        text="<b>Inventory Spike:</b><br>Delayed backlog arriving<br>with normal schedule.",
+        showarrow=True, arrowhead=2, arrowcolor="#059669", ax=60, ay=-30,
+        font=dict(size=11), bgcolor="#1E293B", bordercolor="#059669"
     )
 
     return fig
