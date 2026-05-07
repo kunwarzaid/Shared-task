@@ -22,51 +22,45 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
-import pandas as pd
-
 def add_explanations(fig, ranga_data):
-    # try to grab the dates from the api payload
+    # pull only the exact dates provided by the api
     try:
         geo_info = ranga_data['affected_geographies'][0]
         start_date = geo_info['impact_start_date']
         end_date = geo_info['expected_impact_end_date']
         severity = geo_info.get('impact_level', 'HIGH')
     except (KeyError, IndexError):
-        # if the json is missing dates, just return the unedited plot
         return fig
 
-    # shade the threat window on the bottom subplot (row=2)
+    # shade the exact window defined by the api
     fig.add_vrect(
         x0=start_date, x1=end_date,
         fillcolor="red", opacity=0.1,
         layer="below", line_width=1, line_dash="dash", line_color="red",
         row=2, col=1,
-        annotation_text=f"RANGA API: {severity} Risk",
+        annotation_text=f"RANGA API: {severity} Risk Window",
         annotation_position="top left",
         annotation_font_color="red"
     )
 
-    # callout for the initial delay (pointing to the start date)
+    # explain what happens exactly at the start date (based on their carrier delay logic)
     fig.add_annotation(
         x=start_date, y=0.3,
         xref="x", yref="y2 domain", 
-        text="Shock Onset:<br>7-15 day carrier delay",
+        text="Window Starts:<br>7-15 day carrier delays applied",
         showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#DC2626",
-        ax=-60, ay=-40,
+        ax=-70, ay=-40,
         font=dict(color="#F1F5F9", size=11),
         bgcolor="#1E293B", bordercolor="#DC2626"
     )
 
-    # roughly estimate when the delayed ships hit port all at once (end date + avg 12 days)
-    recovery_date = (pd.to_datetime(end_date) + pd.Timedelta(days=12)).strftime('%Y-%m-%d')
-    
-    # callout for the supply spike
+    # explain what happens exactly at the end date
     fig.add_annotation(
-        x=recovery_date, y=0.6,
+        x=end_date, y=0.5,
         xref="x", yref="y2 domain",
-        text="Bullwhip Effect:<br>Delayed backlog arrives",
+        text="Window Ends:<br>Normal ETA schedules resume",
         showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#059669",
-        ax=60, ay=-50,
+        ax=70, ay=-50,
         font=dict(color="#F1F5F9", size=11),
         bgcolor="#1E293B", bordercolor="#059669"
     )
