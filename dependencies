@@ -23,96 +23,52 @@ premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
 import pandas as pd
-import plotly.graph_objects as go
 
-class DisruptionExplainer:
-    """
-    Overlays causal explanations and business logic onto supply-demand Plotly figures
-    using RANGA API intelligence.
-    """
-    
-    def __init__(self, ranga_intelligence: dict):
-        self.intelligence = ranga_intelligence
-
-    def _extract_impact_dates(self):
-        """Safely extracts the disruption window from the API payload."""
-        try:
-            geographies = self.intelligence.get('affected_geographies', [])
-            if not geographies:
-                return None, None
-                
-            impact_data = geographies[0]
-            start = impact_data.get('impact_start_date')
-            end = impact_data.get('expected_impact_end_date')
-            return start, end
-        except Exception:
-            return None, None
-
-    def add_annotations(self, fig: go.Figure) -> go.Figure:
-        """
-        Injects the visual explainability layer (bounding boxes, causal arrows) 
-        onto the secondary subplot.
-        """
-        start_date, end_date = self._extract_impact_dates()
-        
-        if not start_date or not end_date:
-            return fig  # Fail gracefully if API payload is missing dates
-
-        severity = self.intelligence['affected_geographies'][0].get('impact_level', 'HIGH')
-
-        # 1. Shade the Threat Window
-        fig.add_vrect(
-            x0=start_date, 
-            x1=end_date,
-            fillcolor="red", 
-            opacity=0.1,
-            layer="below", 
-            line_width=1, 
-            line_dash="dash", 
-            line_color="red",
-            row=2, col=1,
-            annotation_text=f"<b>RANGA Alert:</b> {severity} Risk Window",
-            annotation_position="top left",
-            annotation_font_color="red"
-        )
-
-        # 2. Callout: The Initial Shock / Delay
-        fig.add_annotation(
-            x=start_date, 
-            y=0.3,
-            xref="x", 
-            yref="y2 domain", 
-            text="<b>1. Shock Onset:</b><br>Initial shipments hit by<br>7-15 day carrier lag.",
-            showarrow=True, 
-            arrowhead=2, 
-            arrowsize=1, 
-            arrowwidth=2, 
-            arrowcolor="#DC2626",
-            ax=-80, ay=-40,
-            font=dict(color="#F1F5F9", size=11),
-            bgcolor="#1E293B", 
-            bordercolor="#DC2626"
-        )
-
-        # 3. Callout: The Bullwhip / Recovery Spike
-        # Estimate arrival of the backlogged vessels (End of threat + avg 12 day delay)
-        recovery_date = (pd.to_datetime(end_date) + pd.Timedelta(days=12)).strftime('%Y-%m-%d')
-        
-        fig.add_annotation(
-            x=recovery_date, 
-            y=0.6,
-            xref="x", 
-            yref="y2 domain",
-            text="<b>2. Bullwhip Effect:</b><br>Delayed vessels arrive at once,<br>triggering inventory spike.",
-            showarrow=True, 
-            arrowhead=2, 
-            arrowsize=1, 
-            arrowwidth=2, 
-            arrowcolor="#059669",
-            ax=80, ay=-50,
-            font=dict(color="#F1F5F9", size=11),
-            bgcolor="#1E293B", 
-            bordercolor="#059669"
-        )
-
+def add_explanations(fig, ranga_data):
+    # try to grab the dates from the api payload
+    try:
+        geo_info = ranga_data['affected_geographies'][0]
+        start_date = geo_info['impact_start_date']
+        end_date = geo_info['expected_impact_end_date']
+        severity = geo_info.get('impact_level', 'HIGH')
+    except (KeyError, IndexError):
+        # if the json is missing dates, just return the unedited plot
         return fig
+
+    # shade the threat window on the bottom subplot (row=2)
+    fig.add_vrect(
+        x0=start_date, x1=end_date,
+        fillcolor="red", opacity=0.1,
+        layer="below", line_width=1, line_dash="dash", line_color="red",
+        row=2, col=1,
+        annotation_text=f"RANGA API: {severity} Risk",
+        annotation_position="top left",
+        annotation_font_color="red"
+    )
+
+    # callout for the initial delay (pointing to the start date)
+    fig.add_annotation(
+        x=start_date, y=0.3,
+        xref="x", yref="y2 domain", 
+        text="Shock Onset:<br>7-15 day carrier delay",
+        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#DC2626",
+        ax=-60, ay=-40,
+        font=dict(color="#F1F5F9", size=11),
+        bgcolor="#1E293B", bordercolor="#DC2626"
+    )
+
+    # roughly estimate when the delayed ships hit port all at once (end date + avg 12 days)
+    recovery_date = (pd.to_datetime(end_date) + pd.Timedelta(days=12)).strftime('%Y-%m-%d')
+    
+    # callout for the supply spike
+    fig.add_annotation(
+        x=recovery_date, y=0.6,
+        xref="x", yref="y2 domain",
+        text="Bullwhip Effect:<br>Delayed backlog arrives",
+        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#059669",
+        ax=60, ay=-50,
+        font=dict(color="#F1F5F9", size=11),
+        bgcolor="#1E293B", bordercolor="#059669"
+    )
+
+    return fig
