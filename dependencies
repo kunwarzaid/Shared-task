@@ -23,65 +23,93 @@ premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
 import pandas as pd
+import numpy as np
 
 def add_explanations(fig, ranga_data, shipments_df):
+    """
+    Analyzes the shipment data and plot traces to provide 
+    dynamic, data-driven explainability annotations.
+    """
     try:
         geo_info = ranga_data['affected_geographies'][0]
         start_date = pd.to_datetime(geo_info['impact_start_date'])
         end_date = pd.to_datetime(geo_info['expected_impact_end_date'])
-    except:
+        severity = geo_info.get('impact_level', 'HIGH')
+    except (KeyError, IndexError):
         return fig
 
     # --- STEP 1: DYNAMIC DELAY DETECTION ---
-    # Instead of hardcoding 7-15, we calculate the delta between original and delayed dates
-    # Assuming the other team added the delay to a column (or we calculate from their plot)
+    # We calculate the real delay range by comparing STA to CURR_ETA.
+    # This ensures if the simulation changes from 7-15 to 30-45, the text updates.
     
-    # Logic: Look at shipments in the window and find the min/max days they were pushed
+    # Check if the dataframe has the ETA column (from sd_plot's internal logic)
     if 'CURR_ETA' in shipments_df.columns:
         shipments_df['actual_delay'] = (pd.to_datetime(shipments_df['CURR_ETA']) - 
                                         pd.to_datetime(shipments_df['STA'])).dt.days
-        # Only look at shipments that were actually moved
-        impacted = shipments_df[shipments_df['actual_delay'] > 0]['actual_delay']
-        low = int(impacted.min()) if not impacted.empty else 7
-        high = int(impacted.max()) if not impacted.empty else 15
+        
+        # Filter for shipments that fall within the risk window and were delayed
+        mask = (pd.to_datetime(shipments_df['STA']) >= start_date) & \
+               (pd.to_datetime(shipments_df['STA']) <= end_date)
+        
+        impacted_delays = shipments_df[mask & (shipments_df['actual_delay'] > 0)]['actual_delay']
+        
+        if not impacted_delays.empty:
+            low = int(impacted_delays.min())
+            high = int(impacted_delays.max())
+        else:
+            low, high = 7, 15 # Fallback to original observed values
     else:
-        # If we can't see their internal dataframe, we stick to the observed 7-15
         low, high = 7, 15
 
-    # --- STEP 2: FIND THE SPIKE DATE ---
-    # This is excellent—it finds the highest point on the red line AFTER the window
+    # --- STEP 2: FIND THE SPIKE (BULLWHIP) DATE ---
+    # We scan the plotly figure data to find the highest peak after the window ends.
     spike_date = end_date.strftime('%Y-%m-%d')
     for trace in fig.data:
+        # We target the 'Disrupted Supply' line specifically
         if trace.name == "Disrupted Supply" and trace.visible is True:
             df_trace = pd.DataFrame({'date': pd.to_datetime(trace.x), 'qty': trace.y})
+            # Filter for dates after the risk window closed
             post_window = df_trace[df_trace['date'] > end_date]
+            
             if not post_window.empty:
-                # Find the peak quantity date
-                spike_date = post_window.loc[post_window['qty'].idxmax()]['date'].strftime('%Y-%m-%d')
+                # Find the mathematical peak
+                max_row = post_window.loc[post_window['qty'].idxmax()]
+                spike_date = max_row['date'].strftime('%Y-%m-%d')
             break
 
     # --- STEP 3: ADD ANNOTATIONS ---
-    # 1. Threat Window
+    
+    # A. Shade the Risk Window
     fig.add_vrect(
-        x0=start_date, x1=end_date, fillcolor="red", opacity=0.1,
-        layer="below", line_dash="dash", row=2, col=1,
-        annotation_text="Disruption Window", annotation_position="top left"
+        x0=start_date, x1=end_date,
+        fillcolor="red", opacity=0.1,
+        layer="below", line_width=1, line_dash="dash", line_color="red",
+        row=2, col=1,
+        annotation_text=f"RANGA API: {severity} Risk",
+        annotation_position="top left",
+        annotation_font_color="red"
     )
 
-    # 2. The Shortfall (The "Why")
+    # B. Explain the Shortfall
     fig.add_annotation(
-        x=start_date, y=0.2, xref="x", yref="y2 domain",
-        text=f"<b>Supply Shortfall:</b><br>{low}-{high} day delays applied<br>to shipments in this window.",
-        showarrow=True, arrowhead=2, arrowcolor="#DC2626", ax=-60, ay=-40,
-        font=dict(size=11), bgcolor="#1E293B", bordercolor="#DC2626"
+        x=start_date.strftime('%Y-%m-%d'), y=0.3,
+        xref="x", yref="y2 domain", 
+        text=f"<b>Shortfall Onset:</b><br>{low}-{high} day delays applied<br>to orders in this window.",
+        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#DC2626",
+        ax=-70, ay=-40,
+        font=dict(color="#F1F5F9", size=11),
+        bgcolor="#1E293B", bordercolor="#DC2626"
     )
 
-    # 3. The Spike (The "Bullwhip")
+    # C. Explain the Spike (Convergence)
     fig.add_annotation(
-        x=spike_date, y=0.8, xref="x", yref="y2 domain",
-        text="<b>Inventory Spike:</b><br>Delayed backlog arriving<br>with normal schedule.",
-        showarrow=True, arrowhead=2, arrowcolor="#059669", ax=60, ay=-30,
-        font=dict(size=11), bgcolor="#1E293B", bordercolor="#059669"
+        x=spike_date, y=0.8,
+        xref="x", yref="y2 domain",
+        text="<b>Inventory Spike:</b><br>Delayed backlog arrives<br>with normal schedule.",
+        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="#059669",
+        ax=80, ay=-50,
+        font=dict(color="#F1F5F9", size=11),
+        bgcolor="#1E293B", bordercolor="#059669"
     )
 
     return fig
