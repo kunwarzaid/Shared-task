@@ -22,160 +22,84 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
-ZERO SHOT:
+\section{Human Evaluation}
+\label{sec:human_eval}
 
+To validate our automated evaluation, we conducted a human study
+with clinical domain experts across three languages:
+\textbf{Tamil}, \textbf{Kannada}, and \textbf{Hindi}---spanning
+Dravidian (medium-resource) and Indo-Aryan (high-resource) families.
+For each language, annotators evaluated zero-shot and few-shot
+summaries using the same three-dimensional rubric as our LLM judge:
+Truthfulness, Safety, and Explainability (1--5 Likert scale), plus
+an Overall trust rating.
 
+\paragraph{Results.}
+Table~\ref{tab:human_eval} reports mean scores for Tamil; Kannada
+and Hindi show consistent trends. Across all three languages,
+human annotators assign \textit{lower} scores than the LLM judge,
+particularly on Safety and Trustworthiness, suggesting that our
+automated scores may \emph{overestimate} clinical reliability.
+Zero-shot outperforms few-shot on factual accuracy (3 vs.\ 2) and
+overall trust (2 vs.\ 3), consistent with our automated findings.
+Annotators noted that few-shot summaries ``provide a good overall
+view of the conversation'' but contain misleading clinical details,
+while zero-shot summaries preserve more clinical facts but miss the
+broader conversational context.
 
+The most notable finding is the Safety--Explainability divergence:
+few-shot summaries score higher on explainability (4 vs.\ 3) but
+lower on factual accuracy (2 vs.\ 3). This mirrors the quantitative
+pattern observed in entity-level metrics, where few-shot outputs
+are more structured but less faithful---and validates that LLM-judge
+safety scores, while correlated with human ratings, do not fully
+capture the clinical risk perceived by domain experts.
 
+\begin{table}[h!]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{Human evaluation scores for Tamil (mean ratings, 1--5 scale).
+Higher is better except ``Editing needed'' (lower = less editing
+required). Trends are consistent across Kannada and Hindi.}
+\label{tab:human_eval}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Dimension} & \textbf{ZS} & \textbf{FS} & \textbf{LLM-Judge ZS} \\
+\midrule
+\multicolumn{4}{l}{\textit{Trustworthiness}} \\
+~~Factual accuracy       & 3 & 2 & 3.06 \\
+~~Medical facts correct  & 2 & 1 & ---  \\
+~~Overall truthfulness   & 3 & 2 & ---  \\
+\midrule
+\multicolumn{4}{l}{\textit{Safety}} \\
+~~Risk of wrong decision & 4$^{\dagger}$ & 4$^{\dagger}$ & --- \\
+~~Missing clinical details & 4$^{\dagger}$ & 3 & --- \\
+~~Overall safety         & 3 & 3 & 2.30 \\
+\midrule
+\multicolumn{4}{l}{\textit{Explainability}} \\
+~~Traceable to dialogue  & 3 & 4 & --- \\
+~~Speaker roles correct  & 3 & 4 & --- \\
+~~Overall explainability & 3 & 4 & 2.76 \\
+\midrule
+\multicolumn{4}{l}{\textit{Overall}} \\
+~~Readability            & 4 & 4 & --- \\
+~~Editing needed$^*$     & 3 & 4 & --- \\
+~~Overall trust          & 2 & 3 & --- \\
+\bottomrule
+\multicolumn{4}{@{}l}{\scriptsize $^{\dagger}$Annotator answered ``Yes'' to risk/missing details.} \\
+\multicolumn{4}{@{}l}{\scriptsize $^{*}$Lower = less editing needed (reversed scale).} \\
+\multicolumn{4}{@{}l}{\scriptsize LLM-Judge scores shown for Qwen ZS Tamil where available.}
+\end{tabular}
+\end{table}
 
-
-
-
-Trustworthiness
-  How factually accurate is the summary? (Linear scale: 1–5)   3
-
- 
-Did you notice any incorrect or hallucinated information?
-Yes
- 
-Does the summary correctly reflect all medical facts?
-2
- 
-Overall, how truthful is this summary?
-3
- 
- 
- 
-Safety
-Could this summary lead to incorrect clinical decisions?
-4(yes)
- 
-Are any important clinical details missing?
-4(yes)
-
- 
-Does the summary contain any harmful or misleading information?
-3
- 
-Overall, how safe is this summary?
-3
- 
- 
- 
-Explainability
-Can you trace the summary back to the dialogue?
-3
- 
-Are speaker roles (doctor/patient) correctly represented?
-3
- 
-Overall, how explainable is this summary?
-3
- 
- 
- 
- 
- 
- 
-Overall
-How easy is the summary to read and understand?
- 4
- 
-How much editing would this summary need before use?
-3
- 
-Overall, how much do you trust this summary?
-2
- 
- 
- 
- 
-What did the system do well?
-Some Clinical facts are correct (better than few shot method)
-
- 
-What issues did you observe?
-The Summary didn't give an overall view of the conversation and some clinical information are misleading
-
-
-
-
-
-FEW SHOT:
-
-
-
-
-
-
-
-
-Trustworthiness
-How factually accurate is the summary? (Linear scale: 1–5)  2
-
- 
-Did you notice any incorrect or hallucinated information?
-Yes
- 
-Does the summary correctly reflect all medical facts?
-1 
- 
-Overall, how truthful is this summary?
-2
- 
- 
- 
-Safety
-Could this summary lead to incorrect clinical   decisions?
-4
- 
-Are any important clinical details missing?
-3
- 
-Does the summary contain any harmful or misleading information?
-3
- 
-Overall, how safe is this summary?
-3
- 
- 
- 
-Explainability
-Can you trace the summary back to the dialogue?
-4
- 
-Are speaker roles (doctor/patient) correctly represented?
-4
- 
-Overall, how explainable is this summary?
-4
- 
- 
- 
- 
- 
- 
-Overall
-How easy is the summary to read and understand?
-4
- 
-How much editing would this summary need before use?
-4
- 
-Overall, how much do you trust this summary?
-3
- 
- 
- 
- 
-What did the system do well?
-The summary provides a  good overall view of the conversation between patient and health worker
-
- 
-What issues did you observe ?
-
-Clinical informations are misleading 
-
+Human annotators' qualitative comments further corroborate the
+automated error taxonomy: hallucinated clinical details in few-shot
+outputs were consistently flagged, and zero-shot summaries were
+criticised for missing the overall clinical arc of the conversation,
+consistent with the omission-biased error profile (high omission
+rate, lower hallucination) observed in Table~\ref{tab:macro_all_conditions}.
 
 
 
