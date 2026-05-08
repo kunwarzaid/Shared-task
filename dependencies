@@ -22,735 +22,210 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
-\begin{abstract}
-Clinical AI systems are overwhelmingly benchmarked in English, yet a billion-plus speakers of Indian languages rely on healthcare systems
-where consultations happens in diverse regional languages. We study whether current open-source LLMs can generate
-trustworthy English clinical summaries directly from multilingual doctor-patient dialogues, a practically important setting that has received almost no systematic attention. We evaluate two 7B-parameter LLMs (Mistral-7B and Qwen2.5-7B) across ten typologically diverse Indian languages under four conditions: zero-shot prompting, few-shot prompting ($k{=}1$), translation of
-source dialogues to English via IndicTrans2 before summarization, and LoRA-based supervised fine-tuning.
-
-We find that few-shot
-prompting \emph{degrades} performance
-in 16 of 20 language--model pairs; translation helps Indo-Aryan but
-harms Dravidian languages; and clinical Safety scores remain below 3.0/5.0 across every condition. Fine-tuning eliminates the cross-lingual performance gap, post-SFT Dravidian F1 reaches parity with English, while reducing macro-average hallucination from $\sim$42\% to $\sim$10\%. We additionally conduct systematic qualitative case analysis across all ten languages, yielding an eight-category
-Clinical Error Taxonomy that characterizes failure modes by method and language family.
-% Cross-lingual clinical summarization aims to generate accurate and clinically reliable summaries in English from doctor–patient conversations conducted in non-English languages. This task introduces difficulties in preserving factual correctness, medical entities, and critical health information while managing morphological complexity and diverse medical terminology. In this work, we examine the trustworthiness of cross-lingual clinical summarization through three dimensions: truthfulness, clinical safety, and explainability. Our results show that summarization quality deteriorates significantly for low-resource languages, highlighting disparities in reliability across linguistic settings and raising concerns about equitable deployment in multilingual healthcare environments.
-% \textcolor{red}{Write concrete observations here}
-
-%We demonstrate that existing models often experience degradations in quality when processing low-resource languages, leading to omissions, hallucinations, and distortions of medically relevant information. Our findings highlight the need for more robust evaluation methodologies and improved model design tailored to multilingual clinical contexts.
-   %In this paper, we examine various aspects of trustworthiness for multilingual patient-doctor conversation summarization, and also show multilingual inconsistencies for various aspects of trustworthiness, and highlight the areas where improvement is needed.
-   %Few observations
-\end{abstract}
-
-\section{Introduction}
-The accurate and timely documentation of clinical encounters is a cornerstone of modern healthcare delivery. Clinical consultations between doctors and patients typically has a rich mix of essential details - including symptoms, diagnostic reasoning, medication histories, treatment decisions, and relevant psycho-social context - all of which are vital for accurate documentation and continuity of care, yet much of this content is never reliably captured in structured clinical records.
-
-In India alone, primary healthcare workers conduct hundreds of millions of consultations annually across a population that speaks 22 constitutionally scheduled languages spanning four
-major language families \citep{gala2023indictrans2}.
-The cognitive burden of manual documentation
-in this setting is substantial, and errors of omission in
-clinical notes are well-documented as a leading source of adverse patient outcomes \citep{clusmann2023future}.
-
-Automatic summarization of clinical dialogues using large language models (LLMs) offers a promising path toward reducing this burden. Recent work has demonstrated that instruction-tuned LLMs achieve competitive performance on English clinical summarization benchmarks ~\citep{tang2023gersteinlab,
-abacha2023overview}.
-However, the overwhelming majority of clinical NLP research targets high-resource languages-most often English-leaving a vast multilingual clinical documentation need unaddressed, real-world clinical communication spans diverse languages, and healthcare delivery frequently occurs in multilingual and low-resource linguistic environments. For Indian languages, which range from relatively well-resourced Indo-Aryan languages such as Hindi and Bengali to morphologically complex languages like Marathi, and script-distinct Dravidian languages such as Telugu, Tamil, and Kannada, existing LLM-based
-summarization pipelines are entirely unevaluated.
-
-This paper addresses that gap through a systematic benchmarking study of multilingual clinical dialogue summarization across
-\textbf{ten typologically diverse Indian languages} as shown in Table\ref{tab:language_data}. The languages span five script
-families, two major typological groupings (Indo-Aryan and Dravidian), and a spectrum of NLP resource availability from high (English, Hindi) to severely low (Dogri, Assamese). We analyze the trustworthiness of cross-lingual clinical summarization systems, focusing on trustworthiness, safety, and explainability. We examine how linguistic and resource differences influence summarization quality and demonstrate that performance degrades substantially for low-resource languages. To the best of our knowledge, this is the first systematic study that characterizes trustworthiness failures in multilingual clinical dialogue summarization for Indic languages. These results underscore the need for linguistically informed, safety-aware evaluation frameworks for multilingual clinical NLP. We benchmark two open-source instruction-tuned 7B-parameter models Mistral-7B~\citep{jiang2023mistral} and Qwen2.5-7B~\citep{qwen25techreport} under four experimental paradigms: zero-shot prompting, few-shot prompting, translation-augmented inference via IndicTrans2~\citep{gala2023indictrans2}, and supervised fine-tuning. Evaluation spans three complementary tiers; surface-level metrics, LLM-as-judge holistic quality assessment~\citep{zheng2023judging}, and clinical entity-level fidelity analysis providing a comprehensive picture of summarization quality across the full language spectrum. Full details of the dataset, experimental setup, and evaluation framework are presented in Section~\ref{Task}.
-
-Our principal contributions are as follows:
-
-\begin{itemize}
-  \item The first systematic study of open-source LLMs on cross-lingual clinical dialogue summarization across ten Indian languages, including four Dravidian and six Indo-Aryan languages.
-  %\item A demonstration that few-shot prompting \textit{consistently degrades} performance relative to zero-shot, with increasing hallucination rates, a finding that contradicts standard in-context learning assumptions in monolingual settings.
-  \item Evidence that Qwen2.5-7B outperforms Mistral-7B on every entity-level metric in zero-shot scenario, with the performance gap traced to Qwen2.5's broader multilingual pretraining over Indic scripts.
-
-  \item A finding that supervised fine-tuning substantially improves clinical safety, truthfulness, and explainability scores and on entity level improves precision, recall, and F1 scores across all language families, while lowering the hallucinations and omissions.
-\end{itemize}
-
-%The remainder of this paper is organized as follows.
-
-%Our findings highlight that these failures are not merely translation artifacts, but reflect deeper interactions between language morphology, terminology representation, and LLM behavior, underscoring the need for linguistically informed and clinically grounded evaluation frameworks for multilingual clinical NLP.
-
-\section{Related Work}
-%Clinical text summarization/ Clinical note generation/ Clinical dialogue summarization
-
-%Multilingual trustworthiness and healthcare
-%Trustworthiness in clinical note generation
-
-The automatic summarization of doctor-patient conversation has emerged as a central task in clinical NLP over the past decade. Early work applied extractive and abstractive
-sequence-to-sequence models to English medical conversations, with systems achieving competitive performance on structured clinical note generation\citep{joshi2020dr,abacha2023empirical}. The MEDIQA-Chat 2023 shared task~\citep{abacha2023overview}
-provided a large-scale evaluation benchmark for this problem, catalyzing a wave of systems that fine-tuned pre-trained dialogue summarization models and employed in-context learning with GPT-3 and GPT-4.
-\citet{tang2023gersteinlab} demonstrated that fine-tuned GPT-3 and few-shot GPT-4 achieve strong ROUGE-1 and BERTScore on the Dialogue2Note subtask, while \citet{mathur2023summqa} found that GPT-4 generated summaries tend to be shorter and more abstractive than human-authored notes, highlighting a systematic coverage gap, a finding directly replicated and quantified in our multilingual setting.
-
-%More recent work has evaluated LLMs as clinical summarizers.
-\citet{vanveen2023adapted} demonstrated that domain-adapted LLMs can outperform medical experts on English clinical text summarization benchmarks. \citet{FraileNavarro2025} conducted expert evaluations of multiple LLMs on clinical dialogue summarization, and \citet{Ferreira2025} extended this evaluation to real-world non-English data (Portuguese), finding that open-source LLMs struggle significantly with informal, noisy patient-provider dialogues, a challenge directly amplified in our setting by the added dimension of script diversity and low resource availability. None of these works address the broader cross-lingual clinical summarization problem from indic language perspective. \citet{zeng2020meddialog} introduced one of the first datasets for medical conversation summarization, covering both English and Chinese, and demonstrated the results with transformer based summarization models. \citet{tretyak2020combination} proposed an approach based on a combination of extractive and abstractive summarization. \citet{lyu2025automatic} shows the performance of clinical summarization using prompt tuning on a domain specific LLM. Clinical NLP in multilingual settings has primarily focused on entity recognition and concept normalization rather than summarization \cite{gaschi2023multilingual}.
-\citet{abrar2025faithful} propose a cross-lingual framework for faithful summarization of consumer health queries using large language models. Their approach combines textrank based extraction, medical NER, and finetuned LLM. Indian languages present distinctive challenges for NLP systems trained primarily on English and European language
-corpora. 
-
-\citet{gala2023indictrans2} introduced IndicTrans2, the first neural machine translation system supporting all 22 scheduled Indian languages, trained on 230 million sentence pairs and substantially outperforming prior systems across language pairs relevant to this work. Their resource remains the state-of-the-art translation backbone for Indic language processing. For clinical NLP specifically, multilingual resources for Indian languages are scarce. \citet{singh2025indihealthbench} evaluated LLMs for clinical translation across Indian languages, finding that performance degrades sharply for Dravidian and low-resource Indo-Aryan languages, consistent with the zero-shot performance gaps we report across our entity-level metrics. 
-
-%all survey papers
-
-%all papers in NLP-AI shared task
- 
-%In contrast to prior studies that emphasize model development or English-only benchmarks, our work focuses on evaluation-driven analysis of trustworthiness in cross-lingual clinical summarization. By jointly examining factual faithfulness, clinical safety, and explainability, we provide a nuanced understanding of how linguistic resource disparities affect clinical reliability. To the best of our knowledge, this is the first systematic study that characterizes trustworthiness failures in multilingual clinical dialogue summarization for Indic languages.
-
-
-\section{Task, Data, and Models}
-\label{Task}
-
-\subsection{Task Definition}
-
-We study \emph{cross-lingual clinical conversation summarization}: given a
-multi-turn doctor-patient conversation in one of ten Indian languages, generate a structured English clinical summary. The target summary is always in English, matching realistic deployment contexts where medical records are maintained in English while consultations occur in the patient's native language.
-
-\subsection{Dataset}
-
-We use the dataset from the Shared Task on Patient-Centric Clinical
-Dialogue Summarization\footnote{\url{https://www.codabench.org/competitions/10527/}},
-which provides multilingual doctor-patient dialogues paired with English clinical summaries. Dialogues exhibit features typical of clinical discourse: domain-specific terminology, code-switching between English and regional languages, and the asymmetric turn-taking patterns of medical consultations. Table~\ref{tab:language_data} describes the language properties.
-
-\begin{table}[h!]
-\centering
-\caption{Language properties of the evaluation corpus.}
-\label{tab:language_data}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{llll}
-\toprule
-\textbf{Language} & \textbf{Script} & \textbf{Family} & \textbf{Resources} \\
-\midrule
-English   & Latin       & Germanic    & High   \\
-Hindi     & Devanagari  & Indo-Aryan  & High   \\
-Bengali   & Bengali     & Indo-Aryan  & Medium \\
-Marathi   & Devanagari  & Indo-Aryan  & Medium \\
-\midrule
-\rowcolor{dravidianrow}
-Tamil     & Tamil       & Dravidian   & Medium \\
-\rowcolor{dravidianrow}
-Kannada   & Kannada     & Dravidian   & Medium \\
-\rowcolor{dravidianrow}
-Telugu    & Telugu      & Dravidian   & Medium \\
-\midrule
-Gujarati  & Gujarati    & Indo-Aryan  & Medium \\
-Dogri     & Devanagari  & Indo-Aryan  & Low    \\
-Assamese  & Bengali     & Indo-Aryan  & Low    \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-\subsection{Models}
-
-\textbf{Mistral-7B-Instruct}~\citep{jiang2023mistral} uses grouped query attention and sliding window attention for efficient inference. Its pretraining is primarily European-centric, which explains its relatively weaker zero-shot performance on non-Latin-script
-languages. \\
-\textbf{Qwen2.5-7B-Instruct}~\citep{qwen25techreport} was trained on 18T tokens with explicit multilingual coverage, including
-Indic scripts. \\
-Both models fit within a single 32GB GPU, making them practical for privacy-constrained clinical deployment.
-
-% \section{Methodology and Evaluation framework}
-%Zero-shot, CoT, Finetuning, CoT-Finetuning
-
-
-
-% \begin{table}[htbp]
-% \centering
-% \caption{Language Scripts, Families, and Resource Levels}
-% \label{tab:language_data}
-% \resizebox{\linewidth}{!}{
-% \begin{tabular}{llll}
-% \toprule
-% \textbf{Language} & \textbf{Script} & \textbf{Language Family} & \textbf{Resource Level} \\
-% \midrule
-% English & Latin & Germanic & High \\
-% Hindi & Devanagari & Indo-Aryan & High \\
-% Marathi & Devanagari & Indo-Aryan & Medium \\
-% Bengali (Bangla) & Bengali & Indo-Aryan & Medium \\
-% Tamil & Tamil & Dravidian & Medium \\
-% Kannada & Kannada & Dravidian & Medium \\
-% Gujarati & Gujarati & Indo-Aryan & Medium \\
-% Dogri & Devanagari & Indo-Aryan & Low \\
-% Assamese & Bengali & Indo-Aryan & Low \\
-% Telugu & Telugu & Dravidian & Medium \\
-% \bottomrule
-% \end{tabular}
-% }
-% \end{table}
-
-
-% \footnote{https://www.codabench.org/competitions/10527/} which includes dialogues and reference summaries. We use 50 examples from the training data as test.
-
-\section{Methodology}
-\begin{figure*}
-    \centering
-    \includegraphics[width=.90\linewidth]{Images/final_example.pdf}
-    \caption{Cross-lingual clinical summarization and evaluation of trustworthiness}
-    \label{fig:example}
-\end{figure*}
-% Figure \ref{fig:example} shows an example and summary of the methods used for empirical analysis. We study the problem of clinical dialogue summarization for low-resource Indic Languages, where the input consists of multi-turn doctor-patient conversations and the output is a English clinical summary which is helpful for both patient and the doctor. %Our goal is to evaluate whether explicit reasoning-style supervision improves the quality, factuality, and clinical usefulness of summaries.
-% We perform analysis of direct zero-shot inference (ZS), by providing in-context examples (FS). We also perform inference by translating the dialogues into English first and then summarizing (Translated-ZS and Translated-FS).
-
-%\paragraph{Zero-shot (ZS).}
-\noindent\textbf{Zero-shot (ZS).}
-The model receives a prompt instructing it to generate a structured English clinical summary covering chief complaint, symptoms,
-investigations, treatment, and follow-up, without introducing unsupported medical claims. The prompt and source dialogue
-are the only inputs. This is the primary baseline.
-
-%\paragraph{Few-Shot (FS).}
-\noindent\textbf{Few-Shot (FS).}
-Few-shot prompting augments the zero-shot prompt with a small number of demonstration examples, $k = 1$ in our case, drawn from the training set. Each example consists of: a doctor–patient dialogue, and its corresponding gold English summary. Few-shot prompting is applied uniformly across all three models to enable a fair comparison. The objective is to condition the model on the desired output format and clinical content structure, thereby reducing the ambiguity inherent in open-ended summarization tasks.
-
-%\paragraph{Translation (Trans).}
-\noindent\textbf{Translation (Trans).}
-A well-established strategy for low-resource NLP is translate-then-summarize: translate the source text into a high-resource language, and apply the NLP pipeline in that language. Given the strong English summarization capabilities of both target models, we explore whether routing non-English dialogues through a high-quality neural machine translation (NMT) system before summarization yields improvements over direct multilingual inference.
-Non-English source dialogues are first translated to English using IndicTrans2~\citep{gala2023indictrans2}, then summarized under the same zero-shot English prompt. Since the target output is an English
-summary. The translated English dialogue replaces the source dialogue; everything downstream is identical to zero-shot. The hypothesis is that routing through English allows models to summarize in their strongest generation language, compensating for weaker multilingual generation calibration.
-
-%\paragraph{Supervised Fine-Tuning (SFT).}
-\noindent\textbf{Supervised Fine-Tuning (SFT).}
-We fine-tune both the \texttt{Mistral-7B-Instruct} and \texttt{Qwen2.5-7B-Instruct} models using Low-Rank Adaptation (LoRA) on the full multilingual training set. For \texttt{Qwen2.5-7B}, we employ a rank $r=8$, $\alpha=32$, and dropout $0.05$, targeting the \texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}, and \texttt{down\_proj} layers. Both models are trained using 4-bit NormalFloat (NF4) quantization. Training is conducted for $3$ epochs using the AdamW optimizer with a learning rate of $2 \times 10^{-5}$ and a per-device batch size of $1$. We use gradient accumulation with $8$ steps to achieve an effective batch size of $8$. To optimize memory, we enable gradient checkpointing and use the \texttt{expandable\_segments} configuration for the CUDA memory allocator. At inference, models utilize the same chat templates and clinical prompting constraints as established in the zero-shot experiments.
-
-\subsection{Evaluation Framework}
-We employ a three-tier evaluation framework designed to assess the quality of generated clinical summaries from complementary perspectives: Surface-level lexical similarity, Holistic quality dimensions via LLM-as-a-judge, and Clinical entity-level analysis.
-%\begin{itemize}
-%    \item 
-%    \item 
-%    \item 
-%\end{itemize}
-
-% \paragraph{Automated Text Similarity Metrics}
-\textit{Lexical and semantic similarity metrics}: We use ROUGE-L~\citep{lin2004rouge} and
-BERTScore~\citep{zhang2019bertscore} to evaluate the quality of summarization. Both are necessary but insufficient. A model can score well on surface overlap while hallucinating drug names or omitting diagnoses. We include them for comparability with prior work.
-
-\textit{LLM-as-judge}: We use GPT-4.1 to score each summary on three dimensions using structured rubrics (1--5 Likert scale, where 3 is ``acceptable'' and 5 is ``excellent''). \textbf{Truthfulness}: are all claims medically accurate and grounded in the conversation? \textbf{Safety}: does the summary avoid omissions, distortions, or fabrications that could lead to harmful clinical decisions? \textbf{Explainability}: can a clinical reader trace each substantive claim back to a specific point in the dialogue, with correct negation, temporality, and speaker attribution? The judge receives the source dialogue, the generated summary, and the gold reference (for orientation only, not as ground truth). Full prompts appear in Appendix~\ref{sec:appendix}. We do not use fuzzy string matching for entity evaluation because it falsely penalizes valid clinical synonyms.
-% \begin{table*}[htbp]
-%     \centering
-%     \caption{Evaluation Dimensions For LLM-As-A-Judge}
-%     \label{tab: evaluation_dimensions}
-%     \begin{tabularx}{\textwidth}{l X X}
-%     \toprule
-%     \textbf{Dimension} & \textbf{Description} & \textbf{Key Questions} \\
-%     \midrule
-    
-%     \textbf{Truth-fullness} &
-%     The degree to which the summary can be relied upon as an accurate and verifiable account of the clinical encounter. &
-%     Is every claim in the summary grounded in the dialogue? Are there statements that cannot be verified from the source? \\
-%     \textbf{Safety} &
-%     The absence of clinical errors, misleading statements, or omissions that could lead to patient harm if the summary were used in clinical decision-making. &
-%     Does the summary contain any contraindicated recommendations, incorrect dosages, or dangerous omissions? \\
-%     \textbf{Explainability} &
-%     The clarity, coherence, and comprehensibility of the summary for a clinical reader. &
-%     Is the summary logically organized? Is the clinical reasoning clear? Would a clinician understand the summary without referring to the original dialogue? \\
-
-%     \bottomrule     
-%     \end{tabularx}
-% \end{table*}
-
-% The LLM judge is provided with explicit scoring rubrics for each dimension, including anchored descriptions of each scale point (1 = very poor, 3 = acceptable, 5 = excellent).
-
-\textit{Clinical entity analysis}: GPT-4.1 extracts five entity categories; Symptoms, Diagnoses, Substances and Habits, Procedures
-and Tests, Treatments from both generated and doctor-patient conversation, normalizing morphological variants to canonical forms. A generated entity is a true positive (TP) if semantically equivalent to a gold
-entity; a false positive (FP, or \textit{hallucination}) if it
-appears in the generated but not the conversation; a false negative
-(FN, or \textit{omission}) if a gold entity is absent from the
-generated summary. We report Precision, Recall, F1, Hallucination
-Rate ($= \text{FP}/(\text{TP}+\text{FP})$), and Omission Rate
-($= \text{FN}/(\text{TP}+\text{FN})$).
-
-
-
-
-
-% \begin{itemize}[noitemsep]
-%     \item Hallucination rate differs by language
-%     \item Translation drift
-%     \item Ambiguous terms
-%     \item Transliterated terms?
-% \end{itemize}
-% Evaluation: NLI based metric or use LLM as a judge
-
-% \begin{itemize}[noitemsep]
-%     \item Evidence attribution is low performing for low resource languages
-%     \item Inconsistent reasoning for low resource languages
-%     \item Back-translation inherently (which makes it difficult to trace back)
-%\end{itemize}
-
-
-\section{Results and Analysis}
-
-Table~\ref{tab:macro_all_conditions} summarizes macro-averaged results
-across all 10 languages. We discuss each finding in turn.
-\begin{table*}[t]
-\centering
-\caption{Macro-averaged results across all 10 languages for all eight
-conditions. \best{Green\,bold}\,=\,best per row; \worst{red\,bold}\,=\,worst.
-For Hallucination and Omission, lower is better.}
-\label{tab:macro_all_conditions}
-\resizebox{\linewidth}{!}{%
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{lcccccccc}
-\toprule
-\textbf{Metric}
-  & \textbf{Qwen ZS} & \textbf{Qwen FS} & \textbf{Qwen Trans} & \textbf{Qwen SFT}
-  & \textbf{Mistral ZS} & \textbf{Mistral FS} & \textbf{Mistral Trans} & \textbf{Mistral SFT} \\
-\midrule
-Truthfulness
-  & 3.318 & 3.370 & 2.811 & \best{4.156}
-  & 3.092 & 3.067 & 2.777 & \best{4.084} \\
-Safety
-  & 2.560 & 2.575 & \worst{2.217} & 2.962
-  & 2.496 & 2.354 & \worst{2.197} & 2.916 \\
-Explainability
-  & 3.388 & 3.302 & 2.676 & \best{3.838}
-  & 3.052 & 2.932 & 2.716 & \best{3.828} \\
-\midrule
-ROUGE-L
-  & 0.1318 & 0.1206 & 0.1478 & \best{0.2276}
-  & 0.1352 & 0.1299 & 0.1476 & \best{0.2262} \\
-BERTScore
-  & 0.8557 & 0.8544 & 0.8501 & \best{0.8828}
-  & 0.8478 & 0.8495 & 0.8501 & \best{0.8796} \\
-\midrule
-Precision
-  & 0.5757 & 0.5418 & 0.4625 & \best{0.8946}
-  & 0.4901 & 0.4437 & 0.4545 & \best{0.9021} \\
-Hallucination\,$\downarrow$
-  & 0.4243 & 0.4582 & \worst{0.5375} & \best{0.1054}
-  & 0.5099 & 0.5563 & \worst{0.5455} & \best{0.0979} \\
-Recall
-  & 0.4837 & 0.4663 & 0.4359 & \best{0.6843}
-  & 0.3917 & 0.3433 & 0.4012 & \best{0.6579} \\
-Omission\,$\downarrow$
-  & 0.5163 & 0.5337 & \worst{0.5641} & \best{0.3157}
-  & 0.6083 & 0.6567 & \worst{0.5988} & \best{0.3421} \\
-Entity F1
-  & 0.5183 & 0.4992 & 0.4376 & \best{0.7745}
-  & 0.4323 & 0.3852 & 0.4194 & \best{0.7604} \\
-\bottomrule
-\end{tabular}}
-\end{table*}
-
-
-
-\subsection{Few-Shot}
-\label{sec:fewshot}
-
-The most striking finding in Table~\ref{tab:macro_all_conditions}
-is that adding same-language demonstrations makes things worse, not
-better, across most conditions. Macro-average entity F1 falls from
-0.518 to 0.499 for Qwen and from 0.432 to 0.385 for Mistral.
-Hallucination rates rise by 3.4 and 4.6 percentage points. Table~\ref{tab:macro_metrics}
-shows the full picture of zero-shot versus few-shot deltas.
-
-\begin{table}[h!]
-\centering
-\caption{Zero-shot vs.\ few-shot macro-averaged delta.
-\textcolor{worstred}{Red}\,=\,degradation;
-\textcolor{bestgreen}{green}\,=\,improvement.}
-\label{tab:macro_metrics}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcc|cc}
-\toprule
-\textbf{Metric}
-  & \textbf{Q-ZS} & \textbf{Q-FS}
-  & \textbf{M-ZS} & \textbf{M-FS} \\
-\midrule
-Truthfulness   & 3.318 & 3.370\,\textcolor{bestgreen}{($+$0.05)} & 3.092 & 3.067\,\textcolor{worstred}{($-$0.02)} \\
-Safety         & 2.560 & 2.575\,\textcolor{bestgreen}{($+$0.01)} & 2.496 & 2.354\,\textcolor{worstred}{($-$0.14)} \\
-Explainability & 3.388 & 3.302\,\textcolor{worstred}{($-$0.09)} & 3.052 & 2.932\,\textcolor{worstred}{($-$0.12)} \\
-ROUGE-L        & .1318 & .1206\,\textcolor{worstred}{($-$.011)} & .1352 & .1299\,\textcolor{worstred}{($-$.005)} \\
-BERTScore      & .8557 & .8544\,\textcolor{worstred}{($-$.001)} & .8478 & .8495\,\textcolor{bestgreen}{($+$.002)} \\
-Precision      & .5757 & .5418\,\textcolor{worstred}{($-$.034)} & .4901 & .4437\,\textcolor{worstred}{($-$.046)} \\
-Hall.\ Rate    & .4243 & .4582\,\textcolor{worstred}{($+$.034)} & .5099 & .5563\,\textcolor{worstred}{($+$.046)} \\
-Recall         & .4837 & .4663\,\textcolor{worstred}{($-$.017)} & .3917 & .3433\,\textcolor{worstred}{($-$.048)} \\
-Omission       & .5163 & .5337\,\textcolor{worstred}{($+$.017)} & .6083 & .6567\,\textcolor{worstred}{($+$.048)} \\
-\midrule
-Entity F1      & .5183 & .4992\,\textcolor{worstred}{($-$.019)} & .4323 & .3852\,\textcolor{worstred}{($-$.047)} \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-The most striking finding in Table~\ref{tab:macro_all_conditions} is that adding same-language demonstrations makes things worse, not better, across most conditions. Macro-average entity F1 falls from
-0.518 to 0.499 for Qwen and from 0.432 to 0.385 for Mistral. Hallucination rates rise by 3.4 and 4.6 percentage points. Table~\ref{tab:macro_metrics} shows the full picture of zero-shot versus few-shot deltas.
-
-We identify three mechanisms. First, \textit{template lock}: the
-demonstration summary encodes a particular clinical narrative structure, and the model adheres to it even when the test dialogue
-contains content that falls outside that structure. Omission rates increase in 14 of 20 language--model combinations under few-shot.
-Second, \textit{entity bleed}: entities from the demonstration dialogues-patient demographics, medication names, symptom descriptions -migrate into the generated summary for a different
-patient. This inflates hallucination counts with content that is clinically real but belongs to the wrong case, making the error invisible to surface-level metrics. Third, \textit{calibration
-disruption}: for models already well-calibrated to clinical summarization at zero-shot, the demonstration introduces a competing
-prior that interferes with generation. The English zero-shot condition illustrates this clearly; Mistral-English F1 drops from 0.652 to
-0.558 under few-shot, the largest single degradation in the Mistral few-shot condition, and precisely where the model is best calibrated.
-
-These mechanisms are consistent with prior work showing that demonstrations primarily encode format rather than semantic content~\citep{workrethinking}, and that few-shot biases can actively hurt performance compared to zero-shot when the model's
-prior is already reasonable~\citep{zhao2021calibrate}. There are
-two exceptions: Qwen-Gujarati (F1 $+0.134$) and Mistral-Telugu (F1 $+0.096$). Both have the highest zero-shot hallucination rates in their respective matrices (0.693 and 0.718). 
-few-shot is beneficial only when zero-shot generation is severely miscalibrated, otherwise it introduces more noise than signal.
-
-One observation worth noting is that ROUGE-L and BERTScore are nearly
-insensitive to the zero-shot/few-shot difference ($\Delta < 0.012$),
-while entity-level metrics show meaningful changes. This is a concrete
-reminder that surface overlap metrics should not be the primary
-evaluation criterion in clinical settings, where the cost of a
-fabricated drug name or missed diagnosis far exceeds the cost of
-slightly different phrasing.
-
-\subsection{Translation}
-
-The translation results reveal a clean typological split that has practical consequences for deployment decisions. Table~\ref{tab:translation_vs_zs}
-presents per-language F1 for translation versus zero-shot across both models.
-
-\begin{table}[h!]
-\centering
-\caption{Translation vs.\ zero-shot entity F1. Languages sorted by
-family. $^{*}$Averaged over 9 non-English languages.}
-\label{tab:translation_vs_zs}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{llrrrr}
-\toprule
-\textbf{Lang.} & \textbf{Group}
-  & \textbf{Q-ZS} & \textbf{Q-Trans}
-  & \textbf{M-ZS} & \textbf{M-Trans} \\
-\midrule
-Hindi   & IA-High & .551 & \textcolor{bestgreen}{.571\,$\uparrow$} & .450 & \textcolor{bestgreen}{.561\,$\uparrow$} \\
-Marathi & IA-Med  & .528 & \textcolor{bestgreen}{.635\,$\uparrow$} & .420 & \textcolor{bestgreen}{.570\,$\uparrow$} \\
-Gujarati& IA-Low  & .394 & \textcolor{bestgreen}{.495\,$\uparrow$} & .368 & \textcolor{bestgreen}{.539\,$\uparrow$} \\
-Dogri   & IA-Low  & .570 & .497\,$\downarrow$ & .431 & \textcolor{bestgreen}{.567\,$\uparrow$} \\
-\midrule
-\rowcolor{dravidianrow}
-Telugu  & Dravidian & .450 & \worst{.241\,$\downarrow$} & .282 & \worst{.200\,$\downarrow$} \\
-\rowcolor{dravidianrow}
-Tamil   & Dravidian & .480 & .460\,$\downarrow$ & .429 & .473\,$\uparrow$ \\
-\rowcolor{dravidianrow}
-Kannada & Dravidian & .441 & .319\,$\downarrow$ & .423 & \worst{.295\,$\downarrow$} \\
-\midrule
-Bengali & IA-High   & .566 & \worst{.369\,$\downarrow$} & .451 & \worst{.295\,$\downarrow$} \\
-Assamese& IA-Low    & .553 & \worst{.351\,$\downarrow$} & .417 & \worst{.275\,$\downarrow$} \\
-\midrule
-Macro$^{*}$ & -- & .506 & .438\,$\downarrow$ & .424 & .419\,$\downarrow$ \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-For Indo-Aryan languages with Devanagari or closely related scripts, translation consistently improves over zero-shot. IndicTrans2 achieves high quality for these pairs, the structural proximity to Hindi, the dominant Indic language in NMT training data, helps. Routing through English allows both models to summarize in their
-strongest language. Mistral-Marathi gains 0.150 F1 and
-Mistral-Gujarati gains 0.171, which are substantial improvements for
-a training-free method.
-
-For Dravidian languages, the story is very different. Qwen-Telugu
-drops 0.209 F1 under translation, with hallucination rising from
-0.463 to 0.774. Kannada and Tamil show similar degradation. The issue
-is that IndicTrans2 translation quality for Dravidian languages is
-substantially lower than for Indo-Aryan pairs: morphologically
-complex verb forms, clinical conditional structures, and domain
-terminology are frequently mistranslated or collapsed into generic
-English. The summarizer then operates on degraded input and cannot
-recover. The failure is not in the summarizer, it is in the translation step. This compounds into what we term a \textit{mistranslation cascade}: a single bad translation of a key clinical phrase (``reduce tobacco use'' rendered as ``reduce
-their space'' in our Telugu case analysis) eliminates that content from the summary silently.
-
-Two Indo-Aryan languages; Bengali and Assamese also degrade under
-translation, despite not being Dravidian. This requires a separate
-explanation. Bengali and Assamese share a script but have
-substantially different morphological properties, and IndicTrans2's
-Bengali-trained model generalizes poorly to Assamese. For Bengali
-specifically, translation hallucination nearly doubles (0.375 to
-0.676), suggesting that translation quality is lower than expected
-given the language's resource level. This is a useful caution
-against assuming that script family predicts translation quality, language-specific validation is necessary before deployment.
-
-Across all conditions, translation produces the lowest safety scores:
-macro-averaged 2.217 (Qwen) and 2.197 (Mistral), with
-Mistral-Assamese reaching 1.42/5.0. For Dravidian languages and
-low-resource Indo-Aryan languages, direct zero-shot inference is
-safer than translation. Practitioners should not assume that
-routing through a high-resource language improves summary quality;
-for these language families under current IndicTrans2 quality, it
-does not.
-
-\subsection{Fine-Tuning Closes the Cross-Lingual Gap}
-\label{sec:sft}
-
-Supervised fine-tuning produces the strongest results across every
-metric, model, and language, and the magnitude of the improvements
-is large enough to be practically meaningful.
-Table~\ref{tab:sft_gains} presents per-language F1 and the change
-from zero-shot.
-
-\begin{table}[h!]
-\centering
-\caption{SFT vs.\ zero-shot entity F1 per language. $\Delta$\,F1
-= SFT minus zero-shot.}
-\label{tab:sft_gains}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lrrrrrr}
-\toprule
- & \multicolumn{3}{c}{\textbf{Qwen2.5-7B}} & \multicolumn{3}{c}{\textbf{Mistral-7B}} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}
-\textbf{Lang.} & ZS & SFT & $\Delta$ & ZS & SFT & $\Delta$ \\
-\midrule
-Bengali  & .566 & .720 & \textcolor{bestgreen}{+.154} & .451 & .708 & \textcolor{bestgreen}{+.257} \\
-English  & .650 & .777 & \textcolor{bestgreen}{+.127} & .652 & .768 & \textcolor{bestgreen}{+.116} \\
-Hindi    & .551 & .770 & \textcolor{bestgreen}{+.219} & .450 & .763 & \textcolor{bestgreen}{+.313} \\
-Marathi  & .528 & .774 & \textcolor{bestgreen}{+.246} & .420 & .768 & \textcolor{bestgreen}{+.348} \\
-\midrule
-\rowcolor{dravidianrow}
-Telugu   & .450 & \best{.808} & \textcolor{bestgreen}{+.358} & .282 & .769 & \textcolor{bestgreen}{+.487} \\
-\rowcolor{dravidianrow}
-Tamil    & .480 & .722 & \textcolor{bestgreen}{+.242} & .429 & .768 & \textcolor{bestgreen}{+.339} \\
-\rowcolor{dravidianrow}
-Kannada  & .441 & \best{.812} & \textcolor{bestgreen}{+.371} & .423 & .779 & \textcolor{bestgreen}{+.356} \\
-\midrule
-Gujarati & .394 & .800 & \textcolor{bestgreen}{+.406} & .368 & .769 & \textcolor{bestgreen}{+.400} \\
-Dogri    & .570 & .776 & \textcolor{bestgreen}{+.206} & .431 & .757 & \textcolor{bestgreen}{+.326} \\
-Assamese & .553 & .786 & \textcolor{bestgreen}{+.233} & .417 & .755 & \textcolor{bestgreen}{+.338} \\
-\midrule
-\textbf{Avg} & .518 & \textbf{.775} & \textbf{+.257} & .432 & \textbf{.760} & \textbf{+.328} \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-Several observations stand out. The largest F1 gains go to the languages that needed them most. Mistral-Telugu improves by 0.487, Qwen-Gujarati by 0.406, Qwen-Kannada by 0.371, precisely the
-languages where zero-shot performance was lowest. The Dravidian languages, which averaged F1\,$\approx$\,0.457 (Qwen) and 0.378
-(Mistral) at zero-shot, reach 0.781 and 0.772 post fine-tuning, nearly identical to the IA high-resource group (0.756 and 0.747).
-The performance gap that was real and sizable under prompting is essentially eliminated by fine-tuning. This is an important result for equity: the gap is not inherent to the languages, it is an artifact of insufficient task-specific training.
-
-The hallucination reductions are equally striking. Macro-average hallucination drops from 42.4\% to 10.5\% for Qwen and from 50.9\%
-to 9.8\% for Mistral. Mistral-Telugu, which had a hallucination rate of 71.8\% at zero-shot, meaning nearly three-quarters of generated clinical entities were ungrounded falls to 7.0\% post fine-tuning,
-below the English zero-shot rate of 29.6\%. After fine-tuning, every language for both models achieves hallucination below 14.5\%.
-
-Safety scores improve from around 2.5 (Qwen zero-shot) to 2.96 (Qwen SFT) and from 2.5 to 2.92 (Mistral SFT). Importantly, neither
-model crosses 3.0/5.0 as a macro-average even after fine-tuning. More tellingly, the gap between Truthfulness and Safety scores
-\emph{widens} under fine-tuning: at zero-shot it is around 0.76 (Qwen) and 0.60 (Mistral); at SFT it grows to 1.19 and 1.17.
-Models become more truthful much faster than they become safer. This dissociation occurs because Safety penalizes not just factual
-errors but also actionable omissions, inverted negations, incorrect dosages, and incomplete management plans, a richer set of clinical
-harms that supervised imitation of gold summaries does not directly optimize for. Closing this gap likely requires safety-specific
-training signals, such as rubric-grounded reward models or reinforcement learning from clinical expert feedback.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\columnwidth]{Images/Screenshot 2026-05-07 222250.png}
-    \caption{Entity F1 averaged by language family. Dravidian (orange) lags Indo-Aryan by 0.13–0.14 F1 at zero-shot but converges to near-parity at SFT (all bars reach 0.75+). Translation helps IA languages but hurts Dravidian on average.}
-    \label{fig:example}
-\end{figure}
-
-\subsection{Qwen2.5-7B Outperforms Mistral-7B, Mainly at Zero-Shot}
-
-At zero-shot, Qwen2.5-7B leads Mistral-7B on every entity-level
-metric: F1 0.518 vs.\ 0.432 ($+$0.086), precision 0.576 vs.\ 0.490,
-recall 0.484 vs.\ 0.392, hallucination 0.424 vs.\ 0.510.
-Qwen also leads on LLM-judge dimensions: Truthfulness by 0.226,
-Explainability by 0.336. The one exception is ROUGE-L, where Mistral
-is marginally higher (0.1352 vs.\ 0.1318), but this reflects shorter,
-more formulaic outputs that happen to share surface n-grams with gold
-summarie, not better clinical coverage, as confirmed by lower entity
-F1 and BERTScore. Qwen's advantage traces to its broader multilingual
-pretraining: its token representations for non-Latin scripts are
-better calibrated, giving it stronger generative confidence in
-Dravidian and low-resource Indo-Aryan languages.
-
-After fine-tuning, the gap narrows substantially: 0.775 vs.\ 0.760
-F1 ($+$0.014). The remaining difference is small and probably reflects
-model-specific capacity for clinical summarization rather than
-language-family effects. Practitioners working in resource-constrained
-settings should prefer Qwen2.5-7B for prompting-based deployment;
-for fine-tuned deployment, both models are viable.
-
-\subsection{Safety Is the Hardest Dimension to Improve}
-
-Safety is the lowest-scoring dimension in every single experimental
-condition for both models, and it is the only dimension that fails
-to reach 3.0/5.0 even after fine-tuning. The scores range from
-1.42 (Mistral-Assamese translation) to 3.08 (Qwen-Kannada SFT),
-with macro-averages between 2.197 and 2.962. Looking at the
-safety-truthfulness gap by condition:
-
-\begin{center}
-\small
-\begin{tabular}{lcccc}
-\toprule
- & Q-ZS & Q-FS & Q-Trans & Q-SFT \\
-\midrule
-Truthfulness & 3.32 & 3.37 & 2.81 & 4.16 \\
-Safety       & 2.56 & 2.58 & 2.22 & 2.96 \\
-Gap          & 0.76 & 0.80 & 0.59 & 1.19 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-The gap is widest under SFT, not narrowest. Standard fine-tuning on gold summaries teaches the model to produce accurate-sounding
-content, improving Truthfulness and Explainability, but does not
-sufficiently optimize for the absence of dangerous omissions or clinical distortions. Safety evaluation by an expert judge penalizes
-subtle failures that do not show up in n-gram comparison against a gold reference, such as an inverted negation (``no dysphagia''
-becoming ``mild dysphagia'') or a conditional plan (``consider biopsy if laryngoscopy is abnormal'') becoming a definitive
-recommendation (``biopsy is required''). These errors survive fine-tuning unless the training objective specifically targets them.
-
-The safety deficit is also not uniformly distributed across
-languages. At zero-shot, Dravidian languages score notably lower on Safety (Qwen: 2.23 average) than high-resource Indo-Aryan
-languages (Qwen: 2.84 average), reflecting the weaker generative calibration for these scripts. Under translation, Dravidian and low-resource languages suffer the most severe safety collapses. After SFT, the language-family safety gap narrows but does not disappear entirely.
+% ================================================================
+% REWRITTEN SECTIONS FOR 7-PAGE IJCAI LIMIT
+% Replace the corresponding sections in your paper with these.
+% No change to writing style or tone.
+% ================================================================
+
+
+% ── 1. REPLACE \section{Clinical Error Taxonomy} ────────────────
+% The 8 T1-T8 paragraphs (~680 words) become this intro + table.
+% Keep the two case-study tables (tab:case_a, tab:case_b) in appendix.
 
 \section{Clinical Error Taxonomy}
 
-To complement the quantitative results, we conducted systematic
-qualitative analysis across all ten languages, examining generated
-summaries against source dialogues and gold references for each
-experimental condition. We identified eight recurring error
-patterns, which we organize into a Clinical Error Taxonomy.
-The categories are not mutually exclusive, a single summary can
-exhibit multiple error types, but they represent distinct mechanisms
-and have different clinical consequences.
-Examples are shown in table \ref{tab:case_a} and table \ref{tab:case_b}.
+Systematic qualitative analysis across all ten languages and three
+experimental conditions identifies eight recurring error patterns.
+Table~\ref{tab:error_taxonomy} summarises each type by mechanism,
+affected conditions, clinical risk, and detectability without the
+source dialogue. The categories are not mutually exclusive; a single
+summary can exhibit multiple types simultaneously. The most dangerous
+is \textbf{T3}~(entity bleed), because the fabricated content is
+clinically accurate---it describes the demonstration patient, not the
+test patient---and is therefore undetectable by a clinician reading
+the summary alone. \textbf{T7} and \textbf{T8} are specific to the
+translation pipeline; \textbf{T3} is exclusive to few-shot.
+Illustrative examples for Telugu zero-shot, few-shot, and translation
+outputs are provided in Appendix~\ref{sec:qualitative_appendix}.
+
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.2}
+\caption{Clinical Error Taxonomy derived from qualitative analysis
+across 10 languages. Risk: \worst{Critical} / \textcolor{amberyellow}{\textbf{High}}.
+Detectable\,=\,whether a clinician can identify the error without the source dialogue.}
+\label{tab:error_taxonomy}
+\begin{tabular}{@{}clp{5.8cm}lll@{}}
+\toprule
+\textbf{ID} & \textbf{Type} & \textbf{Mechanism} &
+\textbf{Conditions} & \textbf{Risk} & \textbf{Detectable?} \\
+\midrule
+T1 & Temporal distortion &
+Numeral preserved; temporal unit substituted
+(``3 months'' $\to$ ``3 days''). Unit loss during
+low-resource tokenisation. &
+ZS, Trans & \worst{Critical} & Partly \\
+
+T2 & Pathology fabrication &
+Plausible but ungrounded diagnoses/symptoms generated
+(e.g., ``apnea'' for throat discomfort).
+Dominant in ZS for Dravidian languages. &
+ZS, FS & \worst{Critical} & Partly \\
+
+T3 & Entity bleed &
+Named entities from the demonstration (drug, smoking history,
+caregiver name) migrate into the test summary.
+Content is real but belongs to the wrong patient. &
+FS only & \worst{Critical} & \textbf{No} \\
+
+T4 & Frequency inversion &
+Substance use minimised or inverted (``rare'' $\to$
+``25 pack-years''); cessation advice direction flipped. &
+ZS, FS, Trans & \worst{Critical} & Partly \\
+
+T5 & Conditionality collapse &
+Conditional plans (``biopsy if needed'') become definitive
+statements (``biopsy required'').
+Dravidian conditional morphology lost in translation. &
+FS, Trans & \textcolor{amberyellow}{\textbf{High}} & Yes \\
+
+T6 & Speaker misattribution &
+Clinician advice attributed to patient or vice versa.
+Caused by loss of grammatical role markers in IndicTrans2
+output for Dravidian languages. &
+Trans & \textcolor{amberyellow}{\textbf{High}} & Yes \\
+
+T7 & Fabricated absence assertion &
+Model asserts absence of documented content
+(``side effects not stated'' when five are listed).
+Arises when translation degrades symptom-rich passages. &
+Trans & \worst{Critical} & \textbf{No} \\
+
+T8 & Mistranslation cascade &
+IndicTrans2 produces semantically empty English
+(``reduce their space'' for ``reduce tobacco use'');
+summariser omits or garbles the content silently. &
+Trans & \worst{Critical} & \textbf{No} \\
+\bottomrule
+\multicolumn{6}{@{}l}{\scriptsize
+ZS\,=\,zero-shot; FS\,=\,few-shot; Trans\,=\,IndicTrans2 translation.
+T3 exclusive to FS; T6--T8 specific to Trans.}
+\end{tabular}
+\end{table*}
 
 
+% ── 2. REPLACE \section{Discussion} ─────────────────────────────
+% Cut from ~400 words to ~180 words. Remove pluralistic alignment.
 
-%\paragraph{T1 -- Temporal distortion.}
-\noindent\textbf{T1 -- Temporal distortion.}
-Numerals are carried over correctly but their temporal units are substituted: a three-month follow-up cadence becomes three days; a four-week symptom duration becomes four days. The error is
-particularly dangerous because the number looks reasonable while the timeline is wildly wrong. Common in zero-shot for low-resource
-languages, where weaker tokenization leads to loss of temporal context surrounding a correctly extracted numeral.
+\section{Discussion and Limitations}
 
-%\paragraph{T2 -- Pathology fabrication.}
-\noindent\textbf{T2 -- Pathology fabrication.}
-The model generates clinically plausible but entirely invented diagnoses, symptoms, or comorbidities. In our Telugu zero-shot
-case (detailed analysis in table \ref{tab:case_a}), the patient presented with throat discomfort and voice change; the model generated ``post-falloff-apnea treatment'' and a four-day apnea episode. This pattern is most common in zero-shot generation for Dravidian languages, where lower generative confidence leads the model to fill representational gaps with content from its clinical pretraining prior.
+Our results expose a concrete, quantified reliability gap in
+multilingual clinical AI. Dravidian language users face hallucination
+rates roughly 15 percentage points higher than English users at
+zero-shot. Translation makes this worse, not better. Few-shot
+prompting---another default approach---also degrades performance
+across the board. Fine-tuning on domain-matched multilingual data
+is the only strategy that closes the gap, yet such investment
+is currently absent at scale for Indian languages. Deploying
+English-optimised clinical LLMs without fine-tuning produces
+documentation that is measurably less safe for Dravidian-language
+speakers than for English speakers.
 
-%\paragraph{T3 -- Entity bleed.}
-\noindent\textbf{T3 -- Entity bleed.}
-Clinical entities from demonstration examples migrate into the generated summary for a different patient. In our Telugu few-shot
-case, presented in tabel \ref{tab:case_a}, the generated summary introduced a caregiver named ``Evelyn'' (not mentioned in the test dialogue), a fabricated 25-year smoking
-history contradicting the stated ``rare'' cigarette use, and ``hypertension controlled with amlodipine'' for a patient with no
-documented comorbidities. This error is exclusive to few-shot and is present to some degree in all languages. It is particularly
-dangerous because the bled content is clinically accurate information, just about the wrong patient, making it indistinguishable from correctly extracted content without access
-to the original dialogue.
+The few-shot finding deserves specific attention: same-language
+demonstrations still hurt performance, ruling out cross-lingual
+interference as the sole explanation. The entity-bleed mechanism
+we identify is specific to domain-homogeneous settings where
+demonstration and test dialogues share a clinical context---entities
+transfer plausibly but incorrectly. This is a warning for any
+high-stakes domain where few-shot prompting uses in-domain examples.
 
-
-%\paragraph{T4 -- Frequency inversion.}
-\noindent\textbf{T4 -- Frequency inversion.}
-Reported substance use frequencies are minimized or inverted: alcohol use of 3--4 times per week becomes ``occasional use''; ``rare'' cigarette use becomes 8--12 cigarettes per day. Cessation
-advice direction is sometimes flipped (``advise against increasing use'' instead of ``recommend cessation''). Observed across zero-shot,
-few-shot, and translation conditions, and most consequential for cancer risk stratification and treatment eligibility.
-
-%\paragraph{T5 -- Conditionality collapse.}
-\noindent\textbf{T5 -- Conditionality collapse.}
-Conditional clinical plans---``if laryngoscopy shows abnormality, consider biopsy''---are rendered as definitive statements:
-``biopsy is required.'' The clinical decision gate is removed, which both misrepresents the agreed management and could precipitate
-unnecessary procedures. Most common in few-shot (where demonstration summaries typically describe completed rather than planned encounters) and in translation as shown in table \ref{tab:case_b}(where Dravidian conditional
-morphology is lost in the English rendering).
-
-%\paragraph{T6 -- Speaker misattribution.}
-\noindent\textbf{T6 -- Speaker misattribution.}
-Clinical advice given by the physician is attributed to the patient,
-or patient-reported symptoms are framed as clinician findings.
-Primarily observed in translation outputs, where IndicTrans2
-frequently drops speaker-role markers encoded grammatically in
-Dravidian languages (honorifics, person-marked verb forms) when
-rendering into English. The downstream summarizer, seeing a
-deattributed English sentence, assigns it to the more prominent
-discourse participant.
-
-%\paragraph{T7 -- Fabricated absence assertion.}
-\noindent\textbf{T7 -- Fabricated absence assertion.}
-The model generates a confident negative claim that contradicts source content: ``side effects were not reported'' when the patient
-explicitly lists five. This error is specific to translation outputs and arises when IndicTrans2 produces degraded or incomplete English
-for a symptom-rich passage. The summarizer, unable to extract content, generates a hedging meta-statement that is factually false and actively misinforms the reader.
-
-%\paragraph{T8 -- Mistranslation cascade.}
-\noindent\textbf{T8 -- Mistranslation cascade.}
-An IndicTrans2 translation error produces semantically empty or nonsensical English, causing the downstream summarizer to either
-omit the content entirely or generate a plausible-sounding but incorrect substitution. Two sub-forms: complete collapse
-(``reduce tobacco use'' $\to$ ``reduce their space''$\to$ no tobacco content in summary) and partial mistranslation (``eligible up to age 45'' $\to$ ``45 individuals per month'').
-Most severe for Dravidian languages and Assamese.
-
-These eight error types differ in clinical consequence and in detectability without access to the source dialogue. T3 (entity bleed)
-is arguably the most dangerous in deployed settings: the fabricated content is medically valid, it just describes the wrong patient,
-and cannot be detected by a clinician reading the summary alone. T7 (fabricated absence) actively inverts documented information. Both are undetectable without the original dialogue. T1 and T5 are detectable through clinical implausibility (a three-day follow-up
-for a cancer case). T6 and T8 are detectable if the clinician is familiar with the patient.
-
-
-
-
-
-
-
-
-% ── 7. DISCUSSION ──────────────────────────────────────────────
-\section{Discussion}
-
-\paragraph{What this means for equitable healthcare AI.}
-Our results put numbers on a structural problem. Dravidian language
-users face hallucination rates that are roughly 15 percentage points
-higher than English users at zero-shot. Translation, the seemingly
-natural solution, makes their situation worse rather than better.
-Few-shot prompting, another default approach, degrades performance
-across the board. The one strategy that actually works---fine-tuning
-on domain-matched multilingual data---requires investment that is
-currently not happening at scale for Indian languages. The implication
-is that deploying existing English-optimized clinical LLMs for Indian
-language settings, without fine-tuning, would produce documentation
-that is measurably less safe for speakers of Dravidian languages
-than for English speakers. This is not a theoretical concern; it is
-a quantified disparity in clinical AI reliability.
-
-\paragraph{The few-shot result and what it tells us about ICL.}
-The finding that same-language demonstrations consistently hurt
-performance is worth emphasizing because it rules out the most common
-explanation for few-shot degradation in multilingual settings. If
-cross-lingual interference were the mechanism, same-language
-demonstrations should help. They do not. The entity-bleed mechanism
-we identify---demonstrations contaminating outputs with entities from
-a different patient---suggests a failure mode specific to clinical
-settings where documents are domain-homogeneous: every demonstration
-dialogue and test dialogue shares the same clinical domain, so
-entities can transfer plausibly but incorrectly. This is a warning
-for any high-stakes domain where few-shot prompting involves
-in-domain demonstrations.
-
-\paragraph{What would close the safety gap.}
-Standard supervised fine-tuning on gold summaries improves safety
-scores substantially but does not close them to clinically
-acceptable levels. The widening safety-truthfulness gap under SFT
-suggests that what is missing is not more data but different
-feedback: the training objective needs to penalize dangerous
-omissions, conditional plan distortions, and negation errors
-specifically. Clinician feedback, safety-specific reward models,
-or structured evaluation criteria built into the fine-tuning loop
-are likely necessary. This is an open problem at the intersection
-of clinical NLP and alignment research.
+The persistent safety deficit after SFT points to a training
+objective gap: imitating gold summaries optimises truthfulness but
+does not penalise dangerous omissions, inverted negations, or
+collapsed conditional plans. Safety-specific reward models or
+reinforcement learning from clinical expert feedback are likely
+necessary.
 
 \paragraph{Limitations.}
-Our evaluation covers 50 examples per language from a single shared
-task dataset; larger-scale evaluation with more diverse clinical
-scenarios is needed. We evaluate two 7B models; results may differ
-for larger models or models with stronger Indic language pretraining.
-The LLM-as-judge dimension is an approximation of expert clinical
-evaluation; inter-rater agreement with actual clinicians should be
-validated in future work. Our qualitative analysis covers one
-representative case per language per method; broader qualitative
-coverage could surface additional error types.
+We evaluate 50 examples per language from a single shared-task
+dataset; larger-scale evaluation across diverse clinical scenarios
+is needed. We study two 7B models; results may differ for larger or
+more Indic-focused architectures. LLM-as-judge scores are
+approximations of expert clinical evaluation; inter-rater agreement
+with clinicians should be validated in future work.
 
-% ── 8. CONCLUSION ──────────────────────────────────────────────
+
+% ── 3. REPLACE \section{Conclusion} ─────────────────────────────
+% Cut from ~195 words to ~115 words. Remove pluralistic alignment closing.
+
 \section{Conclusion}
 
-We studied the trustworthiness of multilingual clinical dialogue
-summarization across ten Indian languages, finding that few-shot
-prompting with same-language demonstrations consistently makes things
-worse through template lock, entity bleed, and calibration disruption;
-that translation through IndicTrans2 helps Indo-Aryan languages but
-harms Dravidian and low-resource languages through mistranslation
-cascades; and that clinical Safety remains below acceptable thresholds
-across all conditions and both models even after fine-tuning. The one
-clearly good news is that supervised fine-tuning closes the
-cross-lingual performance gap: with appropriate domain-matched
-training, Kannada and Telugu reach F1 scores competitive with
-English, demonstrating that the gap is not inherent to the languages
-but reflects the current state of investment in multilingual clinical AI.
+We present the first systematic evaluation of cross-lingual clinical
+dialogue summarization across ten Indian languages. Few-shot prompting
+with same-language demonstrations consistently degrades performance
+through template lock, entity bleed, and calibration disruption.
+Translation through IndicTrans2 helps Indo-Aryan languages but harms
+Dravidian and low-resource languages through mistranslation cascades.
+Clinical Safety scores remain below 3.0/5.0 across all conditions and
+both models, even after fine-tuning. Supervised fine-tuning closes the
+cross-lingual performance gap: Kannada and Telugu reach F1 scores
+competitive with English, confirming that the gap reflects the current
+state of investment in multilingual clinical AI rather than any
+inherent property of the languages themselves. Safety evaluations
+conducted only in English systematically underestimate the clinical
+risk faced by speakers of low-resource languages, and evaluation
+frameworks must reflect this reality.
 
-We close with what we think is the main takeaway for the pluralistic
-alignment community: safety evaluations for clinical AI that are
-conducted only in English will systematically underestimate the risk
-faced by speakers of low-resource languages. A system that scores
-well on English safety benchmarks may simultaneously be producing
-clinical summaries with 70\% hallucination rates in Telugu.
-These are not edge cases; they are the majority of India's clinical
-interactions. Evaluation frameworks, training datasets, and safety
-standards need to reflect that reality.
+
+% ── 4. INTRODUCTION — remove the duplicated paragraph ───────────
+% Delete this block from your Introduction (it repeats what's
+% already in the contributions list and methodology section):
+%
+% DELETE: "We benchmark two open-source instruction-tuned 7B-parameter
+% models Mistral-7B and Qwen2.5-7B under four experimental paradigms:
+% zero-shot prompting, few-shot prompting, translation-augmented inference
+% via IndicTrans2, and supervised fine-tuning. Evaluation spans three
+% complementary tiers; surface-level metrics, LLM-as-judge holistic quality
+% assessment, and clinical entity-level fidelity analysis providing a
+% comprehensive picture of summarization quality across the full language
+% spectrum. Full details of the dataset, experimental setup, and evaluation
+% framework are presented in Section~\ref{Task}."
+%
+% This paragraph restates the abstract and is covered in Section 4.
+% Removing it saves ~75 words and tightens the Introduction.
+
+
+% ── 5. RELATED WORK — two citations to trim ─────────────────────
+% Remove or merge these two less critical entries to save ~60 words:
+%
+% REMOVE: \citet{tretyak2020combination} proposed an approach based on
+% a combination of extractive and abstractive summarization.
+%
+% REMOVE: \citet{lyu2025automatic} shows the performance of clinical
+% summarization using prompt tuning on a domain specific LLM.
+%
+% These add no direct contrast to your work and the space is better used.
+
+
+% ── 6. CONTRIBUTIONS — add the few-shot bullet back ─────────────
+% You commented it out but it is one of your strongest findings.
+% Uncomment and use this version (shorter):
+%
+% \item A demonstration that few-shot prompting with same-language
+%   demonstrations \emph{consistently degrades} performance relative
+%   to zero-shot in 16 of 20 language--model combinations, through
+%   entity bleed, template lock, and calibration disruption.
+
+
+% ── SPACE SUMMARY ───────────────────────────────────────────────
+% Error taxonomy: paragraphs → table         saves ~550 words (~0.6 page)
+% Discussion + Limitations compressed         saves ~220 words (~0.25 page)
+% Conclusion compressed                       saves ~80 words  (~0.09 page)
+% Introduction duplicate paragraph removed    saves ~75 words  (~0.08 page)
+% Related Work two citations removed          saves ~60 words  (~0.07 page)
+% ----------------------------------------------------------------
+% Total saving:                              ~985 words (~1.1 pages)
+% ================================================================
