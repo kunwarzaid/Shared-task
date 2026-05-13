@@ -22,6 +22,30 @@ avg_decision_delay: 7.2
 premature_action_rate: 0.1
 test_action_mismatch_rate: 0.18
 
+Llama 4 scout
+N: 50
+accuracy: 0.28
+never_diagnosed: 23
+OER: 0.22
+ECE: 0.496
+avg_confidence: 0.738
+UAR: 0.12
+EPH_intended: 0.28
+EPH_realized: 0.22
+EPH_blocked: 0.06
+EPH_reduction_%: 21.4
+high_harm_missed: 0.0
+avg_tests_requested_by_llm: 3.8
+avg_tests_found_in_data: 2.08
+avg_diagnostic_precision: 0.64
+cases_with_tests: 50
+rx_attempt_rate: 0.0
+rx_failure_rate: 0.0
+avg_turns: 9.92
+avg_decision_delay: 9.86
+premature_action_rate: 0.0
+test_action_mismatch_rate: 0.16
+
 \section{Human Evaluation}
 \label{sec:human_eval}
 
