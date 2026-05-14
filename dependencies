@@ -46,6 +46,55 @@ avg_decision_delay: 9.86
 premature_action_rate: 0.0
 test_action_mismatch_rate: 0.16
 
+Qwen 32 B
+===== FINAL METRICS =====
+N: 50
+accuracy: 0.44
+never_diagnosed: 1
+OER: 0.26
+ECE: 0.39
+avg_confidence: 0.808
+UAR: 0.2
+EPH_intended: 2.12
+EPH_realized: 1.58
+EPH_blocked: 0.54
+EPH_reduction_%: 25.5
+high_harm_missed: 0.22
+avg_tests_requested_by_llm: 3.5
+avg_tests_found_in_data: 1.5
+avg_diagnostic_precision: 0.58
+cases_with_tests: 49
+rx_attempt_rate: 0.2
+rx_failure_rate: 0.0
+avg_turns: 5.62
+avg_decision_delay: 4.3
+premature_action_rate: 0.24
+test_action_mismatch_rate: 0.12
+
+llama-3.3-70b-versatile
+N: 50
+accuracy: 0.24
+never_diagnosed: 25
+OER: 0.20
+ECE: 0.523
+avg_confidence: 0.738
+UAR: 0.12
+EPH_intended: 0.26
+EPH_realized: 0.19
+EPH_blocked: 0.07
+EPH_reduction_%: 26.923
+high_harm_missed: 0.0
+avg_tests_requested_by_llm: 3.8
+avg_tests_found_in_data: 2.08
+avg_diagnostic_precision: 0.62
+cases_with_tests: 50
+rx_attempt_rate: 0.0
+rx_failure_rate: 0.0
+avg_turns: 10.92
+avg_decision_delay: 9.96
+premature_action_rate: 0.0
+test_action_mismatch_rate: 0.20
+
 \section{Human Evaluation}
 \label{sec:human_eval}
 
