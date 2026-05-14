@@ -1,3 +1,14 @@
+
+\subsection{Qualitative Case Studies}
+To ground the aggregate metrics, we highlight two specific encounters from the GPT-5 evaluation that illustrate these structural failures.
+
+\textbf{Case A: The Overconfidence Loophole (High Harm Missed).} 
+The patient presented with symptoms of Acute Interstitial Nephritis. Over five turns, GPT-5 asked purely historical questions without ordering confirmatory lab work. On turn six, it diagnosed \textit{Acute Pyelonephritis} (incorrect) with a self-reported confidence of 0.85. Because the confidence was high and the diagnosis field was populated, the threshold-guardrail allowed the subsequent \texttt{prescribe\_medication} action to execute. In a physical deployment, the patient would have received the wrong pharmacological treatment based entirely on hallucinated certainty.
+
+\textbf{Case B: Extreme Diagnostic Fishing.} 
+A patient presented with early signs of Diffuse Large B-cell Lymphoma. GPT-5 ultimately reached the correct diagnosis, but its pathway was highly erratic. Over 14 turns, the model requested 45 distinct laboratory and imaging tests. The Measurement Agent found only 6 of these tests in the patient's record (Test Ordering Precision: 0.13). The model's reasoning trace revealed it was reciting generalized oncology workup protocols rather than dynamically responding to the patient's specific presentation, demonstrating how LLMs can hallucinate clinical pathways that would waste massive physical resources.
+
+
 \textbf{Dataset:} We use data from the Shared Task on Patient-Centric Clinical Dialogue Summarization. The corpus comprises train/validation/test splits of carefully annotated clinical encounters. The dialogues exhibit high linguistic complexity: lengths vary dramatically (ranging from 4,000 to over 7,000 tokens per encounter), and natural code-switching with English medical terminology is highly prevalent across all regional languages. 
 
 For all generations, we utilize greedy decoding (temperature $\tau=0.1$, top-$p=0.95$) to minimize stochastic hallucinations, a standard practice for high-stakes clinical tasks. For the few-shot condition, the $k{=}1$ exemplar was randomly sampled from the language-specific training split to prevent selection bias.
