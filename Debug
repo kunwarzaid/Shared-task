@@ -1,4 +1,6 @@
 
+To ensure the LLM-as-a-judge did not introduce systemic bias, the prompt was strictly constrained. The evaluator model was instructed: \emph{``Return True only if a clinician would treat these as the same working diagnosis and the initial management plan would be identical. Ignore differences in specificity that do not change management (e.g., 'lumbar radiculopathy' vs 'disc herniation').''} This two-stage string normalization and LLM-verification process was critical to prevent false negatives from synonymous medical terminology, ensuring that our High Harm Missed (HHM) metric strictly captured genuine diagnostic errors.
+
 \subsection{Qualitative Case Studies}
 To ground the aggregate metrics, we highlight two specific encounters from the GPT-5 evaluation that illustrate these structural failures.
 
