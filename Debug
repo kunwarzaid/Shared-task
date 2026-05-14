@@ -2,87 +2,67 @@
 
 For all generations, we utilize greedy decoding (temperature $\tau=0.1$, top-$p=0.95$) to minimize stochastic hallucinations, a standard practice for high-stakes clinical tasks. For the few-shot condition, the $k{=}1$ exemplar was randomly sampled from the language-specific training split to prevent selection bias.
 
-\documentclass[tikz, border=10pt]{standalone}
-\usepackage{pgfplots}
-\pgfplotsset{compat=1.18}
-\usepackage{xcolor}
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[font=\sffamily]
+    \begin{axis}[
+        width=\columnwidth, % Automatically scales to column width
+        height=7.5cm,      % Adjusted height for better proportions
+        ybar=1pt, 
+        bar width=8pt,     % Slightly thinner bars for narrow columns
+        ymin=0,
+        ymax=0.85,
+        ylabel={Entity F1},
+        symbolic x coords={ZS, FS, Trans, SFT},
+        xticklabels={ZS, FS, Trans, \textbf{SFT}}, 
+        xtick=data,
+        ytick={0.0, 0.2, 0.4, 0.6, 0.8},
+        ymajorgrids=true,
+        grid style={dashed, gray!40},
+        axis x line=bottom,
+        axis y line=left,
+        enlarge x limits=0.15,
+        legend style={
+            at={(0.5,-0.15)},
+            anchor=north,
+            legend columns=-1,
+            draw=none,
+            font=\footnotesize, % Smaller legend font
+            /tikz/every even column/.append style={column sep=0.3cm}
+        },
+        area legend
+    ]
 
-% Define the colors from the HTML
-\definecolor{dravidian}{HTML}{D46030}
-\definecolor{ialowres}{HTML}{5BA4CF}
-\definecolor{iahighres}{HTML}{1B4E96}
+    % QWEN DATA (Solid Bars)
+    \addplot[fill=dravidian, draw=none] coordinates {
+        (ZS, 0.457) (FS, 0.414) (Trans, 0.340) (SFT, 0.781)
+    };
+    \addplot[fill=ialowres, draw=none] coordinates {
+        (ZS, 0.506) (FS, 0.516) (Trans, 0.448) (SFT, 0.787)
+    };
+    \addplot[fill=iahighres, draw=none] coordinates {
+        (ZS, 0.548) (FS, 0.519) (Trans, 0.525) (SFT, 0.755)
+    };
 
-\begin{document}
-\begin{tikzpicture}[font=\sffamily]
-\begin{axis}[
-    width=12cm,
-    height=8cm,
-    ybar=1pt, % Gap between bars
-    bar width=9pt,
-    ymin=0,
-    ymax=0.85,
-    ylabel={Entity F1},
-    symbolic x coords={ZS, FS, Trans, SFT},
-    % SFT is bolded based on the original HTML style
-    xticklabels={ZS, FS, Trans, \textbf{SFT}}, 
-    xtick=data,
-    ytick={0.0, 0.2, 0.4, 0.6, 0.8},
-    ymajorgrids=true,
-    grid style={dashed, gray!40},
-    axis x line=bottom,
-    axis y line=left,
-    enlarge x limits=0.15,
-    legend style={
-        at={(0.5,-0.12)},
-        anchor=north,
-        legend columns=-1,
-        draw=none,
-        /tikz/every even column/.append style={column sep=0.5cm}
-    },
-    area legend % Forces legend markers to be solid rectangles instead of lines
-]
+    % MISTRAL DATA (Faded Bars)
+    \addplot[fill=dravidian, fill opacity=0.4, draw=none, forget plot] coordinates {
+        (ZS, 0.378) (FS, 0.385) (Trans, 0.323) (SFT, 0.772)
+    };
+    \addplot[fill=ialowres, fill opacity=0.4, draw=none, forget plot] coordinates {
+        (ZS, 0.405) (FS, 0.362) (Trans, 0.460) (SFT, 0.760)
+    };
+    \addplot[fill=iahighres, fill opacity=0.4, draw=none, forget plot] coordinates {
+        (ZS, 0.440) (FS, 0.351) (Trans, 0.475) (SFT, 0.746)
+    };
 
-% ===============================
-% QWEN DATA (Solid Bars)
-% ===============================
+    \legend{Dravidian, IA Low-res, IA High-res}
 
-% Dravidian
-\addplot[fill=dravidian, draw=none] coordinates {
-    (ZS, 0.457) (FS, 0.414) (Trans, 0.340) (SFT, 0.781)
-};
-% IA Low-res
-\addplot[fill=ialowres, draw=none] coordinates {
-    (ZS, 0.506) (FS, 0.516) (Trans, 0.448) (SFT, 0.787)
-};
-% IA High-res
-\addplot[fill=iahighres, draw=none] coordinates {
-    (ZS, 0.548) (FS, 0.519) (Trans, 0.525) (SFT, 0.755)
-};
+    % Explanatory footnote
+    \node[anchor=north, font=\scriptsize\itshape, text=darkgray] 
+        at (rel axis cs:0.5,-0.28) {Solid = Qwen $\cdot$ Faded = Mistral};
 
-% ===============================
-% MISTRAL DATA (Faded Bars)
-% ===============================
-
-% Dravidian
-\addplot[fill=dravidian, fill opacity=0.4, draw=none, forget plot] coordinates {
-    (ZS, 0.378) (FS, 0.385) (Trans, 0.323) (SFT, 0.772)
-};
-% IA Low-res
-\addplot[fill=ialowres, fill opacity=0.4, draw=none, forget plot] coordinates {
-    (ZS, 0.405) (FS, 0.362) (Trans, 0.460) (SFT, 0.760)
-};
-% IA High-res
-\addplot[fill=iahighres, fill opacity=0.4, draw=none, forget plot] coordinates {
-    (ZS, 0.440) (FS, 0.351) (Trans, 0.475) (SFT, 0.746)
-};
-
-% Add Legend Entries (only for the first three plots)
-\legend{Dravidian, IA Low-res, IA High-res}
-
-% Add the explanatory footnote
-\node[anchor=north, font=\small\itshape, text=darkgray] 
-    at (rel axis cs:0.5,-0.22) {Solid = Qwen $\cdot$ Faded = Mistral};
-
-\end{axis}
-\end{tikzpicture}
-\end{document}
+    \end{axis}
+    \end{tikzpicture}
+    \caption{Entity F1 by Language Family.}
+    \label{fig:entity_f1}
+\end{figure}
