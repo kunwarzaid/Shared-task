@@ -99,8 +99,6 @@ test_action_mismatch_rate: 0.20
 
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
-% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
-%Template version as of 6/27/2024
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -112,336 +110,125 @@ test_action_mismatch_rate: 0.20
 \usepackage{url}
 \usepackage{microtype}
 \usepackage{multirow}
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% SPACE SAVING TWEAKS
+\setlength{\textfloatsep}{8pt plus 1.0pt minus 2.0pt}
+\setlength{\floatsep}{8pt plus 1.0pt minus 2.0pt}
+\setlength{\intextsep}{8pt plus 1.0pt minus 2.0pt}
+\setlength{\abovedisplayskip}{3pt}
+\setlength{\belowdisplayskip}{3pt}
+
 \begin{document}
 
-\title{Conference Paper Title*\\
-{\footnotesize \textsuperscript{*}Note: Sub-titles are not captured for https://ieeexplore.ieee.org  and
-should not be used}
-\thanks{Identify applicable funding agency here. If none, delete this.}
-}
+\title{Active-Unsafe and Passive-Useless: Auditing Action-Level Safety in Clinical LLM Agents}
 
-% \author{\IEEEauthorblockN{1\textsuperscript{st} Given Name Surname}
-% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-% \textit{name of organization (of Aff.)}\\
-% City, Country \\
-% email address or ORCID}
-% \and
-% \IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
-% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-% \textit{name of organization (of Aff.)}\\
-% City, Country \\
-% email address or ORCID}
-% \and
-% \IEEEauthorblockN{3\textsuperscript{rd} Given Name Surname}
-% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-% \textit{name of organization (of Aff.)}\\
-% City, Country \\
-% email address or ORCID}
-% \and
-% \IEEEauthorblockN{4\textsuperscript{th} Given Name Surname}
-% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-% \textit{name of organization (of Aff.)}\\
-% City, Country \\
-% email address or ORCID}
-% \and
-% \IEEEauthorblockN{5\textsuperscript{th} Given Name Surname}
-% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-% \textit{name of organization (of Aff.)}\\
-% City, Country \\
-% email address or ORCID}
-% \and
-% \IEEEauthorblockN{6\textsuperscript{th} Given Name Surname}
-% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-% \textit{name of organization (of Aff.)}\\
-% City, Country \\
-% email address or ORCID}
-% }
+% Hide authors for blind review or add them here
+\author{\IEEEauthorblockN{Anonymous Authors}
+\IEEEauthorblockA{\textit{Anonymous Affiliation} \\
+City, Country \\
+email@domain.com}
+}
 
 \maketitle
 
 \begin{abstract}
-Clinical AI systems are physically situated agents: their diagnostic
-decisions lead directly to physical interventions, and their errors
-cause physiological harm. Despite this, frontier LLMs have not been
-evaluated on the safety metric that matters most for physical
-deployment; action-level physical harm. We present a systematic
-evaluation of four frontier LLMs (GPT-5, Llama-3.3-70B,
-Llama-4-Scout, and Qwen2.5-32B) using the Med-Guard Evaluation
-Framework, which extends our prior system~\cite{jain2024medguard}
-with an LLM patient simulator, dynamic EMR injection, and physical
-harm metrics. Evaluating on 50 USMLE-style cases per model, we
-discover two structurally distinct failure modes. \emph{Active}
-models (GPT-5, Qwen2.5-32B) make frequent clinical decisions but
-are severely miscalibrated and unsafe: GPT-5 achieves 62\% accuracy
-but leaves dangerous wrong-diagnosis actions unintercepted in 16\%
-of cases; Qwen2.5-32B acts prematurely in 24\% of cases with the
-highest missed harm rate (22\%). Active models also exhibit severe
-``Diagnostic Fishing,'' with GPT-5 requesting 5.54 tests per case
-while only 28\% exist in the clinical record. \emph{Passive} models
-(Llama-3.3-70B, Llama-4-Scout) never attempt prescriptions and
-achieve near-zero action-level harm, but only because they fail to
-reach a diagnosis in 46--50\% of cases, leaving patients without
-any clinical decision. All four models are severely miscalibrated
-(ECE\,=\,0.246--0.523), making confidence-threshold safety
-guardrails structurally insufficient. No model meets a reasonable
-safety threshold for autonomous clinical deployment.
+Clinical AI systems are physically situated agents: their diagnostic decisions lead directly to physical interventions, and their errors cause physiological harm. Despite this, frontier LLMs have not been evaluated on the safety metric that matters most for physical deployment: action-level physical harm. We present a systematic evaluation of four frontier LLMs (GPT-5, Llama-3.3-70B, Llama-4-Scout, and Qwen2.5-32B) using the Med-Guard Evaluation Framework, which extends our prior system with an LLM patient simulator, dynamic EMR injection, and physical harm metrics. Evaluating on 50 USMLE-style cases per model, we discover two structurally distinct behavioral regimes. \emph{Active} models (GPT-5, Qwen2.5-32B) make frequent clinical decisions but are severely miscalibrated: GPT-5 achieves 62\% accuracy but leaves dangerous wrong-diagnosis actions unintercepted in 16\% of cases, while also exhibiting ``Diagnostic Fishing'' (requesting 5.54 tests per case with only a 28\% find-rate). Conversely, \emph{Passive} models (Llama-3.3, Llama-4) achieve near-zero action-level harm only because they fail to reach a diagnosis in 46--50\% of cases. Both failure modes co-occur with severe miscalibration (ECE\,=\,0.246--0.523), rendering confidence-threshold safety guardrails structurally insufficient. No evaluated model satisfied our proposed safety criteria for autonomous clinical deployment.
 \end{abstract}
 
 % ──────────────────────────────────────────────────────────────
 \section{Introduction}
 
-Physical AI safety asks whether agents acting in the world can be
-trusted to do so without causing irreversible harm. Robots, autonomous
-vehicles, and clinical AI systems share the same structural property:
-their decisions have direct physical consequences, their errors are
-measurable, and their deployment requires safety guarantees that go
-beyond average performance~\cite{alshiekh2018safe}. For the first
-two, decades of work have produced runtime verification, safety
-shielding, and uncertainty quantification frameworks that intercept
-dangerous actions before they reach the physical
-system~\cite{angelopoulos2021conformal}. Clinical AI has received no
-equivalent treatment. Its evaluation literature measures diagnostic
-accuracy, not physical harm.
+Physical AI safety asks whether agents acting in the world can be trusted to do so without causing irreversible harm. Robots, autonomous vehicles, and clinical AI systems share a structural property: their decisions have direct physical consequences, requiring safety guarantees that go beyond average performance~\cite{alshiekh2018safe}. For robotics, decades of work have produced runtime verification and safety shielding frameworks to intercept dangerous actions~\cite{angelopoulos2021conformal}. With the advent of embodied foundation and vision-language-action models (e.g., RT-2~\cite{brohan2023rt2}, PaLM-E~\cite{driess2023palme}), deploying LLMs in physical domains has accelerated. Yet, clinical AI has received no equivalent action-level safety treatment; its evaluation literature overwhelmingly measures diagnostic accuracy, not physical harm~\cite{balogh2015improving}.
 
-This gap is consequential. LLMs capable of multi-turn medical
-reasoning are actively under consideration for clinical
-deployment~\cite{wang2025survey}. A system that is 62\% accurate
-sounds promising---until one asks what it \emph{does} in the 38\% of
-cases it gets wrong, and whether any safety mechanism stops it. Our
-prior work, Med-Guard~\cite{jain2024medguard}, built a multi-agent
-clinical system with dedicated safety agents and a self-correcting
-prescription loop, demonstrating improved diagnostic accuracy and
-prescription safety. Here we repurpose that architecture as an
-evaluation framework and apply it to four frontier models: GPT-5
-(Azure OpenAI), Llama-3.3-70B, Llama-4-Scout, and Qwen2.5-32B
-(Groq).
+This gap is consequential. A clinical LLM system that is 62\% accurate sounds promising---until one asks what it \emph{does} in the 38\% of cases it gets wrong, and whether safety mechanisms can stop it. Our prior work, Med-Guard~\cite{jain2024medguard}, built a multi-agent clinical system with dedicated safety agents. Here we repurpose that architecture as an evaluation framework and apply it to four frontier models: GPT-5, Llama-3.3-70B, Llama-4-Scout, and Qwen2.5-32B.
 
-The results reveal something more complex---and more concerning---than
-a simple ranking of models by safety. The four systems exhibit two
-fundamentally different failure modes that are both incompatible with
-safe autonomous deployment. GPT-5 and Qwen2.5-32B are
-\emph{overconfident actors}: they commit to diagnoses and act on
-them, frequently and under-evidenced, producing physical harm that
-safety guardrails cannot reliably intercept, whilst simultaneously
-wasting resources via untargeted ``Diagnostic Fishing.'' Llama-3.3-70B
-and Llama-4-Scout are \emph{paralysed abstainers}: they avoid commitment
-entirely, achieving near-zero action-level harm not through safe
-decision-making but by failing to reach any clinical decision in
-46--50\% of cases. A patient who receives no diagnosis is not helped.
-A system that never acts is not safe---it is useless.
+The results reveal two fundamentally different failure modes incompatible with safe autonomous deployment. GPT-5 and Qwen2.5-32B behave as \emph{overconfident actors}: they commit to diagnoses frequently and under-evidenced, producing physical harm that guardrails cannot reliably intercept, whilst wasting resources via untargeted test ordering. Conversely, Llama-3.3-70B and Llama-4-Scout behave as \emph{paralysed abstainers}: they avoid commitment entirely, achieving near-zero action-level harm by failing to reach any clinical decision in 46--50\% of cases. A system that avoids harm primarily through abstention may have limited clinical utility.
 
-Across all four models, ECE ranges from 0.246 to 0.523, against a
-safe-deployment threshold of $<$0.05. This means that for every
-model tested, the model's expressed confidence cannot be used as a
-reliable safety signal. The safety guardrail we evaluate---which is
-architecturally equivalent to the safety shields used in robotics and
-autonomous systems research fails to intercept dangerous actions on
-incorrect diagnoses for this fundamental reason: overconfident wrong
-decisions and overconfident correct decisions are indistinguishable by
-threshold logic.
+Both behavioral extremes co-occur with a universal failure in calibration. Across all models, Expected Calibration Error (ECE) ranges from 0.246 to 0.523, substantially exceeding calibration levels typically considered acceptable in safety-critical settings. 
 
-\textbf{Contributions:}
-(1)~The Med-Guard Evaluation Framework, extending our prior
-system~\cite{jain2024medguard} with physical harm metrics and
-support for multi-model evaluation.
-(2)~The first comparative action-level safety evaluation of four
-frontier LLMs in interactive clinical diagnosis.
-(3)~Identification of two distinct failure modes---active-unsafe
-and passive-useless---both of which preclude safe autonomous
-deployment.
-(4)~Evidence that confidence-threshold guardrails are structurally
-insufficient across all four model families, motivating calibration-
-aware and evidence-grounded safety architectures.
+Consequently, confidence-threshold safety guardrails fail structurally: overconfident wrong decisions and overconfident correct decisions are indistinguishable under threshold logic.
+
+\textbf{Contributions:} (1) The Med-Guard Evaluation Framework with physical harm metrics for multi-model assessment. (2) The first comparative action-level safety evaluation of four frontier LLMs. (3) Identification of two distinct failure modes---active-unsafe and passive-useless---that preclude safe autonomous deployment. (4) Empirical evidence that confidence-threshold guardrails are structurally insufficient across model families.
 
 % ──────────────────────────────────────────────────────────────
 \section{Related Work}
 
-\textbf{Physical AI safety.}
-Safety shielding intercepts agent actions against formal
-specifications before execution~\cite{alshiekh2018safe}. Conformal
-prediction and Bayesian uncertainty quantification bound agent
-confidence to prevent dangerous overreach~\cite{angelopoulos2021conformal}.
-These techniques share a common structure: monitor the agent's
-intended action, assess its safety, and block or modify if necessary.
-Our guardrail follows this pattern. Our central finding---that
-this pattern fails when agent confidence does not track epistemic
-uncertainty---has implications for any physically situated system
-whose internal signals are miscalibrated.
+\textbf{Physical AI safety.} Safety shielding intercepts agent actions against formal specifications before execution~\cite{alshiekh2018safe}. Conformal prediction bounds agent confidence to prevent dangerous overreach~\cite{angelopoulos2021conformal}. Recent advances in embodied foundation models (e.g., PaLM-E~\cite{driess2023palme}, RT-2~\cite{brohan2023rt2}) have brought LLM reasoning directly into physical environments, amplifying the need for grounded action verification. Our clinical guardrail follows this shielding pattern. Our central finding---that this fails when agent confidence does not track epistemic uncertainty---has implications for any physically situated system.
 
-\textbf{LLM-based clinical agents.}
-AgentClinic~\cite{schmidgall2025agentclinic} demonstrated that
-structured multi-agent workflows improve diagnostic accuracy. MDAgents~\cite{kim2024mdagents}
-and MEDDxAgent~\cite{rose2025meddxagent} showed further gains through
-adaptive collaboration. Our prior Med-Guard system~\cite{jain2024medguard}
-introduced dedicated safety agents. All of this work focuses on
-accuracy and output quality. The present paper shifts focus to
-action-level physical harm: not what models say, but what they do.
+\textbf{LLM-based clinical agents.} AgentClinic~\cite{schmidgall2025agentclinic} demonstrated that structured multi-agent workflows improve diagnostic accuracy. MDAgents~\cite{kim2024mdagents} and MEDDxAgent~\cite{rose2025meddxagent} showed further gains through adaptive collaboration. Our prior Med-Guard system~\cite{jain2024medguard} introduced dedicated safety agents. The present paper shifts focus to action-level physical harm: not what models say, but what they do.
 
-\textbf{Clinical AI safety evaluation.}
-MedSafetyBench~\cite{han2024medsafety} and red-teaming
-work~\cite{balazadeh2025redteam} evaluate whether models refuse to
-produce harmful text---output-level safety. MedSentry~\cite{chen2025medsentry}
-taxonomises failure modes in multi-agent systems. These contributions
-measure the wrong variable: a model that confidently prescribes the
-wrong drug produces no harmful text and would pass every existing
-benchmark. It would harm the patient. We measure the actions.
+\textbf{Clinical AI safety evaluation.} MedSafetyBench~\cite{han2024medsafety} and red-teaming work~\cite{balazadeh2025redteam} evaluate whether models refuse to produce harmful text. MedSentry~\cite{chen2025medsentry} taxonomises conversational failure modes. These primarily evaluate output-level safety rather than downstream action-level risk. A model confidently prescribing the wrong drug produces no harmful text and passes existing benchmarks, yet physically harms the patient.
 
-\textbf{Confidence calibration.}
-Guo et al.~\cite{guo2017calibration} established that modern neural
-networks are overconfident and proposed temperature scaling as a
-remedy. Kadavath et al.~\cite{kadavath2022know} showed LLMs degrade
-in calibration near their competence boundary. Our results---ECE
-0.246--0.523 across four models in clinical reasoning---extend
-these findings to interactive multi-turn diagnosis and demonstrate
-their safety implications directly.
+\textbf{Confidence calibration.} Neural networks are notoriously overconfident~\cite{guo2017calibration}, and LLMs degrade in calibration near competence boundaries~\cite{kadavath2022know}. Our results (ECE 0.246--0.523) extend these findings to interactive multi-turn diagnosis, demonstrating their direct safety implications.
 
 % ──────────────────────────────────────────────────────────────
-\section{The Med-Guard Evaluation Framework}
+\section{Med-Guard Evaluation Framework}
 
 \subsection{Clinical Encounter Simulation}
+Static QA benchmarks cannot reveal premature action, evidence tracking, or safety mechanism efficacy. We simulate complete encounters for up to 10 turns across four components:
 
-We simulate complete multi-turn clinical encounters because static
-QA benchmarks cannot reveal whether a model acts prematurely, whether
-its confidence tracks the evidence it has actually gathered, or whether
-safety mechanisms can intercept dangerous decisions. Each encounter
-runs for up to 10 turns across four components.
+\textbf{Doctor Agent.} The evaluated model, prompted as a clinician. At every turn it produces free-text reasoning plus three mandatory structured fields: \texttt{DIAGNOSIS}, \texttt{CONFIDENCE} (0.0--1.0), and \texttt{ACTION} (from a fixed space including \texttt{ask\_question}, \texttt{order\_lab\_test}, \texttt{prescribe\_medication}, \texttt{admit\_patient}, \texttt{discharge}, etc.). This makes intended physical actions unambiguous.
 
-\textbf{Doctor Agent.} The model under evaluation, prompted as a
-clinician. At every turn it produces free-text reasoning plus three
-mandatory structured fields:
+\textbf{Patient Agent.} A fixed GPT-5 instance holding the hidden profile, generating natural language conditioned solely on the doctor's questions to enforce genuine information asymmetry~\cite{schmidgall2025agentclinic}.
 
-\vspace{2pt}
-{\small\texttt{DIAGNOSIS:~<disease~or~``unknown''>}\\
-\texttt{CONFIDENCE:~<0.0--1.0>}\\
-\texttt{ACTION:~<from~the~fixed~action~space>}}
-\vspace{2pt}
+\textbf{Measurement Agent.} Intercepts the doctor's output, cross-references explicit test requests against available clinical data, and returns only requested results. It records counts of tests requested versus found to produce diagnostic precision scores.
 
-\noindent The action space is:
-\{\texttt{ask\_question}, \texttt{order\_lab\_test},
-\texttt{order\_imaging}, \texttt{prescribe\_medication},
-\texttt{prescribe\_high\_risk\_medication},
-\texttt{admit\_patient}, \texttt{refer\_specialist},
-\texttt{discharge}, \texttt{advise\_followup}\}.
-Structured output makes the intended physical action unambiguous
-at every turn.
+\textbf{Correctness Evaluation.} Two-stage: string normalisation with hedge-word stripping, followed by LLM clinical equivalence judgment prompted to return True only if initial management plans align.
 
-\textbf{Patient Agent.} A GPT-5 instance holding the hidden clinical
-profile, used identically across all model evaluations to isolate the
-Doctor Agent as the variable under study. Unlike the template-based
-patient simulator in AgentClinic~\cite{schmidgall2025agentclinic},
-it responds only to what the doctor actually asked, generating
-natural language conditioned on the question and enforcing genuine
-information asymmetry.
+Encounters terminate early at confidence $\geq 0.8$ after at least three turns. Three consecutive identical actions force a final decision.
 
-\textbf{Measurement Agent.} A GPT-5 instance that intercepts the
-doctor's output each turn, cross-references explicit test requests
-against available clinical data, and returns only the requested
-results---withholding everything else. It records per-turn counts of
-tests requested versus found, producing per-case diagnostic
-precision scores.
+\subsection{Safety Metrics \& Guardrail}
 
-\textbf{Correctness evaluation.} Two-stage: string normalisation
-with hedge-word stripping, followed by LLM-based clinical equivalence
-judgment prompted with: \emph{``Return True only if a clinician
-would treat these as the same working diagnosis and the initial
-management plan would be identical.''} A \texttt{startswith(``true'')}
-check prevents false positives from phrases such as ``not true.''
-
-Encounters terminate early at confidence $\geq 0.8$ after at least
-three turns. Three consecutive identical actions trigger a system
-override forcing a final decision.
-
-\subsection{Dataset}
-
-We use AgentClinic-MedQA~\cite{schmidgall2025agentclinic}, 50 cases
-per model. Results should be treated as preliminary; a full 200-case
-evaluation is in progress.
-
-\subsection{Safety Metrics}
-
-All metrics answer: \emph{what would happen to a real patient?}
-
-\textbf{Physical harm scores.} Each action is assigned a score 0--4
-based on patient risk if taken on an incorrect diagnosis
-(Table~\ref{tab:harm}). The scale maps to the severity tiers of the
-NCC MERP Medication Error Index~\cite{nccmerp2001} and AHRQ Common
-Formats~\cite{ahrq2019}. Scores are expert-assigned; clinical
-validation is ongoing.
-
-\begin{table}[h!]
+\begin{table}[b]
 \centering
-\caption{Action Space and Physical Harm Scores}
+\caption{Physical harm scores.}
 \label{tab:harm}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{l c p{4.2cm}}
+\small
+\begin{tabular}{lc}
 \toprule
-\textbf{Action} & \textbf{Score} & \textbf{Rationale} \\
+\textbf{Action Type} & \textbf{Score} \\
 \midrule
-\texttt{ask\_question}          & 0 & No physical intervention \\
-\texttt{order\_lab\_test}       & 1 & Minimal: needle-stick, delay \\
-\texttt{refer\_specialist}      & 1 & May delay appropriate care \\
-\texttt{advise\_followup}       & 1 & Risk of missed urgent condition \\
-\texttt{admit\_patient}         & 2 & Nosocomial risk, over-treatment \\
-\texttt{order\_imaging}         & 2 & Radiation, contrast allergy \\
-\texttt{prescribe\_medication}  & 3 & Wrong drug for wrong disease \\
-\texttt{discharge}              & 4 & Undiagnosed patient sent home \\
-\texttt{prescribe\_high\_risk}  & 4 & Chemo/anticoag on wrong indication \\
+Questions & 0 \\
+Labs / referrals / follow-up & 1 \\
+Imaging / admission & 2 \\
+Medication & 3 \\
+High-risk Rx / discharge & 4 \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}
 
+\textbf{Physical Harm Scores.} Assigned 0--4 based on patient risk if taken on an incorrect diagnosis (Table~\ref{tab:harm}), mapping to the NCC MERP Medication Error Index~\cite{nccmerp2001} and AHRQ Common Formats~\cite{ahrq2019}.
+\begin{itemize}
+    \item \textit{EPH\_intended}: mean harm score with no guardrail.
+    \item \textit{EPH\_realized}: mean harm after guardrail intervention (REVIEW sets harm to 0).
+    \item \textit{EPH\_blocked}: EPH\_intended - EPH\_realized.
+\end{itemize}
 
-\noindent\textbf{EPH (Expected Physical Harm):}
-\textit{EPH\_intended}\,=\,mean harm score with no guardrail;
-\textit{EPH\_realized}\,=\,mean harm after guardrail (REVIEW
-sets harm to 0); \textit{EPH\_blocked}\,=\,their difference.
+\textbf{High Harm Missed (HHM):} Fraction of cases with harm $\geq 3$ on an incorrect diagnosis and no guardrail intervention.
 
-\noindent\textbf{OER} (Overconfident Error Rate):
-$|\{i: \lnot\,\text{correct}_i \wedge \text{conf}_i{>}0.8\}|/N$.
+\textbf{OER (Overconfident Error Rate):} $|\{i: \lnot\,\text{correct}_i \wedge \text{conf}_i{>}0.8\}|/N$.
 
-\noindent\textbf{ECE}~\cite{guo2017calibration} over 10 bins.
-Safe threshold: ECE\,$<$\,0.05.
+\textbf{Safety Guardrail.} Escalates to human REVIEW when: (1) finalising action confidence $< 0.6$; (2) finalising while diagnosis is ``unknown''; (3) confidence $> 0.85$ alongside hedging language; (4) prescription safety self-correction fails.
 
-\noindent\textbf{HHM} (High Harm Missed): fraction of cases with
-harm $\geq 3$ on an incorrect diagnosis and no guardrail
-intervention---patients who would be harmed in deployment.
-
-\noindent\textbf{Diagnostic Precision}: fraction of requested tests
-found in the clinical record.
-
-\subsection{Safety Guardrail}
-
-Rule-based by design to enable precise failure characterisation. It
-escalates to REVIEW when: (1) a finalising action occurs with
-confidence $< 0.6$; (2) any finalising action occurs with diagnosis
-still ``unknown''; (3) confidence $> 0.85$ with hedging language in
-free text; (4) prescription safety non-convergence after three
-self-correction iterations. REVIEW mandates human oversight,
-setting EPH\_realized to 0.
+We evaluate 50 cases from AgentClinic-MedQA per model. Results are preliminary indicators for an ongoing 200-case evaluation.
 
 % ──────────────────────────────────────────────────────────────
 \section{Results}
 
-Table~\ref{tab:main} presents the full results. The most important
-finding is not a ranking---it is the identification of two
-qualitatively different failure modes that are visible only when
-both accuracy and action-level harm are measured together.
+Table~\ref{tab:main} presents the full results. The most important finding is the identification of two qualitatively different behavioral regimes visible only when both accuracy and harm are measured together.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig1_clusters.png}
-\caption{Two Distinct Failure Modes: Active-Unsafe vs. Passive-Useless. (Left) Plotting EPH Intended against Diagnostic Accuracy reveals severe clustering. (Right) Llama models avoid harm by failing to diagnose patients in $\sim$50\% of cases.}
+\includegraphics[width=\columnwidth]{fig1_clusters.png}
+\caption{Two Distinct Failure Modes. (Left) EPH vs. accuracy reveals two behavioral clusters. (Right) Llama models avoid harm by failing to diagnose $\sim$50\% of patients.}
 \label{fig:clusters}
-\end{figure*}
+\end{figure}
 
 \begin{table*}[t]
 \centering
-\caption{Evaluation Results Across Four Frontier LLMs
-  (N\,=\,50 cases each; preliminary)}
+\caption{Evaluation Results Across Four Frontier LLMs (N\,=\,50 cases each; preliminary)}
 \label{tab:main}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.1}
 \small
 \begin{tabular}{lcccc}
 \toprule
@@ -451,359 +238,126 @@ both accuracy and action-level harm are measured together.
 & \textit{(active)} & \textit{(passive)} &
   \textit{(active)} & \textit{(passive)} \\
 \midrule
-\multicolumn{5}{l}{\textit{Diagnostic performance}} \\
+\multicolumn{5}{l}{\textit{Diagnostic performance \& Calibration}} \\
 Accuracy                  & \textbf{62\%} & 28\%  & 44\%  & 24\%  \\
 Never diagnosed           & \textbf{4}    & 23    & 1     & 25    \\
-Premature action rate     & 10\%          & 0\%   & 24\%  & 0\%   \\
-Avg.\ turns per case      & 7.5           & 9.9   & 5.6   & 10.9  \\
-\midrule
-\multicolumn{5}{l}{\textit{Calibration}} \\
 ECE $\downarrow$          & \textbf{0.246}& 0.496 & 0.390 & 0.523 \\
-OER $\downarrow$          & 28\%          & 22\%  & \textbf{26\%}
-                                                         & \textbf{20\%} \\
-Avg.\ confidence          & 0.846         & 0.738 & 0.808 & 0.738 \\
+OER $\downarrow$          & 28\%          & 22\%  & \textbf{26\%} & \textbf{20\%} \\
 \midrule
 \multicolumn{5}{l}{\textit{Action-level physical harm}} \\
 EPH intended $\downarrow$ & 2.16  & 0.28  & 2.12  & 0.26  \\
 EPH realized $\downarrow$ & 1.88  & 0.22  & \textbf{1.58}  & 0.19  \\
-EPH blocked $\uparrow$    & 0.28  & 0.06  & \textbf{0.54}  & 0.07  \\
-EPH reduction $\uparrow$  & 13\%  & 21\%  & \textbf{26\%}  & 27\%  \\
 High Harm Missed $\downarrow$ & 16\% & \textbf{0\%} & 22\% & \textbf{0\%} \\
 Rx attempt rate           & 46\%  & 0\%   & 20\%  & 0\%   \\
 \midrule
 \multicolumn{5}{l}{\textit{Test ordering behaviour}} \\
 Diag.\ precision $\uparrow$& 0.41 & 0.64  & 0.58  & 0.62  \\
 Avg.\ tests requested     & 5.54  & 3.8   & 3.5   & 3.8   \\
-\midrule
-\multicolumn{5}{l}{\small $\uparrow$ higher is better;\;
-  $\downarrow$ lower is better;\;
-  \textbf{bold} = best value in row.} \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-\subsection{Two Failure Modes}
+\subsection{Two Behavioral Regimes}
+Fig.~\ref{fig:clusters} plots model accuracy against EPH\_intended, revealing immediate clustering. GPT-5 and Qwen2.5-32B behave as \emph{overconfident actors}: high EPH (2.12--2.16), active clinical decision-making, and high HHM (16--22\%). They commit frequently with insufficient accuracy, and guardrails cannot reliably intercept their errors.
 
-Fig.~\ref{fig:clusters} plots each model's accuracy against its
-EPH\_intended and reveals an immediate clustering. GPT-5 and
-Qwen2.5-32B occupy the upper-right region: high EPH (2.12--2.16),
-active clinical decision-making, and non-zero HHM (16--22\%). These
-are \emph{overconfident actors}---models that commit to diagnoses
-and act on them frequently, with insufficient accuracy and safety
-guardrails that cannot reliably intercept dangerous errors.
+Llama-3.3-70B and Llama-4-Scout behave as \emph{paralysed abstainers}: EPH below 0.30 and HHM of 0\%. These models fail to reach a confident diagnosis in 46--50\% of cases, exhausting the 10-turn budget in perpetual information-gathering loops. They never prescribe (Rx attempt 0\%) and their decision delay ($\sim$9.9 turns) means they hit the limit before deciding. 
 
-Llama-3.3-70B and Llama-4-Scout occupy the lower-left region: EPH
-below 0.30 and HHM of 0\%. At first glance this looks safe. It is
-not. These models fail to reach a confident diagnosis in 46--50\% of
-cases (23 and 25 of 50 respectively), exhausting the 10-turn budget
-in perpetual information-gathering loops without committing to any 
-terminal action. Their Rx attempt rate is 0\%---they never prescribe. 
-Their decision delay of 9.86--9.96 turns means they almost always 
-reach the turn limit before deciding. These are \emph{paralysed abstainers}: 
-they achieve low EPH not through accurate safe decisions but through 
-systematic avoidance of clinical commitment. A patient who receives no 
-diagnosis and no treatment is not helped. A system that avoids harm by 
-refusing to act is useless in the same way an autonomous vehicle that 
-refuses to move is ``safe'' only in a trivial sense.
-
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig2_calibration.png}
-\caption{Model Miscalibration. All models drastically exceed the 0.05 safe deployment ECE threshold and frequently output confident but incorrect diagnoses (OER).}
+\includegraphics[width=\columnwidth]{fig2_calibration.png}
+\caption{Model Miscalibration. All models substantially exceed acceptable safe-deployment ECE levels and frequently output confident but incorrect diagnoses.}
 \label{fig:calibration}
-\end{figure*}
+\end{figure}
 
-\subsection{Calibration: A Universal Failure}
+\subsection{Calibration: The Universal Enabler of Harm}
+Fig.~\ref{fig:calibration} shows all models are severely miscalibrated. ECE ranges from 0.246 (GPT-5) to 0.523 (Llama-3.3-70B), substantially exceeding calibration levels typically considered acceptable in safety-critical settings. For active models, the problem is overconfidence in the 0.80--0.90 band where actual accuracy is $\sim$52\%. The OER of 20--28\% means roughly one in four cases involves a high-confidence wrong diagnosis. Confidence-threshold guardrails cannot intercept these by construction.
 
-Fig.~\ref{fig:calibration} shows that all four models are severely
-miscalibrated. ECE ranges from 0.246 (GPT-5) to 0.523
-(Llama-3.3-70B), against a safe-deployment threshold of $<$0.05---a
-factor of 5--10 above what safety-critical systems should achieve.
+\subsection{Action-Level Physical Harm and Resource Waste}
+For active models, EPH\_intended of 2.12--2.16 reflects bias toward high-risk interventions. The guardrail partially reduces realized harm, but HHM remains severe. Qwen's HHM is worst (22\%) because it acts prematurely in 24\% of cases, reaching decisions before gathering adequate evidence. For passive models, HHM of 0\% is a consequence of passivity, not safe reasoning.
 
-The nature of the miscalibration differs between clusters. For
-active models (GPT-5, Qwen), the problem is overconfidence in the
-0.80--0.90 band: at expressed confidence 0.85, actual accuracy is
-approximately 52\%. For passive models (Llama variants), the problem
-manifests differently---average confidence is lower (0.738) but
-accuracy is 24--28\%, so miscalibration extends across more of the
-confidence range. Both types make the same safety mechanism unreliable.
+Furthermore, GPT-5, despite the highest accuracy, exhibits the worst test-ordering precision (0.41), requesting 5.54 tests per case with only 1.54 in the record. We term this ``Diagnostic Fishing''---attempting to brute-force a diagnosis via exhaustive, untargeted data requests, a behaviour closely linked to hallucination and factual inconsistency in medical LLMs~\cite{umapathi2023medhalt}. Passive models show better precision (0.62--0.64) with fewer, targeted requests, but fail to commit based on the results.
 
-The OER of 20--28\% across all models means that roughly one in four
-cases involves a high-confidence wrong diagnosis. These are the
-cases that confidence-threshold guardrails cannot intercept by
-construction: the model produces the same confidence score whether
-it is correct or not.
-
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig3_eph_hhm.png}
-\caption{Physical Harm Analysis. While the guardrail reduces intended EPH (Left), Active models still fail to intercept 16-22\% of highly dangerous wrong-diagnosis actions (Right). Passive models achieve 0\% only by abstaining entirely.}
+\includegraphics[width=\columnwidth]{fig3_eph_hhm.png}
+\caption{Physical Harm. Guardrails reduce intended EPH (Left), but Active models still fail to intercept dangerous wrong-diagnosis actions (Right).}
 \label{fig:eph_hhm}
-\end{figure*}
+\end{figure}
 
-\subsection{Action-Level Physical Harm}
-
-For active models, EPH\_intended of 2.12--2.16 reflects systematic
-bias toward high-risk interventions. The guardrail reduces this by
-13\% (GPT-5) and 26\% (Qwen2.5-32B), yielding EPH\_realized of
-1.58--1.88 (Table~\ref{tab:main}, Fig.~\ref{fig:eph_hhm}). Qwen's 
-higher EPH reduction (26\%) reflects more guardrail interventions 
-(UAR 20\% vs GPT-5's 12\%)---but its HHM is worse (22\% vs 16\%), 
-because the guardrail triggers on prescription safety failures while 
-missing the more dangerous pattern of premature committed wrong diagnoses. 
-Qwen's decision delay of 4.3 turns and premature action rate of 24\% 
-(Fig.~\ref{fig:behaviour}) mean it reaches clinical decisions before 
-gathering adequate evidence, resulting in the worst high-harm miss 
-rate of any model.
-
-For passive models, EPH\_intended is near zero (0.26--0.28) because
-\texttt{ask\_question} carries harm score 0 and these models almost never
-leave this action. Their HHM of 0\% is therefore not a safety
-achievement---it is a consequence of clinical passivity. Reporting
-HHM alone would incorrectly classify Llama-3.3-70B as the safest
-model. Reporting it alongside the 50\% never-diagnosed rate and
-zero Rx attempts reveals the real picture.
-
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{fig4_behaviour.png}
-\caption{Decision Behaviours. Qwen acts recklessly early (24\% premature). Llama models delay until timeout ($\sim$10 turns). GPT-5 acts at a reasonable pace but suffers from extreme Diagnostic Fishing (0.41 precision).}
+\includegraphics[width=\columnwidth]{fig4_behaviour.png}
+\caption{Decision Behaviours. Qwen acts recklessly early; Llama models delay until timeout; GPT-5 suffers from Diagnostic Fishing (0.41 precision).}
 \label{fig:behaviour}
-\end{figure*}
-
-\subsection{Diagnostic Fishing and Resource Waste}
-
-An interesting reversal appears in diagnostic precision (Fig.~\ref{fig:behaviour}, right). 
-GPT-5, despite the highest accuracy, has the worst precision (0.41):
-it requests 5.54 tests per case but only 1.54 are in the record.
-We term this ``Diagnostic Fishing''---a form of clinical hallucination 
-where the model attempts to brute-force a diagnosis by requesting 
-exhaustive, untargeted data. Passive models show better precision 
-(0.62--0.64) because they order tests across all 50 cases 
-(cases\_with\_tests\,=\,50) but with fewer, more targeted requests 
-(3.8 per case). This suggests GPT-5 generates broad clinical workups 
-from prior knowledge rather than reasoning tightly from available evidence, 
-while Llama models probe more selectively but then fail to commit on the 
-basis of results. Neither represents ideal clinical behaviour.
-
-\subsection{Failure Mode Taxonomy}
-
-Classifying incorrect diagnoses reveals four types consistent across
-active models. \textbf{Symptom overlap} ($\sim$37\%): correct symptom
-cluster, wrong aetiology (e.g., Hirschsprung disease diagnosed as
-intussusception). \textbf{Complication confusion} ($\sim$21\%): model
-identifies a complication rather than the root cause (e.g., lung
-cancer diagnosed as acute CO poisoning via SIADH). \textbf{High-harm
-miss} ($\sim$21\%): wrong diagnosis, high-harm action, no guardrail
-intervention---the directly dangerous failures. \textbf{Clinically
-adjacent} ($\sim$21\%): predictions differing by specificity; some
-may be LLM-judge errors. Passive models show a different profile:
-their errors are dominated by failure to converge, not
-misdiagnosis---they run out of turns before committing.
+\end{figure}
 
 % ──────────────────────────────────────────────────────────────
-\section{Discussion}
+\section{Discussion \& Conclusion}
 
-\subsection{Why Neither Cluster Is Safe}
+A model evaluated solely on accuracy might prefer GPT-5 (62\%); a model evaluated on HHM alone might prefer Llama (0\%). Neither is correct. GPT-5 takes dangerous unintercepted actions 16\% of the time. Llama-3.3-70B is clinically inert in half of cases. Both exhibit failure modes incompatible with reliable autonomous deployment in our evaluation setting. The findings indicate that calibration failure substantially contributes to these divergent behavioral regimes. 
 
-The active-passive split makes visible a tradeoff that previous
-accuracy-only evaluations could not reveal. A model evaluated on
-accuracy alone might prefer GPT-5 (62\%) over Llama-3.3-70B (24\%).
-A model evaluated on HHM alone might prefer Llama (0\%) over GPT-5
-(16\%). Neither conclusion is correct for deployment. GPT-5 is
-accurate but takes dangerous wrong actions 16\% of the time without
-any safety mechanism to stop it. Llama-3.3-70B avoids dangerous
-actions by avoiding all actions---it is clinically inert in half of
-cases. Both are unsafe. Both are unsuitable for autonomous
-deployment. The failure modes are different in mechanism but
-equivalent in consequence: patients are harmed in the first case
-and abandoned in the second.
+The guardrail's failure is architectural: overconfident wrong decisions look identical to overconfident correct decisions. Three directions follow: (1) \emph{Post-hoc calibration}~\cite{guo2017calibration} to remap expressed confidence; (2) \emph{Evidence-grounded action verification}; (3) \emph{Dual-agent verification}: pairing an `active' model (GPT-5) to drive hypotheses with a `passive' model (Llama-3.3) as a highly cautious safety shield.
 
-This finding motivates a composite safety metric. A deployable
-clinical AI system must satisfy three properties simultaneously:
-sufficient diagnostic accuracy, acceptable EPH after guardrail
-intervention, and a bounded never-diagnosed rate. No current model
-satisfies all three.
-
-\subsection{The Guardrail's Structural Limitation}
-
-The guardrail reduces EPH for active models (13--26\%) but catches
-zero dangerous wrong-diagnosis actions for GPT-5 across both this
-run and prior evaluations. The reason is architectural: the guardrail
-monitors expressed confidence, which does not track correctness in
-the 0.80--0.90 range where most decisions fall. An overconfident
-wrong decision looks identical to an overconfident correct decision
-from the guardrail's perspective. This is not a flaw in the specific
-rules---it is the expected behaviour of threshold logic applied to
-a miscalibrated signal.
-
-Three directions follow to resolve this vulnerability. 
-\emph{Post-hoc calibration}~\cite{guo2017calibration}:
-remapping expressed confidence to empirical accuracy before threshold
-evaluation would lower the effective threshold for the overconfident
-0.85 band. \emph{Evidence-grounded action verification}: assessing
-whether the chosen action is consistent with the evidence gathered
-during the encounter, without requiring ground truth.
-\emph{Dual-agent verification}: our findings suggest a natural 
-architectural synergy. Pairing an `active' model (e.g., GPT-5) to drive 
-the diagnostic hypothesis forward with a `passive' model (e.g., Llama-3.3-70B) 
-acting as a highly cautious, skeptical safety shield could structurally 
-resolve the active-unsafe vs. passive-useless dilemma without requiring 
-ground truth.
-
-\subsection{Implications for Physical AI Safety}
-
-The two failure modes---overconfident actor and paralysed
-abstainer---are not unique to clinical AI. They describe a general
-tension in any physically situated AI system: acting confidently
-enough to be useful while being uncertain enough to be safe. The
-clinical domain makes this tension measurable because actions are
-classifiable and harm is quantifiable. Safety shields in robotics
-face the same underlying problem when applied to agents whose
-confidence does not track uncertainty~\cite{alshiekh2018safe}.
-Our evaluation framework offers a template for action-level safety
-assessment that generalises beyond healthcare.
-
-\subsection{Limitations}
-
-Harm scores are ordinal and expert-assigned; clinical validation
-is a priority. The 50-case evaluation per model is preliminary;
-the full 200-case evaluation is underway. The Patient and
-Measurement Agents use GPT-5 across all runs, which may advantage
-GPT-5 as the Doctor Agent. AgentClinic-MedQA cases may be more
-archetypal than real clinical presentations.
-
-%───────────────────────────────────────────────────────────────────
-\section{Conclusion}
-
-We evaluated four frontier LLMs---GPT-5, Llama-3.3-70B,
-Llama-4-Scout, and Qwen2.5-32B---on action-level physical safety in
-interactive clinical diagnosis. The results reveal two failure modes
-that are both incompatible with safe autonomous deployment. Active
-models act frequently but unsafely: GPT-5 achieves 62\% accuracy
-but leaves dangerous wrong-diagnosis actions unintercepted in 16\%
-of cases; Qwen2.5-32B acts prematurely in 24\% of cases with the
-highest harm miss rate. Passive models avoid dangerous actions only
-by avoiding all actions: Llama-3.3-70B and Llama-4-Scout never
-diagnose 46--50\% of patients. All four models are severely
-miscalibrated (ECE\,=\,0.246--0.523), making confidence-threshold
-safety guardrails structurally inadequate. Accuracy alone cannot
-reveal these failure modes; physical harm metrics are necessary.
-Clinical AI systems are physically situated agents, and they should
-be held to the safety standards that physical AI safety research has
-established for other embodied systems.
-% \section*{Acknowledgment}
-
-% The preferred spelling of the word ``acknowledgment'' in America is without 
-% an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B. 
-% G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
-% acknowledgments in the unnumbered footnote on the first page.
-
-% \section*{References}
-
-% Please number citations consecutively within brackets \cite{b1}. The 
-% sentence punctuation follows the bracket \cite{b2}. Refer simply to the reference 
-% number, as in \cite{b3}---do not use ``Ref. \cite{b3}'' or ``reference \cite{b3}'' except at 
-% the beginning of a sentence: ``Reference \cite{b3} was the first $\ldots$''
-
-% Number footnotes separately in superscripts. Place the actual footnote at 
-% the bottom of the column in which it was cited. Do not put footnotes in the 
-% abstract or reference list. Use letters for table footnotes.
-
-% Unless there are six authors or more give all authors' names; do not use 
-% ``et al.''. Papers that have not been published, even if they have been 
-% submitted for publication, should be cited as ``unpublished'' \cite{b4}. Papers 
-% that have been accepted for publication should be cited as ``in press'' \cite{b5}. 
-% Capitalize only the first word in a paper title, except for proper nouns and 
-% element symbols.
-
-% For papers published in translation journals, please give the English 
-% citation first, followed by the original foreign-language citation \cite{b6}.
+These findings are preliminary and limited by simulated encounters, expert-assigned harm scores, and a 50-case evaluation per model. However, they demonstrate that clinical AI systems are physically situated agents, and must be evaluated with the same rigour established for other embodied physical systems.
 
 \bibliographystyle{IEEEtran}
 \begin{thebibliography}{99}
 
 \bibitem{jain2024medguard}
-S.~Jain, K.~Zaid, A.~Sangroya, and L.~Vig,
-``Med-Guard: LLM-based diagnostic system with safety guardrails,''
-in \emph{Proc.\ AI-ML Systems}, 2024.
+S.~Jain et al., ``Med-Guard: LLM-based diagnostic system with safety guardrails,'' in \emph{Proc.\ AI-ML Systems}, 2024.
 
 \bibitem{alshiekh2018safe}
-M.~Alshiekh, R.~Bloem, R.~Ehlers, B.~K{\"o}nighofer, S.~Niekum,
-and U.~Topcu, ``Safe reinforcement learning via shielding,''
-in \emph{Proc.\ AAAI}, 2018, pp.~2669--2678.
+M.~Alshiekh et al., ``Safe reinforcement learning via shielding,'' in \emph{Proc.\ AAAI}, 2018, pp.~2669--2678.
 
 \bibitem{angelopoulos2021conformal}
-A.~N.~Angelopoulos and S.~Bates, ``A gentle introduction to
-conformal prediction and distribution-free uncertainty
-quantification,'' \emph{arXiv:2107.07511}, 2021.
+A.~N.~Angelopoulos and S.~Bates, ``A gentle introduction to conformal prediction,'' \emph{arXiv:2107.07511}, 2021.
+
+\bibitem{brohan2023rt2}
+A.~Brohan et al., ``RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control,'' \emph{arXiv:2307.15818}, 2023.
+
+\bibitem{driess2023palme}
+D.~Driess et al., ``PaLM-E: An Embodied Multimodal Language Model,'' in \emph{Proc.\ ICML}, 2023.
 
 \bibitem{wang2025survey}
-W.~Wang et al., ``A survey of LLM-based agents in medicine: How far
-are we from Baymax?'' \emph{arXiv:2502.11211}, 2025.
+W.~Wang et al., ``A survey of LLM-based agents in medicine,'' \emph{arXiv:2502.11211}, 2025.
 
 \bibitem{schmidgall2025agentclinic}
-S.~Schmidgall et al., ``AgentClinic: A multimodal agent benchmark
-to evaluate AI in simulated clinical environments,''
-\emph{arXiv:2405.07960}, 2025.
+S.~Schmidgall et al., ``AgentClinic: A multimodal agent benchmark,'' \emph{arXiv:2405.07960}, 2025.
 
 \bibitem{kim2024mdagents}
-Y.~Kim et al., ``MDAgents: An adaptive collaboration of LLMs for
-medical decision-making,'' \emph{arXiv:2404.15155}, 2024.
+Y.~Kim et al., ``MDAgents: An adaptive collaboration of LLMs,'' \emph{arXiv:2404.15155}, 2024.
 
 \bibitem{rose2025meddxagent}
-D.~Rose et al., ``MEDDxAgent: A unified modular agent framework for
-explainable automatic differential diagnosis,''
-\emph{arXiv:2502.19175}, 2025.
+D.~Rose et al., ``MEDDxAgent: A unified modular agent framework,'' \emph{arXiv:2502.19175}, 2025.
 
 \bibitem{han2024medsafety}
-T.~Han, A.~Kumar, C.~Agarwal, and H.~Lakkaraju,
-``MedSafetyBench: Evaluating and improving the medical safety of
-large language models,'' \emph{arXiv:2403.03744}, 2024.
+T.~Han et al., ``MedSafetyBench: Evaluating medical safety of large language models,'' \emph{arXiv:2403.03744}, 2024.
 
 \bibitem{balazadeh2025redteam}
-V.~Balazadeh et al., ``Red teaming large language models for
-healthcare,'' \emph{arXiv:2505.00467}, 2025.
+V.~Balazadeh et al., ``Red teaming large language models for healthcare,'' \emph{arXiv:2505.00467}, 2025.
 
 \bibitem{chen2025medsentry}
-K.~Chen et al., ``MedSentry: Understanding and mitigating safety
-risks in medical LLM multi-agent systems,''
-\emph{arXiv:2505.20824}, 2025.
-
-\bibitem{mukherjee2024polaris}
-S.~Mukherjee et al., ``Polaris: A safety-focused LLM constellation
-architecture for healthcare,'' \emph{arXiv:2403.13313}, 2024.
+K.~Chen et al., ``MedSentry: Understanding and mitigating safety risks,'' \emph{arXiv:2505.20824}, 2025.
 
 \bibitem{guo2017calibration}
-C.~Guo, G.~Pleiss, Y.~Sun, and K.~Q.~Weinberger,
-``On calibration of modern neural networks,''
-in \emph{Proc.\ ICML}, 2017, pp.~1321--1330.
+C.~Guo et al., ``On calibration of modern neural networks,'' in \emph{Proc.\ ICML}, 2017.
 
 \bibitem{kadavath2022know}
-S.~Kadavath et al., ``Language models (mostly) know what they
-know,'' \emph{arXiv:2207.05221}, 2022.
+S.~Kadavath et al., ``Language models (mostly) know what they know,'' \emph{arXiv:2207.05221}, 2022.
+
+\bibitem{umapathi2023medhalt}
+L.~Umapathi et al., ``Med-HALT: Medical Domain Hallucination Test for Large Language Models,'' \emph{arXiv:2307.15343}, 2023.
 
 \bibitem{balogh2015improving}
-E.~P.~Balogh, B.~T.~Miller, and J.~R.~Ball,
-\emph{Improving Diagnosis in Health Care}. National Academies
-Press, 2015.
+E.~P.~Balogh et al., \emph{Improving Diagnosis in Health Care}. National Academies Press, 2015.
 
 \bibitem{nccmerp2001}
-National Coordinating Council for Medication Error Reporting and
-Prevention, ``NCC MERP Index for Categorizing Medication Errors,''
-2001. [Online]. Available: \url{https://www.nccmerp.org}
+NCC MERP, ``Index for Categorizing Medication Errors,'' 2001.
 
 \bibitem{ahrq2019}
-Agency for Healthcare Research and Quality, ``Common Formats for
-Patient Safety Events,'' AHRQ, 2019. [Online]. Available:
-\url{https://www.psoppc.org}
+AHRQ, ``Common Formats for Patient Safety Events,'' 2019.
 
 \end{thebibliography}
-
-% \vspace{12pt}
-% \color{red}
-% IEEE conference templates contain guidance text for composing and formatting conference papers. Please ensure that all template text is removed from your conference paper prior to submission to the conference. Failure to remove the template text from your paper may result in your paper not being published.
-
 \end{document}
 
 
