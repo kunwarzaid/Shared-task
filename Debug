@@ -1,7 +1,7 @@
 \begin{figure}[htbp]
     \centering
-    % Notice \resizebox is removed and we scale x and y directly here:
-    \begin{tikzpicture}[x=0.53pt, y=0.53pt]
+    \resizebox{0.45\textwidth}{!}{%   % adjust to \columnwidth or 0.45\textwidth etc.
+    \begin{tikzpicture}[x=1pt, y=1pt]
 
     % ===================== GRID LINES =====================
     \foreach \ysvg/\yval in {233.3/0.2, 166.6/0.4, 100.0/0.6, 33.3/0.8}{
@@ -17,12 +17,12 @@
     % ===================== Y-AXIS TICKS & LABELS =====================
     \foreach \ysvg/\lbl in {303/0.0, 236/0.2, 170/0.4, 103/0.6, 36/0.8}{
       \pgfmathsetmacro{\ytik}{300-\ysvg}
-      \node[anchor=east, font=\scriptsize\sffamily, text=labelcol]
+      \node[anchor=east, font=\normalsize\sffamily, text=labelcol]
         at (48, \ytik) {\lbl};
     }
 
     % ===================== Y-AXIS LABEL (rotated) =====================
-    \node[rotate=90, anchor=center, font=\footnotesize\sffamily, text=labelcol]
+    \node[rotate=90, anchor=center, font=\normalsize\sffamily, text=labelcol]
       at (15, 130) {Entity F1};
 
     % ===================== BARS =====================
@@ -33,12 +33,12 @@
     }
 
     % --- Group ZS ---
-    \drawbar{74}{0.457}{colDrav}{1.0}   
-    \drawbar{83}{0.506}{colIAL}{1.0}    
-    \drawbar{92}{0.548}{colIAH}{1.0}    
-    \drawbar{101}{0.378}{colDrav}{0.4}  
-    \drawbar{110}{0.405}{colIAL}{0.4}   
-    \drawbar{119}{0.440}{colIAH}{0.4}   
+    \drawbar{74}{0.457}{colDrav}{1.0}
+    \drawbar{83}{0.506}{colIAL}{1.0}
+    \drawbar{92}{0.548}{colIAH}{1.0}
+    \drawbar{101}{0.378}{colDrav}{0.4}
+    \drawbar{110}{0.405}{colIAL}{0.4}
+    \drawbar{119}{0.440}{colIAH}{0.4}
 
     % --- Group FS ---
     \drawbar{169}{0.414}{colDrav}{1.0}
@@ -65,36 +65,33 @@
     \drawbar{404}{0.746}{colIAH}{0.4}
 
     % ===================== X-AXIS LABELS =====================
-    \node[anchor=center, font=\footnotesize\sffamily, text=labelcol]
+    \node[anchor=center, font=\normalsize\sffamily, text=labelcol]
       at (100, -25) {ZS};
-    \node[anchor=center, font=\footnotesize\sffamily, text=labelcol]
+    \node[anchor=center, font=\normalsize\sffamily, text=labelcol]
       at (195, -25) {FS};
-    \node[anchor=center, font=\footnotesize\sffamily, text=labelcol]
+    \node[anchor=center, font=\normalsize\sffamily, text=labelcol]
       at (290, -25) {Trans};
-    \node[anchor=center, font=\footnotesize\sffamily\bfseries, text=black]
+    \node[anchor=center, font=\normalsize\sffamily\bfseries, text=black]
       at (385, -25) {SFT};
 
     % ===================== LEGEND =====================
-    % Dravidian
     \fill[colDrav, rounded corners=1pt] (60,-55) rectangle (72,-43);
-    \node[anchor=west, font=\scriptsize\sffamily, text=labelcol]
+    \node[anchor=west, font=\normalsize\sffamily, text=labelcol]
       at (76, -49) {Dravidian};
 
-    % IA Low-res
     \fill[colIAL, rounded corners=1pt] (155,-55) rectangle (167,-43);
-    \node[anchor=west, font=\scriptsize\sffamily, text=labelcol]
+    \node[anchor=west, font=\normalsize\sffamily, text=labelcol]
       at (171, -49) {IA Low-res};
 
-    % IA High-res
     \fill[colIAH, rounded corners=1pt] (260,-55) rectangle (272,-43);
-    \node[anchor=west, font=\scriptsize\sffamily, text=labelcol]
+    \node[anchor=west, font=\normalsize\sffamily, text=labelcol]
       at (276, -49) {IA High-res};
 
-    % Subtitle
-    \node[anchor=west, font=\scriptsize\sffamily\itshape, text=subtlecol]
+    \node[anchor=west, font=\normalsize\sffamily\itshape, text=subtlecol]
       at (60, -75) {Solid = Qwen $\cdot$ Faded = Mistral};
 
     \end{tikzpicture}
+    }% end resizebox
     \caption{Entity F1 by Language Family.}
     \label{fig:entity_f1_custom}
 \end{figure}
