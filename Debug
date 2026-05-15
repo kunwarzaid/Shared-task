@@ -1,95 +1,118 @@
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}[font=\sffamily]
-    
-    % Define base colors based on your original HTML specs
-    \definecolor{dravidian}{HTML}{D46030}
-    \definecolor{ialowres}{HTML}{5BA4CF}
-    \definecolor{iahighres}{HTML}{1B4E96}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Figure 4b – Entity F1 by Language Family</title>
+<style>
+  body {
+    margin: 0;
+    padding: 20px;
+    background: #ffffff;
+  }
+</style>
+</head>
+<body>
 
-    % Define faded colors (40% color, 60% white) to mimic opacity 
-    % This prevents background grid lines from showing through the Mistral bars
-    \colorlet{dravidianfaded}{dravidian!40!white}
-    \colorlet{ialowresfaded}{ialowres!40!white}
-    \colorlet{iahighresfaded}{iahighres!40!white}
+<svg viewBox="0 0 470 400"
+     xmlns="http://www.w3.org/2000/svg"
+     style="font-family:'IBM Plex Sans', Arial, sans-serif;">
 
-    \begin{axis}[
-        width=\columnwidth,
-        height=8cm,
-        ybar=0pt, % 0pt gap between adjacent bars *within* the immediate group
-        bar width=5.5pt, % Slightly thinner to accommodate 6 bars + 1 gap per tick
-        enlarge x limits=0.15,
-        ymin=0, 
-        ymax=0.85,
-        ylabel={Entity F1},
-        symbolic x coords={ZS, FS, Trans, SFT},
-        xticklabels={ZS, FS, Trans, \textbf{SFT}},
-        xtick=data,
-        ytick={0.0, 0.2, 0.4, 0.6, 0.8},
-        axis x line=bottom,
-        axis y line=left,
-        ymajorgrids=true,
-        grid style={dashed, gray!30},
-        legend style={
-            at={(0.05,-0.12)},
-            anchor=north west,
-            legend columns=3,
-            draw=none,
-            /tikz/every even column/.append style={column sep=0.4cm},
-            font=\small\sffamily
-        },
-        area legend
-    ]
+  <!-- Axes -->
+  <line x1="55" y1="20" x2="55" y2="300" stroke="#bbb" stroke-width="1"/>
+  <line x1="55" y1="300" x2="450" y2="300" stroke="#bbb" stroke-width="1"/>
 
-    % ==========================================
-    % QWEN DATA (Solid Bars)
-    % ==========================================
-    \addplot[fill=dravidian, draw=none] coordinates {
-        (ZS, 0.457) (FS, 0.414) (Trans, 0.340) (SFT, 0.781)
-    };
-    \addlegendentry{Dravidian}
-    
-    \addplot[fill=ialowres, draw=none] coordinates {
-        (ZS, 0.506) (FS, 0.516) (Trans, 0.448) (SFT, 0.787)
-    };
-    \addlegendentry{IA Low-res}
-    
-    \addplot[fill=iahighres, draw=none] coordinates {
-        (ZS, 0.548) (FS, 0.519) (Trans, 0.525) (SFT, 0.755)
-    };
-    \addlegendentry{IA High-res}
+  <!-- Grid lines -->
+  <line x1="55" y1="233.3" x2="450" y2="233.3" stroke="#eee" stroke-dasharray="3,3"/>
+  <line x1="55" y1="166.6" x2="450" y2="166.6" stroke="#eee" stroke-dasharray="3,3"/>
+  <line x1="55" y1="100"   x2="450" y2="100"   stroke="#eee" stroke-dasharray="3,3"/>
+  <line x1="55" y1="33.3"  x2="450" y2="33.3"  stroke="#eee" stroke-dasharray="3,3"/>
 
-    % ==========================================
-    % INVISIBLE GAP
-    % ==========================================
-    % This dummy plot with 0 values acts as a spacer, creating the 
-    % visual gap between the Qwen and Mistral groups seen in your image.
-    \addplot[draw=none, fill=none] coordinates {
-        (ZS, 0) (FS, 0) (Trans, 0) (SFT, 0)
-    };
+  <!-- Y ticks -->
+  <text x="48" y="303" text-anchor="end" font-size="9" fill="#333">0.0</text>
+  <text x="48" y="236" text-anchor="end" font-size="9" fill="#333">0.2</text>
+  <text x="48" y="170" text-anchor="end" font-size="9" fill="#333">0.4</text>
+  <text x="48" y="103" text-anchor="end" font-size="9" fill="#333">0.6</text>
+  <text x="48" y="36"  text-anchor="end" font-size="9" fill="#333">0.8</text>
 
-    % ==========================================
-    % MISTRAL DATA (Faded Bars)
-    % ==========================================
-    \addplot[fill=dravidianfaded, draw=none] coordinates {
-        (ZS, 0.378) (FS, 0.385) (Trans, 0.323) (SFT, 0.772)
-    };
-    
-    \addplot[fill=ialowresfaded, draw=none] coordinates {
-        (ZS, 0.405) (FS, 0.362) (Trans, 0.460) (SFT, 0.760)
-    };
-    
-    \addplot[fill=iahighresfaded, draw=none] coordinates {
-        (ZS, 0.440) (FS, 0.351) (Trans, 0.475) (SFT, 0.746)
-    };
+  <!-- Y-axis label -->
+  <text x="18" y="170" transform="rotate(-90 18 170)"
+        text-anchor="middle" font-size="10" fill="#333">
+    Entity F1
+  </text>
 
-    \end{axis}
-    
-    % Add the explanatory footnote aligned below the legend
-    \node[anchor=north west, font=\scriptsize\itshape, text=darkgray] 
-        at (rel axis cs:0.05,-0.22) {Solid = Qwen $\cdot$ Faded = Mistral};
+  <!-- Bars inserted here -->
+  <g id="bars-container"></g>
 
-    \end{tikzpicture}
-    \caption{Entity F1 averaged by language family.}
-    \label{fig:entity_f1_six_bars}
-\end{figure}
+  <!-- X labels -->
+  <text x="100" y="325" text-anchor="middle" font-size="10" fill="#333">ZS</text>
+  <text x="195" y="325" text-anchor="middle" font-size="10" fill="#333">FS</text>
+  <text x="290" y="325" text-anchor="middle" font-size="10" fill="#333">Trans</text>
+  <text x="385" y="325" text-anchor="middle" font-size="10" fill="#111" font-weight="600">SFT</text>
+
+  <!-- Legend -->
+  <rect x="65" y="345" width="10" height="10" rx="2" fill="#d46030"/>
+  <text x="80" y="354" font-size="9" fill="#333">Dravidian</text>
+
+  <rect x="155" y="345" width="10" height="10" rx="2" fill="#5ba4cf"/>
+  <text x="170" y="354" font-size="9" fill="#333">IA Low-res</text>
+
+  <rect x="260" y="345" width="10" height="10" rx="2" fill="#1b4e96"/>
+  <text x="275" y="354" font-size="9" fill="#333">IA High-res</text>
+
+  <text x="65" y="372" font-size="8.5" fill="#555" font-style="italic">
+    Solid = Qwen · Faded = Mistral
+  </text>
+
+</svg>
+
+<script>
+const f1Data = {
+  ZS: {
+    Qwen:     { Drav: 0.457, IAL: 0.506, IAH: 0.548 },
+    Mistral:  { Drav: 0.378, IAL: 0.405, IAH: 0.440 }
+  },
+  FS: {
+    Qwen:     { Drav: 0.414, IAL: 0.516, IAH: 0.519 },
+    Mistral:  { Drav: 0.385, IAL: 0.362, IAH: 0.351 }
+  },
+  Trans: {
+    Qwen:     { Drav: 0.340, IAL: 0.448, IAH: 0.525 },
+    Mistral:  { Drav: 0.323, IAL: 0.460, IAH: 0.475 }
+  },
+  SFT: {
+    Qwen:     { Drav: 0.781, IAL: 0.787, IAH: 0.755 },
+    Mistral:  { Drav: 0.772, IAL: 0.760, IAH: 0.746 }
+  }
+};
+
+const groups = ['ZS', 'FS', 'Trans', 'SFT'];
+const xCenters = [100, 195, 290, 385];
+const colors = { Drav: '#d46030', IAL: '#5ba4cf', IAH: '#1b4e96' };
+
+const barW = 7;
+const gap = 2;
+const scale = 333.333;   // maps 0–0.8 to 266.7 px
+
+let svgBars = '';
+
+groups.forEach((grp, i) => {
+  let x = xCenters[i] - ((barW * 6 + gap * 5) / 2);
+
+  ['Drav', 'IAL', 'IAH'].forEach(k => {
+    let h = f1Data[grp].Qwen[k] * scale;
+    svgBars += `<rect x="${x}" y="${300 - h}" width="${barW}" height="${h}" rx="1.5" fill="${colors[k]}"/>`;
+    x += barW + gap;
+  });
+
+  ['Drav', 'IAL', 'IAH'].forEach(k => {
+    let h = f1Data[grp].Mistral[k] * scale;
+    svgBars += `<rect x="${x}" y="${300 - h}" width="${barW}" height="${h}" rx="1.5" fill="${colors[k]}" opacity="0.4"/>`;
+    x += barW + gap;
+  });
+});
+
+document.getElementById('bars-container').innerHTML = svgBars;
+</script>
+
+</body>
+</html>
