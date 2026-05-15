@@ -1,141 +1,100 @@
-\definecolor{colDrav}{HTML}{d46030}
-\definecolor{colIAL}{HTML}{5ba4cf}
-\definecolor{colIAH}{HTML}{1b4e96}
-\definecolor{axiscol}{HTML}{bbbbbb}
-\definecolor{gridcol}{HTML}{eeeeee}
-\definecolor{labelcol}{HTML}{333333}
-\definecolor{subtlecol}{HTML}{555555}
+\begin{figure}[htbp]
+    \centering
+    % Notice \resizebox is removed and we scale x and y directly here:
+    \begin{tikzpicture}[x=0.53pt, y=0.53pt]
 
-\begin{document}
-\begin{tikzpicture}[x=1pt, y=1pt]
+    % ===================== GRID LINES =====================
+    \foreach \ysvg/\yval in {233.3/0.2, 166.6/0.4, 100.0/0.6, 33.3/0.8}{
+      \pgfmathsetmacro{\ytik}{300-\ysvg}
+      \draw[gridcol, dash pattern=on 3pt off 3pt, line width=0.5pt]
+        (55, \ytik) -- (450, \ytik);
+    }
 
-% -------------------------------------------------------
-%  Coordinate system
-%  SVG origin (0,0) is top-left; we flip y so larger = up
-%  SVG uses y=300 as the x-axis baseline.
-%  We map SVG (x, y)  →  TikZ (x, 300-y)
-%  so the TikZ origin sits at SVG (0,300).
-% -------------------------------------------------------
+    % ===================== AXES =====================
+    \draw[axiscol, line width=0.8pt] (55, 0) -- (55, 280);
+    \draw[axiscol, line width=0.8pt] (55, 0) -- (450, 0);
 
-% Helper: bar height from F1 value
-%   scale = 333.333  (0.8 maps to 266.7 px)
-%   bar height h = val * 333.333
-%   SVG rect: y1=300-h, height=h
-%   TikZ rect: from y=0 to y=h
+    % ===================== Y-AXIS TICKS & LABELS =====================
+    \foreach \ysvg/\lbl in {303/0.0, 236/0.2, 170/0.4, 103/0.6, 36/0.8}{
+      \pgfmathsetmacro{\ytik}{300-\ysvg}
+      \node[anchor=east, font=\scriptsize\sffamily, text=labelcol]
+        at (48, \ytik) {\lbl};
+    }
 
-% ===================== GRID LINES =====================
-% SVG grid y values: 233.3, 166.6, 100, 33.3
-% TikZ y: 300-233.3=66.7, 300-166.6=133.4, 200, 266.7
-\foreach \ysvg/\yval in {233.3/0.2, 166.6/0.4, 100.0/0.6, 33.3/0.8}{
-  \pgfmathsetmacro{\ytik}{300-\ysvg}
-  \draw[gridcol, dash pattern=on 3pt off 3pt, line width=0.7pt]
-    (55, \ytik) -- (450, \ytik);
-}
+    % ===================== Y-AXIS LABEL (rotated) =====================
+    \node[rotate=90, anchor=center, font=\footnotesize\sffamily, text=labelcol]
+      at (15, 130) {Entity F1};
 
-% ===================== AXES =====================
-% vertical axis: SVG (55,20)-(55,300) → TikZ (55,0)-(55,280)
-\draw[axiscol, line width=0.8pt] (55, 0) -- (55, 280);
-% horizontal axis: SVG (55,300)-(450,300) → TikZ (55,0)-(450,0)
-\draw[axiscol, line width=0.8pt] (55, 0) -- (450, 0);
+    % ===================== BARS =====================
+    \newcommand{\drawbar}[4]{%
+      \pgfmathsetmacro{\bh}{#2 * 333.333}%
+      \fill[#3, opacity=#4, rounded corners=1pt]
+        (#1, 0) rectangle (#1+7, \bh);%
+    }
 
-% ===================== Y-AXIS TICKS & LABELS =====================
-% SVG text positions converted: TikZ y = 300 - SVG_y
-% slight offset: SVG uses dominant-baseline; approximate with -2pt shift
-\foreach \ysvg/\lbl in {303/0.0, 236/0.2, 170/0.4, 103/0.6, 36/0.8}{
-  \pgfmathsetmacro{\ytik}{300-\ysvg}
-  \node[anchor=east, font=\fontsize{7}{7}\selectfont, text=labelcol]
-    at (48, \ytik) {\lbl};
-}
+    % --- Group ZS ---
+    \drawbar{74}{0.457}{colDrav}{1.0}   
+    \drawbar{83}{0.506}{colIAL}{1.0}    
+    \drawbar{92}{0.548}{colIAH}{1.0}    
+    \drawbar{101}{0.378}{colDrav}{0.4}  
+    \drawbar{110}{0.405}{colIAL}{0.4}   
+    \drawbar{119}{0.440}{colIAH}{0.4}   
 
-% ===================== Y-AXIS LABEL (rotated) =====================
-% SVG: rotate(-90 18 170) → centered at x=18, y=170 → TikZ y=130
-\node[rotate=90, anchor=center, font=\fontsize{8}{8}\selectfont, text=labelcol]
-  at (18, 130) {Entity F1};
+    % --- Group FS ---
+    \drawbar{169}{0.414}{colDrav}{1.0}
+    \drawbar{178}{0.516}{colIAL}{1.0}
+    \drawbar{187}{0.519}{colIAH}{1.0}
+    \drawbar{196}{0.385}{colDrav}{0.4}
+    \drawbar{205}{0.362}{colIAL}{0.4}
+    \drawbar{214}{0.351}{colIAH}{0.4}
 
-% ===================== BARS =====================
-% Parameters (all in SVG px, converted via y→300-y for TikZ):
-%   barW = 7, gap = 2, scale = 333.333
-%   xCenters = {100, 195, 290, 385}
-%   groupOffset = -(6*7 + 5*2)/2 = -(42+10)/2 = -26
-%   Keys order: Drav, IAL, IAH  (Qwen solid; Mistral opacity 0.4)
+    % --- Group Trans ---
+    \drawbar{264}{0.340}{colDrav}{1.0}
+    \drawbar{273}{0.448}{colIAL}{1.0}
+    \drawbar{282}{0.525}{colIAH}{1.0}
+    \drawbar{291}{0.323}{colDrav}{0.4}
+    \drawbar{300}{0.460}{colIAL}{0.4}
+    \drawbar{309}{0.475}{colIAH}{0.4}
 
-% Macro: \drawbar{x_left}{f1_value}{color}{opacity}
-% TikZ rect from (x, 0) to (x+barW, h), with h = val*333.333
-\newcommand{\drawbar}[4]{%
-  \pgfmathsetmacro{\bh}{#2 * 333.333}%
-  \fill[#3, opacity=#4, rounded corners=1.5pt]
-    (#1, 0) rectangle (#1+7, \bh);%
-}
+    % --- Group SFT ---
+    \drawbar{359}{0.781}{colDrav}{1.0}
+    \drawbar{368}{0.787}{colIAL}{1.0}
+    \drawbar{377}{0.755}{colIAH}{1.0}
+    \drawbar{386}{0.772}{colDrav}{0.4}
+    \drawbar{395}{0.760}{colIAL}{0.4}
+    \drawbar{404}{0.746}{colIAH}{0.4}
 
-% --- Group ZS  (xCenter=100) ---
-% start x = 100 - 26 = 74
-\drawbar{74}{0.457}{colDrav}{1.0}   % Qwen Drav
-\drawbar{83}{0.506}{colIAL}{1.0}    % Qwen IAL
-\drawbar{92}{0.548}{colIAH}{1.0}    % Qwen IAH
-\drawbar{101}{0.378}{colDrav}{0.4}  % Mistral Drav
-\drawbar{110}{0.405}{colIAL}{0.4}   % Mistral IAL
-\drawbar{119}{0.440}{colIAH}{0.4}   % Mistral IAH
+    % ===================== X-AXIS LABELS =====================
+    \node[anchor=center, font=\footnotesize\sffamily, text=labelcol]
+      at (100, -25) {ZS};
+    \node[anchor=center, font=\footnotesize\sffamily, text=labelcol]
+      at (195, -25) {FS};
+    \node[anchor=center, font=\footnotesize\sffamily, text=labelcol]
+      at (290, -25) {Trans};
+    \node[anchor=center, font=\footnotesize\sffamily\bfseries, text=black]
+      at (385, -25) {SFT};
 
-% --- Group FS  (xCenter=195) ---
-% start x = 195 - 26 = 169
-\drawbar{169}{0.414}{colDrav}{1.0}
-\drawbar{178}{0.516}{colIAL}{1.0}
-\drawbar{187}{0.519}{colIAH}{1.0}
-\drawbar{196}{0.385}{colDrav}{0.4}
-\drawbar{205}{0.362}{colIAL}{0.4}
-\drawbar{214}{0.351}{colIAH}{0.4}
+    % ===================== LEGEND =====================
+    % Dravidian
+    \fill[colDrav, rounded corners=1pt] (60,-55) rectangle (72,-43);
+    \node[anchor=west, font=\scriptsize\sffamily, text=labelcol]
+      at (76, -49) {Dravidian};
 
-% --- Group Trans  (xCenter=290) ---
-% start x = 290 - 26 = 264
-\drawbar{264}{0.340}{colDrav}{1.0}
-\drawbar{273}{0.448}{colIAL}{1.0}
-\drawbar{282}{0.525}{colIAH}{1.0}
-\drawbar{291}{0.323}{colDrav}{0.4}
-\drawbar{300}{0.460}{colIAL}{0.4}
-\drawbar{309}{0.475}{colIAH}{0.4}
+    % IA Low-res
+    \fill[colIAL, rounded corners=1pt] (155,-55) rectangle (167,-43);
+    \node[anchor=west, font=\scriptsize\sffamily, text=labelcol]
+      at (171, -49) {IA Low-res};
 
-% --- Group SFT  (xCenter=385) ---
-% start x = 385 - 26 = 359
-\drawbar{359}{0.781}{colDrav}{1.0}
-\drawbar{368}{0.787}{colIAL}{1.0}
-\drawbar{377}{0.755}{colIAH}{1.0}
-\drawbar{386}{0.772}{colDrav}{0.4}
-\drawbar{395}{0.760}{colIAL}{0.4}
-\drawbar{404}{0.746}{colIAH}{0.4}
+    % IA High-res
+    \fill[colIAH, rounded corners=1pt] (260,-55) rectangle (272,-43);
+    \node[anchor=west, font=\scriptsize\sffamily, text=labelcol]
+      at (276, -49) {IA High-res};
 
-% ===================== X-AXIS LABELS =====================
-% SVG y=325 → TikZ y = 300-325 = -25
-\node[anchor=center, font=\fontsize{8}{8}\selectfont, text=labelcol]
-  at (100, -25) {ZS};
-\node[anchor=center, font=\fontsize{8}{8}\selectfont, text=labelcol]
-  at (195, -25) {FS};
-\node[anchor=center, font=\fontsize{8}{8}\selectfont, text=labelcol]
-  at (290, -25) {Trans};
-\node[anchor=center, font=\fontsize{8}{8}\selectfont, text=black, font=\bfseries]
-  at (385, -25) {SFT};
+    % Subtitle
+    \node[anchor=west, font=\scriptsize\sffamily\itshape, text=subtlecol]
+      at (60, -75) {Solid = Qwen $\cdot$ Faded = Mistral};
 
-% ===================== LEGEND =====================
-% SVG y=345 → TikZ y = 300-345 = -45  (rect 10x10)
-% SVG y=354 → TikZ y = 300-354 = -54  (text baseline)
-
-% Dravidian
-\fill[colDrav, rounded corners=1.5pt] (65,-55) rectangle (75,-45);
-\node[anchor=west, font=\fontsize{7}{7}\selectfont, text=labelcol]
-  at (80, -50) {Dravidian};
-
-% IA Low-res
-\fill[colIAL, rounded corners=1.5pt] (155,-55) rectangle (165,-45);
-\node[anchor=west, font=\fontsize{7}{7}\selectfont, text=labelcol]
-  at (170, -50) {IA Low-res};
-
-% IA High-res
-\fill[colIAH, rounded corners=1.5pt] (260,-55) rectangle (270,-45);
-\node[anchor=west, font=\fontsize{7}{7}\selectfont, text=labelcol]
-  at (275, -50) {IA High-res};
-
-% Subtitle
-% SVG y=372 → TikZ y = 300-372 = -72
-\node[anchor=west, font=\fontsize{7}{7}\selectfont\itshape, text=subtlecol]
-  at (65, -72) {Solid = Qwen $\cdot$ Faded = Mistral};
-
-\end{tikzpicture}
+    \end{tikzpicture}
+    \caption{Entity F1 by Language Family.}
+    \label{fig:entity_f1_custom}
+\end{figure}
