@@ -1,11 +1,34 @@
+import os
 import torch
 import pandas as pd
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+# =====================================================
+# CONFIG
+# =====================================================
+
 MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+OUTPUT_DIR = "./results"
+OUTPUT_FILE = os.path.join(
+    OUTPUT_DIR,
+    "pilot_results.csv"
+)
+
+DEBUG = True
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# =====================================================
+# LOAD MODEL
+# =====================================================
+
+print("Loading model...")
+
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME
+)
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
@@ -15,28 +38,47 @@ model = AutoModelForCausalLM.from_pretrained(
 
 model.eval()
 
+print("Model loaded.")
+
+# =====================================================
+# ANSWER GENERATION + CONFIDENCE
+# =====================================================
 
 def generate_answer_and_confidence(question):
 
-    prompt = f"""Question:
-{question}
+    prompt = f"""You are answering a question.
 
-Answer with only the final answer.
+Rules:
+- Give only the answer.
+- Use at most 5 words.
+- Do not explain.
+- Do not justify.
+- Do not add extra text.
+
+Question: {question}
+
+Answer:
 """
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt"
+    ).to(model.device)
 
     with torch.no_grad():
 
         output = model.generate(
             **inputs,
-            max_new_tokens=20,
+            max_new_tokens=5,
             do_sample=False,
             return_dict_in_generate=True,
-            output_scores=True
+            output_scores=True,
+            pad_token_id=tokenizer.eos_token_id
         )
 
-    generated_tokens = output.sequences[0][inputs.input_ids.shape[1]:]
+    generated_tokens = output.sequences[0][
+        inputs.input_ids.shape[1]:
+    ]
 
     answer = tokenizer.decode(
         generated_tokens,
@@ -45,28 +87,134 @@ Answer with only the final answer.
 
     token_probs = []
 
-    for token_id, scores in zip(
-        generated_tokens,
-        output.scores
+    if DEBUG:
+
+        print("\n" + "=" * 100)
+        print("QUESTION:")
+        print(question)
+
+        print("\nRAW TOKEN IDS:")
+        print(generated_tokens.tolist())
+
+    for step, (token_id, scores) in enumerate(
+        zip(generated_tokens, output.scores)
     ):
 
-        probs = torch.softmax(scores[0], dim=-1)
+        probs = torch.softmax(
+            scores[0],
+            dim=-1
+        )
 
         prob = probs[token_id].item()
 
         token_probs.append(prob)
 
-    avg_confidence = (
-        sum(token_probs) / len(token_probs)
-        if len(token_probs) > 0 else 0
+        if DEBUG:
+
+            token_text = tokenizer.decode(
+                [token_id.item()]
+            )
+
+            topk = torch.topk(
+                probs,
+                k=5
+            )
+
+            print(
+                f"\nSTEP {step+1}"
+            )
+
+            print(
+                f"Generated token: "
+                f"{repr(token_text)}"
+            )
+
+            print(
+                f"Chosen probability: "
+                f"{prob:.6f}"
+            )
+
+            print("\nTop 5 candidates:")
+
+            for rank in range(5):
+
+                candidate_id = topk.indices[
+                    rank
+                ].item()
+
+                candidate_prob = topk.values[
+                    rank
+                ].item()
+
+                candidate_text = tokenizer.decode(
+                    [candidate_id]
+                )
+
+                print(
+                    f"{rank+1}. "
+                    f"{repr(candidate_text)} "
+                    f"({candidate_prob:.6f})"
+                )
+
+    if len(token_probs) == 0:
+
+        first_token_confidence = 0.0
+        avg_confidence = 0.0
+
+    else:
+
+        first_token_confidence = (
+            token_probs[0]
+        )
+
+        avg_confidence = (
+            sum(token_probs)
+            / len(token_probs)
+        )
+
+    uncertainty = (
+        1 - avg_confidence
     )
 
-    uncertainty = 1 - avg_confidence
+    if DEBUG:
 
-    return answer, avg_confidence, uncertainty
+        print("\nFINAL ANSWER:")
+        print(repr(answer))
 
+        print(
+            "\nFIRST TOKEN CONFIDENCE:"
+        )
+        print(
+            first_token_confidence
+        )
 
-def generate_explanation(question, answer):
+        print(
+            "\nAVERAGE CONFIDENCE:"
+        )
+        print(avg_confidence)
+
+        print(
+            "\nUNCERTAINTY:"
+        )
+        print(uncertainty)
+
+        print("=" * 100)
+
+    return (
+        answer,
+        first_token_confidence,
+        avg_confidence,
+        uncertainty
+    )
+
+# =====================================================
+# EXPLANATION GENERATION
+# =====================================================
+
+def generate_explanation(
+    question,
+    answer
+):
 
     prompt = f"""Question:
 {question}
@@ -74,17 +222,28 @@ def generate_explanation(question, answer):
 Answer:
 {answer}
 
-Explain why this answer is correct.
+Provide a concise explanation in 2-3 sentences.
+
+Rules:
+- Explain only why the answer is correct.
+- Do not discuss the question.
+- Do not discuss test-taking strategies.
+- Do not discuss follow-up questions.
+- Be concise.
 """
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt"
+    ).to(model.device)
 
     with torch.no_grad():
 
         output = model.generate(
             **inputs,
-            max_new_tokens=256,
-            do_sample=False
+            max_new_tokens=100,
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id
         )
 
     explanation = tokenizer.decode(
@@ -94,19 +253,29 @@ Explain why this answer is correct.
 
     return explanation.strip()
 
+# =====================================================
+# TEST QUESTIONS
+# =====================================================
 
-# Example questions
 questions = [
     "What is the capital of France?",
     "Can coughing stop a heart attack?"
 ]
 
+# =====================================================
+# RUN
+# =====================================================
+
 rows = []
 
 for q in tqdm(questions):
 
-    answer, confidence, uncertainty = \
-        generate_answer_and_confidence(q)
+    (
+        answer,
+        first_token_confidence,
+        avg_confidence,
+        uncertainty
+    ) = generate_answer_and_confidence(q)
 
     explanation = generate_explanation(
         q,
@@ -116,16 +285,39 @@ for q in tqdm(questions):
     rows.append({
         "question": q,
         "answer": answer,
-        "avg_confidence": confidence,
-        "uncertainty": uncertainty,
-        "explanation": explanation
+        "first_token_confidence":
+            first_token_confidence,
+        "avg_confidence":
+            avg_confidence,
+        "uncertainty":
+            uncertainty,
+        "explanation":
+            explanation
     })
+
+    pd.DataFrame(rows).to_csv(
+        OUTPUT_FILE,
+        index=False
+    )
+
+# =====================================================
+# FINAL SAVE
+# =====================================================
 
 df = pd.DataFrame(rows)
 
 df.to_csv(
-    "pilot_results.csv",
+    OUTPUT_FILE,
     index=False
 )
 
-print(df.head())
+print("\nSaved results to:")
+print(OUTPUT_FILE)
+
+print("\nFINAL DATAFRAME:\n")
+
+print(
+    df.to_string(
+        max_colwidth=100
+    )
+)
