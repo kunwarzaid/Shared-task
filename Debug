@@ -1,43 +1,93 @@
-```latex
-\appendix
-\section{Human Evaluation Case Studies}
-\label{sec:appendix_human_eval}
+review: Four LLMs (GPT-5, Llama-3.3-70B, Llama-4-Scout, Qwen2.5-32B), 50 AgentClinic-MedQA cases each, multi-agent setup where a Doctor model emits a typed DIAGNOSIS/CONFIDENCE/ACTION triple at every turn and a Measurement Agent gates information release so the model can't read the full chart on turn zero. Actions are scored 0 to 4 by potential harm if the diagnosis is wrong. The headline result is two clusters: GPT-5 and Qwen as "overconfident actors" (62% / 44% accuracy, HHM 16% / 22%), Llama-3.3 and Llama-4 as "paralysed abstainers" who score HHM 0% because they never reach a diagnosis in 50% and 46% of cases respectively. ECE 0.246 to 0.523 across the board.
 
-To validate our automated LLM-as-a-judge framework, expert annotators reviewed generated summaries alongside the original native-language dialogues. Annotators provided scores across our three primary dimensions (Truthfulness, Safety, Explainability) as well as an Overall Trust rating (all on a 1--5 Likert scale). Furthermore, they recorded specific qualitative observations regarding the system's performance and clinical errors. 
+The structured action space is the design choice that makes everything else possible. Once a model has to commit to prescribe_medication versus ask_question, you can actually assign harm scores and you can actually count what a confidence-threshold guardrail would or wouldn't block. The zero-turn-leakage architecture, where the Measurement Agent withholds neuro/abdominal/lab findings until explicitly requested, fixes a real problem with static medical QA benchmarks and I'd like to see it adopted more widely. Diagnostic Fishing as a named failure mode (5.54 tests per case at 0.41 precision for GPT-5; the Case B DLBCL example where the model fires off 45 tests of which 6 land) captures something I haven't seen named cleanly elsewhere. It's a memorable framing and it generalizes beyond medicine.
 
-Table \ref{tab:human_eval_examples} presents a representative sample of these human evaluations for Marathi (Indo-Aryan) and Tamil (Dravidian) across the Zero-Shot and Few-Shot paradigms. The human annotations corroborate our automated findings: while Few-Shot prompting often improves the superficial flow and formatting of the summary (higher Explainability), it actively introduces severe clinical hallucinations (e.g., fabricating geographic locations like "Pune") and degrades factual Truthfulness.
+Now the holes. n=50 per model with no confidence intervals reported anywhere. At that sample size the gap between GPT-5's 16% HHM and Qwen's 22% is noise, Fisher gives you nothing, yet the paper repeatedly uses two-decimal-place language ("2.16," "2.12," "0.41") that implies a precision the data can't carry. Confidence intervals on every cell of Table II, or at least on the headline metrics, would cost nothing and would change how a reader weighs the two-regimes claim.
 
-\begin{table*}[h!]
-\centering
-\small
-\caption{Sample of Human Expert Evaluation for Marathi and Tamil (Zero-Shot vs. Few-Shot). Scores represent the annotator's overall rating for that dimension (1-5 scale). Qualitative notes highlight the divergence between surface-level readability and actual clinical safety.}
-\label{tab:human_eval_examples}
-\begin{tabularx}{\textwidth}{ll cccc X}
-\toprule
-\textbf{Language} & \textbf{Paradigm} & \textbf{Truth.} & \textbf{Safety} & \textbf{Expl.} & \textbf{Trust} & \textbf{Expert Qualitative Observations} \\
-\midrule
-\multirow{4}{*}{\textbf{Marathi}} 
-& Zero-Shot & 3 & 3 & 3 & 2 & 
-\textbf{Pros:} Captured some basic information. \newline 
-\textbf{Issues:} Missing vital details. Hallucinated "persistent sweating" instead of persistent cough. Incorrectly altered the infant's diet plan regarding protein, iron, and milk. \\
-\cmidrule{2-7}
-& Few-Shot & 3 & 4 & 4 & 3 & 
-\textbf{Pros:} More accurate point-wise presentation making it easier to read; correctly mentioned some symptoms. \newline 
-\textbf{Issues:} \textit{Entity Bleed / Hallucination:} Falsely assumed the location was "Pune". Missed critical details regarding duration of notes, travel health management, and specific milk/food quantity advice. \\
+The HHM metric definition does the Llama models a structural favor. HHM only fires when there's an incorrect diagnosis with harm ≥3 and no guardrail intervention. If the model refuses to diagnose half the cases, those cases can't trigger HHM at all. So the 0% number is real but it's measuring a different thing than the 16% / 22% numbers above it on the same row. The paper acknowledges this in prose ("a consequence of passivity, not safe reasoning") but lets the metric stand in the headline table without renormalization or a paired abstain-aware variant. A reader skimming Table II walks away with the wrong impression.
 
-\midrule
-\midrule
+The patient simulator is GPT-5. So when Doctor-GPT-5 is being evaluated, the patient on the other side of the conversation is the same model family, with whatever shared priors and conversational conventions that implies. I don't know how much of GPT-5's accuracy lead is real diagnostic skill versus an unintended information-channel advantage, and the paper doesn't tell me. An ablation with a non-GPT patient simulator (or even just a swap with Llama-3.3 as patient and rerun a subset) would settle this. Until then I'd hold any frontier-versus-open-weight conclusion loosely.
 
-\multirow{4}{*}{\textbf{Tamil}} 
-& Zero-Shot & 3 & 3 & 3 & 2 & 
-\textbf{Pros:} Captured better clinical facts compared to the few-shot method. \newline 
-\textbf{Issues:} Failed to provide a cohesive overall view of the conversation. Contained some misleading clinical information and omissions. \\
-\cmidrule{2-7}
-& Few-Shot & 2 & 3 & 4 & 3 & 
-\textbf{Pros:} The summary structure provided a good, readable overall view of the patient-provider conversation. \newline 
-\textbf{Issues:} \textit{Factual Collapse:} Despite the good structure, the actual clinical facts and medical information were highly inaccurate and misleading. \\
-\bottomrule
-\end{tabularx}
-\end{table*}
+Two smaller things. The "Safe threshold (0.05)" line on Fig. 2 is the paper's own; Guo et al. don't propose a clinical ECE threshold. Own that. There's no shame in proposing it, but cite it as a proposal, not as community consensus. And the ECE binning scheme isn't specified anywhere I could find, which matters at n=50 because equal-width vs equal-mass binning can move the number by a lot.
 
-```
+Case A is the best part of the paper for me. Five turns of pure history-taking, no lab work, then a 0.85-confidence commitment to Acute Pyelonephritis when the truth was Acute Interstitial Nephritis, and the guardrail waves the prescription through because it only checks the confidence number. That single trace is more persuasive than the aggregate ECE plots. Section IV.C notes that Qwen "acts prematurely in 24% of cases" (Fig. 4; GPT-5 is at 10%), but the case-study format makes the failure mode concrete in a way the percentages don't. More traces at this resolution would strengthen the paper substantially.
+
+Weak accept. The action-level reframing is overdue and the framework is reusable. The 50-case scale and the patient-simulator confound are the two things I want fixed before the 200-case follow-up the authors promise. Without them the comparative claim across models isn't trustworthy, even though the within-paper qualitative findings are.
+rating: 6
+
+title: Useful framework on action-level LLM clinical safety; statistical evidence underpowered (N=50).
+review: The paper presents a systematic evaluation of four LLMs (GPT-5, Llama-3.3-70B, Llama-4-Scout, Qwen2.5-32B) on action-level physical safety in simulated clinical encounters. Building on the previously published Med-Guard architecture [10], the authors extend it with an LLM patient simulator, dynamic EMR injection, and physical harm metrics, evaluating each model on 50 USMLE-style cases from AgentClinic-MedQA. The central claim is the identification of two qualitatively distinct failure modes: overconfident actors (GPT-5, Qwen2.5-32B), which commit to under-evidenced clinical decisions leading to 16–22% unintercepted high-harm actions, and paralysed abstainers (Llama-3.3-70B, Llama-4-Scout), which avoid harm only by failing to commit in roughly half of the cases. Across all four models, severe miscalibration (ECE 0.246–0.523) renders confidence-threshold guardrails structurally ineffective. The authors conclude that no evaluated model meets safety criteria for autonomous clinical deployment, and propose post-hoc calibration, evidence-grounded action verification, and dual-agent verification as future directions.
+
+Strengths
+S1. Important conceptual contribution. The action-level safety angle is genuinely missing in clinical LLM benchmarks, which overwhelmingly measure output-level metrics (accuracy, refusal rates, harmful-text generation). The framing is well aligned with the SPAI workshop scope.
+S2. Clean failure-mode taxonomy. The overconfident actor vs paralysed abstainer distinction is conceptually clean and immediately interpretable from Fig. 1. It provides useful vocabulary for follow-up work.
+S3. Realistic encounter simulation. Zero-turn leakage prevention (Section III.A) is a meaningful methodological improvement over static QA benchmarks. The Measurement Agent design is appropriate.
+S4. Multi-model comparison. Evaluating four LLMs side-by-side under an identical protocol provides comparative grounding that single-model studies lack.
+S5. Effective qualitative case studies (Section IV.D). The two GPT-5 traces (Acute Interstitial Nephritis misdiagnosis, Lymphoma diagnostic fishing) ground the aggregate metrics and illustrate the failure modes vividly.
+S6. Acknowledged preliminary nature. Sample size and harm-score grounding limitations are stated openly, with a concrete plan for the 200-case extension.
+Weaknesses affecting the central claims
+W1. Statistical underpowering (N=50 per model), major
+With $N=50$, every reported percentage carries a wide confidence interval. For HHM $= 16%$ (GPT-5), the 95% Wilson interval is approximately $[8%, 29%]$; for HHM $= 22%$ (Qwen), $[13%, 35%]$. These intervals overlap substantially, both with each other and with plausible alternative hypotheses. None of the central numerical comparisons in Section IV (OER $20%$ vs $28%$; ECE $0.246$ vs $0.390$; HHM $16%$ vs $22%$) is accompanied by confidence intervals or significance tests. The two-regimes claim is qualitatively visible in Fig. 1, but the severity ranking within each regime is statistically fragile.
+
+Suggested mitigation (workshop scope): report 95% binomial CIs for every percentage in Table II. State explicitly which between-model differences are robust under these CIs and which are not.
+
+W2. Patient agent is GPT-5, creating a circularity, major
+Section III.A states the Patient Agent is "A fixed GPT-5 instance". GPT-5 is also one of the four Doctor Agents under evaluation. This creates a potential confound: the GPT-5 Doctor may receive systematically different responses than other Doctors because the simulator's linguistic style, hedging patterns, and information disclosure rate are GPT-5-shaped. This could mechanically advantage GPT-5 on accuracy and disadvantage open-weight models, then propagate through every downstream metric (EPH, HHM, ECE). The paper does not discuss or test this.
+
+Suggested mitigation: at minimum, a 10-case ablation in which a different model (e.g., Claude or Gemini) replaces GPT-5 as Patient Agent, to demonstrate robustness of the regime classification. Alternatively, an explicit limitation paragraph in Section V.
+
+W3. "Frontier LLMs" framing is inaccurate, moderate
+Abstract and Introduction describe Llama-3.3-70B, Llama-4-Scout, and Qwen2.5-32B as frontier LLMs. As of the evaluation window, these are mid-tier open-weight models; only GPT-5 qualifies as frontier in standard usage. This affects interpretation: the "paralysed abstainer" behaviour in Llamas may partly reflect capability limits on USMLE-style reasoning rather than a deliberate cautious strategy. The paper does not distinguish these.
+
+Suggested mitigation: either reframe as "four open-weight and proprietary LLMs of varied scale" or, more usefully, add a brief discussion clarifying whether the paralysed-abstainer regime is a capability artefact or a behavioural strategy.
+
+W4. LLM-judged correctness without human validation, moderate
+Section III.A states correctness is evaluated via "LLM clinical equivalence judgment". The judge model is not specified and no agreement against human clinical adjudication is reported. With model accuracies in the 24–62% range, judge errors at even a 5–10% rate would materially shift the rankings.
+
+Suggested mitigation: report agreement of the LLM judge against a clinical expert on a small sample (e.g., 50 cases). Document the judge model and prompt explicitly.
+
+W5. Harm-score assignment process underspecified, moderate
+Table I assigns ordinal harm scores 0–4 by action type. This is reasonable for a first pass but conflates action type with action appropriateness: a correctly prescribed and an incorrectly prescribed medication both receive score 3. The text clarifies that EPH is computed "on an incorrect diagnosis", which partly addresses this, but the mapping to NCC MERP / AHRQ is asserted rather than documented. Who assigned the scores? Was there any inter-rater agreement check?
+
+Suggested mitigation: one-paragraph appendix on the assignment process; ideally two raters with agreement statistics, documented for the journal version.
+
+W6. "Two regimes" finding partly tautological, moderate
+The regime separation in Fig. 1 plots EPH against accuracy. EPH is by construction near-zero when "never diagnosed" rate is high (Llama-3.3: 50%, Llama-4: 46%): no diagnosis means no risky action and hence no harm score. The two-regimes finding therefore partly restates "some models commit, some do not", which is directly observable from the Never diagnosed row of Table II. The taxonomy adds qualitative value but the separation strength is partly an artefact of how EPH is defined.
+
+Suggested mitigation: report EPH conditional on the model having reached a diagnosis, alongside the unconditional EPH. This would disentangle "willingness to act" from "harm given action".
+
+W7. Guardrail thresholds are ad-hoc and not sensitivity-tested, minor-moderate
+The guardrail (Section III.C) escalates on confidence $<0.6$, unknown diagnosis, $>0.85$ with hedging, etc. These thresholds are not justified or varied. The claim that guardrails "cannot reliably intercept" errors depends on these specific choices.
+
+Suggested mitigation: a brief sensitivity analysis varying the primary confidence threshold (e.g., 0.5 to 0.9) to show that HHM remains high across the range.
+
+W8. "Safe threshold (0.05)" in Fig. 2 unjustified, minor
+Fig. 2 draws a dashed red line at ECE $= 0.05$ labelled "Safe threshold". This bound is not in [8] (Guo et al.) and no source is provided for treating 0.05 as a safety-critical calibration threshold. The textual claim of "substantially exceeding calibration levels typically considered acceptable in safety-critical settings" reuses this number without an anchoring citation.
+
+Suggested mitigation: either remove the threshold line or anchor it to a concrete reference. A statement such as "ECE below 0.05–0.10 is commonly targeted in calibration literature" with appropriate citations would be defensible.
+rating: 6
+
+title: Study on clinical LLM safety, with useful insights in a preliminary stage.
+review: Summary:
+
+This paper evaluates the calibration and action-level physical safety of frontier LLMs for autonomous clinical deployment.
+Most notably, the authors extend the Med-Guard framework with physical harm metrics such as Expected Physical Harm (EPH), High Harm Missed (HMM), and other calibration measures.
+The study assesses four frontier LLMs on 50 different cases.
+The findings suggest that none of the evaluated models are suitable for autonomous clinical deployment so far.
+
+Strength:
+
+The study introduces metrics to measure harm and overconfidence for action-level safety.
+The disction between errors of omission (failure to act) and errors of commission (harmful actions) is interesting and provides richer charaterization of model behaviors.
+Weaknesses:
+
+If submitted as a short paper, then it appears to exceed the page limit.
+The main takeaway ("current frontier LLMs should not be autonomously deployed in safety-critical clinical settings") is not particularly surprising.
+Patient simulator is an LLM as well. Not sure how results translate to real human interactions.
+Overall Assessment:
+
+The paper addresses an important problem and proposes an useful evaluation perspective centered on action-level harm.
+The empirical findings are interesting.
+However, the central conclusion is somewhat expected.
+I view the work as a valuable preliminary study, but additional experiments and stronger statistical analysis would be appreciated for deeper conclusions.
+rating: 6
