@@ -4,20 +4,35 @@ import pandas as pd
 from tqdm import tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from huggingface_hub import login
 
-# =====================================================
-# CONFIG
-# =====================================================
+def huggingface_login():
+    """
+    Logs into the Hugging Face Hub using the user's token.
+    """
+    # print("Please enter your Hugging Face token. You can generate one at: https://huggingface.co/settings/tokens")
+    token = ''
+    try:
+        # Log in to the Hugging Face Hub
+        login(token=token)
+        print("Successfully logged into Hugging Face!")
+    except Exception as e:
+        print(f"Failed to log in: {e}")
 
+huggingface_login()
+
+OUTPUT_DIR = "/workspace/data/KZ_2117574/Calibration/truthfulqa_exp1"
+OUTPUT_FILE = os.path.join(OUTPUT_DIR,"test.csv")
 MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
 
-OUTPUT_DIR = "./truthfulqa_exp1"
+
+
 OUTPUT_CSV = os.path.join(
     OUTPUT_DIR,
     "truthfulqa_results.csv"
 )
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 # =====================================================
 # MODEL
