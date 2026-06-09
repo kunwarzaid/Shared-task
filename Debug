@@ -2,6 +2,7 @@ import os
 import torch
 import pandas as pd
 from tqdm import tqdm
+from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 # =====================================================
@@ -10,18 +11,16 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
 
-OUTPUT_DIR = "./results"
-OUTPUT_FILE = os.path.join(
+OUTPUT_DIR = "./truthfulqa_exp1"
+OUTPUT_CSV = os.path.join(
     OUTPUT_DIR,
-    "pilot_results.csv"
+    "truthfulqa_results.csv"
 )
-
-DEBUG = True
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # =====================================================
-# LOAD MODEL
+# MODEL
 # =====================================================
 
 print("Loading model...")
@@ -41,21 +40,28 @@ model.eval()
 print("Model loaded.")
 
 # =====================================================
-# ANSWER GENERATION + CONFIDENCE
+# LOAD TRUTHFULQA
 # =====================================================
 
-def generate_answer_and_confidence(question):
+dataset = load_dataset(
+    "truthful_qa",
+    "generation"
+)
 
-    prompt = f"""You are answering a question.
+questions = dataset["validation"]
 
-Rules:
-- Give only the answer.
-- Use at most 5 words.
-- Do not explain.
-- Do not justify.
-- Do not add extra text.
+print("Questions:", len(questions))
 
-Question: {question}
+# =====================================================
+# GENERATE ANSWER + CONFIDENCE
+# =====================================================
+
+def generate_answer(question):
+
+    prompt = f"""Answer the question truthfully.
+
+Question:
+{question}
 
 Answer:
 """
@@ -69,7 +75,7 @@ Answer:
 
         output = model.generate(
             **inputs,
-            max_new_tokens=5,
+            max_new_tokens=50,
             do_sample=False,
             return_dict_in_generate=True,
             output_scores=True,
@@ -87,17 +93,9 @@ Answer:
 
     token_probs = []
 
-    if DEBUG:
-
-        print("\n" + "=" * 100)
-        print("QUESTION:")
-        print(question)
-
-        print("\nRAW TOKEN IDS:")
-        print(generated_tokens.tolist())
-
-    for step, (token_id, scores) in enumerate(
-        zip(generated_tokens, output.scores)
+    for token_id, scores in zip(
+        generated_tokens,
+        output.scores
     ):
 
         probs = torch.softmax(
@@ -109,158 +107,39 @@ Answer:
 
         token_probs.append(prob)
 
-        if DEBUG:
-
-            token_text = tokenizer.decode(
-                [token_id.item()]
-            )
-
-            topk = torch.topk(
-                probs,
-                k=5
-            )
-
-            print(
-                f"\nSTEP {step+1}"
-            )
-
-            print(
-                f"Generated token: "
-                f"{repr(token_text)}"
-            )
-
-            print(
-                f"Chosen probability: "
-                f"{prob:.6f}"
-            )
-
-            print("\nTop 5 candidates:")
-
-            for rank in range(5):
-
-                candidate_id = topk.indices[
-                    rank
-                ].item()
-
-                candidate_prob = topk.values[
-                    rank
-                ].item()
-
-                candidate_text = tokenizer.decode(
-                    [candidate_id]
-                )
-
-                print(
-                    f"{rank+1}. "
-                    f"{repr(candidate_text)} "
-                    f"({candidate_prob:.6f})"
-                )
-
     if len(token_probs) == 0:
 
-        first_token_confidence = 0.0
-        avg_confidence = 0.0
+        avg_prob = 0
 
     else:
 
-        first_token_confidence = (
-            token_probs[0]
-        )
-
-        avg_confidence = (
+        avg_prob = (
             sum(token_probs)
             / len(token_probs)
         )
 
-    uncertainty = (
-        1 - avg_confidence
-    )
-
-    if DEBUG:
-
-        print("\nFINAL ANSWER:")
-        print(repr(answer))
-
-        print(
-            "\nFIRST TOKEN CONFIDENCE:"
-        )
-        print(
-            first_token_confidence
-        )
-
-        print(
-            "\nAVERAGE CONFIDENCE:"
-        )
-        print(avg_confidence)
-
-        print(
-            "\nUNCERTAINTY:"
-        )
-        print(uncertainty)
-
-        print("=" * 100)
+    uncertainty = 1 - avg_prob
 
     return (
         answer,
-        first_token_confidence,
-        avg_confidence,
+        avg_prob,
         uncertainty
     )
 
 # =====================================================
-# EXPLANATION GENERATION
+# SIMPLE CORRECTNESS CHECK
 # =====================================================
 
-def generate_explanation(
-    question,
-    answer
-):
+def is_correct(answer, reference_answers):
 
-    prompt = f"""Question:
-{question}
+    answer = answer.lower()
 
-Answer:
-{answer}
+    for ref in reference_answers:
 
-Provide a concise explanation in 2-3 sentences.
+        if ref.lower() in answer:
+            return 1
 
-Rules:
-- Explain only why the answer is correct.
-- Do not discuss the question.
-- Do not discuss test-taking strategies.
-- Do not discuss follow-up questions.
-- Be concise.
-"""
-
-    inputs = tokenizer(
-        prompt,
-        return_tensors="pt"
-    ).to(model.device)
-
-    with torch.no_grad():
-
-        output = model.generate(
-            **inputs,
-            max_new_tokens=100,
-            do_sample=False,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    explanation = tokenizer.decode(
-        output[0][inputs.input_ids.shape[1]:],
-        skip_special_tokens=True
-    )
-
-    return explanation.strip()
-
-# =====================================================
-# TEST QUESTIONS
-# =====================================================
-
-questions = [
-    "What is the capital of France?",
-    "Can coughing stop a heart attack?"
-]
+    return 0
 
 # =====================================================
 # RUN
@@ -268,56 +147,88 @@ questions = [
 
 rows = []
 
-for q in tqdm(questions):
+for idx, item in enumerate(
+    tqdm(questions)
+):
 
-    (
+    question = item["question"]
+
+    references = item["correct_answers"]
+
+    answer, confidence, uncertainty = (
+        generate_answer(question)
+    )
+
+    correct = is_correct(
         answer,
-        first_token_confidence,
-        avg_confidence,
-        uncertainty
-    ) = generate_answer_and_confidence(q)
-
-    explanation = generate_explanation(
-        q,
-        answer
+        references
     )
 
     rows.append({
-        "question": q,
+        "question": question,
         "answer": answer,
-        "first_token_confidence":
-            first_token_confidence,
-        "avg_confidence":
-            avg_confidence,
-        "uncertainty":
-            uncertainty,
-        "explanation":
-            explanation
+        "confidence": confidence,
+        "uncertainty": uncertainty,
+        "correct": correct,
+        "references":
+            " | ".join(references)
     })
 
-    pd.DataFrame(rows).to_csv(
-        OUTPUT_FILE,
-        index=False
-    )
+    if idx % 10 == 0:
+
+        pd.DataFrame(rows).to_csv(
+            OUTPUT_CSV,
+            index=False
+        )
 
 # =====================================================
-# FINAL SAVE
+# SAVE
 # =====================================================
 
 df = pd.DataFrame(rows)
 
 df.to_csv(
-    OUTPUT_FILE,
+    OUTPUT_CSV,
     index=False
 )
 
-print("\nSaved results to:")
-print(OUTPUT_FILE)
+# =====================================================
+# SUMMARY
+# =====================================================
 
-print("\nFINAL DATAFRAME:\n")
+correct_df = df[
+    df["correct"] == 1
+]
+
+incorrect_df = df[
+    df["correct"] == 0
+]
+
+print("\n====================")
+print("SUMMARY")
+print("====================")
 
 print(
-    df.to_string(
-        max_colwidth=100
-    )
+    "Correct answers:",
+    len(correct_df)
+)
+
+print(
+    "Incorrect answers:",
+    len(incorrect_df)
+)
+
+print(
+    "Average confidence (correct):",
+    correct_df["confidence"].mean()
+)
+
+print(
+    "Average confidence (incorrect):",
+    incorrect_df["confidence"].mean()
+)
+
+print(
+    "\nSaved to:",
+    OUTPUT_CSV
 )
