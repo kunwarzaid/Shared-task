@@ -1,9 +1,15 @@
 import os
+import re
 import torch
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+from scipy.stats import pearsonr, spearmanr
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics.pairwise import cosine_similarity
 from huggingface_hub import login
 
 # =====================================================
@@ -13,11 +19,20 @@ from huggingface_hub import login
 TOKEN = ''
 MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
 OUTPUT_DIR = "/workspace/data/KZ_2117574/Calibration/truthfulqa_exp1"
-OUTPUT_CSV = os.path.join(OUTPUT_DIR, "truthfulqa_pilot20.csv")
+OUTPUT_CSV = os.path.join(OUTPUT_DIR, "truthfulqa_semantic_entropy_v2.csv")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Run only 20 for diagnostic purposes
-PILOT_SIZE = 20
+# Increased from 5 — better entropy resolution
+N_SAMPLES = 10
+TEMPERATURE = 0.7
+
+# Similarity threshold for agglomerative clustering
+# Distance threshold = 1 - cosine similarity
+# 0.15 distance = 0.85 cosine similarity
+CLUSTER_DISTANCE_THRESHOLD = 0.15
+
+PILOT_SIZE = 100
+INSPECT_FIRST_N = 20  # print sampled/cluster answers for these
 
 CERTAINTY_TOKENS = [
     "definitely", "certainly", "clearly", "obviously",
@@ -28,7 +43,7 @@ CERTAINTY_TOKENS = [
     "show", "prove", "certain", "definite", "clear",
     "obvious", "guarantee", "guaranteed", "conclusively",
     "conclusive", "indisputable", "indisputably",
-    "unambiguous", "unambiguously", "without"
+    "unambiguous", "unambiguously"
 ]
 
 UNCERTAINTY_TOKENS = [
@@ -46,13 +61,17 @@ UNCERTAINTY_TOKENS = [
 ]
 
 # =====================================================
-# LOGIN + MODEL
+# LOGIN
 # =====================================================
 
 login(token=TOKEN)
 print("Logged in.")
 
-print("Loading model...")
+# =====================================================
+# LOAD MODELS
+# =====================================================
+
+print("Loading LLM...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
@@ -60,7 +79,13 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 model.eval()
-print("Model loaded.")
+print("LLM loaded.")
+
+print("Loading sentence encoder...")
+encoder = SentenceTransformer(
+    'sentence-transformers/all-MiniLM-L6-v2'
+)
+print("Sentence encoder loaded.")
 
 VOCAB_SIZE = tokenizer.vocab_size
 MAX_ENTROPY = np.log(VOCAB_SIZE)
@@ -89,22 +114,31 @@ def get_token_ids(word_list):
 CERTAINTY_IDS = get_token_ids(CERTAINTY_TOKENS)
 UNCERTAINTY_IDS = get_token_ids(UNCERTAINTY_TOKENS)
 
-print(f"Certainty IDs: {len(CERTAINTY_IDS)}")
-print(f"Uncertainty IDs: {len(UNCERTAINTY_IDS)}")
+print(f"Certainty token IDs: {len(CERTAINTY_IDS)}")
+print(f"Uncertainty token IDs: {len(UNCERTAINTY_IDS)}")
 
 # =====================================================
-# FUNCTION 1: Answer + Internal Uncertainty
+# FUNCTION 1: Embedding-Based Semantic Entropy
 #
-# We measure entropy at the first answer token.
-# GPT is right this is imperfect — "The", "A", "It"
-# inflate entropy. We save multiple uncertainty
-# measures and flag this limitation explicitly.
-# For the pilot this is acceptable.
+# IMPORTANT NOTE (per GPT critique):
+# This is an embedding-based approximation of
+# semantic entropy, NOT the Farquhar et al. method.
+# Farquhar uses bidirectional NLI entailment for
+# semantic equivalence. We use cosine similarity
+# over sentence embeddings.
+# This is clearly labeled as an approximation.
+# For the paper, we will call it:
+# "Embedding-Based Semantic Entropy (EBSE)"
+#
+# Changes from v1:
+# - N_SAMPLES increased from 5 to 10
+# - Greedy cosine clustering replaced with
+#   AgglomerativeClustering (order-independent)
+# - cluster_sizes now saved for debugging
 # =====================================================
 
-def get_answer_and_internal_uncertainty(question):
+def compute_embedding_semantic_entropy(question, idx):
 
-    # Neutral prompt — no bias toward certainty
     prompt = f"""Answer the following question in one sentence.
 
 Question: {question}
@@ -116,81 +150,118 @@ Answer:"""
         return_tensors="pt"
     ).to(model.device)
 
+    # Generate N_SAMPLES answers with temperature
     with torch.no_grad():
-
-        # Get logits at answer position
-        outputs_prefill = model(**inputs)
-        first_token_logits = outputs_prefill.logits[0, -1, :]
-        first_token_probs = torch.softmax(
-            first_token_logits, dim=-1
-        )
-
-        # Entropy of first token distribution (nats)
-        epsilon = 1e-10
-        entropy_nats = -torch.sum(
-            first_token_probs * torch.log(
-                first_token_probs + epsilon
-            )
-        ).item()
-
-        normalized_entropy = entropy_nats / MAX_ENTROPY
-
-        # Top-1 prob and margin
-        top1_prob = first_token_probs.max().item()
-        top2_vals = torch.topk(first_token_probs, k=2).values
-        margin = (top2_vals[0] - top2_vals[1]).item()
-
-        # What is the top token? Helps diagnose inflation
-        top1_token_id = first_token_probs.argmax().item()
-        top1_token_str = tokenizer.decode([top1_token_id])
-
-        # Generate answer
-        output = model.generate(
+        outputs = model.generate(
             **inputs,
             max_new_tokens=60,
-            do_sample=False,
-            return_dict_in_generate=True,
-            output_scores=True,
+            do_sample=True,
+            temperature=TEMPERATURE,
+            num_return_sequences=N_SAMPLES,
             pad_token_id=tokenizer.eos_token_id
         )
 
-    generated_tokens = output.sequences[0][
+    # Decode all samples
+    answers = []
+    for seq in outputs:
+        generated = seq[inputs.input_ids.shape[1]:]
+        text = tokenizer.decode(
+            generated, skip_special_tokens=True
+        ).strip()
+        answers.append(text)
+
+    # Greedy answer for explanation generation
+    with torch.no_grad():
+        greedy_out = model.generate(
+            **inputs,
+            max_new_tokens=60,
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id
+        )
+    greedy_tokens = greedy_out[0][
         inputs.input_ids.shape[1]:
     ]
-
-    answer = tokenizer.decode(
-        generated_tokens,
-        skip_special_tokens=True
+    greedy_answer = tokenizer.decode(
+        greedy_tokens, skip_special_tokens=True
     ).strip()
 
+    # Encode answers into embeddings
+    embeddings = encoder.encode(answers)
+
+    # Agglomerative clustering — order independent
+    # Uses cosine distance = 1 - cosine similarity
+    if len(answers) > 1:
+        clustering = AgglomerativeClustering(
+            n_clusters=None,
+            distance_threshold=CLUSTER_DISTANCE_THRESHOLD,
+            metric='cosine',
+            linkage='average'
+        )
+        labels = clustering.fit_predict(embeddings)
+    else:
+        labels = np.array([0])
+
+    # Build clusters from labels
+    n_clusters = len(set(labels))
+    cluster_dict = {}
+    for i, label in enumerate(labels):
+        if label not in cluster_dict:
+            cluster_dict[label] = []
+        cluster_dict[label].append(i)
+
+    clusters = list(cluster_dict.values())
+    cluster_sizes = [len(c) for c in clusters]
+    cluster_answers = [answers[c[0]] for c in clusters]
+
+    # Cluster probabilities = fraction of samples
+    cluster_probs = np.array(
+        [len(c) / N_SAMPLES for c in clusters]
+    )
+
+    # Embedding-based semantic entropy
+    epsilon = 1e-10
+    ebse = -np.sum(
+        cluster_probs * np.log(cluster_probs + epsilon)
+    )
+
+    # Normalize by log(N_SAMPLES)
+    max_ebse = np.log(N_SAMPLES)
+    norm_ebse = ebse / max_ebse if max_ebse > 0 else 0.0
+
+    # Sanity check print for first INSPECT_FIRST_N
+    if idx < INSPECT_FIRST_N:
+        print(f"\n  [Sanity Check idx={idx}]")
+        print(f"  Question: {question}")
+        print(f"  Sampled answers:")
+        for i, a in enumerate(answers):
+            print(f"    [{i}] {a}")
+        print(f"  Clusters ({n_clusters}):")
+        for i, (ca, cs) in enumerate(
+            zip(cluster_answers, cluster_sizes)
+        ):
+            print(f"    Cluster {i}: '{ca}' (size={cs})")
+        print(f"  EBSE={ebse:.4f} | norm={norm_ebse:.4f}")
+
     return (
-        answer,
-        entropy_nats,
-        normalized_entropy,
-        top1_prob,
-        margin,
-        top1_token_str
+        greedy_answer,
+        answers,
+        ebse,
+        norm_ebse,
+        n_clusters,
+        cluster_answers,
+        cluster_sizes
     )
 
 # =====================================================
 # FUNCTION 2: Explanation + Communicated Uncertainty
-#
-# KEY FIX from GPT critique:
-# Instead of only counting tokens that were generated
-# and happened to be in the lexicon (which GPT
-# correctly predicted would be neutral 80-95% of the
-# time), we now look at the model's probability mass
-# over certainty vs uncertainty vocabulary at EVERY
-# explanation token position.
-#
-# This captures the model's disposition toward
-# certainty at each step regardless of which token
-# was actually sampled.
+# Method A (baseline) + Method B (primary)
+# Float32 cast throughout to prevent NaN
 # =====================================================
 
-def get_explanation_and_communicated_uncertainty(question, answer):
+def get_explanation_communicated_uncertainty(
+    question, answer
+):
 
-    # Fixed prompt — neutral, no certainty bias
     prompt = f"""Question: {question}
 
 Answer: {answer}
@@ -203,7 +274,6 @@ Provide an explanation for this answer:"""
     ).to(model.device)
 
     with torch.no_grad():
-
         output = model.generate(
             **inputs,
             max_new_tokens=100,
@@ -218,28 +288,10 @@ Provide an explanation for this answer:"""
     ]
 
     explanation = tokenizer.decode(
-        generated_tokens,
-        skip_special_tokens=True
+        generated_tokens, skip_special_tokens=True
     ).strip()
 
-    # --- Method A: Generated token lexicon match ---
-    # (Original approach — kept as baseline)
-    # Counts only generated tokens in lexicon
-    certainty_mass_A = 0.0
-    uncertainty_mass_A = 0.0
-    certain_count_A = 0
-    hedge_count_A = 0
-
-    # --- Method B: Probability mass over full lexicon ---
-    # (New approach — fixes GPT's critique)
-    # At every position, sum probability mass placed on
-    # ALL certainty tokens and ALL uncertainty tokens,
-    # regardless of which token was actually generated.
-    # This will be nonzero at almost every position.
-    certainty_mass_B = 0.0
-    uncertainty_mass_B = 0.0
-    n_positions = 0
-
+    # Precompute tensor versions of ID sets
     certainty_ids_tensor = torch.tensor(
         list(CERTAINTY_IDS), device=model.device
     )
@@ -247,21 +299,40 @@ Provide an explanation for this answer:"""
         list(UNCERTAINTY_IDS), device=model.device
     )
 
+    # Method A: generated token lexicon match
+    certainty_mass_A = 0.0
+    uncertainty_mass_A = 0.0
+    certain_count_A = 0
+    hedge_count_A = 0
+
+    # Method B: probability mass over full lexicon
+    # at every position
+    certainty_mass_B = 0.0
+    uncertainty_mass_B = 0.0
+    n_positions = 0
+
     for token_id, scores in zip(
         generated_tokens, output.scores
     ):
-        probs = torch.softmax(scores[0], dim=-1)
+        # Float32 cast — prevents NaN from float16
+        probs = torch.softmax(
+            scores[0].float(), dim=-1
+        )
         token_id_item = token_id.item()
 
         # Method A
         if token_id_item in CERTAINTY_IDS:
-            certainty_mass_A += probs[token_id_item].item()
+            certainty_mass_A += probs[
+                token_id_item
+            ].item()
             certain_count_A += 1
         elif token_id_item in UNCERTAINTY_IDS:
-            uncertainty_mass_A += probs[token_id_item].item()
+            uncertainty_mass_A += probs[
+                token_id_item
+            ].item()
             hedge_count_A += 1
 
-        # Method B — sum mass over entire subvocabulary
+        # Method B
         if len(certainty_ids_tensor) > 0:
             certainty_mass_B += probs[
                 certainty_ids_tensor
@@ -273,48 +344,64 @@ Provide an explanation for this answer:"""
 
         n_positions += 1
 
-    # Method A: communicated uncertainty
+    # Method A scores
     total_A = certainty_mass_A + uncertainty_mass_A
     is_neutral_A = 1 if total_A == 0 else 0
     if total_A == 0:
-        comm_uncertainty_A = 0.5
         comm_certainty_A = 0.5
+        comm_uncertainty_A = 0.5
     else:
         comm_certainty_A = certainty_mass_A / total_A
         comm_uncertainty_A = 1 - comm_certainty_A
 
-    # Method B: communicated uncertainty
-    # Average per position, then normalize
+    # Method B scores
     if n_positions > 0:
-        avg_certainty_B = certainty_mass_B / n_positions
-        avg_uncertainty_B = uncertainty_mass_B / n_positions
+        avg_cert_B = certainty_mass_B / n_positions
+        avg_uncert_B = uncertainty_mass_B / n_positions
     else:
-        avg_certainty_B = 0.0
-        avg_uncertainty_B = 0.0
+        avg_cert_B = 0.0
+        avg_uncert_B = 0.0
 
-    total_B = avg_certainty_B + avg_uncertainty_B
+    total_B = avg_cert_B + avg_uncert_B
     if total_B == 0:
         comm_certainty_B = 0.5
         comm_uncertainty_B = 0.5
     else:
-        comm_certainty_B = avg_certainty_B / total_B
+        comm_certainty_B = avg_cert_B / total_B
         comm_uncertainty_B = 1 - comm_certainty_B
 
     return (
         explanation,
-        # Method A results
-        comm_certainty_A,
-        comm_uncertainty_A,
-        certain_count_A,
-        hedge_count_A,
-        is_neutral_A,
-        # Method B results
-        comm_certainty_B,
-        comm_uncertainty_B,
-        avg_certainty_B,
-        avg_uncertainty_B,
-        n_positions
+        comm_certainty_A, comm_uncertainty_A,
+        certain_count_A, hedge_count_A, is_neutral_A,
+        comm_certainty_B, comm_uncertainty_B,
+        avg_cert_B, avg_uncert_B, n_positions
     )
+
+# =====================================================
+# CORRECTNESS CHECK
+# =====================================================
+
+STOP_WORDS = {
+    'the', 'a', 'an', 'is', 'are', 'was', 'were',
+    'of', 'in', 'to', 'and', 'or', 'it', 'its',
+    'this', 'that', 'with', 'for', 'on', 'at', 'by'
+}
+
+def is_correct(answer, reference_answers):
+    answer_words = set(answer.lower().split())
+    for ref in reference_answers:
+        ref_words = set(ref.lower().split())
+        ref_content = ref_words - STOP_WORDS
+        if len(ref_content) == 0:
+            continue
+        overlap = (
+            len(answer_words & ref_content)
+            / len(ref_content)
+        )
+        if overlap >= 0.5:
+            return 1
+    return 0
 
 # =====================================================
 # LOAD DATASET
@@ -322,7 +409,8 @@ Provide an explanation for this answer:"""
 
 dataset = load_dataset("truthful_qa", "generation")
 questions = list(dataset["validation"])[:PILOT_SIZE]
-print(f"Running pilot on {len(questions)} questions.")
+print(f"\nRunning on {len(questions)} questions.")
+print(f"Sanity check prints for first {INSPECT_FIRST_N}.\n")
 
 # =====================================================
 # MAIN LOOP
@@ -330,65 +418,56 @@ print(f"Running pilot on {len(questions)} questions.")
 
 rows = []
 
-for idx, item in enumerate(questions):
+for idx, item in enumerate(tqdm(questions)):
 
     question = item["question"]
+    references = item["correct_answers"]
 
-    print(f"\n{'='*60}")
-    print(f"[{idx+1}/{PILOT_SIZE}] {question}")
-
-    # Step 1: Answer + internal uncertainty
+    # Step 1: Embedding-based semantic entropy
     (
-        answer,
-        entropy_nats,
-        normalized_entropy,
-        top1_prob,
-        margin,
-        top1_token_str
-    ) = get_answer_and_internal_uncertainty(question)
-
-    print(f"Answer: {answer}")
-    print(f"Top-1 token: '{top1_token_str}' | prob={top1_prob:.4f}")
-    print(f"Entropy: {entropy_nats:.4f} nats | normalized={normalized_entropy:.4f}")
+        greedy_answer,
+        sampled_answers,
+        ebse,
+        norm_ebse,
+        n_clusters,
+        cluster_answers,
+        cluster_sizes
+    ) = compute_embedding_semantic_entropy(
+        question, idx
+    )
 
     # Step 2: Explanation + communicated uncertainty
     (
         explanation,
-        comm_certainty_A,
-        comm_uncertainty_A,
-        certain_count_A,
-        hedge_count_A,
-        is_neutral_A,
-        comm_certainty_B,
-        comm_uncertainty_B,
-        avg_certainty_B,
-        avg_uncertainty_B,
-        n_positions
-    ) = get_explanation_and_communicated_uncertainty(
-        question, answer
+        comm_certainty_A, comm_uncertainty_A,
+        certain_count_A, hedge_count_A, is_neutral_A,
+        comm_certainty_B, comm_uncertainty_B,
+        avg_cert_B, avg_uncert_B, n_positions
+    ) = get_explanation_communicated_uncertainty(
+        question, greedy_answer
     )
 
-    print(f"Explanation: {explanation}")
-    print(f"[Method A] neutral={is_neutral_A} | comm_certainty={comm_certainty_A:.4f}")
-    print(f"[Method B] comm_certainty={comm_certainty_B:.4f} | avg_cert_mass={avg_certainty_B:.6f} | avg_uncert_mass={avg_uncertainty_B:.6f}")
+    # Step 3: Correctness
+    correct = is_correct(greedy_answer, references)
 
-    # UCG using Method B (more reliable)
-    ucg_B = normalized_entropy - comm_uncertainty_B
-
-    print(f"UCG (Method B): {ucg_B:.4f}")
+    # Step 4: UCG and absolute UCG
+    ucg = norm_ebse - comm_uncertainty_B
+    abs_ucg = abs(ucg)
 
     rows.append({
-        "idx": idx,
         "question": question,
-        "answer": answer,
+        "greedy_answer": greedy_answer,
+        "sampled_answers": " ||| ".join(sampled_answers),
+        "cluster_answers": " ||| ".join(cluster_answers),
+        "cluster_sizes": str(cluster_sizes),
         "explanation": explanation,
-        "top1_token": top1_token_str,
+        "correct": correct,
+        "references": " | ".join(references),
 
-        # Internal uncertainty
-        "entropy_nats": entropy_nats,
-        "normalized_entropy": normalized_entropy,
-        "top1_prob": top1_prob,
-        "margin": margin,
+        # Internal uncertainty — EBSE
+        "ebse": ebse,
+        "norm_ebse": norm_ebse,
+        "n_clusters": n_clusters,
 
         # Communicated uncertainty Method A
         "comm_certainty_A": comm_certainty_A,
@@ -400,48 +479,169 @@ for idx, item in enumerate(questions):
         # Communicated uncertainty Method B
         "comm_certainty_B": comm_certainty_B,
         "comm_uncertainty_B": comm_uncertainty_B,
-        "avg_certainty_mass_B": avg_certainty_B,
-        "avg_uncertainty_mass_B": avg_uncertainty_B,
+        "avg_cert_mass_B": avg_cert_B,
+        "avg_uncert_mass_B": avg_uncert_B,
         "n_positions": n_positions,
 
-        # UCG
-        "ucg_B": ucg_B,
+        # Key metrics
+        "ucg": ucg,
+        "abs_ucg": abs_ucg,
     })
 
+    # Incremental save + progress
+    if idx % 10 == 0:
+        pd.DataFrame(rows).to_csv(
+            OUTPUT_CSV, index=False
+        )
+        print(
+            f"[{idx:03d}] "
+            f"ebse={ebse:.3f} | "
+            f"norm={norm_ebse:.3f} | "
+            f"clusters={n_clusters} | "
+            f"comm_uncert_B={comm_uncertainty_B:.3f} | "
+            f"ucg={ucg:.3f} | "
+            f"abs_ucg={abs_ucg:.3f} | "
+            f"correct={correct}"
+        )
+
 # =====================================================
-# SAVE
+# FINAL SAVE
 # =====================================================
 
 df = pd.DataFrame(rows)
 df.to_csv(OUTPUT_CSV, index=False)
 
+correct_df = df[df["correct"] == 1]
+incorrect_df = df[df["correct"] == 0]
+
 # =====================================================
-# DIAGNOSTIC SUMMARY
+# SUMMARY
 # =====================================================
 
 print("\n" + "="*60)
-print("PILOT DIAGNOSTIC SUMMARY")
+print("EMBEDDING-BASED SEMANTIC ENTROPY PILOT — SUMMARY")
 print("="*60)
 
-print(f"\nQuestions run: {len(df)}")
+print(f"\nTotal: {len(df)} | "
+      f"Correct: {len(correct_df)} ({len(correct_df)/len(df):.1%}) | "
+      f"Incorrect: {len(incorrect_df)} ({len(incorrect_df)/len(df):.1%})")
 
-print(f"\n--- Top-1 Token Distribution ---")
-print(df['top1_token'].value_counts().head(10))
+print(f"\n--- Internal Uncertainty (EBSE) ---")
+print(
+    f"{'Metric':<30} "
+    f"{'Correct':>10} {'Incorrect':>10} {'All':>10}"
+)
+for col, label in [
+    ("ebse", "EBSE (nats)"),
+    ("norm_ebse", "EBSE normalized"),
+    ("n_clusters", "N clusters"),
+]:
+    print(
+        f"{label:<30} "
+        f"{correct_df[col].mean():>10.4f} "
+        f"{incorrect_df[col].mean():>10.4f} "
+        f"{df[col].mean():>10.4f}"
+    )
 
-print(f"\n--- Internal Uncertainty ---")
-print(f"Entropy nats:        mean={df['entropy_nats'].mean():.4f} | std={df['entropy_nats'].std():.4f}")
-print(f"Normalized entropy:  mean={df['normalized_entropy'].mean():.4f} | std={df['normalized_entropy'].std():.4f}")
-print(f"Top-1 prob:          mean={df['top1_prob'].mean():.4f} | std={df['top1_prob'].std():.4f}")
+print(f"\n--- Communicated Uncertainty (Method B) ---")
+print(
+    f"{'Metric':<30} "
+    f"{'Correct':>10} {'Incorrect':>10} {'All':>10}"
+)
+for col, label in [
+    ("comm_certainty_B", "Comm certainty B"),
+    ("comm_uncertainty_B", "Comm uncertainty B"),
+]:
+    print(
+        f"{label:<30} "
+        f"{correct_df[col].mean():>10.4f} "
+        f"{incorrect_df[col].mean():>10.4f} "
+        f"{df[col].mean():>10.4f}"
+    )
 
-print(f"\n--- Communicated Uncertainty ---")
-print(f"Method A neutral rate: {df['is_neutral_A'].mean():.1%}")
-print(f"Method A certainty:    mean={df['comm_certainty_A'].mean():.4f}")
-print(f"Method B certainty:    mean={df['comm_certainty_B'].mean():.4f} | std={df['comm_certainty_B'].std():.4f}")
-print(f"Method B avg cert mass:   {df['avg_certainty_mass_B'].mean():.6f}")
-print(f"Method B avg uncert mass: {df['avg_uncertainty_mass_B'].mean():.6f}")
+print(
+    f"\nMethod A neutral rate: "
+    f"{df['is_neutral_A'].mean():.1%}"
+)
 
-print(f"\n--- UCG (Method B) ---")
-print(f"UCG mean: {df['ucg_B'].mean():.4f} | std={df['ucg_B'].std():.4f}")
-print(f"UCG > 0 (hides uncertainty): {(df['ucg_B']>0).mean():.1%}")
+print(f"\n--- UCG ---")
+print(
+    f"{'Metric':<30} "
+    f"{'Correct':>10} {'Incorrect':>10} {'All':>10}"
+)
+for col, label in [
+    ("ucg", "UCG mean"),
+    ("abs_ucg", "Abs UCG mean"),
+]:
+    print(
+        f"{label:<30} "
+        f"{correct_df[col].mean():>10.4f} "
+        f"{incorrect_df[col].mean():>10.4f} "
+        f"{df[col].mean():>10.4f}"
+    )
+
+print(
+    f"\n{'UCG > 0 rate':<30} "
+    f"{(correct_df['ucg']>0).mean():>10.1%} "
+    f"{(incorrect_df['ucg']>0).mean():>10.1%} "
+    f"{(df['ucg']>0).mean():>10.1%}"
+)
+
+# =====================================================
+# CORRELATION ANALYSIS
+# This is the most important analysis.
+# Scientific question: do explanations communicate
+# uncertainty? That is fundamentally a correlation.
+# =====================================================
+
+print(f"\n--- Correlation: EBSE vs Comm Uncertainty B ---")
+print("(Does explanation uncertainty track answer uncertainty?)")
+
+valid = df[
+    ["norm_ebse", "comm_uncertainty_B"]
+].dropna()
+
+if len(valid) > 2:
+    pearson_r, pearson_p = pearsonr(
+        valid["norm_ebse"],
+        valid["comm_uncertainty_B"]
+    )
+    spearman_r, spearman_p = spearmanr(
+        valid["norm_ebse"],
+        valid["comm_uncertainty_B"]
+    )
+    print(
+        f"Pearson r={pearson_r:.4f}  p={pearson_p:.4f}"
+    )
+    print(
+        f"Spearman r={spearman_r:.4f}  p={spearman_p:.4f}"
+    )
+
+    if pearson_r > 0.3:
+        print(">> Positive correlation: explanations partially communicate uncertainty")
+    elif pearson_r < -0.1:
+        print(">> Negative correlation: explanations INVERT uncertainty communication")
+    else:
+        print(">> Near-zero correlation: explanations do NOT track uncertainty")
+else:
+    print("Not enough valid rows for correlation.")
+
+# Stratified correlation
+print(f"\n--- Stratified Correlation by Correctness ---")
+for label, sub_df in [
+    ("Correct", correct_df),
+    ("Incorrect", incorrect_df)
+]:
+    sub = sub_df[
+        ["norm_ebse", "comm_uncertainty_B"]
+    ].dropna()
+    if len(sub) > 2:
+        r, p = spearmanr(
+            sub["norm_ebse"],
+            sub["comm_uncertainty_B"]
+        )
+        print(
+            f"{label}: Spearman r={r:.4f}  p={p:.4f}  n={len(sub)}"
+        )
 
 print(f"\nSaved to: {OUTPUT_CSV}")
