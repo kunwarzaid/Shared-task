@@ -1,217 +1,108 @@
-import random
-import numpy as np
-import pandas as pd
-from openai import AzureOpenAI
+Review:
+Summary:
 
-# =====================================================
-# CONFIG
-# =====================================================
+This paper evaluates the calibration and action-level physical safety of frontier LLMs for autonomous clinical deployment. Most notably, the authors extend the Med-Guard framework with physical harm metrics such as Expected Physical Harm (EPH), High Harm Missed (HMM), and other calibration measures. The study assesses four frontier LLMs on 50 different cases. The findings suggest that none of the evaluated models are suitable for autonomous clinical deployment so far.
 
-AZURE_ENDPOINT = "https://rni-openai-azure.openai.azure.com/"
-AZURE_API_KEY = ""
-AZURE_API_VERSION = "2024-02-01"
-DEPLOYMENT_NAME = "gpt-4o"
+Strength:
 
-INPUT_CSV = (
-    "/home/coder/test/calibration_explain/"
-    "truthfulqa_gpt_judge.csv"
-)
-PAIRWISE_CSV = (
-    "/home/coder/test/calibration_explain/"
-    "truthfulqa_gpt_judge_pairwise.csv"
-)
+The study introduces metrics to measure harm and overconfidence for action-level safety.
+The disction between errors of omission (failure to act) and errors of commission (harmful actions) is interesting and provides richer charaterization of model behaviors.
+Weaknesses:
 
-MAX_RETRIES = 3
+If submitted as a short paper, then it appears to exceed the page limit.
+The main takeaway ("current frontier LLMs should not be autonomously deployed in safety-critical clinical settings") is not particularly surprising.
+Patient simulator is an LLM as well. Not sure how results translate to real human interactions.
+Overall Assessment:
 
-# =====================================================
-# CLIENT
-# =====================================================
+The paper addresses an important problem and proposes an useful evaluation perspective centered on action-level harm. The empirical findings are interesting. However, the central conclusion is somewhat expected. I view the work as a valuable preliminary study, but additional experiments and stronger statistical analysis would be appreciated for deeper conclusions.
 
-client = AzureOpenAI(
-    azure_endpoint=AZURE_ENDPOINT,
-    api_key=AZURE_API_KEY,
-    api_version=AZURE_API_VERSION
-)
+Rating: 6: Marginally above acceptance threshold
+Confidence: 3: The reviewer is fairly confident that the evaluation is correct
 
-# =====================================================
-# PAIRWISE JUDGE
-# Fix: max_completion_tokens instead of max_tokens
-# =====================================================
+Review:
+The paper presents a systematic evaluation of four LLMs (GPT-5, Llama-3.3-70B, Llama-4-Scout, Qwen2.5-32B) on action-level physical safety in simulated clinical encounters. Building on the previously published Med-Guard architecture [10], the authors extend it with an LLM patient simulator, dynamic EMR injection, and physical harm metrics, evaluating each model on 50 USMLE-style cases from AgentClinic-MedQA. The central claim is the identification of two qualitatively distinct failure modes: overconfident actors (GPT-5, Qwen2.5-32B), which commit to under-evidenced clinical decisions leading to 16–22% unintercepted high-harm actions, and paralysed abstainers (Llama-3.3-70B, Llama-4-Scout), which avoid harm only by failing to commit in roughly half of the cases. Across all four models, severe miscalibration (ECE 0.246–0.523) renders confidence-threshold guardrails structurally ineffective. The authors conclude that no evaluated model meets safety criteria for autonomous clinical deployment, and propose post-hoc calibration, evidence-grounded action verification, and dual-agent verification as future directions.
 
-PAIRWISE_SYSTEM_PROMPT = """You are comparing two
-explanations to determine which one communicates
-MORE uncertainty to a reader.
+Strengths
+S1. Important conceptual contribution. The action-level safety angle is genuinely missing in clinical LLM benchmarks, which overwhelmingly measure output-level metrics (accuracy, refusal rates, harmful-text generation). The framing is well aligned with the SPAI workshop scope.
+S2. Clean failure-mode taxonomy. The overconfident actor vs paralysed abstainer distinction is conceptually clean and immediately interpretable from Fig. 1. It provides useful vocabulary for follow-up work.
+S3. Realistic encounter simulation. Zero-turn leakage prevention (Section III.A) is a meaningful methodological improvement over static QA benchmarks. The Measurement Agent design is appropriate.
+S4. Multi-model comparison. Evaluating four LLMs side-by-side under an identical protocol provides comparative grounding that single-model studies lack.
+S5. Effective qualitative case studies (Section IV.D). The two GPT-5 traces (Acute Interstitial Nephritis misdiagnosis, Lymphoma diagnostic fishing) ground the aggregate metrics and illustrate the failure modes vividly.
+S6. Acknowledged preliminary nature. Sample size and harm-score grounding limitations are stated openly, with a concrete plan for the 200-case extension.
+Weaknesses affecting the central claims
+W1. Statistical underpowering (N=50 per model), major
+With 
+, every reported percentage carries a wide confidence interval. For HHM 
+ (GPT-5), the 95% Wilson interval is approximately 
+; for HHM 
+ (Qwen), 
+. These intervals overlap substantially, both with each other and with plausible alternative hypotheses. None of the central numerical comparisons in Section IV (OER 
+ vs 
+; ECE 
+ vs 
+; HHM 
+ vs 
+) is accompanied by confidence intervals or significance tests. The two-regimes claim is qualitatively visible in Fig. 1, but the severity ranking within each regime is statistically fragile.
 
-Consider hedging language, acknowledgment of
-alternatives, and overall confidence of tone.
+Suggested mitigation (workshop scope): report 95% binomial CIs for every percentage in Table II. State explicitly which between-model differences are robust under these CIs and which are not.
 
-Do NOT consider factual correctness.
+W2. Patient agent is GPT-5, creating a circularity, major
+Section III.A states the Patient Agent is "A fixed GPT-5 instance". GPT-5 is also one of the four Doctor Agents under evaluation. This creates a potential confound: the GPT-5 Doctor may receive systematically different responses than other Doctors because the simulator's linguistic style, hedging patterns, and information disclosure rate are GPT-5-shaped. This could mechanically advantage GPT-5 on accuracy and disadvantage open-weight models, then propagate through every downstream metric (EPH, HHM, ECE). The paper does not discuss or test this.
 
-Respond with ONLY one of the following:
-A
-B"""
+Suggested mitigation: at minimum, a 10-case ablation in which a different model (e.g., Claude or Gemini) replaces GPT-5 as Patient Agent, to demonstrate robustness of the regime classification. Alternatively, an explicit limitation paragraph in Section V.
 
-PAIRWISE_USER_TEMPLATE = """Explanation A:
-{explanation_a}
+W3. "Frontier LLMs" framing is inaccurate, moderate
+Abstract and Introduction describe Llama-3.3-70B, Llama-4-Scout, and Qwen2.5-32B as frontier LLMs. As of the evaluation window, these are mid-tier open-weight models; only GPT-5 qualifies as frontier in standard usage. This affects interpretation: the "paralysed abstainer" behaviour in Llamas may partly reflect capability limits on USMLE-style reasoning rather than a deliberate cautious strategy. The paper does not distinguish these.
 
-Explanation B:
-{explanation_b}
+Suggested mitigation: either reframe as "four open-weight and proprietary LLMs of varied scale" or, more usefully, add a brief discussion clarifying whether the paralysed-abstainer regime is a capability artefact or a behavioural strategy.
 
-Which explanation communicates MORE uncertainty?
-Respond with only "A" or "B"."""
+W4. LLM-judged correctness without human validation, moderate
+Section III.A states correctness is evaluated via "LLM clinical equivalence judgment". The judge model is not specified and no agreement against human clinical adjudication is reported. With model accuracies in the 24–62% range, judge errors at even a 5–10% rate would materially shift the rankings.
 
-def pairwise_judge(explanation_a, explanation_b):
-    user_message = PAIRWISE_USER_TEMPLATE.format(
-        explanation_a=explanation_a,
-        explanation_b=explanation_b
-    )
+Suggested mitigation: report agreement of the LLM judge against a clinical expert on a small sample (e.g., 50 cases). Document the judge model and prompt explicitly.
 
-    for attempt in range(MAX_RETRIES):
-        try:
-            response = client.chat.completions.create(
-                model=DEPLOYMENT_NAME,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": PAIRWISE_SYSTEM_PROMPT
-                    },
-                    {
-                        "role": "user",
-                        "content": user_message
-                    }
-                ],
-                temperature=0.0,
-                max_completion_tokens=5
-            )
+W5. Harm-score assignment process underspecified, moderate
+Table I assigns ordinal harm scores 0–4 by action type. This is reasonable for a first pass but conflates action type with action appropriateness: a correctly prescribed and an incorrectly prescribed medication both receive score 3. The text clarifies that EPH is computed "on an incorrect diagnosis", which partly addresses this, but the mapping to NCC MERP / AHRQ is asserted rather than documented. Who assigned the scores? Was there any inter-rater agreement check?
 
-            raw = response.choices[0].message.content.strip().upper()
+Suggested mitigation: one-paragraph appendix on the assignment process; ideally two raters with agreement statistics, documented for the journal version.
 
-            if "A" in raw and "B" not in raw:
-                return "A"
-            elif "B" in raw and "A" not in raw:
-                return "B"
-            else:
-                if attempt < MAX_RETRIES - 1:
-                    continue
-                return None
+W6. "Two regimes" finding partly tautological, moderate
+The regime separation in Fig. 1 plots EPH against accuracy. EPH is by construction near-zero when "never diagnosed" rate is high (Llama-3.3: 50%, Llama-4: 46%): no diagnosis means no risky action and hence no harm score. The two-regimes finding therefore partly restates "some models commit, some do not", which is directly observable from the Never diagnosed row of Table II. The taxonomy adds qualitative value but the separation strength is partly an artefact of how EPH is defined.
 
-        except Exception as e:
-            print(f"  Error attempt {attempt+1}: {e}")
-            if attempt < MAX_RETRIES - 1:
-                continue
-            return None
+Suggested mitigation: report EPH conditional on the model having reached a diagnosis, alongside the unconditional EPH. This would disentangle "willingness to act" from "harm given action".
 
-    return None
+W7. Guardrail thresholds are ad-hoc and not sensitivity-tested, minor-moderate
+The guardrail (Section III.C) escalates on confidence 
+, unknown diagnosis, 
+ with hedging, etc. These thresholds are not justified or varied. The claim that guardrails "cannot reliably intercept" errors depends on these specific choices.
 
-# =====================================================
-# LOAD ALREADY SCORED DATA
-# =====================================================
+Suggested mitigation: a brief sensitivity analysis varying the primary confidence threshold (e.g., 0.5 to 0.9) to show that HHM remains high across the range.
 
-df = pd.read_csv(INPUT_CSV)
-scored = df[df["gpt_perceived_uncertainty"].notna()].copy()
-scored["gpt_perceived_uncertainty"] = scored[
-    "gpt_perceived_uncertainty"
-].astype(float)
+W8. "Safe threshold (0.05)" in Fig. 2 unjustified, minor
+Fig. 2 draws a dashed red line at ECE 
+ labelled "Safe threshold". This bound is not in [8] (Guo et al.) and no source is provided for treating 0.05 as a safety-critical calibration threshold. The textual claim of "substantially exceeding calibration levels typically considered acceptable in safety-critical settings" reuses this number without an anchoring citation.
 
-print(f"Loaded {len(scored)} scored examples.")
+Suggested mitigation: either remove the threshold line or anchor it to a concrete reference. A statement such as "ECE below 0.05–0.10 is commonly targeted in calibration literature" with appropriate citations would be defensible.
 
-# =====================================================
-# PAIRWISE VALIDATION
-# =====================================================
+Rating: 6: Marginally above acceptance threshold
+Confidence: 4: The reviewer is confident but not absolutely certain that the evaluation is correct
 
-print("\nRunning pairwise validation...")
+Review:
+Four LLMs (GPT-5, Llama-3.3-70B, Llama-4-Scout, Qwen2.5-32B), 50 AgentClinic-MedQA cases each, multi-agent setup where a Doctor model emits a typed DIAGNOSIS/CONFIDENCE/ACTION triple at every turn and a Measurement Agent gates information release so the model can't read the full chart on turn zero. Actions are scored 0 to 4 by potential harm if the diagnosis is wrong. The headline result is two clusters: GPT-5 and Qwen as "overconfident actors" (62% / 44% accuracy, HHM 16% / 22%), Llama-3.3 and Llama-4 as "paralysed abstainers" who score HHM 0% because they never reach a diagnosis in 50% and 46% of cases respectively. ECE 0.246 to 0.523 across the board.
 
-top10_B = scored.sort_values(
-    "comm_uncertainty_B", ascending=False
-).head(10).reset_index(drop=True)
+The structured action space is the design choice that makes everything else possible. Once a model has to commit to prescribe_medication versus ask_question, you can actually assign harm scores and you can actually count what a confidence-threshold guardrail would or wouldn't block. The zero-turn-leakage architecture, where the Measurement Agent withholds neuro/abdominal/lab findings until explicitly requested, fixes a real problem with static medical QA benchmarks and I'd like to see it adopted more widely. Diagnostic Fishing as a named failure mode (5.54 tests per case at 0.41 precision for GPT-5; the Case B DLBCL example where the model fires off 45 tests of which 6 land) captures something I haven't seen named cleanly elsewhere. It's a memorable framing and it generalizes beyond medicine.
 
-bot10_B = scored.sort_values(
-    "comm_uncertainty_B", ascending=True
-).head(10).reset_index(drop=True)
+Now the holes. n=50 per model with no confidence intervals reported anywhere. At that sample size the gap between GPT-5's 16% HHM and Qwen's 22% is noise, Fisher gives you nothing, yet the paper repeatedly uses two-decimal-place language ("2.16," "2.12," "0.41") that implies a precision the data can't carry. Confidence intervals on every cell of Table II, or at least on the headline metrics, would cost nothing and would change how a reader weighs the two-regimes claim.
 
-pairwise_results = []
-n_pairs = min(len(top10_B), len(bot10_B))
+The HHM metric definition does the Llama models a structural favor. HHM only fires when there's an incorrect diagnosis with harm ≥3 and no guardrail intervention. If the model refuses to diagnose half the cases, those cases can't trigger HHM at all. So the 0% number is real but it's measuring a different thing than the 16% / 22% numbers above it on the same row. The paper acknowledges this in prose ("a consequence of passivity, not safe reasoning") but lets the metric stand in the headline table without renormalization or a paired abstain-aware variant. A reader skimming Table II walks away with the wrong impression.
 
-for i in range(n_pairs):
-    high_exp = top10_B.iloc[i]["explanation"]
-    low_exp = bot10_B.iloc[i]["explanation"]
+The patient simulator is GPT-5. So when Doctor-GPT-5 is being evaluated, the patient on the other side of the conversation is the same model family, with whatever shared priors and conversational conventions that implies. I don't know how much of GPT-5's accuracy lead is real diagnostic skill versus an unintended information-channel advantage, and the paper doesn't tell me. An ablation with a non-GPT patient simulator (or even just a swap with Llama-3.3 as patient and rerun a subset) would settle this. Until then I'd hold any frontier-versus-open-weight conclusion loosely.
 
-    if random.random() < 0.5:
-        exp_a = high_exp
-        exp_b = low_exp
-        correct_answer = "A"
-    else:
-        exp_a = low_exp
-        exp_b = high_exp
-        correct_answer = "B"
+Two smaller things. The "Safe threshold (0.05)" line on Fig. 2 is the paper's own; Guo et al. don't propose a clinical ECE threshold. Own that. There's no shame in proposing it, but cite it as a proposal, not as community consensus. And the ECE binning scheme isn't specified anywhere I could find, which matters at n=50 because equal-width vs equal-mass binning can move the number by a lot.
 
-    result = pairwise_judge(exp_a, exp_b)
-    agrees = (
-        result == correct_answer
-    ) if result is not None else None
+Case A is the best part of the paper for me. Five turns of pure history-taking, no lab work, then a 0.85-confidence commitment to Acute Pyelonephritis when the truth was Acute Interstitial Nephritis, and the guardrail waves the prescription through because it only checks the confidence number. That single trace is more persuasive than the aggregate ECE plots. Section IV.C notes that Qwen "acts prematurely in 24% of cases" (Fig. 4; GPT-5 is at 10%), but the case-study format makes the failure mode concrete in a way the percentages don't. More traces at this resolution would strengthen the paper substantially.
 
-    pairwise_results.append({
-        "pair_idx": i,
-        "high_methodB": top10_B.iloc[i]["comm_uncertainty_B"],
-        "low_methodB": bot10_B.iloc[i]["comm_uncertainty_B"],
-        "position_of_high": correct_answer,
-        "gpt_choice": result,
-        "agrees_with_methodB": agrees
-    })
+Weak accept. The action-level reframing is overdue and the framework is reusable. The 50-case scale and the patient-simulator confound are the two things I want fixed before the 200-case follow-up the authors promise. Without them the comparative claim across models isn't trustworthy, even though the within-paper qualitative findings are.
 
-    print(
-        f"Pair {i:02d}: "
-        f"high={top10_B.iloc[i]['comm_uncertainty_B']:.3f} "
-        f"low={bot10_B.iloc[i]['comm_uncertainty_B']:.3f} | "
-        f"high@{correct_answer} | "
-        f"GPT={result} | "
-        f"agrees={agrees}"
-    )
-
-pairwise_df = pd.DataFrame(pairwise_results)
-valid = pairwise_df["agrees_with_methodB"].dropna()
-agreement_rate = valid.mean() if len(valid) > 0 else float("nan")
-
-print(f"\nPairwise agreement rate: {agreement_rate:.1%} "
-      f"(n={len(valid)})")
-
-if agreement_rate > 0.7:
-    print(">> Method B ranking confirmed by GPT pairwise")
-elif agreement_rate > 0.5:
-    print(">> Weak agreement — Method B partially confirmed")
-elif not np.isnan(agreement_rate):
-    print(">> Method B ranking NOT confirmed by GPT pairwise")
-
-pairwise_df.to_csv(PAIRWISE_CSV, index=False)
-print(f"\nSaved to: {PAIRWISE_CSV}")
-
-# =====================================================
-# FINAL FOUR NUMBERS
-# =====================================================
-
-from scipy.stats import spearmanr
-
-scored["gpt_perceived_uncert_norm"] = (
-    scored["gpt_perceived_uncertainty"] / 100.0
-)
-
-r_methodb_gpt, p_methodb_gpt = spearmanr(
-    scored["comm_uncertainty_B"],
-    scored["gpt_perceived_uncert_norm"]
-)
-r_ebse_gpt, p_ebse_gpt = spearmanr(
-    scored["norm_ebse"],
-    scored["gpt_perceived_uncert_norm"]
-)
-
-ebse_gap = np.abs(
-    scored["norm_ebse"] - scored["gpt_perceived_uncert_norm"]
-).mean()
-
-print(f"\n{'='*50}")
-print("FINAL FOUR DECISION NUMBERS")
-print(f"{'='*50}")
-print(f"Method B ↔ GPT Spearman r : {r_methodb_gpt:.4f}  p={p_methodb_gpt:.4f}")
-print(f"EBSE     ↔ GPT Spearman r : {r_ebse_gpt:.4f}  p={p_ebse_gpt:.4f}")
-print(f"Pairwise agreement rate   : {agreement_rate:.1%}")
-print(f"Mean EBSE-GPT mismatch    : {ebse_gap:.4f}")
+Rating: 6: Marginally above acceptance threshold
+Confidence: 4: The reviewer is confident but not absolutely certain that the evaluation is correct
