@@ -1,8 +1,167 @@
-\section{Introduction}
-Clinical consultations between doctors and patients typically has a rich mix of essential details - including symptoms, diagnostic reasoning, medication histories, treatment decisions, and relevant psychosocial context - all of which are vital for accurate documentation and continuity of care. Automating the summarization of these clinical interactions can significantly ease documentation workloads, enhance provider efficiency, and support more seamless continuity of care across the patient’s treatment journey. 
-%Some related work here
-\textcolor{red}{Some related work here}
-Prior research has primarily studied clinical dialogue summarization in monolingual settings, focusing on structured note generation, while the problem of trustworthiness in cross-lingual clinical summarization remains largely unexplored.
-\citet{lyu2025automatic} use prompt-tuned clinical LLMs to summarize doctor–patient dialogues into structured notes, demonstrating strong performance on MTS-DIALOG.
-While recent advances in large language models (LLMs) have demonstrated promising performance in medical summarization tasks, the vast majority of existing work focuses on English-only settings.
-However, real-world clinical communication spans diverse languages, and healthcare delivery frequently occurs in multilingual and low-resource linguistic environments. In this paper, we analyze the trustworthiness of cross-lingual clinical summarization systems, focusing on trustworthiness, safety, and explainability. We examine how linguistic and resource differences influence summarization quality and demonstrate that performance degrades substantially for low-resource languages. To the best of our knowledge, this is the first systematic study that characterizes trustworthiness failures in multilingual clinical dialogue summarization for Indic languages. These results underscore the need for linguistically informed, safety-aware evaluation frameworks for multilingual clinical NLP.
+%%%% ijcai26.tex
+
+\typeout{IJCAI--ECAI 26 Instructions for Authors}
+
+% These are the instructions for authors for IJCAI--ECAI 26.
+
+\documentclass{article}
+\pdfpagewidth=8.5in
+\pdfpageheight=11in
+
+% The file ijcai26.sty is a copy from ijcai22.sty
+% The file ijcai22.sty is NOT the same as previous years'
+\usepackage{ijcai26}
+
+% Use the postscript times font!
+\usepackage{times}
+\usepackage{soul}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[small]{caption}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage[switch]{lineno}
+\usepackage{natbib}
+\usepackage{tabularx}
+\usepackage{multirow}
+% \usepackage{array}
+\usepackage[table]{xcolor}
+
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{tikz}
+\pgfplotsset{compat=1.18}
+\definecolor{dravidian}{HTML}{D46030}
+\definecolor{ialowres}{HTML}{5BA4CF}
+\definecolor{iahighres}{HTML}{1B4E96}
+\usetikzlibrary{matrix}
+
+\definecolor{bestgreen}{RGB}{0,140,60}
+\definecolor{worstred}{RGB}{185,30,30}
+\definecolor{dravidianrow}{RGB}{255,245,220}
+\definecolor{sectiongray}{RGB}{246,246,246}
+\definecolor{midgray}{RGB}{100,100,100}
+
+\definecolor{colDrav}{HTML}{d46030}
+\definecolor{colIAL}{HTML}{5ba4cf}
+\definecolor{colIAH}{HTML}{1b4e96}
+\definecolor{axiscol}{HTML}{bbbbbb}
+\definecolor{gridcol}{HTML}{eeeeee}
+\definecolor{labelcol}{HTML}{333333}
+\definecolor{subtlecol}{HTML}{555555}
+
+\definecolor{hdrbg}{RGB}{235,240,255}
+\usepackage{colortbl}
+
+\newcommand{\best}[1]{\textcolor{bestgreen}{#1}}
+\newcommand{\worst}[1]{\textcolor{worstred}{#1}}
+% Comment out this line in the camera-ready submission
+\linenumbers
+
+\urlstyle{same}
+
+% the following package is optional:
+%\usepackage{latexsym}
+
+% See https://www.overleaf.com/learn/latex/theorems_and_proofs
+% for a nice explanation of how to define new theorems, but keep
+% in mind that the amsthm package is already included in this
+% template and that you must *not* alter the styling.
+\newtheorem{example}{Example}
+\newtheorem{theorem}{Theorem}
+
+% Following comment is from ijcai97-submit.tex:
+% The preparation of these files was supported by Schlumberger Palo Alto
+% Research, AT\&T Bell Laboratories, and Morgan Kaufmann Publishers.
+% Shirley Jowell, of Morgan Kaufmann Publishers, and Peter F.
+% Patel-Schneider, of AT\&T Bell Laboratories collaborated on their
+% preparation.
+
+% These instructions can be modified and used in other conferences as long
+% as credit to the authors and supporting agencies is retained, this notice
+% is not changed, and further modification or reuse is not restricted.
+% Neither Shirley Jowell nor Peter F. Patel-Schneider can be listed as
+% contacts for providing assistance without their prior permission.
+
+% To use for other conferences, change references to files and the
+% conference appropriate and use other authors, contacts, publishers, and
+% organizations.
+% Also change the deadline and address for returning papers and the length and
+% page charge instructions.
+% Put where the files are available in the appropriate places.
+
+
+% PDF Info Is REQUIRED.
+
+% Please leave this \pdfinfo block untouched both for the submission and
+% Camera Ready Copy. Do not include Title and Author information in the pdfinfo section
+\pdfinfo{
+/TemplateVersion (IJCAI.2026.0)
+}
+\title{Trustworthiness of LLMs in Cross-Lingual Clinical Summarization: An Empirical Study on Indian Languages}
+
+%\title{Evaluating Trustworthiness in Cross-Lingual Clinical Conversation Summarization}
+
+% Single author syntax
+% \author{
+%     Author Name
+%     \affiliations
+%     Affiliation
+%     \emails
+%     email@example.com
+% }
+
+% Multiple author syntax (remove the single-author syntax above and the \iffalse ... \fi here)
+% \iffalse
+% \author{
+% First Author$^1$
+% \and
+% Second Author$^2$\and
+% Third Author$^{2,3}$\And
+% Fourth Author$^4$\\
+% \affiliations
+% $^1$First Affiliation\\
+% $^2$Second Affiliation\\
+% $^3$Third Affiliation\\
+% $^4$Fourth Affiliation\\
+% \emails
+% \{first, second\}@example.com,
+% third@other.example.com,
+% fourth@example.com
+% }
+% \fi
+
+\begin{document}
+
+\maketitle
+
+\input{Sections/0.Abstract}
+
+\input{Sections/1.Introduction}
+
+\input{Sections/2.RelatedWork}
+\input{Sections/3.Approach}
+\input{Sections/4.Experiments}
+\input{Sections/5.Discussion}
+\input{Sections/6.Conclusion}
+
+
+\section*{Ethical Statement}
+
+There are no ethical issues.
+
+% \section*{Acknowledgments}
+
+\input{Sections/appendix}
+
+%% The file named.bst is a bibliography style file for BibTeX 0.99c
+\bibliographystyle{named}
+\bibliography{ijcai26}
+
+\end{document}
+
