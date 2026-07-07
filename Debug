@@ -1,18 +1,195 @@
+import os
+import json
+import time
 import pandas as pd
-from scipy.stats import spearmanr
+from openai import AzureOpenAI
 
-df = pd.read_csv("llama-base_gpt_judge.csv")
+# =====================================================
+# CONFIG
+# =====================================================
 
-valid = df[
-    df["explanation"].notna() &
-    (df["explanation"].str.strip().str.len() > 50) &
-    df["gpt_perceived_uncertainty"].notna()
-].copy()
+AZURE_ENDPOINT = "https://rni-openai-azure.openai.azure.com/"
+AZURE_API_KEY = ""
+AZURE_API_VERSION = "2024-02-01"
+DEPLOYMENT_NAME = "gpt-4o"
 
-print(f"Valid rows: {len(valid)} / {len(df)}")
+# Point this at any of your four already-scored CSVs
+INPUT_CSV = "llama-instruct_gpt_judge.csv"
+OUTPUT_CSV = "llama-instruct_support_scored.csv"
 
-r, p = spearmanr(
-    valid["norm_ebse"],
-    valid["gpt_perceived_uncert_norm"]
+MAX_RETRIES = 3
+RETRY_DELAY = 5
+
+client = AzureOpenAI(
+    azure_endpoint=AZURE_ENDPOINT,
+    api_key=AZURE_API_KEY,
+    api_version=AZURE_API_VERSION
 )
-print(f"Filtered EBSE↔GPT: r={r:.4f}  p={p:.4f}  n={len(valid)}")
+
+# =====================================================
+# SUPPORT SCORE JUDGE
+# Measures whether the explanation argues the answer
+# is correct, regardless of whether it actually is.
+# =====================================================
+
+SUPPORT_SYSTEM_PROMPT = """You are evaluating whether an
+explanation supports or challenges the answer it was
+asked to explain.
+
+Do NOT evaluate whether the answer is factually correct
+according to your own knowledge. Evaluate ONLY whether
+the explanation TEXT argues FOR the answer being correct,
+argues AGAINST it, or is neutral/hedging.
+
+Score using this scale:
+0   = Explicitly states the answer is wrong or incorrect
+25  = Challenges or casts doubt on the answer
+50  = Neutral — neither defends nor challenges
+75  = Mostly supports/justifies the answer as correct
+100 = Strongly and confidently defends the answer as correct,
+      with no doubt expressed
+
+Return ONLY valid JSON:
+{
+  "support_score": <integer 0-100>,
+  "reason": "<one sentence>"
+}"""
+
+SUPPORT_USER_TEMPLATE = """Question: {question}
+
+Answer given: {answer}
+
+Explanation: {explanation}
+
+Does this explanation argue that the answer is correct,
+argue that it is incorrect, or remain neutral?
+
+Respond with a JSON object in exactly this format:
+{{
+  "support_score": <integer 0-100>,
+  "reason": "<one sentence explaining your score>"
+}}
+
+Return only the JSON object. No other text."""
+
+def judge_support(question, answer, explanation):
+
+    user_message = SUPPORT_USER_TEMPLATE.format(
+        question=question,
+        answer=answer,
+        explanation=explanation
+    )
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = client.chat.completions.create(
+                model=DEPLOYMENT_NAME,
+                messages=[
+                    {"role": "system", "content": SUPPORT_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.0,
+                max_completion_tokens=200
+            )
+
+            raw = response.choices[0].message.content.strip()
+            clean = raw.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(clean)
+
+            score = int(parsed["support_score"])
+            reason = parsed.get("reason", "")
+            score = max(0, min(100, score))
+
+            return score, reason
+
+        except json.JSONDecodeError as e:
+            print(f"  JSON error attempt {attempt+1}: {e}")
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(RETRY_DELAY)
+            else:
+                return None, "JSON parse failed"
+
+        except Exception as e:
+            print(f"  API error attempt {attempt+1}: {e}")
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(RETRY_DELAY)
+            else:
+                return None, str(e)
+
+    return None, "Max retries exceeded"
+
+# =====================================================
+# LOAD DATA — reuse existing CSV, no new generation
+# =====================================================
+
+df = pd.read_csv(INPUT_CSV)
+print(f"Loaded {len(df)} rows from {INPUT_CSV}")
+
+for col in ["support_score", "support_reason"]:
+    if col not in df.columns:
+        df[col] = None
+
+# =====================================================
+# SCORE ALL ROWS (both correct and incorrect —
+# we need both groups to compare)
+# =====================================================
+
+for idx, row in df.iterrows():
+
+    if pd.notna(df.at[idx, "support_score"]):
+        continue
+
+    question = str(row["question"])
+    answer = str(row["greedy_answer"])
+    explanation = str(row["explanation"])
+
+    if explanation in ("None", "nan") or pd.isna(row["explanation"]):
+        continue
+
+    score, reason = judge_support(question, answer, explanation)
+
+    if score is not None:
+        df.at[idx, "support_score"] = score
+        df.at[idx, "support_reason"] = reason
+        print(
+            f"[{idx:03d}] correct={row['correct']} | "
+            f"support={score:3d} | {reason[:60]}..."
+        )
+
+    if idx % 10 == 0:
+        df.to_csv(OUTPUT_CSV, index=False)
+
+df.to_csv(OUTPUT_CSV, index=False)
+print(f"\nSaved to: {OUTPUT_CSV}")
+
+# =====================================================
+# THE KEY COMPARISON
+# =====================================================
+
+scored = df[df["support_score"].notna()].copy()
+scored["support_score"] = scored["support_score"].astype(float)
+
+correct_support = scored[scored["correct"] == 1]["support_score"]
+incorrect_support = scored[scored["correct"] == 0]["support_score"]
+
+print(f"\n{'='*60}")
+print("JUSTIFICATION BIAS RESULT")
+print(f"{'='*60}")
+print(f"Support score (correct answers):   mean={correct_support.mean():.1f}  n={len(correct_support)}")
+print(f"Support score (incorrect answers): mean={incorrect_support.mean():.1f}  n={len(incorrect_support)}")
+
+from scipy.stats import mannwhitneyu, spearmanr
+u, p = mannwhitneyu(correct_support, incorrect_support)
+print(f"Mann-Whitney U test: p={p:.4f}")
+
+r, rp = spearmanr(scored["correct"], scored["support_score"])
+print(f"Correctness ↔ Support Spearman r={r:.4f}  p={rp:.4f}")
+
+if incorrect_support.mean() > 60 and p > 0.05:
+    print("\n>> STRONG justification bias: model defends wrong answers")
+    print("   almost as confidently as right ones.")
+elif incorrect_support.mean() > 60 and p < 0.05:
+    print("\n>> Model still defends wrong answers substantially,")
+    print("   though somewhat less than correct ones.")
+else:
+    print("\n>> Model shows meaningfully less support for wrong answers.")
