@@ -13,9 +13,9 @@ AZURE_API_KEY = ""
 AZURE_API_VERSION = "2024-02-01"
 DEPLOYMENT_NAME = "gpt-4o"
 
-# Point this at any of your four already-scored CSVs
+# Point this at any CSV that has: question, greedy_answer, references
 INPUT_CSV = "llama-instruct_gpt_judge.csv"
-OUTPUT_CSV = "llama-instruct_support_scored.csv"
+OUTPUT_CSV = "llama-instruct_correctness_recheck.csv"
 
 MAX_RETRIES = 3
 RETRY_DELAY = 5
@@ -26,58 +26,59 @@ client = AzureOpenAI(
     api_version=AZURE_API_VERSION
 )
 
+print("Azure client initialized.")
+
 # =====================================================
-# SUPPORT SCORE JUDGE
-# Measures whether the explanation argues the answer
-# is correct, regardless of whether it actually is.
+# CORRECTNESS JUDGE
 # =====================================================
 
-SUPPORT_SYSTEM_PROMPT = """You are evaluating whether an
-explanation supports or challenges the answer it was
-asked to explain.
+CORRECTNESS_SYSTEM_PROMPT = """You are fact-checking an
+answer against reference correct answers for a question.
 
-Do NOT evaluate whether the answer is factually correct
-according to your own knowledge. Evaluate ONLY whether
-the explanation TEXT argues FOR the answer being correct,
-argues AGAINST it, or is neutral/hedging.
+Determine if the given answer is factually correct and
+consistent with the meaning of at least one reference
+answer. Allow for paraphrasing, different wording, added
+detail, or partial matches.
 
-Score using this scale:
-0   = Explicitly states the answer is wrong or incorrect
-25  = Challenges or casts doubt on the answer
-50  = Neutral — neither defends nor challenges
-75  = Mostly supports/justifies the answer as correct
-100 = Strongly and confidently defends the answer as correct,
-      with no doubt expressed
+Do NOT mark it correct if the answer:
+- Negates or contradicts the reference meaning
+- States the opposite conclusion
+- Is factually different even if it shares many words
+
+Do NOT mark it incorrect just because the wording differs
+from the reference, as long as the core factual claim
+matches.
 
 Return ONLY valid JSON:
 {
-  "support_score": <integer 0-100>,
-  "reason": "<one sentence>"
+  "is_correct": true or false,
+  "reason": "<one sentence explaining your judgment>"
 }"""
 
-SUPPORT_USER_TEMPLATE = """Question: {question}
+CORRECTNESS_USER_TEMPLATE = """Question: {question}
 
 Answer given: {answer}
 
-Explanation: {explanation}
+Reference correct answers (any one matching is sufficient):
+{references}
 
-Does this explanation argue that the answer is correct,
-argue that it is incorrect, or remain neutral?
+Is the given answer factually correct according to the
+references above?
 
 Respond with a JSON object in exactly this format:
 {{
-  "support_score": <integer 0-100>,
-  "reason": "<one sentence explaining your score>"
+  "is_correct": true or false,
+  "reason": "<one sentence explaining your judgment>"
 }}
 
 Return only the JSON object. No other text."""
 
-def judge_support(question, answer, explanation):
+def judge_correctness(question, answer, references):
 
-    user_message = SUPPORT_USER_TEMPLATE.format(
+    user_message = CORRECTNESS_USER_TEMPLATE.format(
         question=question,
         answer=answer,
-        explanation=explanation
+        references=references
     )
 
     for attempt in range(MAX_RETRIES):
@@ -85,22 +86,29 @@ def judge_support(question, answer, explanation):
             response = client.chat.completions.create(
                 model=DEPLOYMENT_NAME,
                 messages=[
-                    {"role": "system", "content": SUPPORT_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_message}
+                    {
+                        "role": "system",
+                        "content": CORRECTNESS_SYSTEM_PROMPT
+                    },
+                    {
+                        "role": "user",
+                        "content": user_message
+                    }
                 ],
                 temperature=0.0,
-                max_completion_tokens=200
+                max_completion_tokens=150
             )
 
             raw = response.choices[0].message.content.strip()
-            clean = raw.replace("```json", "").replace("```", "").strip()
+            clean = raw.replace(
+                "```json", ""
+            ).replace("```", "").strip()
             parsed = json.loads(clean)
 
-            score = int(parsed["support_score"])
+            is_correct = bool(parsed["is_correct"])
             reason = parsed.get("reason", "")
-            score = max(0, min(100, score))
 
-            return score, reason
+            return is_correct, reason
 
         except json.JSONDecodeError as e:
             print(f"  JSON error attempt {attempt+1}: {e}")
@@ -119,77 +127,112 @@ def judge_support(question, answer, explanation):
     return None, "Max retries exceeded"
 
 # =====================================================
-# LOAD DATA — reuse existing CSV, no new generation
+# LOAD DATA
 # =====================================================
 
 df = pd.read_csv(INPUT_CSV)
 print(f"Loaded {len(df)} rows from {INPUT_CSV}")
 
-for col in ["support_score", "support_reason"]:
+required_cols = ["question", "greedy_answer", "references"]
+missing = [c for c in required_cols if c not in df.columns]
+if missing:
+    raise ValueError(f"Missing columns: {missing}")
+
+# Keep old correctness label for comparison
+if "correct" in df.columns:
+    df["correct_old_heuristic"] = df["correct"]
+
+for col in ["correct_gpt", "correct_gpt_reason"]:
     if col not in df.columns:
         df[col] = None
 
 # =====================================================
-# SCORE ALL ROWS (both correct and incorrect —
-# we need both groups to compare)
+# MAIN LOOP
 # =====================================================
+
+n_success = 0
+n_failed = 0
 
 for idx, row in df.iterrows():
 
-    if pd.notna(df.at[idx, "support_score"]):
+    if pd.notna(df.at[idx, "correct_gpt"]):
         continue
 
     question = str(row["question"])
     answer = str(row["greedy_answer"])
-    explanation = str(row["explanation"])
+    references = str(row["references"])
 
-    if explanation in ("None", "nan") or pd.isna(row["explanation"]):
+    if pd.isna(row["greedy_answer"]) or answer in ("None", "nan"):
+        n_failed += 1
         continue
 
-    score, reason = judge_support(question, answer, explanation)
+    is_correct, reason = judge_correctness(
+        question, answer, references
+    )
 
-    if score is not None:
-        df.at[idx, "support_score"] = score
-        df.at[idx, "support_reason"] = reason
+    if is_correct is not None:
+        df.at[idx, "correct_gpt"] = int(is_correct)
+        df.at[idx, "correct_gpt_reason"] = reason
+        n_success += 1
+
+        old_label = row.get("correct_old_heuristic", "N/A")
+        match = "MATCH" if int(is_correct) == old_label else "DIFFER"
+
         print(
-            f"[{idx:03d}] correct={row['correct']} | "
-            f"support={score:3d} | {reason[:60]}..."
+            f"[{idx:03d}] gpt={int(is_correct)} | "
+            f"old={old_label} | {match} | {reason[:50]}..."
         )
+    else:
+        n_failed += 1
+        print(f"[{idx:03d}] FAILED — {reason}")
 
     if idx % 10 == 0:
         df.to_csv(OUTPUT_CSV, index=False)
 
 df.to_csv(OUTPUT_CSV, index=False)
+print(f"\nScoring complete. Saved to: {OUTPUT_CSV}")
+print(f"Success: {n_success} | Failed: {n_failed}")
+
+# =====================================================
+# COMPARISON: OLD HEURISTIC vs GPT JUDGE
+# =====================================================
+
+scored = df[df["correct_gpt"].notna()].copy()
+scored["correct_gpt"] = scored["correct_gpt"].astype(int)
+
+if "correct_old_heuristic" in scored.columns:
+    agreement = (
+        scored["correct_gpt"] == scored["correct_old_heuristic"]
+    ).mean()
+
+    print(f"\n{'='*60}")
+    print("CORRECTNESS LABEL COMPARISON")
+    print(f"{'='*60}")
+    print(f"Agreement between old heuristic and GPT judge: {agreement:.1%}")
+
+    print(f"\nOld heuristic — Correct: {(scored['correct_old_heuristic']==1).sum()} | "
+          f"Incorrect: {(scored['correct_old_heuristic']==0).sum()}")
+    print(f"GPT judge     — Correct: {(scored['correct_gpt']==1).sum()} | "
+          f"Incorrect: {(scored['correct_gpt']==0).sum()}")
+
+    # Show disagreements for manual inspection
+    disagreements = scored[
+        scored["correct_gpt"] != scored["correct_old_heuristic"]
+    ]
+    print(f"\nDisagreements: {len(disagreements)} / {len(scored)}")
+
+    if len(disagreements) > 0:
+        print(f"\n{'='*60}")
+        print("SAMPLE DISAGREEMENTS (first 10)")
+        print(f"{'='*60}")
+        for _, row in disagreements.head(10).iterrows():
+            print(f"\nQ: {row['question']}")
+            print(f"A: {row['greedy_answer']}")
+            print(f"References: {row['references'][:150]}...")
+            print(
+                f"Old heuristic: {row['correct_old_heuristic']} | "
+                f"GPT judge: {row['correct_gpt']}"
+            )
+            print(f"GPT reason: {row['correct_gpt_reason']}")
+
 print(f"\nSaved to: {OUTPUT_CSV}")
-
-# =====================================================
-# THE KEY COMPARISON
-# =====================================================
-
-scored = df[df["support_score"].notna()].copy()
-scored["support_score"] = scored["support_score"].astype(float)
-
-correct_support = scored[scored["correct"] == 1]["support_score"]
-incorrect_support = scored[scored["correct"] == 0]["support_score"]
-
-print(f"\n{'='*60}")
-print("JUSTIFICATION BIAS RESULT")
-print(f"{'='*60}")
-print(f"Support score (correct answers):   mean={correct_support.mean():.1f}  n={len(correct_support)}")
-print(f"Support score (incorrect answers): mean={incorrect_support.mean():.1f}  n={len(incorrect_support)}")
-
-from scipy.stats import mannwhitneyu, spearmanr
-u, p = mannwhitneyu(correct_support, incorrect_support)
-print(f"Mann-Whitney U test: p={p:.4f}")
-
-r, rp = spearmanr(scored["correct"], scored["support_score"])
-print(f"Correctness ↔ Support Spearman r={r:.4f}  p={rp:.4f}")
-
-if incorrect_support.mean() > 60 and p > 0.05:
-    print("\n>> STRONG justification bias: model defends wrong answers")
-    print("   almost as confidently as right ones.")
-elif incorrect_support.mean() > 60 and p < 0.05:
-    print("\n>> Model still defends wrong answers substantially,")
-    print("   though somewhat less than correct ones.")
-else:
-    print("\n>> Model shows meaningfully less support for wrong answers.")
