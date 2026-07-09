@@ -1,107 +1,34 @@
-model,dataset,question,options,correct_letter,correct_text,greedy_raw,predicted_letter,greedy_answer,sampled_texts,explanation,correct,ebse,norm_ebse,n_distinct_options
-Llama-3.1-8B-Instruct,medqa,"A junior orthopaedic surgery resident is completing a carpal tunnel repair with the department chairman as the attending physician. During the case, the resident inadvertently cuts a flexor tendon. The tendon is repaired without complication. The attending tells the resident that the patient will do fine, and there is no need to report this minor complication that will not harm the patient, as he does not want to make the patient worry unnecessarily. He tells the resident to leave this complication out of the operative report. Which of the following is the correct next action for the resident to take?","[{'key': 'A', 'value': 'Disclose the error to the patient but leave it out of the operative report'}, {'key': 'B', 'value': 'Disclose the error to the patient and put it in the operative report'}, {'key': 'C', 'value': 'Tell the attending that he cannot fail to disclose this mistake'}, {'key': 'D', 'value': 'Report the physician to the ethics committee'}, {'key': 'E', 'value': 'Refuse to dictate the operative report'}]",C,Tell the attending that he cannot fail to disclose this mistake,"The correct answer is B. Disclose the error to the patient and put it in the operative report.
+def compute_entropy(probs):
+    """
+    Compute entropy over discrete probabilities.
+    Handles the p=1.0 edge case exactly, avoiding
+    floating point artifacts from epsilon addition.
+    """
+    probs = np.array(probs)
+    nonzero = probs[probs > 0]
+    entropy = -np.sum(nonzero * np.log(nonzero))
+    return max(entropy, 0.0)
 
-The attending physician's instruction to leave the complication",B,Disclose the error to the patient and put it in the operative report,"The correct answer is B. Disclose the error to the patient and put it in the operative report.
+ebse = compute_entropy(cluster_probs)
+max_ebse = np.log(N_SAMPLES)
+norm_ebse = ebse / max_ebse if max_ebse > 0 else 0.0
 
-As a ||| The correct answer is B. Disclose the error to the patient and put it in the operative report.
+def compute_entropy(probs):
+    """
+    Compute entropy over discrete probabilities.
+    Handles the p=1.0 edge case exactly, avoiding
+    floating point artifacts from epsilon addition.
+    """
+    probs = np.array(probs)
+    nonzero = probs[probs > 0]
+    entropy = -np.sum(nonzero * np.log(nonzero))
+    return max(entropy, 0.0)
 
-The  ||| B. Disclose the error to the patient and put it in the operative report
+counts = Counter(sampled_letters)
+total = sum(counts.values())
+probs = np.array([c / total for c in counts.values()])
 
-The correct course of actio ||| The correct answer is B. Disclose the error to the patient and put it in the operative report.
-
-The  ||| The correct answer is B. Disclose the error to the patient and put it in the operative report.
-
-As a ||| The correct answer is B. Disclose the error to the patient and put it in the operative report.
-
-The  ||| The correct answer is B. Disclose the error to the patient and put it in the operative report.
-
-This ||| The correct answer is B. Disclose the error to the patient and put it in the operative report.
-
-The  ||| The correct answer is B. Disclose the error to the patient and put it in the operative report.
-
-The  ||| B. Disclose the error to the patient and put it in the operative report.
-
-The resident should disclo","The correct answer is B. Disclose the error to the patient and put it in the operative report.
-
-As a healthcare professional, it is the duty of the resident to prioritize patient safety and well-being above all else. In this scenario, the resident inadvertently cuts a flexor tendon during the carpal tunnel repair, which is a complication that should be disclosed to the patient. The attending physician's advice to leave the complication out of the operative report and not disclose it to the patient is unethical and potentially harmful.
-
-The resident should disclose the error to the patient in a compassionate and transparent manner, explaining the nature of the complication and the steps taken to repair it. This is essential for maintaining trust and ensuring the patient's informed consent.
-
-Including the complication in the operative report is also crucial for several reasons:
-
-1.  **Transparency**: It ensures that the patient's medical record accurately reflects the events that occurred during the surgery.
-2.  **Accountability**: It allows for accountability and tracking of complications, which can help identify areas for improvement in surgical techniques and patient care.
-3.  **Medical education**: It provides a learning opportunity for the resident and other healthcare professionals to understand the importance of transparency and accurate documentation.
-
-The other options are incorrect because",0.0,-1.000000082690371e-10,-6.213349859380281e-11,1
-Llama-3.1-8B-Instruct,medqa,A 67-year-old man with transitional cell carcinoma of the bladder comes to the physician because of a 2-day history of ringing sensation in his ear. He received this first course of neoadjuvant chemotherapy 1 week ago. Pure tone audiometry shows a sensorineural hearing loss of 45 dB. The expected beneficial effect of the drug that caused this patient's symptoms is most likely due to which of the following actions?,"[{'key': 'A', 'value': 'Inhibition of thymidine synthesis'}, {'key': 'B', 'value': 'Inhibition of proteasome'}, {'key': 'C', 'value': 'Hyperstabilization of microtubules'}, {'key': 'D', 'value': 'Generation of free radicals'}, {'key': 'E', 'value': 'Cross-linking of DNA'}]",E,Cross-linking of DNA,"The correct answer is B. Inhibition of proteasome.
-
-The patient's symptoms are likely due to cisplatin-induced ototoxicity, which",B,Inhibition of proteasome,"To solve this question, let's analyze the information given:
-
-1. The patient has transitional cell c ||| The correct answer is D. Generation of free radicals.
-
-This patient's symptoms are likely due to cis ||| The correct answer is C. Hyperstabilization of microtubules.
-
-The patient's symptoms and pure tone a ||| The correct answer is B. Inhibition of proteasome.
-
-This patient's symptoms of sensorineural hearing ||| To answer this question, we need to identify the chemotherapy agent that is most likely to cause sen ||| To answer this question, we need to identify the chemotherapy drug that is most likely to cause sens ||| The correct answer is B. Inhibition of proteasome.
-
-Cisplatin is a common chemotherapy agent used to ||| To solve this question, let's first identify the likely culprit drug that caused the patient's sympt ||| The correct answer is E. Cross-linking of DNA.
-
-The patient's symptoms are consistent with ototoxici ||| The correct answer is E. Cross-linking of DNA.
-
-The patient's symptoms are likely due to cisplatin, ","The patient's symptoms of tinnitus (ringing sensation in the ear) and sensorineural hearing loss are likely due to the ototoxic effects of cisplatin, a chemotherapy medication commonly used to treat transitional cell carcinoma of the bladder. Cisplatin is a platinum-based chemotherapeutic agent that works by cross-linking DNA, which ultimately leads to cell death. However, the ototoxic effects of cisplatin are thought to be due to its inhibition of the proteasome.
-
-The proteasome is a complex of proteins that breaks down and recycles damaged or unneeded proteins within the cell. Inhibition of the proteasome disrupts this process, leading to the accumulation of damaged proteins and oxidative stress. This can cause damage to the inner ear, particularly the cochlea, leading to sensorineural hearing loss and tinnitus.
-
-The other options are not directly related to the ototoxic effects of cisplatin:
-
-A. Inhibition of thymidine synthesis is a mechanism of action of certain chemotherapeutic agents, such as fluorouracil and methotrexate, but it is not related to the ototoxic effects of cisplatin.
-
-C. Hyperstabilization of microtubules is a mechanism",0.0,1.3296613484547581,0.8261650469285824,4
-Llama-3.1-8B-Instruct,medqa,"Two weeks after undergoing an emergency cardiac catherization with stenting for unstable angina pectoris, a 61-year-old man has decreased urinary output and malaise. He has type 2 diabetes mellitus and osteoarthritis of the hips. Prior to admission, his medications were insulin and naproxen. He was also started on aspirin, clopidogrel, and metoprolol after the coronary intervention. His temperature is 38°C (100.4°F), pulse is 93/min, and blood pressure is 125/85 mm Hg. Examination shows mottled, reticulated purplish discoloration of the feet. Laboratory studies show:
-Hemoglobin count 14 g/dL
-Leukocyte count 16,400/mm3
-Segmented neutrophils 56%
-Eosinophils 11%
-Lymphocytes 31%
-Monocytes 2%
-Platelet count 260,000/mm3
-Erythrocyte sedimentation rate 68 mm/h
-Serum
-Urea nitrogen 25 mg/dL
-Creatinine 4.2 mg/dL
-Renal biopsy shows intravascular spindle-shaped vacuoles. Which of the following is the most likely cause of this patient's symptoms?""","[{'key': 'A', 'value': 'Renal papillary necrosis'}, {'key': 'B', 'value': 'Allergic interstitial nephritis'}, {'key': 'C', 'value': 'Cholesterol embolization'}, {'key': 'D', 'value': 'Eosinophilic granulomatosis with polyangiitis'}, {'key': 'E', 'value': 'Polyarteritis nodosa'}]",C,Cholesterol embolization,"The correct answer is C. Cholesterol embolization.
-
-The patient's presentation of decreased urinary output, malaise, and mottled, ret",C,Cholesterol embolization,"The correct answer is C. Cholesterol embolization.
-
-Reasoning skill for Medical Decision Making: Thi ||| The correct answer is C. Cholesterol embolization.
-
-The patient's symptoms of decreased urinary outp ||| The correct answer is C. Cholesterol embolization.
-
-Cholesterol embolization occurs when small chole ||| The correct answer is C. Cholesterol embolization.
-
-The patient's presentation of decreased urinary  ||| The correct answer is C. Cholesterol embolization.
-
-The patient's presentation of decreased urinary  ||| The correct answer is C. Cholesterol embolization.
-
-The patient's presentation of decreased urinary  ||| The correct answer is C. Cholesterol embolization.
-
-Explanation: 
-This patient's presentation, inclu ||| The correct answer is C. Cholesterol embolization.
-
-The patient's presentation of decreased urinary  ||| The correct answer is C. Cholesterol embolization.
-
-Reasoning skill for Scientific Evidence Evaluati ||| The correct answer is C. Cholesterol embolization.
-
-Reasoning Skill: This question requires the appl","The patient's symptoms and laboratory findings are consistent with a diagnosis of cholesterol embolization, which is a complication of the cardiac catheterization and stenting procedure. 
-
-Cholesterol embolization occurs when small fragments of atherosclerotic plaque break off from the arterial wall during the procedure and travel downstream, lodging in smaller vessels and causing damage to the surrounding tissues. This can lead to a range of symptoms, including renal failure, which is evident in this patient with a creatinine level of 4.2 mg/dL.
-
-The presence of mottled, reticulated purplish discoloration of the feet (livedo reticularis) is a classic sign of cholesterol embolization. The elevated erythrocyte sedimentation rate (ESR) and leukocytosis with eosinophilia also support this diagnosis, as they indicate an inflammatory response to the emboli.
-
-The renal biopsy showing intravascular spindle-shaped vacuoles is also consistent with cholesterol embolization, as these vacuoles are thought to represent lipid-laden macrophages that have accumulated in the affected vessels.
-
-The other options are less likely:
-
-A. Renal papillary necrosis is a complication of analgesic abuse",1.0,-1.000000082690371e-10,-6.213349859380281e-11,1
+entropy = compute_entropy(probs)
+max_entropy = np.log(5)  # 5 possible options
+norm_ebse = entropy / max_entropy if max_entropy > 0 else 0.0
+n_distinct = len(counts)
