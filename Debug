@@ -1,112 +1,616 @@
-# Post-Hoc Justification vs. Truth: Do LLM Explanations Communicate Uncertainty or Merely Defend the Answer?
+import os
+import torch
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from datasets import load_dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import AgglomerativeClustering
+from huggingface_hub import login
 
-## 1. Problem Statement
+# =====================================================
+# CONFIG — change MODEL_NAME to switch models
+# =====================================================
 
-Large language models are increasingly deployed in settings — clinical decision support, financial analysis, legal research — where a generated answer is accompanied by a natural language explanation intended to justify that answer to a human reader. The implicit assumption underlying this practice is that the explanation reflects something real about the model's confidence and reasoning: an uncertain model should produce a hedged, qualified explanation, and a confident model should produce an assertive one.
+HF_TOKEN = ''
+MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
 
-This work investigates whether that assumption holds. Specifically, we ask three connected questions:
+MODEL_SHORT = MODEL_NAME.split("/")[-1]
+IS_BASE_MODEL = "Instruct" not in MODEL_NAME
 
-1. **Does an LLM's generated explanation communicate the uncertainty present in its own answer distribution?** If a model's internal distribution over possible answers is diffuse (high entropy, many plausible completions), does its explanation read as hedged? If the distribution is sharply peaked, does the explanation read as confident?
+BASE_DIR = "/workspace/data/KZ_2117574/Calibration/strategyqa"
+OUTPUT_DIR = os.path.join(BASE_DIR, f"results_{MODEL_SHORT}")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+OUTPUT_CSV = os.path.join(OUTPUT_DIR, "generations.csv")
 
-2. **Does the explanation-generation process distinguish between defending a correct answer and defending an incorrect one?** When a model is asked to explain an answer it has already committed to, does it behave differently depending on whether that answer is actually true?
+N_SAMPLES = 10
+TEMPERATURE = 0.7
+CLUSTER_DISTANCE_THRESHOLD = 0.15
+PILOT_SIZE = 200  # StrategyQA has ~2780 questions; adjust as needed
 
-3. **Is this behavior architecture-specific, or does it hold across different models and alignment procedures?**
+print(f"Model: {MODEL_NAME} | Is base: {IS_BASE_MODEL}")
 
-The practical stakes are direct: if explanations are generated to justify a stated answer regardless of its truth, then explanations increase the *appearance* of trustworthiness without increasing actual reliability — a dangerous property in exactly the high-stakes domains where explanations are most demanded.
+# =====================================================
+# LOGIN + MODEL
+# =====================================================
 
----
+login(token=HF_TOKEN)
 
-## 2. Current Literature
+print("Loading tokenizer...")
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
 
-The relevant literature falls into several distinct areas that, until recently, have developed largely independently.
+print("Loading model...")
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME, torch_dtype=torch.float16,
+    device_map="auto", trust_remote_code=True
+)
+model.eval()
+print("Model loaded.")
+print(f"EOS token: {tokenizer.eos_token} (id={tokenizer.eos_token_id})")
+print(f"PAD token: {tokenizer.pad_token} (id={tokenizer.pad_token_id})")
+print(f"Chat template present: {tokenizer.chat_template is not None}")
 
-### 2.1 Calibration of LLM Answers
+print("Loading sentence encoder...")
+encoder = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+print("Sentence encoder loaded.")
 
-A mature body of work studies whether a model's stated or implied confidence in an answer matches its actual accuracy — the classical calibration problem, adapted to language models.
+# =====================================================
+# CHAT TEMPLATE HELPER
+# =====================================================
 
-- **Kadavath et al. (2022)**, *"Language Models (Mostly) Know What They Know,"* showed that large language models can be reasonably well calibrated on multiple-choice and true/false formats, and that models can be trained to estimate the probability they know the answer to a question (P(IK)) without reference to a specific proposed answer. Critically, they found that RLHF-tuned policies are often poorly calibrated compared to their base counterparts, though simple temperature adjustment can partially correct this.
+def build_prompt(user_message):
+    if tokenizer.chat_template is not None and not IS_BASE_MODEL:
+        messages = [{"role": "user", "content": user_message}]
+        prompt = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+    else:
+        prompt = user_message
+    return prompt
 
-- **Tian et al. (2023)**, *"Just Ask for Calibration,"* showed that verbalized confidence — a model stating a numeric confidence score in natural language — can be better calibrated than the model's raw output token probabilities, particularly for RLHF-tuned models like ChatGPT and Claude.
+def clean_generated_text(text):
+    """Cutoff if model wanders into a new Q&A pair (common in base models)."""
+    for marker in ["\nQ:", "\nQuestion:"]:
+        if marker in text:
+            text = text.split(marker)[0].strip()
+    return text
 
-- **Leng et al. (2024)**, *"Taming Overconfidence in LLMs,"* identified a mechanistic driver of miscalibration: reward models used in RLHF exhibit an inherent bias toward high-confidence responses regardless of actual response quality, propagating overconfidence into the aligned policy.
+# =====================================================
+# STRATEGYQA-SPECIFIC: correctness extraction
+# =====================================================
 
-- **Chhikara et al. (2025)**, *"Mind the Confidence Gap,"* provided one of the most comprehensive empirical calibration audits across nine models, finding that large RLHF-tuned models can paradoxically become *more* miscalibrated on easier queries even as their overall calibration improves.
+def extract_yes_no(text):
+    """Extract Yes/No prediction from generated text. Returns True/False/None."""
+    text_lower = text.lower().strip()
+    first_30 = text_lower[:30]
+    if "yes" in first_30 and "no" not in first_30:
+        return True
+    if "no" in first_30 and "yes" not in first_30:
+        return False
+    # fallback: check first word only
+    first_word = text_lower.split()[0].strip(".,!?") if text_lower.split() else ""
+    if first_word == "yes":
+        return True
+    if first_word == "no":
+        return False
+    return None
 
-This literature establishes that answer-level calibration is an active, contested, and only partially solved problem — but it does not examine what happens to uncertainty information once the model moves from an answer to an explanation.
+def is_correct_strategyqa(predicted_bool, true_bool):
+    if predicted_bool is None:
+        return None
+    return int(predicted_bool == true_bool)
 
-### 2.2 Faithfulness of Chain-of-Thought and Explanations
+# =====================================================
+# FUNCTION 1: EBSE (answer sampling + entropy)
+# =====================================================
 
-A separate literature asks whether an explanation (typically a chain-of-thought trace) reflects the actual computational process that produced the answer, rather than being a plausible-sounding post-hoc story.
+def compute_ebse(question):
 
-- **Turpin et al. (2023)**, *"Language Models Don't Always Say What They Think,"* is the foundational result here. The authors showed that introducing biasing features into a prompt (e.g., reordering answer choices to favor a particular option) can change a model's answer without the model ever acknowledging the bias in its chain-of-thought — the explanation instead constructs a plausible-sounding rationale for whichever answer the bias produced. Accuracy dropped by as much as 36% under adversarial biasing across 13 tasks, with the CoT explanation never revealing the true cause.
+    if IS_BASE_MODEL:
+        user_message = f"Q: {question}\nA:"
+    else:
+        user_message = (
+            f"Answer the following question with Yes or No, "
+            f"then briefly justify your answer.\n\n"
+            f"Question: {question}\n\nAnswer:"
+        )
+    prompt = build_prompt(user_message)
 
-- **Lanham et al. (2023)**, *"Measuring Faithfulness in Chain-of-Thought Reasoning,"* introduced perturbation-based methods (truncating or corrupting reasoning steps) to test whether the final answer causally depends on the stated reasoning, finding that faithfulness varies substantially by task and model scale.
+    inputs = tokenizer(
+        prompt, return_tensors="pt", truncation=True, max_length=1024
+    ).to(model.device)
 
-- A 2025 position paper, *"Chain-of-Thought Is Not Explainability,"* argues even more forcefully that CoT traces should not be treated as genuine explanations of model computation, since models can be trained toward superficially faithful CoT while reverting to unfaithful, plausible-but-non-causal reasoning on harder problems.
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs, max_new_tokens=80, do_sample=True,
+            temperature=TEMPERATURE, num_return_sequences=N_SAMPLES,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
 
-This literature establishes that explanations can be causally disconnected from the true decision process — but it studies *input-driven* bias (an external manipulation causes both the wrong answer and the unfaithful explanation), not whether explanations are *intrinsically* indifferent to correctness even absent any adversarial manipulation.
+    answers = []
+    for seq in outputs:
+        generated = seq[inputs.input_ids.shape[1]:]
+        text = tokenizer.decode(generated, skip_special_tokens=True).strip()
+        text = clean_generated_text(text)
+        first_line = text.split('\n')[0].strip()
+        answers.append(first_line if first_line else text)
 
-### 2.3 Faithful Verbalized Uncertainty (the closest prior work)
+    with torch.no_grad():
+        greedy_out = model.generate(
+            **inputs, max_new_tokens=80, do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+    greedy_tokens = greedy_out[0][inputs.input_ids.shape[1]:]
+    greedy_answer = tokenizer.decode(greedy_tokens, skip_special_tokens=True).strip()
+    greedy_answer = clean_generated_text(greedy_answer)
+    greedy_answer = greedy_answer.split('\n')[0].strip()
 
-Two very recent papers converge most closely on the question this work investigates.
+    # Semantic clustering (kept for consistency with TruthfulQA pipeline,
+    # even though StrategyQA answers are binary — captures phrasing diversity)
+    embeddings = encoder.encode(answers)
 
-- **Yona et al. (2024, EMNLP)**, *"Can Large Language Models Faithfully Express Their Intrinsic Uncertainty in Words?"* formalizes "faithful response uncertainty" as the gap between a model's intrinsic confidence in an assertion and the linguistic decisiveness with which that assertion is conveyed. Using this example-level metric, the authors find that modern LLMs are poor at faithfully conveying uncertainty in their responses, and argue that improved alignment procedures are necessary.
+    if len(answers) > 1:
+        clustering = AgglomerativeClustering(
+            n_clusters=None, distance_threshold=CLUSTER_DISTANCE_THRESHOLD,
+            metric='cosine', linkage='average'
+        )
+        labels = clustering.fit_predict(embeddings)
+    else:
+        labels = np.array([0])
 
-- **MetaFaith (2025)**, *"Faithful Natural Language Uncertainty Expression in LLMs,"* extends this with a systematic benchmark across models, datasets, and prompting strategies, confirming that LLMs largely fail to calibrate their linguistic hedging to their actual confidence, and that existing interventions (including metacognitive prompting) are only partially effective.
+    n_clusters = len(set(labels))
+    cluster_dict = {}
+    for i, label in enumerate(labels):
+        cluster_dict.setdefault(label, []).append(i)
+    clusters = list(cluster_dict.values())
+    cluster_probs = np.array([len(c) / N_SAMPLES for c in clusters])
 
-These two papers establish, at the level of the **full response**, that LLMs do not faithfully communicate uncertainty in language. This is the single most important piece of prior work bearing on the present study, and any claim made here must be positioned precisely against it.
+    epsilon = 1e-10
+    ebse = -np.sum(cluster_probs * np.log(cluster_probs + epsilon))
+    max_ebse = np.log(N_SAMPLES)
+    norm_ebse = ebse / max_ebse if max_ebse > 0 else 0.0
+    cluster_answers = [answers[c[0]] for c in clusters]
 
-### 2.4 Uncertainty Quantification Methods (measurement infrastructure)
+    return greedy_answer, answers, ebse, norm_ebse, n_clusters, cluster_answers
 
-A separate, rapidly growing literature develops methods for estimating a model's *internal* uncertainty over answers, independent of what it says about that uncertainty:
+# =====================================================
+# FUNCTION 2: Explanation
+# =====================================================
 
-- **Semantic Entropy** (Farquhar et al., 2024) clusters multiple sampled answers by meaning (via bidirectional entailment) and computes entropy over the resulting cluster distribution, rather than over raw token probabilities — capturing uncertainty over *meaning* rather than surface form.
-- **Evidential Semantic Entropy (EVSE, EACL 2026)** extends this by explicitly modeling the probability mass on *unobserved* answers (via Dempster-Shafer evidence theory), correcting a normalization artifact in standard semantic entropy that can make two very differently-uncertain answer distributions appear identical after normalization.
-- **Pairwise Semantic Similarity methods** (2025) further refine cluster-based entropy by using continuous pairwise similarity rather than hard cluster assignment, avoiding information loss at cluster boundaries.
-- Recent work has also begun extending uncertainty quantification to **agentic settings**, arguing that traditional single-turn UQ methods do not capture how uncertainty propagates across a multi-step trajectory of tool calls and observations.
+def get_explanation(question, answer):
 
-These methods are infrastructure — they provide better and better ways to estimate a model's true internal uncertainty over an answer. None of them ask what happens to that internal uncertainty once the model is asked to explain an answer it has already committed to.
+    if IS_BASE_MODEL:
+        user_message = f"Q: {question}\nA: {answer}\nThis is because"
+    else:
+        user_message = (
+            f"Question: {question}\n\n"
+            f"Answer: {answer}\n\n"
+            f"Provide an explanation for this answer:"
+        )
+    prompt = build_prompt(user_message)
 
-### 2.5 Explainability in Agentic and Multi-Agent Systems
+    inputs = tokenizer(
+        prompt, return_tensors="pt", truncation=True, max_length=1024
+    ).to(model.device)
 
-A separate and still-immature literature addresses explainability for LLM-based agents and multi-agent systems. Several recent surveys (TRiSM for Agentic AI, 2025; various critical surveys of responsible agentic reasoning, 2025–2026) converge on the observation that traditional explainability techniques — largely post-hoc methods such as SHAP, LIME, and attention visualization borrowed directly from single-model interpretability — struggle to capture agentic behavior and are widely acknowledged as inadequate for this setting. A smaller, more recent line of work reframes interpretability as an interactive, dialogic process ("agentic interpretability") rather than a static post-hoc artifact, but this direction remains nascent. Reflection-based agent frameworks (e.g., Reflexion) already have agents generate natural-language, post-hoc commentary on their own past decisions — a direct structural analogue of the single-turn explanation-generation setting studied here — but no work has yet asked whether such agent self-reflections faithfully track the agent's actual decision-time uncertainty, or whether they merely justify whatever action was already taken.
+    with torch.no_grad():
+        output = model.generate(
+            **inputs, max_new_tokens=250, do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
 
----
+    generated_tokens = output[0][inputs.input_ids.shape[1]:]
+    explanation = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+    explanation = clean_generated_text(explanation)
 
-## 3. The Gap
+    return explanation
 
-Overlaying the literature above reveals a precise, previously unoccupied space.
+# =====================================================
+# LOAD DATASET
+# =====================================================
 
-| | Studies... | Using... | Finds... |
-|---|---|---|---|
-| Calibration literature (Kadavath, Tian, Leng, Chhikara) | Whether stated/implied confidence matches accuracy | Token probabilities, verbalized confidence scores | RLHF systematically degrades calibration |
-| Faithfulness literature (Turpin, Lanham) | Whether CoT reflects the true causal process | Input perturbation, activation patching | CoT can be causally disconnected from the answer, especially under adversarial input bias |
-| Faithful uncertainty literature (Yona, MetaFaith) | Whether the **full response** linguistically communicates intrinsic uncertainty | Example-level faithfulness metrics comparing intrinsic confidence to linguistic decisiveness | LLMs largely fail to hedge appropriately across the response as a whole |
-| UQ methods (Semantic Entropy, EVSE, Pairwise Similarity) | How to estimate internal answer uncertainty accurately | Multi-sample clustering, evidence theory | Provide increasingly precise measures of $H(\text{answer} \mid q)$ |
-| Agentic explainability surveys | Whether post-hoc/interactive methods can explain agent behavior | Taxonomy and framework proposals | Post-hoc methods are widely used but explicitly flagged as inadequate; faithfulness of agent self-reflection is untested |
+print("\nLoading StrategyQA...")
+dataset = load_dataset("wics/strategy-qa")
+split_name = "test" if "test" in dataset else list(dataset.keys())[0]
+questions = list(dataset[split_name])[:PILOT_SIZE]
+print(f"Loaded {len(questions)} questions from split '{split_name}'.")
+print(f"Sample item keys: {list(questions[0].keys())}")
 
-**What has not been asked, by any of the above:** given a model that has *already committed to a specific answer*, and is *then separately asked to explain that answer* — a structurally post-hoc generation step, architecturally decoupled from whatever internal state produced the original answer — does the resulting explanation (a) communicate the degree of internal uncertainty that existed at the moment of commitment, and (b) distinguish, in its rhetorical stance, between justifying a true claim and justifying a false one?
+# =====================================================
+# MAIN LOOP
+# =====================================================
 
-This is a narrower and more mechanistic question than "is the full response faithfully hedged" (Yona/MetaFaith), and a different question than "is the reasoning causally connected to the answer under adversarial bias" (Turpin/Lanham). It isolates the explanation-generation step itself, treats it as architecturally separate from answer generation (a fresh forward pass conditioned only on the externalized question-and-answer text, with no access to the hidden states that produced the answer), and asks two very specific, falsifiable things: does it carry forward quantitative uncertainty, and does it perform truth-blind justification.
+rows = []
 
----
+for idx, item in enumerate(tqdm(questions)):
 
-## 4. What We Are Trying to Achieve
+    question = item["question"]
+    true_answer = item["answer"]  # boolean
 
-The objective of this work is to characterize, empirically and (where possible) formally, the behavior of post-hoc explanation generation in autoregressive language models along two axes:
+    print(f"\n[{idx:03d}/{len(questions)}] {question[:70]}...")
 
-### 4.1 Uncertainty Fidelity
+    try:
+        (
+            greedy_answer, sampled_answers, ebse, norm_ebse,
+            n_clusters, cluster_answers
+        ) = compute_ebse(question)
 
-Using **Embedding-Based Semantic Entropy (EBSE)** — a multi-sample, cluster-based measure of the model's true uncertainty over the space of possible answers — as the internal ground truth, and an **independent LLM judge** to score how much uncertainty a generated explanation communicates to a reader, we test whether these two quantities are correlated. A near-zero correlation would indicate that the explanation-generation process does not have — or does not use — access to the uncertainty that existed at answer-commitment time, consistent with a formal Markov-chain argument (question → answer → explanation) in which the explanation is generated from externalized text alone, with no access to the transient internal computation that produced the answer.
+        explanation = get_explanation(question, greedy_answer)
 
-### 4.2 Justification Bias (the primary finding to date)
+        predicted_bool = extract_yes_no(greedy_answer)
+        correct = is_correct_strategyqa(predicted_bool, true_answer)
 
-Using an **independently GPT-verified correctness label** (rather than a crude lexical-overlap heuristic) to separate model answers into genuinely correct and genuinely incorrect groups, we test whether the *rhetorical stance* of the explanation — does it argue the answer is correct, is neutral, or challenges it — differs between the two groups. Preliminary results on Llama-3.1-8B-Instruct show a support score of 90.9/100 for explanations of correct answers and 85.1/100 for explanations of incorrect answers, a difference that is not statistically significant (p = 0.14). This indicates the model defends fabricated conclusions with essentially the same rhetorical confidence as true ones — direct evidence that the explanation-generation objective is "justify this answer" rather than "evaluate whether this answer is true."
+        print(
+            f"  ebse={norm_ebse:.3f} | clusters={n_clusters} | "
+            f"pred={predicted_bool} | true={true_answer} | correct={correct}"
+        )
 
-### 4.3 Generality Across Architecture and Alignment
+        rows.append({
+            "model": MODEL_SHORT,
+            "dataset": "strategyqa",
+            "question": question,
+            "true_answer_bool": true_answer,
+            "greedy_answer": greedy_answer,
+            "predicted_bool": predicted_bool,
+            "sampled_answers": " ||| ".join(sampled_answers),
+            "cluster_answers": " ||| ".join(cluster_answers),
+            "explanation": explanation,
+            "correct": correct,
+            "ebse": ebse,
+            "norm_ebse": norm_ebse,
+            "n_clusters": n_clusters,
+        })
 
-Both analyses are run across multiple model families (Llama, Qwen, Mistral) and, where feasible, across base versus instruction-tuned variants of the same architecture, to determine whether the observed behavior is a general property of autoregressive post-hoc explanation generation, or specific to a particular alignment procedure.
+    except Exception as e:
+        print(f"  ERROR: {e}")
+        rows.append({
+            "model": MODEL_SHORT, "dataset": "strategyqa",
+            "question": question, "true_answer_bool": true_answer,
+            "greedy_answer": None, "predicted_bool": None,
+            "sampled_answers": None, "cluster_answers": None,
+            "explanation": None, "correct": None,
+            "ebse": None, "norm_ebse": None, "n_clusters": None,
+        })
 
-### 4.4 Intended Contribution
+    if idx % 10 == 0:
+        pd.DataFrame(rows).to_csv(OUTPUT_CSV, index=False)
 
-The intended contribution is not another calibration metric or another instance of "LLMs are miscalibrated." It is a mechanistic characterization — supported by a formal Markov-chain/data-processing-inequality argument and cross-model empirical evidence — of *what kind of process* post-hoc explanation generation actually is: an unconditional justification process that is structurally and empirically decoupled from both the model's own internal uncertainty and from the ground truth of the claim it is defending. This distinguishes the work from the calibration literature (Kadavath, Tian, Leng, Chhikara), the causal faithfulness literature (Turpin, Lanham), and the closest prior work on faithful uncertainty expression (Yona, MetaFaith), while remaining consistent with and explanatory of their findings.
+df = pd.DataFrame(rows)
+df.to_csv(OUTPUT_CSV, index=False)
+
+valid = df[df["norm_ebse"].notna()]
+extractable = valid[valid["correct"].notna()]
+correct_df = extractable[extractable["correct"] == 1]
+incorrect_df = extractable[extractable["correct"] == 0]
+
+print(f"\n{'='*60}")
+print(f"STRATEGYQA GENERATION SUMMARY: {MODEL_SHORT}")
+print(f"{'='*60}")
+print(f"Total: {len(df)} | Valid: {len(valid)} | Extractable: {len(extractable)}")
+print(f"Correct: {len(correct_df)} | Incorrect: {len(incorrect_df)}")
+if len(correct_df) > 0 and len(incorrect_df) > 0:
+    print(f"EBSE correct:   {correct_df['norm_ebse'].mean():.4f}")
+    print(f"EBSE incorrect: {incorrect_df['norm_ebse'].mean():.4f}")
+print(f"\nSaved to: {OUTPUT_CSV}")
+
+
+import os
+import re
+import torch
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from collections import Counter
+from datasets import load_dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from huggingface_hub import login
+
+# =====================================================
+# CONFIG
+# =====================================================
+
+HF_TOKEN = ''
+MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
+
+MODEL_SHORT = MODEL_NAME.split("/")[-1]
+IS_BASE_MODEL = "Instruct" not in MODEL_NAME
+
+BASE_DIR = "/workspace/data/KZ_2117574/Calibration/medqa"
+OUTPUT_DIR = os.path.join(BASE_DIR, f"results_{MODEL_SHORT}")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+OUTPUT_CSV = os.path.join(OUTPUT_DIR, "generations.csv")
+
+N_SAMPLES = 10
+TEMPERATURE = 0.7
+PILOT_SIZE = 200
+
+print(f"Model: {MODEL_NAME} | Is base: {IS_BASE_MODEL}")
+
+# =====================================================
+# LOGIN + MODEL
+# =====================================================
+
+login(token=HF_TOKEN)
+
+print("Loading tokenizer...")
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+print("Loading model...")
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME, torch_dtype=torch.float16,
+    device_map="auto", trust_remote_code=True
+)
+model.eval()
+print("Model loaded.")
+print(f"EOS token: {tokenizer.eos_token} (id={tokenizer.eos_token_id})")
+print(f"Chat template present: {tokenizer.chat_template is not None}")
+
+# =====================================================
+# CHAT TEMPLATE HELPER
+# =====================================================
+
+def build_prompt(user_message):
+    if tokenizer.chat_template is not None and not IS_BASE_MODEL:
+        messages = [{"role": "user", "content": user_message}]
+        prompt = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+    else:
+        prompt = user_message
+    return prompt
+
+def clean_generated_text(text):
+    for marker in ["\nQ:", "\nQuestion:"]:
+        if marker in text:
+            text = text.split(marker)[0].strip()
+    return text
+
+# =====================================================
+# MEDQA-SPECIFIC: formatting and extraction
+# =====================================================
+
+def format_medqa_question(item):
+    """
+    bigbio/med_qa_en_source format:
+    item['question'], item['options'] is a list of {"key": "A", "value": "..."}
+    item['answer_idx'] is the correct key (e.g. "A")
+    """
+    options_text = "\n".join(
+        f"{opt['key']}. {opt['value']}" for opt in item["options"]
+    )
+    return f"{item['question']}\n\n{options_text}"
+
+def extract_option_letter(text):
+    """Extract first standalone A-E letter from generated text."""
+    match = re.search(r'\b([A-E])\b', text[:80])
+    if match:
+        return match.group(1)
+    return None
+
+def get_option_text(item, letter):
+    for opt in item["options"]:
+        if opt["key"] == letter:
+            return opt["value"]
+    return None
+
+def is_correct_medqa(predicted_letter, correct_letter):
+    if predicted_letter is None:
+        return None
+    return int(predicted_letter == correct_letter)
+
+# =====================================================
+# FUNCTION 1: EBSE via discrete option-letter entropy
+# No embedding clustering needed — answer space is
+# already discrete (5 options).
+# =====================================================
+
+def compute_ebse_medqa(item):
+
+    question_formatted = format_medqa_question(item)
+
+    if IS_BASE_MODEL:
+        user_message = f"Q: {question_formatted}\nA:"
+    else:
+        user_message = (
+            f"Answer the following medical question by selecting "
+            f"the single best option (A, B, C, D, or E).\n\n"
+            f"{question_formatted}\n\nAnswer:"
+        )
+    prompt = build_prompt(user_message)
+
+    inputs = tokenizer(
+        prompt, return_tensors="pt", truncation=True, max_length=1536
+    ).to(model.device)
+
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs, max_new_tokens=30, do_sample=True,
+            temperature=TEMPERATURE, num_return_sequences=N_SAMPLES,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+
+    sampled_letters = []
+    sampled_texts = []
+    for seq in outputs:
+        generated = seq[inputs.input_ids.shape[1]:]
+        text = tokenizer.decode(generated, skip_special_tokens=True).strip()
+        text = clean_generated_text(text)
+        letter = extract_option_letter(text)
+        sampled_texts.append(text[:100])
+        if letter:
+            sampled_letters.append(letter)
+
+    with torch.no_grad():
+        greedy_out = model.generate(
+            **inputs, max_new_tokens=30, do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+    greedy_tokens = greedy_out[0][inputs.input_ids.shape[1]:]
+    greedy_text = tokenizer.decode(greedy_tokens, skip_special_tokens=True).strip()
+    greedy_text = clean_generated_text(greedy_text)
+    greedy_letter = extract_option_letter(greedy_text)
+
+    # Entropy directly over observed option letters
+    if len(sampled_letters) == 0:
+        return greedy_text, greedy_letter, sampled_texts, 0.0, 0.0, 0
+
+    counts = Counter(sampled_letters)
+    total = sum(counts.values())
+    probs = np.array([c / total for c in counts.values()])
+
+    epsilon = 1e-10
+    entropy = -np.sum(probs * np.log(probs + epsilon))
+    max_entropy = np.log(5)  # 5 possible options
+    norm_ebse = entropy / max_entropy if max_entropy > 0 else 0.0
+    n_distinct = len(counts)
+
+    return greedy_text, greedy_letter, sampled_texts, entropy, norm_ebse, n_distinct
+
+# =====================================================
+# FUNCTION 2: Explanation
+# =====================================================
+
+def get_explanation_medqa(item, answer_letter, answer_text):
+
+    question_formatted = format_medqa_question(item)
+
+    if IS_BASE_MODEL:
+        user_message = (
+            f"Q: {question_formatted}\n"
+            f"A: {answer_letter}. {answer_text}\n"
+            f"This is because"
+        )
+    else:
+        user_message = (
+            f"Question: {question_formatted}\n\n"
+            f"Answer: {answer_letter}. {answer_text}\n\n"
+            f"Provide an explanation for this answer:"
+        )
+    prompt = build_prompt(user_message)
+
+    inputs = tokenizer(
+        prompt, return_tensors="pt", truncation=True, max_length=1536
+    ).to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs, max_new_tokens=250, do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+
+    generated_tokens = output[0][inputs.input_ids.shape[1]:]
+    explanation = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+    explanation = clean_generated_text(explanation)
+
+    return explanation
+
+# =====================================================
+# LOAD DATASET
+# =====================================================
+
+print("\nLoading MedQA...")
+dataset = load_dataset("bigbio/med_qa", "med_qa_en_source")
+split_name = "test" if "test" in dataset else list(dataset.keys())[0]
+questions = list(dataset[split_name])[:PILOT_SIZE]
+print(f"Loaded {len(questions)} questions from split '{split_name}'.")
+print(f"Sample item keys: {list(questions[0].keys())}")
+
+# =====================================================
+# MAIN LOOP
+# =====================================================
+
+rows = []
+
+for idx, item in enumerate(tqdm(questions)):
+
+    question = item["question"]
+    correct_letter = item["answer_idx"]
+    correct_text = get_option_text(item, correct_letter)
+
+    print(f"\n[{idx:03d}/{len(questions)}] {question[:70]}...")
+
+    try:
+        (
+            greedy_text, greedy_letter, sampled_texts,
+            ebse, norm_ebse, n_distinct
+        ) = compute_ebse_medqa(item)
+
+        answer_text_for_explanation = (
+            get_option_text(item, greedy_letter)
+            if greedy_letter else greedy_text
+        )
+
+        explanation = get_explanation_medqa(
+            item, greedy_letter or "?", answer_text_for_explanation
+        )
+
+        correct = is_correct_medqa(greedy_letter, correct_letter)
+
+        print(
+            f"  ebse={norm_ebse:.3f} | distinct_options={n_distinct} | "
+            f"pred={greedy_letter} | true={correct_letter} | correct={correct}"
+        )
+
+        rows.append({
+            "model": MODEL_SHORT,
+            "dataset": "medqa",
+            "question": question,
+            "options": str(item["options"]),
+            "correct_letter": correct_letter,
+            "correct_text": correct_text,
+            "greedy_raw": greedy_text,
+            "predicted_letter": greedy_letter,
+            "greedy_answer": answer_text_for_explanation,
+            "sampled_texts": " ||| ".join(sampled_texts),
+            "explanation": explanation,
+            "correct": correct,
+            "ebse": ebse,
+            "norm_ebse": norm_ebse,
+            "n_distinct_options": n_distinct,
+        })
+
+    except Exception as e:
+        print(f"  ERROR: {e}")
+        rows.append({
+            "model": MODEL_SHORT, "dataset": "medqa",
+            "question": question, "options": str(item["options"]),
+            "correct_letter": correct_letter, "correct_text": correct_text,
+            "greedy_raw": None, "predicted_letter": None,
+            "greedy_answer": None, "sampled_texts": None,
+            "explanation": None, "correct": None,
+            "ebse": None, "norm_ebse": None, "n_distinct_options": None,
+        })
+
+    if idx % 10 == 0:
+        pd.DataFrame(rows).to_csv(OUTPUT_CSV, index=False)
+
+df = pd.DataFrame(rows)
+df.to_csv(OUTPUT_CSV, index=False)
+
+valid = df[df["norm_ebse"].notna()]
+extractable = valid[valid["correct"].notna()]
+correct_df = extractable[extractable["correct"] == 1]
+incorrect_df = extractable[extractable["correct"] == 0]
+
+print(f"\n{'='*60}")
+print(f"MEDQA GENERATION SUMMARY: {MODEL_SHORT}")
+print(f"{'='*60}")
+print(f"Total: {len(df)} | Valid: {len(valid)} | Extractable: {len(extractable)}")
+print(f"Correct: {len(correct_df)} | Incorrect: {len(incorrect_df)}")
+if len(correct_df) > 0 and len(incorrect_df) > 0:
+    print(f"EBSE correct:   {correct_df['norm_ebse'].mean():.4f}")
+    print(f"EBSE incorrect: {incorrect_df['norm_ebse'].mean():.4f}")
+print(f"\nSaved to: {OUTPUT_CSV}")
+
+
