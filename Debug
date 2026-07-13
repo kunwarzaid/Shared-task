@@ -1,18 +1,41 @@
-import pandas as pd
-import ast
-
-df = pd.read_csv("medqa/results_Mistral-7B-v0.1/generations.csv")
-
-def reparse_row(row):
-    if pd.notna(row["predicted_letter"]):
-        return row["predicted_letter"]  # already succeeded, keep it
+def extract_option_letter_by_content_match(generated_text, item):
+    """
+    Fallback for base models: if no letter is found, check
+    whether the generated text's content matches one of the
+    option values directly (the model stated the answer's
+    substance rather than its label).
+    """
+    text_lower = generated_text[:150].lower().strip()
     
-    item = {"options": ast.literal_eval(row["options"])}
-    return extract_option_letter_combined(row["greedy_raw"], item)
-
-df["predicted_letter_v2"] = df.apply(reparse_row, axis=1)
-
-print(f"Original extraction rate: {df['predicted_letter'].notna().mean():.1%}")
-print(f"Improved extraction rate: {df['predicted_letter_v2'].notna().mean():.1%}")
-
-df.to_csv("medqa/results_Mistral-7B-v0.1/generations_v2.csv", index=False)
+    best_match = None
+    best_overlap = 0
+    
+    for opt in item["options"]:
+        opt_text_lower = opt["value"].lower().strip()
+        opt_words = set(opt_text_lower.split())
+        text_words = set(text_lower.split())
+        
+        if len(opt_words) == 0:
+            continue
+        
+        overlap = len(opt_words & text_words) / len(opt_words)
+        
+        # Also check if option text appears as a substring
+        # (handles short answers like "0.375" or "Duodenal atresia")
+        substring_match = opt_text_lower in text_lower
+        
+        if substring_match or overlap > 0.6:
+            if overlap > best_overlap or substring_match:
+                best_match = opt["key"]
+                best_overlap = overlap
+    
+    return best_match
+def extract_option_letter_combined(generated_text, item):
+    # First try direct letter extraction (works for instruct models)
+    letter = extract_option_letter(generated_text)
+    if letter:
+        return letter
+    
+    # Fallback: match generated content against option text
+    # (needed for base models that state content, not labels)
+    return extract_option_letter_by_content_match(generated_text, item)
