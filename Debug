@@ -1,41 +1,25 @@
-def extract_option_letter_by_content_match(generated_text, item):
-    """
-    Fallback for base models: if no letter is found, check
-    whether the generated text's content matches one of the
-    option values directly (the model stated the answer's
-    substance rather than its label).
-    """
-    text_lower = generated_text[:150].lower().strip()
-    
-    best_match = None
-    best_overlap = 0
-    
-    for opt in item["options"]:
-        opt_text_lower = opt["value"].lower().strip()
-        opt_words = set(opt_text_lower.split())
-        text_words = set(text_lower.split())
-        
-        if len(opt_words) == 0:
-            continue
-        
-        overlap = len(opt_words & text_words) / len(opt_words)
-        
-        # Also check if option text appears as a substring
-        # (handles short answers like "0.375" or "Duodenal atresia")
-        substring_match = opt_text_lower in text_lower
-        
-        if substring_match or overlap > 0.6:
-            if overlap > best_overlap or substring_match:
-                best_match = opt["key"]
-                best_overlap = overlap
-    
-    return best_match
-def extract_option_letter_combined(generated_text, item):
-    # First try direct letter extraction (works for instruct models)
-    letter = extract_option_letter(generated_text)
-    if letter:
-        return letter
-    
-    # Fallback: match generated content against option text
-    # (needed for base models that state content, not labels)
-    return extract_option_letter_by_content_match(generated_text, item)
+TruthfulQA   | Llama Instruct     | correct=0.2201 (n=60) | incorrect=0.2003 (n=40) | gap=-0.0198 | p=0.5518 
+TruthfulQA   | Qwen Instruct      | correct=0.0604 (n=63) | incorrect=0.0725 (n=37) | gap=+0.0121 | p=0.6931 
+TruthfulQA   | Mistral Instruct   | correct=0.1733 (n=69) | incorrect=0.2697 (n=31) | gap=+0.0964 | p=0.0333 *
+TruthfulQA   | Llama Base         | correct=0.8164 (n=21) | incorrect=0.7969 (n=79) | gap=-0.0195 | p=0.8377 
+TruthfulQA   | Qwen Base          | correct=0.6231 (n=33) | incorrect=0.7121 (n=67) | gap=+0.0890 | p=0.1280 
+TruthfulQA   | Mistral Base       | correct=0.7335 (n=25) | incorrect=0.7831 (n=75) | gap=+0.0496 | p=0.1613 
+MedQA        | Llama Instruct     | correct=0.1071 (n=110) | incorrect=0.2265 (n=65) | gap=+0.1193 | p=0.0011 ***
+MedQA        | Qwen Instruct      | correct=0.0069 (n=102) | incorrect=0.0364 (n=79) | gap=+0.0294 | p=0.0175 *
+MedQA        | Mistral Instruct   | correct=0.0704 (n=89) | incorrect=0.1229 (n=108) | gap=+0.0525 | p=0.0227 *
+MedQA        | Llama Base         | correct=0.2931 (n=84) | incorrect=0.3880 (n=116) | gap=+0.0948 | p=0.0152 *
+MedQA        | Qwen Base          | correct=0.2561 (n=119) | incorrect=0.4186 (n=81) | gap=+0.1625 | p=0.0000 ***
+MedQA        | Mistral Base       | correct=0.3964 (n=79) | incorrect=0.4552 (n=121) | gap=+0.0588 | p=0.0383 *
+StrategyQA   | Llama Instruct     | correct=0.2219 (n=141) | incorrect=0.2955 (n=59) | gap=+0.0736 | p=0.0093 ***
+StrategyQA   | Mistral Instruct   | correct=0.0991 (n=138) | incorrect=0.0698 (n=62) | gap=-0.0294 | p=0.5421 
+StrategyQA   | Llama Base         | correct=0.8360 (n=108) | incorrect=0.8360 (n=72) | gap=-0.0001 | p=0.9965 
+StrategyQA   | Qwen Base          | correct=0.2859 (n=146) | incorrect=0.3739 (n=46) | gap=+0.0880 | p=0.0183 *
+StrategyQA   | Mistral Base       | correct=0.8697 (n=124) | incorrect=0.8969 (n=75) | gap=+0.0272 | p=0.1052 
+
+================================================================================
+SUMMARY
+================================================================================
+Expected direction, significant (p<0.05):   9
+Expected direction, not significant:        4
+Reversed direction, significant (p<0.05):    0
+Reversed direction, not significant:         4
