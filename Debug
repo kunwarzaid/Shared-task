@@ -1,6 +1,119 @@
+import pandas as pd
+
+# =====================================================
+# CONFIG
+# Persist correct_v2 into each MedQA generations_v2.csv
+# so downstream judge scripts (uncertainty + support)
+# don't need to recompute it every time.
+# =====================================================
+
+BASE_DIR = "MedQA"
+
+MODELS = [
+    "medqa_llama_base",
+    "medqa_llama_instruct",
+    "medqa_qwen_base",
+    "medqa_qwen_instruct",
+    "medqa_mistral_base",
+    "medqa_mistral_instruct",
+]
+
+# =====================================================
+# CORRECTNESS FUNCTION
+# Simple letter-match — no GPT call needed since
+# MedQA is multiple-choice with a known correct letter.
+# =====================================================
+
+def check_correctness(row):
+    if pd.isna(row["predicted_letter_v2"]):
+        return None
+    return int(row["predicted_letter_v2"] == row["correct_letter"])
+
+# =====================================================
+# MAIN LOOP
+# =====================================================
+
+summary = []
+
+for model_name in MODELS:
+
+    path = f"{BASE_DIR}/generations_{model_name}_v2.csv"
+
+    print(f"\n{'='*60}")
+    print(f"Processing: {model_name}")
+    print(f"{'='*60}")
+
+    try:
+        df = pd.read_csv(path)
+    except FileNotFoundError:
+        print(f"SKIP — file not found: {path}")
+        summary.append({
+            "model": model_name,
+            "status": "file_not_found",
+            "n_total": None,
+            "n_valid_correct_v2": None,
+        })
+        continue
+
+    print(f"Loaded {len(df)} rows.")
+    print(f"Columns: {df.columns.tolist()}")
+
+    # Verify required columns exist
+    required = ["predicted_letter_v2", "correct_letter"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        print(f"SKIP — missing columns: {missing}")
+        summary.append({
+            "model": model_name,
+            "status": f"missing_columns_{missing}",
+            "n_total": len(df),
+            "n_valid_correct_v2": None,
+        })
+        continue
+
+    # Recompute correct_v2 even if it exists, to ensure
+    # it's derived consistently from predicted_letter_v2
+    # (safe to overwrite — deterministic function)
+    df["correct_v2"] = df.apply(check_correctness, axis=1)
+
+    df.to_csv(path, index=False)
+
+    n_valid = df["correct_v2"].notna().sum()
+    n_correct = (df["correct_v2"] == 1).sum()
+    n_incorrect = (df["correct_v2"] == 0).sum()
+
+    print(f"correct_v2 computed and saved.")
+    print(f"Valid: {n_valid}/{len(df)} ({n_valid/len(df):.1%})")
+    print(f"Correct: {n_correct} | Incorrect: {n_incorrect}")
+
+    summary.append({
+        "model": model_name,
+        "status": "success",
+        "n_total": len(df),
+        "n_valid_correct_v2": n_valid,
+        "n_correct": n_correct,
+        "n_incorrect": n_incorrect,
+        "extraction_rate": round(n_valid / len(df), 4),
+    })
+
+# =====================================================
+# FINAL SUMMARY
+# =====================================================
+
+summary_df = pd.DataFrame(summary)
+print(f"\n{'='*60}")
+print("FINAL SUMMARY — correct_v2 persistence across all models")
+print(f"{'='*60}")
+print(summary_df.to_string(index=False))
+
+summary_df.to_csv(f"{BASE_DIR}/correct_v2_persist_summary.csv", index=False)
+print(f"\nSaved summary to: {BASE_DIR}/correct_v2_persist_summary.csv")
+
+
 import os
 import json
 import time
+import numpy as np
 import pandas as pd
 from scipy.stats import mannwhitneyu, spearmanr
 from openai import AzureOpenAI
@@ -10,15 +123,13 @@ from openai import AzureOpenAI
 # =====================================================
 
 AZURE_ENDPOINT = "https://ctonpncuaaiopenai.openai.azure.com/"
-AZURE_API_KEY = 
+AZURE_API_KEY = ""
 AZURE_API_VERSION = "2024-12-01-preview"
 DEPLOYMENT_NAME = "gpt-5"
 
-
-# Point this at the CSV that already has correct_gpt
-# (output of the correctness re-check script)
-INPUT_CSV = "qwen_correctness_recheck.csv"
-OUTPUT_CSV = "qwen_support_scored.csv"
+# Change per model — one run per MedQA model
+INPUT_CSV = "MedQA/generations_medqa_llama_base_v2.csv"
+OUTPUT_CSV = "MedQA/medqa_llama_base_support_scored.csv"
 
 MAX_RETRIES = 3
 RETRY_DELAY = 5
@@ -125,20 +236,21 @@ def judge_support(question, answer, explanation):
 
 # =====================================================
 # LOAD DATA
+# correct_v2 should already be persisted in this file
+# from the earlier persist-script run.
 # =====================================================
 
 df = pd.read_csv(INPUT_CSV)
 print(f"Loaded {len(df)} rows from {INPUT_CSV}")
 
-if "correct_gpt" not in df.columns:
+if "correct_v2" not in df.columns:
     raise ValueError(
-        "Column 'correct_gpt' not found. "
-        "Run the correctness re-check script first."
+        "correct_v2 not found. Run the correct_v2 persist "
+        "script first for this model."
     )
 
-n_gpt_correct = (df["correct_gpt"] == 1).sum()
-n_gpt_incorrect = (df["correct_gpt"] == 0).sum()
-print(f"GPT-labeled correct: {n_gpt_correct} | incorrect: {n_gpt_incorrect}")
+n_valid_correctness = df["correct_v2"].notna().sum()
+print(f"Rows with valid correct_v2: {n_valid_correctness}/{len(df)}")
 
 for col in ["support_score", "support_reason"]:
     if col not in df.columns:
@@ -153,8 +265,8 @@ for idx, row in df.iterrows():
     if pd.notna(df.at[idx, "support_score"]):
         continue
 
-    if pd.isna(row.get("correct_gpt")):
-        continue  # skip rows without a GPT correctness label
+    if pd.isna(row.get("correct_v2")):
+        continue  # skip rows without a valid correctness label
 
     question = str(row["question"])
     answer = str(row["greedy_answer"])
@@ -169,7 +281,7 @@ for idx, row in df.iterrows():
         df.at[idx, "support_score"] = score
         df.at[idx, "support_reason"] = reason
         print(
-            f"[{idx:03d}] correct_gpt={int(row['correct_gpt'])} | "
+            f"[{idx:03d}] correct_v2={int(row['correct_v2'])} | "
             f"support={score:3d} | {reason[:60]}..."
         )
 
@@ -180,22 +292,22 @@ df.to_csv(OUTPUT_CSV, index=False)
 print(f"\nSaved to: {OUTPUT_CSV}")
 
 # =====================================================
-# THE KEY COMPARISON — using correct_gpt as ground truth
+# THE KEY COMPARISON — Truth Calibration Error
 # =====================================================
 
 scored = df[
     df["support_score"].notna() &
-    df["correct_gpt"].notna()
+    df["correct_v2"].notna()
 ].copy()
 
 scored["support_score"] = scored["support_score"].astype(float)
-scored["correct_gpt"] = scored["correct_gpt"].astype(int)
+scored["correct_v2"] = scored["correct_v2"].astype(int)
 
-correct_support = scored[scored["correct_gpt"] == 1]["support_score"]
-incorrect_support = scored[scored["correct_gpt"] == 0]["support_score"]
+correct_support = scored[scored["correct_v2"] == 1]["support_score"]
+incorrect_support = scored[scored["correct_v2"] == 0]["support_score"]
 
 print(f"\n{'='*60}")
-print("JUSTIFICATION BIAS RESULT (using GPT correctness labels)")
+print("JUSTIFICATION BIAS RESULT — MedQA")
 print(f"{'='*60}")
 print(
     f"Support score (correct answers):   "
@@ -213,8 +325,13 @@ else:
     p = None
     print("Not enough data in one group for Mann-Whitney test.")
 
-r, rp = spearmanr(scored["correct_gpt"], scored["support_score"])
+r, rp = spearmanr(scored["correct_v2"], scored["support_score"])
 print(f"Correctness ↔ Support Spearman r={r:.4f}  p={rp:.4f}")
+
+tce = incorrect_support.mean() - correct_support.mean()
+print(f"\nTruth Calibration Error (TCE) = {tce:.2f}")
+print("(TCE should approach the full negative scale range under")
+print(" an ideal evaluative, non-justificatory explanation process)")
 
 print(f"\n--- Interpretation ---")
 if incorrect_support.mean() > 60 and (p is None or p > 0.05):
@@ -232,23 +349,37 @@ else:
 
 # =====================================================
 # SAMPLE INSPECTION — wrong answers, high support score
-# The most damning examples for the paper
 # =====================================================
 
 print(f"\n{'='*60}")
-print("TOP 10 EXAMPLES: WRONG ANSWER, HIGH SUPPORT SCORE")
-print("(Model confidently defends an answer it got wrong)")
+print("TOP 10: WRONG ANSWER, HIGH SUPPORT SCORE")
 print(f"{'='*60}")
 
 damning = scored[
-    scored["correct_gpt"] == 0
+    scored["correct_v2"] == 0
 ].sort_values("support_score", ascending=False).head(10)
 
 for _, row in damning.iterrows():
-    print(f"\nQ: {row['question']}")
+    print(f"\nQ: {row['question'][:100]}...")
     print(f"A (wrong): {row['greedy_answer']}")
-    print(f"E: {row['explanation']}")
+    print(f"E: {row['explanation'][:200]}...")
     print(f"Support score: {row['support_score']:.0f}")
     print(f"Support reason: {row['support_reason']}")
-    if "correct_gpt_reason" in row:
-        print(f"Why marked wrong: {row['correct_gpt_reason']}")
+
+# =====================================================
+# SAVE SUMMARY
+# =====================================================
+
+summary_df = pd.DataFrame([{
+    "model": INPUT_CSV.split("/")[-1].replace("generations_", "").replace("_v2.csv", ""),
+    "n_scored": len(scored),
+    "support_correct": correct_support.mean(),
+    "support_incorrect": incorrect_support.mean(),
+    "tce": tce,
+    "mannwhitney_p": p,
+    "spearman_r": r,
+    "spearman_p": rp,
+}])
+
+summary_df.to_csv(OUTPUT_CSV.replace(".csv", "_summary.csv"), index=False)
+print(f"\nSummary saved to: {OUTPUT_CSV.replace('.csv', '_summary.csv')}")
