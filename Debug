@@ -1,3 +1,536 @@
+----------------------------------------------------------
+---------------TRUTHFULQA---------------------------------
+----------------------------------------------------------
+
+Llama-Instruct (ON GPT RECHECK)
+
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   60 (60.0%)
+Incorrect: 40 (40.0%)
+
+--- EBSE ---
+Mean (all):       0.2122
+Mean (correct):   0.2201
+Mean (incorrect): 0.2003
+Std:              0.2469
+
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+100,0.65,0.2121847896596216,0.24693793679739648,0.19079112635098128,0.251915878661382,23.06,19.77848029622809,952.85,0.1338029624515926,0.1844479170483628,0.22568382793630268,0.13111932223679088,-0.3058808878729385,0.06740345306494774
+
+
+QWEN-INSTRUCT (GPT RECHECK)
+
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   63 (63.0%)
+Incorrect: 37 (37.0%)
+
+--- EBSE ---
+Mean (all):       0.0649
+Mean (correct):   0.0604
+Mean (incorrect): 0.0725
+Std:              0.1358
+
+MISTRAL-INSTRUCT
+
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   69 (69.0%)
+Incorrect: 31 (31.0%)
+
+--- EBSE ---
+Mean (all):       0.2032
+Mean (correct):   0.1733
+Mean (incorrect): 0.2697
+Std:              0.2078
+
+Llama-base
+
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   21 (21.0%)
+Incorrect: 79 (79.0%)
+
+--- EBSE ---
+Mean (all):       0.8010
+Mean (correct):   0.8164
+Mean (incorrect): 0.7969
+Std:              0.2153
+
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+100,0.32,0.8009554777942879,0.2152784886996458,0.7417569382875095,0.8288136140327719,7.37,15.36600932006233,628.88,0.0374495007685852,0.711444718185984,0.7304318429668015,0.18033772895747668,0.19787350665840742,-0.04404594913358526
+
+
+Qwen-Base
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   33 (33.0%)
+Incorrect: 67 (67.0%)
+
+--- EBSE ---
+Mean (all):       0.6828
+Mean (correct):   0.6231
+Mean (incorrect): 0.7121
+Std:              0.2809
+
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+100,0.68,0.06487924464140873,0.13575812973231927,0.059641928037352104,0.07600854242502907,21.83,19.574800849123044,989.38,0.2018789784633664,0.04398878590690498,0.19874262304222381,0.15004437184020541,-0.13644311174793355,0.2729791074440756
+
+
+Mistral Base
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   25 (25.0%)
+Incorrect: 75 (75.0%)
+
+--- EBSE ---
+Mean (all):       0.7707
+Mean (correct):   0.7335
+Mean (incorrect): 0.7831
+Std:              0.2586
+
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+100,0.63,0.20317643826382567,0.20781609066246862,0.17862256783665262,0.24498437980198498,14.57,14.745144723918205,714.6,0.08893312754583468,0.3789159974787713,0.19170010575148652,0.36769533366595003,-0.19200353719745214,0.06282802926954051
+
+
+Mistral
+============================================================
+JUSTIFICATION BIAS RESULT (using GPT correctness labels)
+============================================================
+Support score (correct answers):   mean=96.2  n=69
+Support score (incorrect answers): mean=85.3  n=31
+Mann-Whitney U test: p=0.0063
+Correctness ↔ Support Spearman r=0.2752  p=0.0056
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+
+
+Qwen
+
+JUSTIFICATION BIAS RESULT (using GPT correctness labels)
+============================================================
+Support score (correct answers):   mean=93.3  n=63
+Support score (incorrect answers): mean=76.8  n=37
+Mann-Whitney U test: p=0.0014
+Correctness ↔ Support Spearman r=0.3213  p=0.0011
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+
+
+
+
+============================================================
+GENERATION SUMMARY: Llama-3.1-8B
+============================================================
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   32 (32.0%)
+Incorrect: 68 (68.0%)
+
+--- EBSE ---
+Mean (all):       0.8010
+Mean (correct):   0.7418
+Mean (incorrect): 0.8288
+Std:              0.2153
+
+Explanation length mean: 629 chars
+
+============================================================
+GENERATION SUMMARY: Qwen2.5-7B
+============================================================
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   28 (28.0%)
+Incorrect: 72 (72.0%)
+
+--- EBSE ---
+Mean (all):       0.6828
+Mean (correct):   0.7195
+Mean (incorrect): 0.6685
+Std:              0.2809
+
+Explanation length mean: 380 chars
+
+============================================================
+GENERATION SUMMARY: Mistral-7B-v0.1
+============================================================
+Total:     100
+Succeeded: 100
+Failed:    0
+Correct:   15 (15.0%)
+Incorrect: 85 (85.0%)
+
+--- EBSE ---
+Mean (all):       0.7707
+Mean (correct):   0.6936
+Mean (incorrect): 0.7843
+Std:              0.2586
+
+Explanation length mean: 150 chars
+
+============================================================
+MEDQA GENERATION SUMMARY: Mistral-7B-Instruct-v0.3
+============================================================
+Total: 200 | Valid: 200 | Extractable: 196
+Correct: 89 | Incorrect: 107
+EBSE correct:   0.0704
+EBSE incorrect: 0.1211
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : 0.1631  p=0.0211
+Mean EBSE-GPT mismatch: 0.1920
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=95.8  n=89
+Support score (incorrect answers): mean=85.2  n=108
+Mann-Whitney U test: p=0.0002
+Correctness ↔ Support Spearman r=0.2648  p=0.0002
+
+Truth Calibration Error (TCE) = -10.61
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+
+
+============================================================
+MEDQA GENERATION SUMMARY: Qwen2.5-7B-Instruct
+============================================================
+Total: 200 | Valid: 200 | Extractable: 153
+Correct: 93 | Incorrect: 60
+EBSE correct:   0.0076
+EBSE incorrect: 0.0479
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : -0.0147  p=0.8367
+Mean EBSE-GPT mismatch: 0.1828
+
+model,n_scored,support_correct,support_incorrect,tce,mannwhitney_p,spearman_r,spearman_p
+medqa_Qwen_instruct,181,96.17647058823529,88.92405063291139,-7.2524199553239015,0.0072428525456882725,0.20031441631963362,0.006856318099229843
+
+
+============================================================
+MEDQA GENERATION SUMMARY: Llama-3.1-8B-Instruct
+============================================================
+Total: 200 | Valid: 200 | Extractable: 150
+Correct: 99 | Incorrect: 51
+EBSE correct:   0.1065
+EBSE incorrect: 0.2633
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : 0.0874  p=0.2187
+Mean EBSE-GPT mismatch: 0.2087
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=92.0  n=109
+Support score (incorrect answers): mean=86.0  n=65
+Mann-Whitney U test: p=0.1836
+Correctness ↔ Support Spearman r=0.1013  p=0.1837
+
+Truth Calibration Error (TCE) = -6.02
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> STRONG justification bias: model defends wrong answers
+   almost as confidently as right ones.
+
+
+============================================================
+MEDQA GENERATION SUMMARY: Qwen2.5-7B
+============================================================
+Total: 200 | Valid: 200 | Extractable: 198
+Correct: 117 | Incorrect: 81
+EBSE correct:   0.2510
+EBSE incorrect: 0.4186
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : 0.0477  p=0.5022
+Mean EBSE-GPT mismatch: 0.2795
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=93.9  n=119
+Support score (incorrect answers): mean=91.0  n=81
+Mann-Whitney U test: p=0.4950
+Correctness ↔ Support Spearman r=0.0485  p=0.4952
+
+Truth Calibration Error (TCE) = -2.86
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> STRONG justification bias: model defends wrong answers
+   almost as confidently as right ones.
+
+============================================================
+MEDQA GENERATION SUMMARY: Llama-3.1-8B
+============================================================
+Total: 200 | Valid: 200 | Extractable: 169
+Correct: 77 | Incorrect: 92
+EBSE correct:   0.3056
+EBSE incorrect: 0.4009
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : -0.0173  p=0.8074
+Mean EBSE-GPT mismatch: 0.3195
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=87.1  n=84
+Support score (incorrect answers): mean=75.9  n=116
+Mann-Whitney U test: p=0.0040
+Correctness ↔ Support Spearman r=0.2041  p=0.0037
+
+Truth Calibration Error (TCE) = -11.19
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+
+============================================================
+MEDQA GENERATION SUMMARY: Mistral-7B-v0.1
+============================================================
+Total: 200 | Valid: 200 | Extractable: 137
+Correct: 61 | Incorrect: 76
+EBSE correct:   0.3923
+EBSE incorrect: 0.5261
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : -0.0240  p=0.7363
+Mean EBSE-GPT mismatch: 0.3919
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=82.4  n=79
+Support score (incorrect answers): mean=71.6  n=121
+Mann-Whitney U test: p=0.0169
+Correctness ↔ Support Spearman r=0.1695  p=0.0164
+
+Truth Calibration Error (TCE) = -10.79
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+
+
+============================================================
+STRATEGYQA GENERATION SUMMARY: Llama-3.1-8B-Instruct
+============================================================
+Total: 200 | Valid: 200 | Extractable: 200
+Correct: 141 | Incorrect: 59
+EBSE correct:   0.2219
+EBSE incorrect: 0.2955
+
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 200 | Correct: 141 | Incorrect: 59
+
+EBSE ↔ GPT Spearman r : 0.2362  p=0.0008
+EBSE ↔ GPT Pearson  r : 0.2498  p=0.0004
+Mean EBSE-GPT mismatch: 0.1817
+>> WEAK: ambiguous relationship
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=89.2  n=141
+Support (incorrect): mean=78.7  n=59
+Mann-Whitney U test: p=0.0004
+Correctness ↔ Support Spearman r=0.2520  p=0.0003
+
+Truth Calibration Error (TCE) = -10.46
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+============================================================
+STRATEGYQA GENERATION SUMMARY: Mistral-7B-Instruct-v0.3
+============================================================
+Total: 200 | Valid: 200 | Extractable: 200
+Correct: 138 | Incorrect: 62
+EBSE correct:   0.0991
+EBSE incorrect: 0.0698
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 200 | Correct: 138 | Incorrect: 62
+
+EBSE ↔ GPT Spearman r : 0.0081  p=0.9089
+EBSE ↔ GPT Pearson  r : 0.0336  p=0.6364
+Mean EBSE-GPT mismatch: 0.1573
+>> NEAR-ZERO: explanation uncertainty does NOT track answer uncertainty
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=92.7  n=138
+Support (incorrect): mean=88.9  n=62
+Mann-Whitney U test: p=0.1304
+Correctness ↔ Support Spearman r=0.1073  p=0.1303
+
+Truth Calibration Error (TCE) = -3.81
+
+--- Interpretation ---
+>> STRONG justification bias: model defends wrong answers almost as confidently as right ones.
+
+
+============================================================
+STRATEGYQA GENERATION SUMMARY: Mistral-7B-v0.1
+============================================================
+Total: 200 | Valid: 200 | Extractable: 199
+Correct: 124 | Incorrect: 75
+EBSE correct:   0.8697
+EBSE incorrect: 0.8969
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 199 | Correct: 124 | Incorrect: 75
+
+EBSE ↔ GPT Spearman r : -0.0416  p=0.5600
+EBSE ↔ GPT Pearson  r : -0.1072  p=0.1319
+Mean EBSE-GPT mismatch: 0.8706
+>> NEAR-ZERO: explanation uncertainty does NOT track answer uncertainty
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=76.1  n=124
+Support (incorrect): mean=67.5  n=75
+Mann-Whitney U test: p=0.0447
+Correctness ↔ Support Spearman r=0.1428  p=0.0442
+
+Truth Calibration Error (TCE) = -8.62
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+
+
+============================================================
+STRATEGYQA GENERATION SUMMARY: Llama-3.1-8B
+============================================================
+Total: 200 | Valid: 200 | Extractable: 180
+Correct: 108 | Incorrect: 72
+EBSE correct:   0.8360
+EBSE incorrect: 0.8360
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=85.3  n=108
+Support (incorrect): mean=71.7  n=72
+Mann-Whitney U test: p=0.0048
+Correctness ↔ Support Spearman r=0.2110  p=0.0045
+
+Truth Calibration Error (TCE) = -13.54
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 180 | Correct: 108 | Incorrect: 72
+
+EBSE ↔ GPT Spearman r : -0.0922  p=0.2184
+EBSE ↔ GPT Pearson  r : 0.0097  p=0.8971
+Mean EBSE-GPT mismatch: 0.7874
+>> NEAR-ZERO: explanation uncertainty does NOT track answer uncertainty
+
+
+============================================================
+STRATEGYQA GENERATION SUMMARY: Qwen2.5-7B
+============================================================
+Total: 200 | Valid: 200 | Extractable: 192
+Correct: 146 | Incorrect: 46
+EBSE correct:   0.2859
+EBSE incorrect: 0.3739
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 192 | Correct: 146 | Incorrect: 46
+
+EBSE ↔ GPT Spearman r : 0.2131  p=0.0030
+EBSE ↔ GPT Pearson  r : 0.2062  p=0.0041
+Mean EBSE-GPT mismatch: 0.2867
+>> WEAK: ambiguous relationship
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=87.0  n=146
+Support (incorrect): mean=62.7  n=46
+Mann-Whitney U test: p=0.0000
+Correctness ↔ Support Spearman r=0.3262  p=0.0000
+
+Truth Calibration Error (TCE) = -24.27
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+
+QWEN Instruct
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : -0.0371  p=0.6016
+Mean EBSE-GPT mismatch: 0.1763
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=92.8  n=131
+Support (incorrect): mean=79.3  n=69
+Mann-Whitney U test: p=0.0000
+Correctness ↔ Support Spearman r=0.3388  p=0.0000
+
+Truth Calibration Error (TCE) = -13.55
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+
+
 Llama Instruct
 Joint:    61.0% rows with single-answer (EBSE=0)
 Post-hoc: 55.0% rows with single-answer (EBSE=0)
@@ -16,3 +549,293 @@ Post-hoc: 33.0% rows with single-answer (EBSE=0)
 Llama Base
 Joint:    10.5% rows with single-answer (EBSE=0)
 Post-hoc: 25.0% rows with single-answer (EBSE=0)
+
+------------------------------------------------------------------------------------------
+JOINT EXP
+----------------------------------------------------------------------------------------------
+Llama Base
+
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+145,0.43448275862068964,0.41147062067692236,0.2202219387546091,0.34122956063883975,0.4654363131452053,12.255172413793103,20.704528258848498,695.7862068965517,0.051697075059244375,0.5368783121572106,0.3527985116666601,-0.03093930672634494,-0.09281348794841397,0.09148268952181088
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=85.1  n=63
+Support score (incorrect answers): mean=60.1  n=82
+Mann-Whitney U test: p=0.0000
+Correctness ↔ Support Spearman r=0.3734  p=0.0000
+
+Truth Calibration Error (TCE) = -25.02
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+
+
+Llama Instruct
+
+============================================================
+GPT JUDGE ANALYSIS
+============================================================
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+200,0.64,0.15874793161204043,0.21982462086575352,0.10867007083398518,0.24777523966191645,18.49,12.848553484076168,825.36,0.18281242711240286,0.009569045325087245,0.1912377737668397,0.13482961110120223,-0.1258553996795341,-0.13555480315508361
+
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=96.7  n=128
+Support score (incorrect answers): mean=91.5  n=72
+Mann-Whitney U test: p=0.1097
+Correctness ↔ Support Spearman r=0.1135  p=0.1094
+
+Truth Calibration Error (TCE) = -5.26
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> STRONG justification bias: model defends wrong answers
+   almost as confidently as right ones.
+
+Mistral Base
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : 0.1648  p=0.0220
+Mean EBSE-GPT mismatch: 0.4280
+
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=82.3  n=76
+Support score (incorrect answers): mean=68.8  n=117
+Mann-Whitney U test: p=0.0023
+Correctness ↔ Support Spearman r=0.2205  p=0.0021
+
+Truth Calibration Error (TCE) = -13.54
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones
+
+MISTRAL Instruct
+
+============================================================
+FINAL NUMBERS
+============================================================
+EBSE ↔ GPT Spearman r : -0.0274  p=0.6999
+Mean EBSE-GPT mismatch: 0.1786
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=96.1  n=90
+Support score (incorrect answers): mean=92.8  n=110
+Mann-Whitney U test: p=0.0292
+Correctness ↔ Support Spearman r=0.1547  p=0.0287
+
+Truth Calibration Error (TCE) = -3.24
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+
+QWEN BASE
+
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+198,0.601010101010101,0.3874116754567018,0.2804714159797421,0.30900114383105776,0.5055237420826718,13.292929292929292,11.491557285138281,672.2424242424242,0.03844023163919388,0.590800719654137,0.32384773651655746,0.37558308017117376,-0.04209218431612663,-0.001250809785341169
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=84.2  n=119
+Support score (incorrect answers): mean=75.2  n=79
+Mann-Whitney U test: p=0.1151
+Correctness ↔ Support Spearman r=0.1124  p=0.1150
+
+Truth Calibration Error (TCE) = -9.01
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> STRONG justification bias: model defends wrong answers
+   almost as confidently as right ones.
+
+QWEN INSTRUCT
+
+n_scored,correct_pct,ebse_mean,ebse_std,ebse_correct,ebse_incorrect,gpt_mean,gpt_std,expl_length_mean,spearman_ebse_gpt,pvalue_ebse_gpt,mean_ebse_gap,spearman_length_gpt,spearman_correct_gpt,spearman_ebse_length
+200,0.6,0.022763065490590813,0.08867818715062012,0.01677999702101096,0.031737668194960586,18.36,10.316128758541844,689.595,-0.005159575772000981,0.9421956187999672,0.18286306549059084,0.26501864614938336,0.0031239669506153275,0.004879594034255303
+
+
+============================================================
+JUSTIFICATION BIAS RESULT — MedQA
+============================================================
+Support score (correct answers):   mean=98.1  n=120
+Support score (incorrect answers): mean=91.1  n=80
+Mann-Whitney U test: p=0.0099
+Correctness ↔ Support Spearman r=0.1830  p=0.0095
+
+Truth Calibration Error (TCE) = -6.96
+(TCE should approach the full negative scale range under
+ an ideal evaluative, non-justificatory explanation process)
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially,
+   though significantly less than correct ones.
+----------------------------------------------------------------------------
+Strategy QA
+----------------------------------------------------------------------------
+Mistral Instruct
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 200 | Correct: 137 | Incorrect: 63
+
+EBSE ↔ GPT Spearman r : 0.1777  p=0.0118
+EBSE ↔ GPT Pearson  r : 0.2544  p=0.0003
+Mean EBSE-GPT mismatch: 0.1199
+>> WEAK: ambiguous relationship
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=89.5  n=137
+Support (incorrect): mean=84.9  n=63
+Mann-Whitney U test: p=0.1309
+Correctness ↔ Support Spearman r=0.1072  p=0.1308
+
+Truth Calibration Error (TCE) = -4.60
+
+--- Interpretation ---
+>> STRONG justification bias: model defends wrong answers almost as confidently as right ones.
+
+QWEN INSTRUCT
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 200 | Correct: 130 | Incorrect: 70
+
+EBSE ↔ GPT Spearman r : 0.0805  p=0.2574
+EBSE ↔ GPT Pearson  r : 0.0350  p=0.6226
+Mean EBSE-GPT mismatch: 0.1399
+>> NEAR-ZERO: explanation uncertainty does NOT track answer uncertainty
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=92.1  n=130
+Support (incorrect): mean=81.9  n=70
+Mann-Whitney U test: p=0.0205
+Correctness ↔ Support Spearman r=0.1644  p=0.0200
+
+Truth Calibration Error (TCE) = -10.19
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+
+Llama Instruct
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 200 | Correct: 146 | Incorrect: 54
+
+EBSE ↔ GPT Spearman r : 0.2070  p=0.0033
+EBSE ↔ GPT Pearson  r : 0.1851  p=0.0087
+Mean EBSE-GPT mismatch: 0.1574
+>> WEAK: ambiguous relationship
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=88.9  n=146
+Support (incorrect): mean=82.4  n=54
+Mann-Whitney U test: p=0.0281
+Correctness ↔ Support Spearman r=0.1558  p=0.0276
+
+Truth Calibration Error (TCE) = -6.50
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+
+Llama Base
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 154 | Correct: 94 | Incorrect: 60
+
+EBSE ↔ GPT Spearman r : -0.0632  p=0.4361
+EBSE ↔ GPT Pearson  r : -0.0043  p=0.9577
+Mean EBSE-GPT mismatch: 0.8069
+>> NEAR-ZERO: explanation uncertainty does NOT track answer uncertainty
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=90.5  n=94
+Support (incorrect): mean=73.3  n=60
+Mann-Whitney U test: p=0.0001
+Correctness ↔ Support Spearman r=0.3073  p=0.0001
+
+Truth Calibration Error (TCE) = -17.20
+
+--- Interpretation ---
+>> Model still defends wrong answers substantially, though significantly less than correct ones.
+
+QWEN BASE
+
+============================================================
+EBSE ↔ GPT ANALYSIS — StrategyQA
+============================================================
+Scored: 191 | Correct: 145 | Incorrect: 46
+
+EBSE ↔ GPT Spearman r : 0.0896  p=0.2176
+EBSE ↔ GPT Pearson  r : 0.0328  p=0.6526
+Mean EBSE-GPT mismatch: 0.3024
+>> NEAR-ZERO: explanation uncertainty does NOT track answer uncertainty
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=84.1  n=145
+Support (incorrect): mean=55.8  n=46
+Mann-Whitney U test: p=0.0000
+Correctness ↔ Support Spearman r=0.3754  p=0.0000
+
+Truth Calibration Error (TCE) = -28.38
+
+--- Interpretation ---
+>> Model shows meaningfully less support for wrong answers.
+
+
+MISTRAL BASE
+
+EBSE ↔ GPT Spearman r : -0.1887  p=0.2041
+EBSE ↔ GPT Pearson  r : 0.0530  p=0.7237
+Mean EBSE-GPT mismatch: 0.8438
+>> WEAK: ambiguous relationship
+
+============================================================
+JUSTIFICATION BIAS RESULT — StrategyQA
+============================================================
+Support (correct):   mean=82.0  n=32
+Support (incorrect): mean=68.3  n=15
+Mann-Whitney U test: p=0.1588
+Correctness ↔ Support Spearman r=0.2096  p=0.1574
+
+Truth Calibration Error (TCE) = -13.70
+
+--- Interpretation ---
+>> STRONG justification bias: model defends wrong answers almost as confidently as right ones.
+
