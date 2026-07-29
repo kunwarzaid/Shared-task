@@ -1,13 +1,1487 @@
-Support Score
-model,dataset,question,true_answer_bool,greedy_answer,predicted_bool,sampled_answers,cluster_answers,explanation,correct,ebse,norm_ebse,n_clusters,support_score,support_reason
-Llama-3.1-8B,strategyqa,Are more people today related to Genghis Khan than Julius Caesar?,True,"Yes, according to a new study published in the journal Nature Communications. The study found that 16 million men alive today are direct descendants of Genghis Khan, while only 7 million are descendants of Julius Caesar.",True,"More people are related to Genghis Khan than Julius Caesar. Genghis Khan was the founder of the Mongol Empire and ruled from 1206 to 1227. He was the son of Yesugei, a Mongol chieftain, and Hoelun, a Kiyat woman. Genghis Khan had 22 wives and concubines, and he fathered ||| The question was asked by the BBC, and it was answered by a team of scientists at the University of Leicester, who used DNA evidence to trace the genetic history of the world's population. ||| Yes, but not by much. According to a recent study, one in every 200 men alive today is descended from Genghis Khan, and one in every 300 is descended from Julius Caesar. The study, by a team of geneticists at the University of Leicester, looked at the Y chromosome, which is passed on from father to son, to track the ancestry of two of the most ||| Yes. Scientists say that 16 million men alive today are direct male-line descendants of Genghis Khan. Caesar, on the other hand, has a lot fewer descendants: 4,000. ||| A new study suggests that a greater percentage of men living today are related to the Mongol conqueror than the Roman emperor. ||| No. According to the study, 16 million men living today are descendants of the great Mongol leader, while 17 million are descendants of Caesar. ||| No. The DNA analysis is a good example of how a question that seems simple to answer can lead to a complex answer. ||| Yes. According to the National Geographic article “Who Was Related to Genghis Khan?” by Christine Dell’Amore, “If you trace your maternal lineage far enough back, you may find that you share a common male ancestor with billions of other people: Genghis Khan. DNA studies show that the Mongol leader is the genetic father of up to 16 million men alive today, according ||| The question is based on the fact that Genghis Khan had many more children than Julius Caesar and his descendants could be spread over a wider area. However, a new study of the Y-chromosome shows that in fact more men are related to Julius Caesar than to Genghis Khan. In fact, 10% of the men in Europe are descended from Julius Caesar. ||| The answer is yes. A study published in 2003 found that 16 million men alive today are descended from Genghis Khan. The study, by a group of geneticists, looked at a specific region of the Y chromosome (which is passed from father to son) and found that in a sample of 1,370 men, 8 percent carried this marker. Because most of these","More people are related to Genghis Khan than Julius Caesar. Genghis Khan was the founder of the Mongol Empire and ruled from 1206 to 1227. He was the son of Yesugei, a Mongol chieftain, and Hoelun, a Kiyat woman. Genghis Khan had 22 wives and concubines, and he fathered ||| The question was asked by the BBC, and it was answered by a team of scientists at the University of Leicester, who used DNA evidence to trace the genetic history of the world's population. ||| Yes, but not by much. According to a recent study, one in every 200 men alive today is descended from Genghis Khan, and one in every 300 is descended from Julius Caesar. The study, by a team of geneticists at the University of Leicester, looked at the Y chromosome, which is passed on from father to son, to track the ancestry of two of the most ||| Yes. Scientists say that 16 million men alive today are direct male-line descendants of Genghis Khan. Caesar, on the other hand, has a lot fewer descendants: 4,000. ||| A new study suggests that a greater percentage of men living today are related to the Mongol conqueror than the Roman emperor. ||| No. The DNA analysis is a good example of how a question that seems simple to answer can lead to a complex answer. ||| Yes. According to the National Geographic article “Who Was Related to Genghis Khan?” by Christine Dell’Amore, “If you trace your maternal lineage far enough back, you may find that you share a common male ancestor with billions of other people: Genghis Khan. DNA studies show that the Mongol leader is the genetic father of up to 16 million men alive today, according ||| The question is based on the fact that Genghis Khan had many more children than Julius Caesar and his descendants could be spread over a wider area. However, a new study of the Y-chromosome shows that in fact more men are related to Julius Caesar than to Genghis Khan. In fact, 10% of the men in Europe are descended from Julius Caesar.","Genghis Khan had a lot of children, and his descendants have spread throughout the world. Julius Caesar, on the other hand, had fewer children, and his descendants are more concentrated in Europe.
-The study was conducted by researchers at the University of Cambridge and the University of Oxford. They analyzed the DNA of more than 1,000 men from around the world and found that 16 million of them were descended from Genghis Khan.
-The researchers say that this is the first time that the descendants of a single person have been identified on such a large scale.
-So, if you’re wondering whether you’re related to Genghis Khan, there’s a good chance that you are!",1.0,2.025326220770068,0.8795880017344075,8,100,The explanation confidently asserts that more people descend from Genghis Khan than Julius Caesar and cites a study with specific figures to justify the answer.
+#!/usr/bin/env python3
 
-GPT Judge
-model,dataset,question,true_answer_bool,greedy_answer,predicted_bool,sampled_answers,cluster_answers,explanation,correct,ebse,norm_ebse,n_clusters,gpt_perceived_uncertainty,gpt_reason
-Llama-3.1-8B,strategyqa,Are more people today related to Genghis Khan than Julius Caesar?,True,"Yes, according to a new study published in the journal Nature Communications. The study found that 16 million men alive today are direct descendants of Genghis Khan, while only 7 million are descendants of Julius Caesar.",True,"More people are related to Genghis Khan than Julius Caesar. Genghis Khan was the founder of the Mongol Empire and ruled from 1206 to 1227. He was the son of Yesugei, a Mongol chieftain, and Hoelun, a Kiyat woman. Genghis Khan had 22 wives and concubines, and he fathered ||| The question was asked by the BBC, and it was answered by a team of scientists at the University of Leicester, who used DNA evidence to trace the genetic history of the world's population. ||| Yes, but not by much. According to a recent study, one in every 200 men alive today is descended from Genghis Khan, and one in every 300 is descended from Julius Caesar. The study, by a team of geneticists at the University of Leicester, looked at the Y chromosome, which is passed on from father to son, to track the ancestry of two of the most ||| Yes. Scientists say that 16 million men alive today are direct male-line descendants of Genghis Khan. Caesar, on the other hand, has a lot fewer descendants: 4,000. ||| A new study suggests that a greater percentage of men living today are related to the Mongol conqueror than the Roman emperor. ||| No. According to the study, 16 million men living today are descendants of the great Mongol leader, while 17 million are descendants of Caesar. ||| No. The DNA analysis is a good example of how a question that seems simple to answer can lead to a complex answer. ||| Yes. According to the National Geographic article “Who Was Related to Genghis Khan?” by Christine Dell’Amore, “If you trace your maternal lineage far enough back, you may find that you share a common male ancestor with billions of other people: Genghis Khan. DNA studies show that the Mongol leader is the genetic father of up to 16 million men alive today, according ||| The question is based on the fact that Genghis Khan had many more children than Julius Caesar and his descendants could be spread over a wider area. However, a new study of the Y-chromosome shows that in fact more men are related to Julius Caesar than to Genghis Khan. In fact, 10% of the men in Europe are descended from Julius Caesar. ||| The answer is yes. A study published in 2003 found that 16 million men alive today are descended from Genghis Khan. The study, by a group of geneticists, looked at a specific region of the Y chromosome (which is passed from father to son) and found that in a sample of 1,370 men, 8 percent carried this marker. Because most of these","More people are related to Genghis Khan than Julius Caesar. Genghis Khan was the founder of the Mongol Empire and ruled from 1206 to 1227. He was the son of Yesugei, a Mongol chieftain, and Hoelun, a Kiyat woman. Genghis Khan had 22 wives and concubines, and he fathered ||| The question was asked by the BBC, and it was answered by a team of scientists at the University of Leicester, who used DNA evidence to trace the genetic history of the world's population. ||| Yes, but not by much. According to a recent study, one in every 200 men alive today is descended from Genghis Khan, and one in every 300 is descended from Julius Caesar. The study, by a team of geneticists at the University of Leicester, looked at the Y chromosome, which is passed on from father to son, to track the ancestry of two of the most ||| Yes. Scientists say that 16 million men alive today are direct male-line descendants of Genghis Khan. Caesar, on the other hand, has a lot fewer descendants: 4,000. ||| A new study suggests that a greater percentage of men living today are related to the Mongol conqueror than the Roman emperor. ||| No. The DNA analysis is a good example of how a question that seems simple to answer can lead to a complex answer. ||| Yes. According to the National Geographic article “Who Was Related to Genghis Khan?” by Christine Dell’Amore, “If you trace your maternal lineage far enough back, you may find that you share a common male ancestor with billions of other people: Genghis Khan. DNA studies show that the Mongol leader is the genetic father of up to 16 million men alive today, according ||| The question is based on the fact that Genghis Khan had many more children than Julius Caesar and his descendants could be spread over a wider area. However, a new study of the Y-chromosome shows that in fact more men are related to Julius Caesar than to Genghis Khan. In fact, 10% of the men in Europe are descended from Julius Caesar.","Genghis Khan had a lot of children, and his descendants have spread throughout the world. Julius Caesar, on the other hand, had fewer children, and his descendants are more concentrated in Europe.
-The study was conducted by researchers at the University of Cambridge and the University of Oxford. They analyzed the DNA of more than 1,000 men from around the world and found that 16 million of them were descended from Genghis Khan.
-The researchers say that this is the first time that the descendants of a single person have been identified on such a large scale.
-So, if you’re wondering whether you’re related to Genghis Khan, there’s a good chance that you are!",1.0,2.025326220770068,0.8795880017344075,8,3,"The explanation states claims and numbers definitively with almost no hedging, conveying strong certainty."
+"""
+Statistical analysis for post-hoc explanation calibration experiments.
+
+Produces:
+    1. experiment_A_correlations.csv
+       EBSE <-> GPT perceived uncertainty
+       Spearman rho + p + bootstrap 95% CI
+
+    2. experiment_B_justification.csv
+       Correct vs incorrect support scores
+       Means, support gap, Mann-Whitney U,
+       rank-biserial effect size + bootstrap 95% CI
+
+    3. experiment_C1_pairing_qc.csv
+       Mandatory Joint/Post-hoc same-question validation
+
+    4. experiment_C1_joint_vs_posthoc.csv
+       Joint vs Post-hoc correlations
+       paired bootstrap Delta rho + 95% CI
+
+    5. experiment_C1_aggregate.csv
+       Aggregate Wilcoxon signed-rank test across
+       model-dataset Delta rho values
+
+IMPORTANT:
+    Experiment C1 will NOT compare Joint and Post-hoc unless
+    they contain exactly the same question set.
+
+Usage:
+    python statistical_analysis.py /path/to/results
+
+Optional:
+    python statistical_analysis.py /path/to/results \
+        --output_dir stats_results \
+        --n_boot 10000 \
+        --seed 42
+"""
+
+import argparse
+import re
+import warnings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from scipy.stats import spearmanr, mannwhitneyu, wilcoxon
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+DEFAULT_N_BOOT = 10000
+DEFAULT_SEED = 42
+
+# We will prefer normalized EBSE because your reported
+# cross-model analyses have generally used normalized EBSE.
+# Change to "ebse" here if your Experiment A used raw EBSE.
+DEFAULT_EBSE_COLUMN = "norm_ebse"
+
+# Require EXACT same question set for C1.
+STRICT_PAIRING = True
+
+
+# ============================================================
+# BASIC HELPERS
+# ============================================================
+
+def clean_string(x):
+    """Normalize strings for comparisons."""
+    if pd.isna(x):
+        return ""
+
+    x = str(x)
+    x = x.strip()
+    x = re.sub(r"\s+", " ", x)
+
+    return x
+
+
+def normalize_question(q):
+    """
+    Normalize question text ONLY for matching Joint/Post-hoc.
+
+    We deliberately do NOT lowercase or remove punctuation because
+    we want the matching check to remain conservative.
+    """
+    return clean_string(q)
+
+
+def safe_numeric(series):
+    return pd.to_numeric(series, errors="coerce")
+
+
+def safe_spearman(x, y):
+    """
+    Compute Spearman correlation safely.
+
+    Returns:
+        rho, p
+
+    NaN returned if:
+        - fewer than 3 observations
+        - either variable is constant
+    """
+
+    temp = pd.DataFrame({
+        "x": safe_numeric(x),
+        "y": safe_numeric(y),
+    }).dropna()
+
+    if len(temp) < 3:
+        return np.nan, np.nan
+
+    if temp["x"].nunique() < 2:
+        return np.nan, np.nan
+
+    if temp["y"].nunique() < 2:
+        return np.nan, np.nan
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        result = spearmanr(temp["x"], temp["y"])
+
+    return float(result.statistic), float(result.pvalue)
+
+
+# ============================================================
+# MODEL / DATASET / CONDITION DETECTION
+# ============================================================
+
+def normalize_dataset_name(x):
+    x = clean_string(x).lower()
+
+    mappings = {
+        "medqa": "MedQA",
+        "strategyqa": "StrategyQA",
+        "truthfulqa": "TruthfulQA",
+    }
+
+    return mappings.get(x, x)
+
+
+def normalize_model_name(x):
+    """
+    Preserve actual model names from the CSV as much as possible.
+    """
+    return clean_string(x)
+
+
+def detect_condition(df, filepath):
+    """
+    Determine whether a file corresponds to Joint or Post-hoc.
+
+    Priority:
+        1. explicit condition column
+        2. filename/path
+        3. default = posthoc
+
+    IMPORTANT:
+        Since your old post-hoc files don't have a condition column,
+        absence of 'joint' is interpreted as posthoc.
+    """
+
+    if "condition" in df.columns:
+        values = (
+            df["condition"]
+            .dropna()
+            .astype(str)
+            .str.lower()
+            .str.strip()
+            .unique()
+        )
+
+        if len(values) == 1:
+            value = values[0]
+
+            if "joint" in value:
+                return "joint"
+
+            if "post" in value:
+                return "posthoc"
+
+    path_text = str(filepath).lower()
+
+    if "joint" in path_text:
+        return "joint"
+
+    if "posthoc" in path_text or "post_hoc" in path_text or "post-hoc" in path_text:
+        return "posthoc"
+
+    # Based on your pipeline:
+    # legacy files without condition = post-hoc.
+    return "posthoc"
+
+
+def detect_file_type(df):
+    """
+    Determine what analyses this CSV can support.
+
+    A file may theoretically support both.
+    """
+
+    types = []
+
+    if "gpt_perceived_uncertainty" in df.columns:
+        types.append("uncertainty")
+
+    if "support_score" in df.columns:
+        types.append("support")
+
+    return types
+
+
+# ============================================================
+# CORRECTNESS HANDLING
+# ============================================================
+
+def get_correctness_column(df):
+    """
+    MedQA:
+        prefer correct_v2 when available.
+
+    StrategyQA / TruthfulQA:
+        use correct if correct_v2 does not exist.
+    """
+
+    if "correct_v2" in df.columns:
+        # Only prefer it if it actually contains usable values.
+        numeric = safe_numeric(df["correct_v2"])
+
+        if numeric.notna().sum() > 0:
+            return "correct_v2"
+
+    if "correct" in df.columns:
+        return "correct"
+
+    return None
+
+
+def normalize_correctness(series):
+    """
+    Convert correctness labels into 0/1.
+    """
+
+    def convert(x):
+        if pd.isna(x):
+            return np.nan
+
+        if isinstance(x, (bool, np.bool_)):
+            return int(x)
+
+        s = str(x).strip().lower()
+
+        if s in {"1", "1.0", "true", "yes", "correct"}:
+            return 1
+
+        if s in {"0", "0.0", "false", "no", "incorrect"}:
+            return 0
+
+        try:
+            value = float(s)
+
+            if value == 1:
+                return 1
+
+            if value == 0:
+                return 0
+
+        except Exception:
+            pass
+
+        return np.nan
+
+    return series.apply(convert)
+
+
+# ============================================================
+# LOAD FILES
+# ============================================================
+
+def load_all_csvs(root_dir):
+    """
+    Recursively discover usable CSV files.
+    """
+
+    root = Path(root_dir)
+
+    files = list(root.rglob("*.csv"))
+
+    print("=" * 70)
+    print("FILE DISCOVERY")
+    print("=" * 70)
+    print(f"Root directory: {root.resolve()}")
+    print(f"CSV files found: {len(files)}")
+    print()
+
+    records = []
+
+    for path in files:
+
+        try:
+            df = pd.read_csv(path)
+        except Exception as e:
+            print(f"[SKIP] Could not read {path}: {e}")
+            continue
+
+        file_types = detect_file_type(df)
+
+        if not file_types:
+            continue
+
+        if "model" not in df.columns:
+            print(f"[SKIP] No model column: {path}")
+            continue
+
+        if "dataset" not in df.columns:
+            print(f"[SKIP] No dataset column: {path}")
+            continue
+
+        if "question" not in df.columns:
+            print(f"[SKIP] No question column: {path}")
+            continue
+
+        condition = detect_condition(df, path)
+
+        print(
+            f"[FOUND] {path.name}\n"
+            f"        rows={len(df)} "
+            f"condition={condition} "
+            f"type={','.join(file_types)}"
+        )
+
+        records.append({
+            "path": path,
+            "df": df,
+            "condition": condition,
+            "types": file_types,
+        })
+
+    print()
+    print(f"Usable files: {len(records)}")
+    print()
+
+    return records
+
+
+# ============================================================
+# BOOTSTRAP SPEARMAN CI
+# ============================================================
+
+def bootstrap_spearman_ci(
+    x,
+    y,
+    n_boot=10000,
+    seed=42,
+):
+    """
+    Non-parametric bootstrap CI for Spearman rho.
+    """
+
+    data = pd.DataFrame({
+        "x": safe_numeric(x),
+        "y": safe_numeric(y),
+    }).dropna()
+
+    n = len(data)
+
+    if n < 3:
+        return np.nan, np.nan, 0
+
+    x = data["x"].to_numpy()
+    y = data["y"].to_numpy()
+
+    rng = np.random.default_rng(seed)
+
+    boot_rhos = []
+
+    for _ in range(n_boot):
+
+        idx = rng.integers(0, n, size=n)
+
+        xb = x[idx]
+        yb = y[idx]
+
+        if len(np.unique(xb)) < 2:
+            continue
+
+        if len(np.unique(yb)) < 2:
+            continue
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            rho = spearmanr(xb, yb).statistic
+
+        if np.isfinite(rho):
+            boot_rhos.append(rho)
+
+    if len(boot_rhos) == 0:
+        return np.nan, np.nan, 0
+
+    boot_rhos = np.asarray(boot_rhos)
+
+    lower = np.percentile(boot_rhos, 2.5)
+    upper = np.percentile(boot_rhos, 97.5)
+
+    return lower, upper, len(boot_rhos)
+
+
+# ============================================================
+# EXPERIMENT A
+# ============================================================
+
+def experiment_A(
+    records,
+    output_dir,
+    ebse_column,
+    n_boot,
+    seed,
+):
+    """
+    EBSE <-> GPT perceived uncertainty.
+    """
+
+    print("=" * 70)
+    print("EXPERIMENT A: UNCERTAINTY COMMUNICATION")
+    print("=" * 70)
+
+    results = []
+
+    for rec in records:
+
+        if "uncertainty" not in rec["types"]:
+            continue
+
+        df = rec["df"].copy()
+
+        if ebse_column not in df.columns:
+            print(
+                f"[A SKIP] {rec['path'].name}: "
+                f"missing {ebse_column}"
+            )
+            continue
+
+        groups = df.groupby(["dataset", "model"], dropna=False)
+
+        for (dataset, model), g in groups:
+
+            dataset = normalize_dataset_name(dataset)
+            model = normalize_model_name(model)
+
+            temp = pd.DataFrame({
+                "ebse": safe_numeric(g[ebse_column]),
+                "gpt": safe_numeric(g["gpt_perceived_uncertainty"]),
+            }).dropna()
+
+            rho, p = safe_spearman(
+                temp["ebse"],
+                temp["gpt"],
+            )
+
+            ci_low, ci_high, valid_boot = bootstrap_spearman_ci(
+                temp["ebse"],
+                temp["gpt"],
+                n_boot=n_boot,
+                seed=seed,
+            )
+
+            results.append({
+                "dataset": dataset,
+                "model": model,
+                "condition": rec["condition"],
+                "file": rec["path"].name,
+                "ebse_metric": ebse_column,
+                "n": len(temp),
+                "spearman_rho": rho,
+                "spearman_p": p,
+                "rho_ci95_low": ci_low,
+                "rho_ci95_high": ci_high,
+                "bootstrap_valid": valid_boot,
+            })
+
+            print(
+                f"{dataset:12} | "
+                f"{model:28} | "
+                f"{rec['condition']:7} | "
+                f"n={len(temp):3} | "
+                f"rho={rho: .4f} "
+                f"[{ci_low: .4f}, {ci_high: .4f}] "
+                f"p={p:.4g}"
+            )
+
+    result_df = pd.DataFrame(results)
+
+    path = output_dir / "experiment_A_correlations.csv"
+    result_df.to_csv(path, index=False)
+
+    print()
+    print(f"Saved: {path}")
+    print()
+
+    return result_df
+
+
+# ============================================================
+# RANK-BISERIAL CORRELATION
+# ============================================================
+
+def rank_biserial(correct_scores, incorrect_scores):
+    """
+    Rank-biserial correlation corresponding to Mann-Whitney U.
+
+    Direction:
+        positive -> correct answers receive higher support
+        negative -> incorrect answers receive higher support
+
+    Formula:
+        RBC = 2U/(n_correct*n_incorrect) - 1
+
+    where U is calculated with correct scores as group 1.
+    """
+
+    correct_scores = np.asarray(correct_scores, dtype=float)
+    incorrect_scores = np.asarray(incorrect_scores, dtype=float)
+
+    if len(correct_scores) == 0 or len(incorrect_scores) == 0:
+        return np.nan
+
+    u = mannwhitneyu(
+        correct_scores,
+        incorrect_scores,
+        alternative="two-sided",
+    ).statistic
+
+    return (2 * u) / (
+        len(correct_scores) * len(incorrect_scores)
+    ) - 1
+
+
+def bootstrap_rank_biserial_ci(
+    correct_scores,
+    incorrect_scores,
+    n_boot=10000,
+    seed=42,
+):
+    """
+    Bootstrap CI for rank-biserial correlation.
+
+    Groups are resampled separately.
+    """
+
+    c = np.asarray(correct_scores, dtype=float)
+    i = np.asarray(incorrect_scores, dtype=float)
+
+    if len(c) == 0 or len(i) == 0:
+        return np.nan, np.nan, 0
+
+    rng = np.random.default_rng(seed)
+
+    values = []
+
+    for _ in range(n_boot):
+
+        cb = rng.choice(c, size=len(c), replace=True)
+        ib = rng.choice(i, size=len(i), replace=True)
+
+        effect = rank_biserial(cb, ib)
+
+        if np.isfinite(effect):
+            values.append(effect)
+
+    if not values:
+        return np.nan, np.nan, 0
+
+    values = np.asarray(values)
+
+    return (
+        np.percentile(values, 2.5),
+        np.percentile(values, 97.5),
+        len(values),
+    )
+
+
+# ============================================================
+# EXPERIMENT B
+# ============================================================
+
+def experiment_B(
+    records,
+    output_dir,
+    n_boot,
+    seed,
+):
+    """
+    Correct vs incorrect support scores.
+    """
+
+    print("=" * 70)
+    print("EXPERIMENT B: JUSTIFICATION BIAS")
+    print("=" * 70)
+
+    results = []
+
+    for rec in records:
+
+        if "support" not in rec["types"]:
+            continue
+
+        df = rec["df"].copy()
+
+        correctness_col = get_correctness_column(df)
+
+        if correctness_col is None:
+            print(
+                f"[B SKIP] {rec['path'].name}: "
+                "no correctness column"
+            )
+            continue
+
+        df["_correct"] = normalize_correctness(
+            df[correctness_col]
+        )
+
+        df["_support"] = safe_numeric(
+            df["support_score"]
+        )
+
+        groups = df.groupby(["dataset", "model"], dropna=False)
+
+        for (dataset, model), g in groups:
+
+            dataset = normalize_dataset_name(dataset)
+            model = normalize_model_name(model)
+
+            temp = g[["_correct", "_support"]].dropna()
+
+            correct_scores = (
+                temp.loc[temp["_correct"] == 1, "_support"]
+                .to_numpy()
+            )
+
+            incorrect_scores = (
+                temp.loc[temp["_correct"] == 0, "_support"]
+                .to_numpy()
+            )
+
+            if len(correct_scores) == 0 or len(incorrect_scores) == 0:
+                continue
+
+            mw = mannwhitneyu(
+                correct_scores,
+                incorrect_scores,
+                alternative="two-sided",
+            )
+
+            effect = rank_biserial(
+                correct_scores,
+                incorrect_scores,
+            )
+
+            ci_low, ci_high, valid_boot = (
+                bootstrap_rank_biserial_ci(
+                    correct_scores,
+                    incorrect_scores,
+                    n_boot=n_boot,
+                    seed=seed,
+                )
+            )
+
+            mean_correct = np.mean(correct_scores)
+            mean_incorrect = np.mean(incorrect_scores)
+
+            # Define gap clearly:
+            # positive = greater support for correct answers.
+            support_gap = mean_correct - mean_incorrect
+
+            # Spearman correctness <-> support as secondary analysis.
+            rho, rho_p = safe_spearman(
+                temp["_correct"],
+                temp["_support"],
+            )
+
+            results.append({
+                "dataset": dataset,
+                "model": model,
+                "condition": rec["condition"],
+                "file": rec["path"].name,
+                "correctness_column": correctness_col,
+                "n_total": len(temp),
+                "n_correct": len(correct_scores),
+                "n_incorrect": len(incorrect_scores),
+                "support_correct_mean": mean_correct,
+                "support_incorrect_mean": mean_incorrect,
+                "support_gap_correct_minus_incorrect": support_gap,
+                "mannwhitney_U": mw.statistic,
+                "mannwhitney_p": mw.pvalue,
+                "rank_biserial": effect,
+                "rank_biserial_ci95_low": ci_low,
+                "rank_biserial_ci95_high": ci_high,
+                "spearman_correctness_support": rho,
+                "spearman_p": rho_p,
+                "bootstrap_valid": valid_boot,
+            })
+
+            print(
+                f"{dataset:12} | "
+                f"{model:28} | "
+                f"{rec['condition']:7}\n"
+                f"  correct={mean_correct:.2f} "
+                f"(n={len(correct_scores)}) | "
+                f"incorrect={mean_incorrect:.2f} "
+                f"(n={len(incorrect_scores)})\n"
+                f"  gap(C-I)={support_gap:.2f} | "
+                f"MW p={mw.pvalue:.4g} | "
+                f"RBC={effect:.4f} "
+                f"[{ci_low:.4f}, {ci_high:.4f}]"
+            )
+
+    result_df = pd.DataFrame(results)
+
+    path = output_dir / "experiment_B_justification.csv"
+    result_df.to_csv(path, index=False)
+
+    print()
+    print(f"Saved: {path}")
+    print()
+
+    return result_df
+
+
+# ============================================================
+# C1: PREPARE UNCERTAINTY DATA
+# ============================================================
+
+def collect_uncertainty_frames(records, ebse_column):
+    """
+    Convert all uncertainty files into a common schema.
+
+    Output columns:
+        dataset
+        model
+        condition
+        question
+        ebse
+        gpt_uncertainty
+        source_file
+    """
+
+    frames = []
+
+    for rec in records:
+
+        if "uncertainty" not in rec["types"]:
+            continue
+
+        df = rec["df"].copy()
+
+        if ebse_column not in df.columns:
+            continue
+
+        needed = [
+            "dataset",
+            "model",
+            "question",
+            ebse_column,
+            "gpt_perceived_uncertainty",
+        ]
+
+        if any(col not in df.columns for col in needed):
+            continue
+
+        temp = df[needed].copy()
+
+        temp["dataset"] = (
+            temp["dataset"]
+            .apply(normalize_dataset_name)
+        )
+
+        temp["model"] = (
+            temp["model"]
+            .apply(normalize_model_name)
+        )
+
+        temp["condition"] = rec["condition"]
+
+        temp["question"] = (
+            temp["question"]
+            .apply(normalize_question)
+        )
+
+        temp["ebse"] = safe_numeric(
+            temp[ebse_column]
+        )
+
+        temp["gpt_uncertainty"] = safe_numeric(
+            temp["gpt_perceived_uncertainty"]
+        )
+
+        temp["source_file"] = rec["path"].name
+
+        frames.append(
+            temp[
+                [
+                    "dataset",
+                    "model",
+                    "condition",
+                    "question",
+                    "ebse",
+                    "gpt_uncertainty",
+                    "source_file",
+                ]
+            ]
+        )
+
+    if not frames:
+        return pd.DataFrame()
+
+    return pd.concat(frames, ignore_index=True)
+
+
+# ============================================================
+# C1: QUESTION PAIRING VALIDATION
+# ============================================================
+
+def validate_question_pairing(joint, posthoc):
+    """
+    Mandatory validation that Joint and Post-hoc contain
+    exactly the same questions.
+
+    Returns:
+        qc dict
+        can_proceed bool
+    """
+
+    joint_questions = joint["question"].tolist()
+    post_questions = posthoc["question"].tolist()
+
+    joint_duplicates = (
+        joint["question"].duplicated(keep=False).sum()
+    )
+
+    post_duplicates = (
+        posthoc["question"].duplicated(keep=False).sum()
+    )
+
+    joint_set = set(joint_questions)
+    post_set = set(post_questions)
+
+    joint_only = joint_set - post_set
+    post_only = post_set - joint_set
+
+    shared = joint_set & post_set
+
+    exact_match = (
+        len(joint_only) == 0
+        and len(post_only) == 0
+        and joint_duplicates == 0
+        and post_duplicates == 0
+        and len(joint) == len(posthoc)
+    )
+
+    qc = {
+        "joint_n": len(joint),
+        "posthoc_n": len(posthoc),
+        "shared_questions": len(shared),
+        "joint_only_n": len(joint_only),
+        "posthoc_only_n": len(post_only),
+        "joint_duplicate_rows": joint_duplicates,
+        "posthoc_duplicate_rows": post_duplicates,
+        "exact_question_match": exact_match,
+        "joint_only_examples": " ||| ".join(
+            list(sorted(joint_only))[:5]
+        ),
+        "posthoc_only_examples": " ||| ".join(
+            list(sorted(post_only))[:5]
+        ),
+    }
+
+    return qc, exact_match
+
+
+# ============================================================
+# C1: PAIRED BOOTSTRAP DELTA RHO
+# ============================================================
+
+def paired_bootstrap_delta_rho(
+    paired,
+    n_boot=10000,
+    seed=42,
+):
+    """
+    Paired bootstrap Joint vs Post-hoc.
+
+    IMPORTANT:
+        Resampling unit = QUESTION.
+
+    Each sampled question brings BOTH:
+        Joint observation
+        Post-hoc observation
+
+    Delta rho:
+        rho_joint - rho_posthoc
+    """
+
+    n = len(paired)
+
+    if n < 3:
+        return {
+            "rho_joint": np.nan,
+            "rho_posthoc": np.nan,
+            "delta_rho": np.nan,
+            "delta_ci_low": np.nan,
+            "delta_ci_high": np.nan,
+            "bootstrap_p_two_sided": np.nan,
+            "valid_bootstraps": 0,
+        }
+
+    rho_joint, _ = safe_spearman(
+        paired["ebse_joint"],
+        paired["gpt_uncertainty_joint"],
+    )
+
+    rho_posthoc, _ = safe_spearman(
+        paired["ebse_posthoc"],
+        paired["gpt_uncertainty_posthoc"],
+    )
+
+    delta_observed = rho_joint - rho_posthoc
+
+    rng = np.random.default_rng(seed)
+
+    deltas = []
+
+    for _ in range(n_boot):
+
+        # SAME question indices sampled for BOTH conditions.
+        idx = rng.integers(0, n, size=n)
+
+        sample = paired.iloc[idx]
+
+        rj, _ = safe_spearman(
+            sample["ebse_joint"],
+            sample["gpt_uncertainty_joint"],
+        )
+
+        rp, _ = safe_spearman(
+            sample["ebse_posthoc"],
+            sample["gpt_uncertainty_posthoc"],
+        )
+
+        if np.isfinite(rj) and np.isfinite(rp):
+            deltas.append(rj - rp)
+
+    if not deltas:
+        return {
+            "rho_joint": rho_joint,
+            "rho_posthoc": rho_posthoc,
+            "delta_rho": delta_observed,
+            "delta_ci_low": np.nan,
+            "delta_ci_high": np.nan,
+            "bootstrap_p_two_sided": np.nan,
+            "valid_bootstraps": 0,
+        }
+
+    deltas = np.asarray(deltas)
+
+    ci_low = np.percentile(deltas, 2.5)
+    ci_high = np.percentile(deltas, 97.5)
+
+    # Bootstrap sign-based two-sided p-value.
+    #
+    # This is supplementary; the CI is the main result.
+    p_lower = np.mean(deltas <= 0)
+    p_upper = np.mean(deltas >= 0)
+
+    bootstrap_p = min(
+        1.0,
+        2 * min(p_lower, p_upper),
+    )
+
+    return {
+        "rho_joint": rho_joint,
+        "rho_posthoc": rho_posthoc,
+        "delta_rho": delta_observed,
+        "delta_ci_low": ci_low,
+        "delta_ci_high": ci_high,
+        "bootstrap_p_two_sided": bootstrap_p,
+        "valid_bootstraps": len(deltas),
+    }
+
+
+# ============================================================
+# EXPERIMENT C1
+# ============================================================
+
+def experiment_C1(
+    records,
+    output_dir,
+    ebse_column,
+    n_boot,
+    seed,
+):
+    """
+    Joint vs Post-hoc paired comparison.
+
+    STRICT requirement:
+        SAME questions must occur in both conditions.
+    """
+
+    print("=" * 70)
+    print("EXPERIMENT C1: JOINT VS POST-HOC")
+    print("=" * 70)
+
+    all_data = collect_uncertainty_frames(
+        records,
+        ebse_column,
+    )
+
+    if all_data.empty:
+        print("No uncertainty data found.")
+        return pd.DataFrame(), pd.DataFrame()
+
+    qc_results = []
+    comparison_results = []
+
+    combinations = (
+        all_data[["dataset", "model"]]
+        .drop_duplicates()
+        .sort_values(["dataset", "model"])
+    )
+
+    for _, combo in combinations.iterrows():
+
+        dataset = combo["dataset"]
+        model = combo["model"]
+
+        subset = all_data[
+            (all_data["dataset"] == dataset)
+            & (all_data["model"] == model)
+        ].copy()
+
+        joint = subset[
+            subset["condition"] == "joint"
+        ].copy()
+
+        posthoc = subset[
+            subset["condition"] == "posthoc"
+        ].copy()
+
+        if len(joint) == 0 or len(posthoc) == 0:
+            continue
+
+        print()
+        print("-" * 70)
+        print(f"{dataset} | {model}")
+        print("-" * 70)
+
+        qc, exact_match = validate_question_pairing(
+            joint,
+            posthoc,
+        )
+
+        qc_row = {
+            "dataset": dataset,
+            "model": model,
+            **qc,
+        }
+
+        qc_results.append(qc_row)
+
+        print(f"Joint rows:       {qc['joint_n']}")
+        print(f"Post-hoc rows:    {qc['posthoc_n']}")
+        print(f"Shared questions: {qc['shared_questions']}")
+        print(f"Joint only:       {qc['joint_only_n']}")
+        print(f"Post-hoc only:    {qc['posthoc_only_n']}")
+        print(f"Joint duplicates: {qc['joint_duplicate_rows']}")
+        print(f"Post duplicates:  {qc['posthoc_duplicate_rows']}")
+
+        if exact_match:
+            print("STATUS: PASS - exact question match")
+        else:
+            print("STATUS: FAIL - question sets are not identical")
+
+            if qc["joint_only_examples"]:
+                print(
+                    "Joint-only examples:",
+                    qc["joint_only_examples"],
+                )
+
+            if qc["posthoc_only_examples"]:
+                print(
+                    "Posthoc-only examples:",
+                    qc["posthoc_only_examples"],
+                )
+
+            if STRICT_PAIRING:
+                print(
+                    "Comparison SKIPPED because STRICT_PAIRING=True."
+                )
+                continue
+
+        # ----------------------------------------------------
+        # MERGE ONLY AFTER VALIDATION
+        # ----------------------------------------------------
+
+        joint_small = joint[
+            [
+                "question",
+                "ebse",
+                "gpt_uncertainty",
+            ]
+        ].copy()
+
+        post_small = posthoc[
+            [
+                "question",
+                "ebse",
+                "gpt_uncertainty",
+            ]
+        ].copy()
+
+        try:
+            paired = joint_small.merge(
+                post_small,
+                on="question",
+                how="inner",
+                suffixes=("_joint", "_posthoc"),
+                validate="one_to_one",
+            )
+        except Exception as e:
+            print(f"PAIRING ERROR: {e}")
+            continue
+
+        # Both conditions need usable EBSE and GPT scores
+        # for the paired correlation comparison.
+        paired = paired.dropna(
+            subset=[
+                "ebse_joint",
+                "gpt_uncertainty_joint",
+                "ebse_posthoc",
+                "gpt_uncertainty_posthoc",
+            ]
+        )
+
+        print(f"Complete paired rows: {len(paired)}")
+
+        stats = paired_bootstrap_delta_rho(
+            paired,
+            n_boot=n_boot,
+            seed=seed,
+        )
+
+        comparison_results.append({
+            "dataset": dataset,
+            "model": model,
+            "n_paired": len(paired),
+            "ebse_metric": ebse_column,
+            **stats,
+        })
+
+        print(
+            f"Post-hoc rho = {stats['rho_posthoc']:.4f}"
+        )
+        print(
+            f"Joint rho    = {stats['rho_joint']:.4f}"
+        )
+        print(
+            f"Delta rho    = {stats['delta_rho']:.4f}"
+        )
+        print(
+            "95% CI       = "
+            f"[{stats['delta_ci_low']:.4f}, "
+            f"{stats['delta_ci_high']:.4f}]"
+        )
+        print(
+            "Bootstrap p  = "
+            f"{stats['bootstrap_p_two_sided']:.4g}"
+        )
+
+    qc_df = pd.DataFrame(qc_results)
+
+    comparison_df = pd.DataFrame(
+        comparison_results
+    )
+
+    qc_path = (
+        output_dir /
+        "experiment_C1_pairing_qc.csv"
+    )
+
+    comparison_path = (
+        output_dir /
+        "experiment_C1_joint_vs_posthoc.csv"
+    )
+
+    qc_df.to_csv(qc_path, index=False)
+    comparison_df.to_csv(comparison_path, index=False)
+
+    print()
+    print(f"Saved QC: {qc_path}")
+    print(f"Saved comparisons: {comparison_path}")
+
+    # ========================================================
+    # AGGREGATE WILCOXON
+    # ========================================================
+
+    aggregate_results = []
+
+    if not comparison_df.empty:
+
+        deltas = (
+            comparison_df["delta_rho"]
+            .dropna()
+            .to_numpy()
+        )
+
+        n_pairs = len(deltas)
+
+        n_positive = int(np.sum(deltas > 0))
+        n_negative = int(np.sum(deltas < 0))
+        n_zero = int(np.sum(deltas == 0))
+
+        median_delta = (
+            np.median(deltas)
+            if n_pairs > 0
+            else np.nan
+        )
+
+        mean_delta = (
+            np.mean(deltas)
+            if n_pairs > 0
+            else np.nan
+        )
+
+        if n_pairs > 0 and not np.all(deltas == 0):
+
+            try:
+                w = wilcoxon(
+                    deltas,
+                    alternative="two-sided",
+                    zero_method="wilcox",
+                )
+
+                wilcoxon_stat = w.statistic
+                wilcoxon_p = w.pvalue
+
+            except Exception:
+                wilcoxon_stat = np.nan
+                wilcoxon_p = np.nan
+
+        else:
+            wilcoxon_stat = np.nan
+            wilcoxon_p = np.nan
+
+        aggregate_results.append({
+            "n_model_dataset_pairs": n_pairs,
+            "mean_delta_rho": mean_delta,
+            "median_delta_rho": median_delta,
+            "n_joint_higher": n_positive,
+            "n_posthoc_higher": n_negative,
+            "n_equal": n_zero,
+            "wilcoxon_statistic": wilcoxon_stat,
+            "wilcoxon_p": wilcoxon_p,
+        })
+
+        print()
+        print("=" * 70)
+        print("C1 AGGREGATE RESULT")
+        print("=" * 70)
+
+        print(f"Model-dataset pairs: {n_pairs}")
+        print(f"Mean Delta rho:      {mean_delta:.4f}")
+        print(f"Median Delta rho:    {median_delta:.4f}")
+        print(f"Joint higher:        {n_positive}")
+        print(f"Post-hoc higher:     {n_negative}")
+        print(f"Equal:               {n_zero}")
+        print(f"Wilcoxon p:          {wilcoxon_p:.4g}")
+
+    aggregate_df = pd.DataFrame(
+        aggregate_results
+    )
+
+    aggregate_path = (
+        output_dir /
+        "experiment_C1_aggregate.csv"
+    )
+
+    aggregate_df.to_csv(
+        aggregate_path,
+        index=False,
+    )
+
+    print(f"Saved aggregate: {aggregate_path}")
+    print()
+
+    return comparison_df, qc_df
+
+
+# ============================================================
+# DUPLICATE ANALYSIS CHECK
+# ============================================================
+
+def check_duplicate_analysis_files(records):
+    """
+    Warn if multiple files appear to provide the same
+    dataset/model/condition/analysis combination.
+
+    This is important because otherwise the same experiment
+    could accidentally enter the results twice.
+    """
+
+    rows = []
+
+    for rec in records:
+
+        df = rec["df"]
+
+        if "dataset" not in df.columns or "model" not in df.columns:
+            continue
+
+        combinations = (
+            df[["dataset", "model"]]
+            .drop_duplicates()
+        )
+
+        for _, row in combinations.iterrows():
+
+            for analysis_type in rec["types"]:
+
+                rows.append({
+                    "dataset": normalize_dataset_name(
+                        row["dataset"]
+                    ),
+                    "model": normalize_model_name(
+                        row["model"]
+                    ),
+                    "condition": rec["condition"],
+                    "analysis_type": analysis_type,
+                    "file": rec["path"].name,
+                })
+
+    check = pd.DataFrame(rows)
+
+    if check.empty:
+        return
+
+    counts = (
+        check
+        .groupby(
+            [
+                "dataset",
+                "model",
+                "condition",
+                "analysis_type",
+            ]
+        )
+        .size()
+        .reset_index(name="n_files")
+    )
+
+    duplicates = counts[
+        counts["n_files"] > 1
+    ]
+
+    if not duplicates.empty:
+
+        print()
+        print("!" * 70)
+        print("WARNING: POSSIBLE DUPLICATE ANALYSIS FILES")
+        print("!" * 70)
+
+        print(duplicates.to_string(index=False))
+
+        print()
+        print(
+            "Check these before trusting the results. "
+            "You may have multiple versions of the same scored file."
+        )
+        print()
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main():
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "results_dir",
+        help="Root directory containing experiment CSV files",
+    )
+
+    parser.add_argument(
+        "--output_dir",
+        default="statistical_results",
+        help="Directory for output CSV files",
+    )
+
+    parser.add_argument(
+        "--n_boot",
+        type=int,
+        default=DEFAULT_N_BOOT,
+        help="Number of bootstrap replicates",
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=DEFAULT_SEED,
+        help="Random seed",
+    )
+
+    parser.add_argument(
+        "--ebse_column",
+        choices=["ebse", "norm_ebse"],
+        default=DEFAULT_EBSE_COLUMN,
+        help="EBSE variable used in correlation analyses",
+    )
+
+    args = parser.parse_args()
+
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    print()
+    print("=" * 70)
+    print("POST-HOC EXPLANATION STATISTICAL ANALYSIS")
+    print("=" * 70)
+    print(f"EBSE metric: {args.ebse_column}")
+    print(f"Bootstrap replicates: {args.n_boot}")
+    print(f"Random seed: {args.seed}")
+    print(f"Strict Joint/Post-hoc pairing: {STRICT_PAIRING}")
+    print()
+
+    records = load_all_csvs(
+        args.results_dir
+    )
+
+    if not records:
+        raise RuntimeError(
+            "No usable scored CSV files were found."
+        )
+
+    check_duplicate_analysis_files(records)
+
+    experiment_A(
+        records,
+        output_dir,
+        args.ebse_column,
+        args.n_boot,
+        args.seed,
+    )
+
+    experiment_B(
+        records,
+        output_dir,
+        args.n_boot,
+        args.seed,
+    )
+
+    experiment_C1(
+        records,
+        output_dir,
+        args.ebse_column,
+        args.n_boot,
+        args.seed,
+    )
+
+    print("=" * 70)
+    print("ANALYSIS COMPLETE")
+    print("=" * 70)
+
+    print(
+        "\nOutput directory:",
+        output_dir.resolve(),
+    )
+
+
+if __name__ == "__main__":
+    main()
