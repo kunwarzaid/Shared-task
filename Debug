@@ -1,47 +1,33 @@
-#!/usr/bin/env python3
-
 """
-Statistical analysis for post-hoc explanation calibration experiments.
+STATISTICAL ANALYSIS
+Post-hoc Explanation Calibration
 
-Produces:
-    1. experiment_A_correlations.csv
-       EBSE <-> GPT perceived uncertainty
-       Spearman rho + p + bootstrap 95% CI
+Run directly from VS Code.
 
-    2. experiment_B_justification.csv
-       Correct vs incorrect support scores
-       Means, support gap, Mann-Whitney U,
-       rank-biserial effect size + bootstrap 95% CI
+Analyses:
+A. EBSE <-> GPT perceived uncertainty
+   - Spearman rho
+   - p-value
+   - bootstrap 95% CI
 
-    3. experiment_C1_pairing_qc.csv
-       Mandatory Joint/Post-hoc same-question validation
+B. Correct vs incorrect answer support
+   - mean support
+   - support gap
+   - Mann-Whitney U
+   - rank-biserial effect size
+   - bootstrap 95% CI
 
-    4. experiment_C1_joint_vs_posthoc.csv
-       Joint vs Post-hoc correlations
-       paired bootstrap Delta rho + 95% CI
-
-    5. experiment_C1_aggregate.csv
-       Aggregate Wilcoxon signed-rank test across
-       model-dataset Delta rho values
-
-IMPORTANT:
-    Experiment C1 will NOT compare Joint and Post-hoc unless
-    they contain exactly the same question set.
-
-Usage:
-    python statistical_analysis.py /path/to/results
-
-Optional:
-    python statistical_analysis.py /path/to/results \
-        --output_dir stats_results \
-        --n_boot 10000 \
-        --seed 42
+C1. Joint vs Post-hoc
+   - SAME-QUESTION verification
+   - rho in each condition
+   - paired bootstrap Delta rho
+   - bootstrap 95% CI
+   - aggregate Wilcoxon signed-rank test
 """
 
-import argparse
+from pathlib import Path
 import re
 import warnings
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -49,32 +35,43 @@ from scipy.stats import spearmanr, mannwhitneyu, wilcoxon
 
 
 # ============================================================
-# CONFIGURATION
+# 1. SETTINGS -- EDIT THESE
 # ============================================================
 
-DEFAULT_N_BOOT = 10000
-DEFAULT_SEED = 42
+# If statistical_analysis.py and results/ are in same folder:
+RESULTS_DIR = Path("results")
 
-# We will prefer normalized EBSE because your reported
-# cross-model analyses have generally used normalized EBSE.
-# Change to "ebse" here if your Experiment A used raw EBSE.
-DEFAULT_EBSE_COLUMN = "norm_ebse"
+# Output folder:
+OUTPUT_DIR = Path("statistical_results")
 
-# Require EXACT same question set for C1.
+# IMPORTANT:
+# Set this to the same EBSE column used in your existing paper results.
+#
+# Options:
+# "ebse"
+# "norm_ebse"
+EBSE_COLUMN = "ebse"
+
+# Use 1000 while testing.
+# Change to 10000 for final paper results.
+N_BOOT = 1000
+
+SEED = 42
+
+# C1 will refuse to compare Joint/Post-hoc if question sets differ.
 STRICT_PAIRING = True
 
 
 # ============================================================
-# BASIC HELPERS
+# 2. HELPERS
 # ============================================================
 
 def clean_string(x):
-    """Normalize strings for comparisons."""
+
     if pd.isna(x):
         return ""
 
-    x = str(x)
-    x = x.strip()
+    x = str(x).strip()
     x = re.sub(r"\s+", " ", x)
 
     return x
@@ -82,11 +79,15 @@ def clean_string(x):
 
 def normalize_question(q):
     """
-    Normalize question text ONLY for matching Joint/Post-hoc.
+    Conservative normalization for matching questions.
 
-    We deliberately do NOT lowercase or remove punctuation because
-    we want the matching check to remain conservative.
+    Only:
+    - strips leading/trailing whitespace
+    - collapses repeated whitespace
+
+    Does NOT lowercase/remove punctuation.
     """
+
     return clean_string(q)
 
 
@@ -94,17 +95,24 @@ def safe_numeric(series):
     return pd.to_numeric(series, errors="coerce")
 
 
+def normalize_dataset_name(x):
+
+    x = clean_string(x).lower()
+
+    mapping = {
+        "medqa": "MedQA",
+        "strategyqa": "StrategyQA",
+        "truthfulqa": "TruthfulQA",
+    }
+
+    return mapping.get(x, x)
+
+
+def normalize_model_name(x):
+    return clean_string(x)
+
+
 def safe_spearman(x, y):
-    """
-    Compute Spearman correlation safely.
-
-    Returns:
-        rho, p
-
-    NaN returned if:
-        - fewer than 3 observations
-        - either variable is constant
-    """
 
     temp = pd.DataFrame({
         "x": safe_numeric(x),
@@ -121,87 +129,22 @@ def safe_spearman(x, y):
         return np.nan, np.nan
 
     with warnings.catch_warnings():
+
         warnings.simplefilter("ignore")
-        result = spearmanr(temp["x"], temp["y"])
+
+        result = spearmanr(
+            temp["x"],
+            temp["y"],
+        )
 
     return float(result.statistic), float(result.pvalue)
 
 
 # ============================================================
-# MODEL / DATASET / CONDITION DETECTION
+# 3. DETECT FILE TYPE / CONDITION
 # ============================================================
 
-def normalize_dataset_name(x):
-    x = clean_string(x).lower()
-
-    mappings = {
-        "medqa": "MedQA",
-        "strategyqa": "StrategyQA",
-        "truthfulqa": "TruthfulQA",
-    }
-
-    return mappings.get(x, x)
-
-
-def normalize_model_name(x):
-    """
-    Preserve actual model names from the CSV as much as possible.
-    """
-    return clean_string(x)
-
-
-def detect_condition(df, filepath):
-    """
-    Determine whether a file corresponds to Joint or Post-hoc.
-
-    Priority:
-        1. explicit condition column
-        2. filename/path
-        3. default = posthoc
-
-    IMPORTANT:
-        Since your old post-hoc files don't have a condition column,
-        absence of 'joint' is interpreted as posthoc.
-    """
-
-    if "condition" in df.columns:
-        values = (
-            df["condition"]
-            .dropna()
-            .astype(str)
-            .str.lower()
-            .str.strip()
-            .unique()
-        )
-
-        if len(values) == 1:
-            value = values[0]
-
-            if "joint" in value:
-                return "joint"
-
-            if "post" in value:
-                return "posthoc"
-
-    path_text = str(filepath).lower()
-
-    if "joint" in path_text:
-        return "joint"
-
-    if "posthoc" in path_text or "post_hoc" in path_text or "post-hoc" in path_text:
-        return "posthoc"
-
-    # Based on your pipeline:
-    # legacy files without condition = post-hoc.
-    return "posthoc"
-
-
 def detect_file_type(df):
-    """
-    Determine what analyses this CSV can support.
-
-    A file may theoretically support both.
-    """
 
     types = []
 
@@ -214,21 +157,61 @@ def detect_file_type(df):
     return types
 
 
+def detect_condition(df, filepath):
+
+    # First preference:
+    # explicit condition column
+
+    if "condition" in df.columns:
+
+        values = (
+            df["condition"]
+            .dropna()
+            .astype(str)
+            .str.lower()
+            .str.strip()
+            .unique()
+        )
+
+        if len(values) == 1:
+
+            value = values[0]
+
+            if "joint" in value:
+                return "joint"
+
+            if "post" in value:
+                return "posthoc"
+
+    # Second preference:
+    # filename / folder
+
+    text = str(filepath).lower()
+
+    if "joint" in text:
+        return "joint"
+
+    if (
+        "posthoc" in text
+        or "post_hoc" in text
+        or "post-hoc" in text
+    ):
+        return "posthoc"
+
+    # Your old files are post-hoc by default.
+    return "posthoc"
+
+
 # ============================================================
-# CORRECTNESS HANDLING
+# 4. CORRECTNESS
 # ============================================================
 
 def get_correctness_column(df):
-    """
-    MedQA:
-        prefer correct_v2 when available.
 
-    StrategyQA / TruthfulQA:
-        use correct if correct_v2 does not exist.
-    """
+    # Prefer GPT-rechecked correctness where available.
 
     if "correct_v2" in df.columns:
-        # Only prefer it if it actually contains usable values.
+
         numeric = safe_numeric(df["correct_v2"])
 
         if numeric.notna().sum() > 0:
@@ -241,11 +224,9 @@ def get_correctness_column(df):
 
 
 def normalize_correctness(series):
-    """
-    Convert correctness labels into 0/1.
-    """
 
     def convert(x):
+
         if pd.isna(x):
             return np.nan
 
@@ -254,13 +235,26 @@ def normalize_correctness(series):
 
         s = str(x).strip().lower()
 
-        if s in {"1", "1.0", "true", "yes", "correct"}:
+        if s in {
+            "1",
+            "1.0",
+            "true",
+            "yes",
+            "correct",
+        }:
             return 1
 
-        if s in {"0", "0.0", "false", "no", "incorrect"}:
+        if s in {
+            "0",
+            "0.0",
+            "false",
+            "no",
+            "incorrect",
+        }:
             return 0
 
         try:
+
             value = float(s)
 
             if value == 1:
@@ -278,24 +272,19 @@ def normalize_correctness(series):
 
 
 # ============================================================
-# LOAD FILES
+# 5. LOAD ALL CSV FILES
 # ============================================================
 
-def load_all_csvs(root_dir):
-    """
-    Recursively discover usable CSV files.
-    """
+def load_all_csvs():
 
-    root = Path(root_dir)
+    files = list(RESULTS_DIR.rglob("*.csv"))
 
-    files = list(root.rglob("*.csv"))
-
-    print("=" * 70)
+    print("\n" + "=" * 75)
     print("FILE DISCOVERY")
-    print("=" * 70)
-    print(f"Root directory: {root.resolve()}")
-    print(f"CSV files found: {len(files)}")
-    print()
+    print("=" * 75)
+
+    print("Results folder:", RESULTS_DIR.resolve())
+    print("CSV files found:", len(files))
 
     records = []
 
@@ -303,63 +292,62 @@ def load_all_csvs(root_dir):
 
         try:
             df = pd.read_csv(path)
+
         except Exception as e:
-            print(f"[SKIP] Could not read {path}: {e}")
+
+            print(f"\n[SKIP] Cannot read {path}")
+            print(e)
+
             continue
 
-        file_types = detect_file_type(df)
+        types = detect_file_type(df)
 
-        if not file_types:
+        if not types:
             continue
 
-        if "model" not in df.columns:
-            print(f"[SKIP] No model column: {path}")
-            continue
+        required = {
+            "model",
+            "dataset",
+            "question",
+        }
 
-        if "dataset" not in df.columns:
-            print(f"[SKIP] No dataset column: {path}")
-            continue
+        missing = required - set(df.columns)
 
-        if "question" not in df.columns:
-            print(f"[SKIP] No question column: {path}")
+        if missing:
+
+            print(
+                f"\n[SKIP] {path.name}: "
+                f"missing {missing}"
+            )
+
             continue
 
         condition = detect_condition(df, path)
 
         print(
-            f"[FOUND] {path.name}\n"
-            f"        rows={len(df)} "
-            f"condition={condition} "
-            f"type={','.join(file_types)}"
+            f"\n[FOUND] {path}"
+            f"\n        rows      = {len(df)}"
+            f"\n        condition = {condition}"
+            f"\n        type      = {', '.join(types)}"
         )
 
         records.append({
             "path": path,
             "df": df,
             "condition": condition,
-            "types": file_types,
+            "types": types,
         })
 
-    print()
-    print(f"Usable files: {len(records)}")
-    print()
+    print("\nUsable files:", len(records))
 
     return records
 
 
 # ============================================================
-# BOOTSTRAP SPEARMAN CI
+# 6. BOOTSTRAP SPEARMAN CI
 # ============================================================
 
-def bootstrap_spearman_ci(
-    x,
-    y,
-    n_boot=10000,
-    seed=42,
-):
-    """
-    Non-parametric bootstrap CI for Spearman rho.
-    """
+def bootstrap_spearman_ci(x, y):
 
     data = pd.DataFrame({
         "x": safe_numeric(x),
@@ -374,13 +362,17 @@ def bootstrap_spearman_ci(
     x = data["x"].to_numpy()
     y = data["y"].to_numpy()
 
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(SEED)
 
     boot_rhos = []
 
-    for _ in range(n_boot):
+    for _ in range(N_BOOT):
 
-        idx = rng.integers(0, n, size=n)
+        idx = rng.integers(
+            0,
+            n,
+            size=n,
+        )
 
         xb = x[idx]
         yb = y[idx]
@@ -392,41 +384,45 @@ def bootstrap_spearman_ci(
             continue
 
         with warnings.catch_warnings():
+
             warnings.simplefilter("ignore")
-            rho = spearmanr(xb, yb).statistic
+
+            rho = spearmanr(
+                xb,
+                yb,
+            ).statistic
 
         if np.isfinite(rho):
             boot_rhos.append(rho)
 
-    if len(boot_rhos) == 0:
+    if not boot_rhos:
         return np.nan, np.nan, 0
 
     boot_rhos = np.asarray(boot_rhos)
 
-    lower = np.percentile(boot_rhos, 2.5)
-    upper = np.percentile(boot_rhos, 97.5)
+    low = np.percentile(
+        boot_rhos,
+        2.5,
+    )
 
-    return lower, upper, len(boot_rhos)
+    high = np.percentile(
+        boot_rhos,
+        97.5,
+    )
+
+    return low, high, len(boot_rhos)
 
 
 # ============================================================
-# EXPERIMENT A
+# 7. EXPERIMENT A
 # ============================================================
 
-def experiment_A(
-    records,
-    output_dir,
-    ebse_column,
-    n_boot,
-    seed,
-):
-    """
-    EBSE <-> GPT perceived uncertainty.
-    """
+def experiment_A(records):
 
-    print("=" * 70)
-    print("EXPERIMENT A: UNCERTAINTY COMMUNICATION")
-    print("=" * 70)
+    print("\n" + "=" * 75)
+    print("EXPERIMENT A")
+    print("EBSE <-> GPT PERCEIVED UNCERTAINTY")
+    print("=" * 75)
 
     results = []
 
@@ -437,23 +433,29 @@ def experiment_A(
 
         df = rec["df"].copy()
 
-        if ebse_column not in df.columns:
+        if EBSE_COLUMN not in df.columns:
+
             print(
-                f"[A SKIP] {rec['path'].name}: "
-                f"missing {ebse_column}"
+                f"\n[A SKIP] {rec['path'].name}: "
+                f"no {EBSE_COLUMN}"
             )
+
             continue
 
-        groups = df.groupby(["dataset", "model"], dropna=False)
-
-        for (dataset, model), g in groups:
+        for (dataset, model), g in df.groupby(
+            ["dataset", "model"]
+        ):
 
             dataset = normalize_dataset_name(dataset)
             model = normalize_model_name(model)
 
             temp = pd.DataFrame({
-                "ebse": safe_numeric(g[ebse_column]),
-                "gpt": safe_numeric(g["gpt_perceived_uncertainty"]),
+                "ebse": safe_numeric(
+                    g[EBSE_COLUMN]
+                ),
+                "gpt": safe_numeric(
+                    g["gpt_perceived_uncertainty"]
+                ),
             }).dropna()
 
             rho, p = safe_spearman(
@@ -461,112 +463,139 @@ def experiment_A(
                 temp["gpt"],
             )
 
-            ci_low, ci_high, valid_boot = bootstrap_spearman_ci(
-                temp["ebse"],
-                temp["gpt"],
-                n_boot=n_boot,
-                seed=seed,
+            ci_low, ci_high, n_valid_boot = (
+                bootstrap_spearman_ci(
+                    temp["ebse"],
+                    temp["gpt"],
+                )
             )
 
             results.append({
+
                 "dataset": dataset,
                 "model": model,
                 "condition": rec["condition"],
-                "file": rec["path"].name,
-                "ebse_metric": ebse_column,
+
                 "n": len(temp),
+
+                "ebse_metric": EBSE_COLUMN,
+
                 "spearman_rho": rho,
                 "spearman_p": p,
+
                 "rho_ci95_low": ci_low,
                 "rho_ci95_high": ci_high,
-                "bootstrap_valid": valid_boot,
+
+                "bootstrap_valid": n_valid_boot,
+
+                "source_file": rec["path"].name,
             })
 
             print(
-                f"{dataset:12} | "
-                f"{model:28} | "
-                f"{rec['condition']:7} | "
-                f"n={len(temp):3} | "
-                f"rho={rho: .4f} "
-                f"[{ci_low: .4f}, {ci_high: .4f}] "
-                f"p={p:.4g}"
+                f"\n{dataset}"
+                f"\n{model}"
+                f"\nCondition: {rec['condition']}"
+                f"\nn = {len(temp)}"
+                f"\nrho = {rho:.4f}"
+                f"\np = {p:.4g}"
+                f"\n95% CI = [{ci_low:.4f}, {ci_high:.4f}]"
             )
 
     result_df = pd.DataFrame(results)
 
-    path = output_dir / "experiment_A_correlations.csv"
-    result_df.to_csv(path, index=False)
+    path = (
+        OUTPUT_DIR /
+        "experiment_A_correlations.csv"
+    )
 
-    print()
-    print(f"Saved: {path}")
-    print()
+    result_df.to_csv(
+        path,
+        index=False,
+    )
+
+    print("\nSaved:", path)
 
     return result_df
 
 
 # ============================================================
-# RANK-BISERIAL CORRELATION
+# 8. RANK-BISERIAL EFFECT SIZE
 # ============================================================
 
-def rank_biserial(correct_scores, incorrect_scores):
-    """
-    Rank-biserial correlation corresponding to Mann-Whitney U.
+def rank_biserial(
+    correct_scores,
+    incorrect_scores,
+):
 
-    Direction:
-        positive -> correct answers receive higher support
-        negative -> incorrect answers receive higher support
+    c = np.asarray(
+        correct_scores,
+        dtype=float,
+    )
 
-    Formula:
-        RBC = 2U/(n_correct*n_incorrect) - 1
+    i = np.asarray(
+        incorrect_scores,
+        dtype=float,
+    )
 
-    where U is calculated with correct scores as group 1.
-    """
-
-    correct_scores = np.asarray(correct_scores, dtype=float)
-    incorrect_scores = np.asarray(incorrect_scores, dtype=float)
-
-    if len(correct_scores) == 0 or len(incorrect_scores) == 0:
+    if len(c) == 0 or len(i) == 0:
         return np.nan
 
-    u = mannwhitneyu(
-        correct_scores,
-        incorrect_scores,
+    U = mannwhitneyu(
+        c,
+        i,
         alternative="two-sided",
     ).statistic
 
-    return (2 * u) / (
-        len(correct_scores) * len(incorrect_scores)
-    ) - 1
+    # Positive:
+    # correct > incorrect
+    #
+    # Negative:
+    # incorrect > correct
+
+    return (
+        (2 * U) /
+        (len(c) * len(i))
+        - 1
+    )
 
 
 def bootstrap_rank_biserial_ci(
     correct_scores,
     incorrect_scores,
-    n_boot=10000,
-    seed=42,
 ):
-    """
-    Bootstrap CI for rank-biserial correlation.
 
-    Groups are resampled separately.
-    """
+    c = np.asarray(
+        correct_scores,
+        dtype=float,
+    )
 
-    c = np.asarray(correct_scores, dtype=float)
-    i = np.asarray(incorrect_scores, dtype=float)
+    i = np.asarray(
+        incorrect_scores,
+        dtype=float,
+    )
 
-    if len(c) == 0 or len(i) == 0:
-        return np.nan, np.nan, 0
-
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(SEED)
 
     values = []
 
-    for _ in range(n_boot):
+    for _ in range(N_BOOT):
 
-        cb = rng.choice(c, size=len(c), replace=True)
-        ib = rng.choice(i, size=len(i), replace=True)
+        cb = rng.choice(
+            c,
+            size=len(c),
+            replace=True,
+        )
 
-        effect = rank_biserial(cb, ib)
+        ib = rng.choice(
+            i,
+            size=len(i),
+            replace=True,
+        )
+
+        effect = rank_biserial(
+            cb,
+            ib,
+        )
 
         if np.isfinite(effect):
             values.append(effect)
@@ -584,22 +613,15 @@ def bootstrap_rank_biserial_ci(
 
 
 # ============================================================
-# EXPERIMENT B
+# 9. EXPERIMENT B
 # ============================================================
 
-def experiment_B(
-    records,
-    output_dir,
-    n_boot,
-    seed,
-):
-    """
-    Correct vs incorrect support scores.
-    """
+def experiment_B(records):
 
-    print("=" * 70)
-    print("EXPERIMENT B: JUSTIFICATION BIAS")
-    print("=" * 70)
+    print("\n" + "=" * 75)
+    print("EXPERIMENT B")
+    print("JUSTIFICATION BIAS")
+    print("=" * 75)
 
     results = []
 
@@ -613,10 +635,12 @@ def experiment_B(
         correctness_col = get_correctness_column(df)
 
         if correctness_col is None:
+
             print(
-                f"[B SKIP] {rec['path'].name}: "
+                f"\n[B SKIP] {rec['path'].name}: "
                 "no correctness column"
             )
+
             continue
 
         df["_correct"] = normalize_correctness(
@@ -627,26 +651,31 @@ def experiment_B(
             df["support_score"]
         )
 
-        groups = df.groupby(["dataset", "model"], dropna=False)
-
-        for (dataset, model), g in groups:
+        for (dataset, model), g in df.groupby(
+            ["dataset", "model"]
+        ):
 
             dataset = normalize_dataset_name(dataset)
             model = normalize_model_name(model)
 
-            temp = g[["_correct", "_support"]].dropna()
+            temp = g[
+                ["_correct", "_support"]
+            ].dropna()
 
-            correct_scores = (
-                temp.loc[temp["_correct"] == 1, "_support"]
-                .to_numpy()
-            )
+            correct_scores = temp.loc[
+                temp["_correct"] == 1,
+                "_support",
+            ].to_numpy()
 
-            incorrect_scores = (
-                temp.loc[temp["_correct"] == 0, "_support"]
-                .to_numpy()
-            )
+            incorrect_scores = temp.loc[
+                temp["_correct"] == 0,
+                "_support",
+            ].to_numpy()
 
-            if len(correct_scores) == 0 or len(incorrect_scores) == 0:
+            if (
+                len(correct_scores) == 0
+                or len(incorrect_scores) == 0
+            ):
                 continue
 
             mw = mannwhitneyu(
@@ -660,93 +689,113 @@ def experiment_B(
                 incorrect_scores,
             )
 
-            ci_low, ci_high, valid_boot = (
+            ci_low, ci_high, n_valid_boot = (
                 bootstrap_rank_biserial_ci(
                     correct_scores,
                     incorrect_scores,
-                    n_boot=n_boot,
-                    seed=seed,
                 )
             )
 
-            mean_correct = np.mean(correct_scores)
-            mean_incorrect = np.mean(incorrect_scores)
+            mean_correct = np.mean(
+                correct_scores
+            )
 
-            # Define gap clearly:
-            # positive = greater support for correct answers.
-            support_gap = mean_correct - mean_incorrect
+            mean_incorrect = np.mean(
+                incorrect_scores
+            )
 
-            # Spearman correctness <-> support as secondary analysis.
+            # IMPORTANT:
+            # Positive gap = correct answers receive
+            # more support than incorrect answers.
+
+            support_gap = (
+                mean_correct -
+                mean_incorrect
+            )
+
             rho, rho_p = safe_spearman(
                 temp["_correct"],
                 temp["_support"],
             )
 
             results.append({
+
                 "dataset": dataset,
                 "model": model,
                 "condition": rec["condition"],
-                "file": rec["path"].name,
-                "correctness_column": correctness_col,
+
                 "n_total": len(temp),
                 "n_correct": len(correct_scores),
                 "n_incorrect": len(incorrect_scores),
-                "support_correct_mean": mean_correct,
-                "support_incorrect_mean": mean_incorrect,
-                "support_gap_correct_minus_incorrect": support_gap,
-                "mannwhitney_U": mw.statistic,
-                "mannwhitney_p": mw.pvalue,
-                "rank_biserial": effect,
-                "rank_biserial_ci95_low": ci_low,
-                "rank_biserial_ci95_high": ci_high,
-                "spearman_correctness_support": rho,
-                "spearman_p": rho_p,
-                "bootstrap_valid": valid_boot,
+
+                "support_correct_mean":
+                    mean_correct,
+
+                "support_incorrect_mean":
+                    mean_incorrect,
+
+                "support_gap_correct_minus_incorrect":
+                    support_gap,
+
+                "mannwhitney_U":
+                    mw.statistic,
+
+                "mannwhitney_p":
+                    mw.pvalue,
+
+                "rank_biserial":
+                    effect,
+
+                "rank_biserial_ci95_low":
+                    ci_low,
+
+                "rank_biserial_ci95_high":
+                    ci_high,
+
+                "spearman_correctness_support":
+                    rho,
+
+                "spearman_p":
+                    rho_p,
+
+                "source_file":
+                    rec["path"].name,
             })
 
             print(
-                f"{dataset:12} | "
-                f"{model:28} | "
-                f"{rec['condition']:7}\n"
-                f"  correct={mean_correct:.2f} "
-                f"(n={len(correct_scores)}) | "
-                f"incorrect={mean_incorrect:.2f} "
-                f"(n={len(incorrect_scores)})\n"
-                f"  gap(C-I)={support_gap:.2f} | "
-                f"MW p={mw.pvalue:.4g} | "
-                f"RBC={effect:.4f} "
-                f"[{ci_low:.4f}, {ci_high:.4f}]"
+                f"\n{dataset}"
+                f"\n{model}"
+                f"\nCondition: {rec['condition']}"
+                f"\nCorrect support:   {mean_correct:.2f}"
+                f"\nIncorrect support: {mean_incorrect:.2f}"
+                f"\nGap (C-I):         {support_gap:.2f}"
+                f"\nMW p:              {mw.pvalue:.4g}"
+                f"\nRank-biserial:     {effect:.4f}"
+                f"\n95% CI: [{ci_low:.4f}, {ci_high:.4f}]"
             )
 
     result_df = pd.DataFrame(results)
 
-    path = output_dir / "experiment_B_justification.csv"
-    result_df.to_csv(path, index=False)
+    path = (
+        OUTPUT_DIR /
+        "experiment_B_justification.csv"
+    )
 
-    print()
-    print(f"Saved: {path}")
-    print()
+    result_df.to_csv(
+        path,
+        index=False,
+    )
+
+    print("\nSaved:", path)
 
     return result_df
 
 
 # ============================================================
-# C1: PREPARE UNCERTAINTY DATA
+# 10. COLLECT C1 DATA
 # ============================================================
 
-def collect_uncertainty_frames(records, ebse_column):
-    """
-    Convert all uncertainty files into a common schema.
-
-    Output columns:
-        dataset
-        model
-        condition
-        question
-        ebse
-        gpt_uncertainty
-        source_file
-    """
+def collect_uncertainty_data(records):
 
     frames = []
 
@@ -757,165 +806,159 @@ def collect_uncertainty_frames(records, ebse_column):
 
         df = rec["df"].copy()
 
-        if ebse_column not in df.columns:
+        if EBSE_COLUMN not in df.columns:
             continue
 
-        needed = [
-            "dataset",
-            "model",
-            "question",
-            ebse_column,
-            "gpt_perceived_uncertainty",
-        ]
+        temp = pd.DataFrame({
 
-        if any(col not in df.columns for col in needed):
-            continue
+            "dataset":
+                df["dataset"].apply(
+                    normalize_dataset_name
+                ),
 
-        temp = df[needed].copy()
+            "model":
+                df["model"].apply(
+                    normalize_model_name
+                ),
 
-        temp["dataset"] = (
-            temp["dataset"]
-            .apply(normalize_dataset_name)
-        )
+            "condition":
+                rec["condition"],
 
-        temp["model"] = (
-            temp["model"]
-            .apply(normalize_model_name)
-        )
+            "question":
+                df["question"].apply(
+                    normalize_question
+                ),
 
-        temp["condition"] = rec["condition"]
+            "ebse":
+                safe_numeric(
+                    df[EBSE_COLUMN]
+                ),
 
-        temp["question"] = (
-            temp["question"]
-            .apply(normalize_question)
-        )
+            "gpt_uncertainty":
+                safe_numeric(
+                    df[
+                        "gpt_perceived_uncertainty"
+                    ]
+                ),
 
-        temp["ebse"] = safe_numeric(
-            temp[ebse_column]
-        )
+            "source_file":
+                rec["path"].name,
+        })
 
-        temp["gpt_uncertainty"] = safe_numeric(
-            temp["gpt_perceived_uncertainty"]
-        )
-
-        temp["source_file"] = rec["path"].name
-
-        frames.append(
-            temp[
-                [
-                    "dataset",
-                    "model",
-                    "condition",
-                    "question",
-                    "ebse",
-                    "gpt_uncertainty",
-                    "source_file",
-                ]
-            ]
-        )
+        frames.append(temp)
 
     if not frames:
         return pd.DataFrame()
 
-    return pd.concat(frames, ignore_index=True)
+    return pd.concat(
+        frames,
+        ignore_index=True,
+    )
 
 
 # ============================================================
-# C1: QUESTION PAIRING VALIDATION
+# 11. SAME-QUESTION CHECK
 # ============================================================
 
-def validate_question_pairing(joint, posthoc):
-    """
-    Mandatory validation that Joint and Post-hoc contain
-    exactly the same questions.
+def validate_question_pairing(
+    joint,
+    posthoc,
+):
 
-    Returns:
-        qc dict
-        can_proceed bool
-    """
+    joint_questions = set(
+        joint["question"]
+    )
 
-    joint_questions = joint["question"].tolist()
-    post_questions = posthoc["question"].tolist()
+    post_questions = set(
+        posthoc["question"]
+    )
+
+    shared = (
+        joint_questions &
+        post_questions
+    )
+
+    joint_only = (
+        joint_questions -
+        post_questions
+    )
+
+    post_only = (
+        post_questions -
+        joint_questions
+    )
 
     joint_duplicates = (
-        joint["question"].duplicated(keep=False).sum()
+        joint["question"]
+        .duplicated()
+        .sum()
     )
 
     post_duplicates = (
-        posthoc["question"].duplicated(keep=False).sum()
+        posthoc["question"]
+        .duplicated()
+        .sum()
     )
 
-    joint_set = set(joint_questions)
-    post_set = set(post_questions)
-
-    joint_only = joint_set - post_set
-    post_only = post_set - joint_set
-
-    shared = joint_set & post_set
-
     exact_match = (
+
         len(joint_only) == 0
+
         and len(post_only) == 0
+
         and joint_duplicates == 0
+
         and post_duplicates == 0
+
         and len(joint) == len(posthoc)
     )
 
-    qc = {
+    return {
+
         "joint_n": len(joint),
+
         "posthoc_n": len(posthoc),
-        "shared_questions": len(shared),
-        "joint_only_n": len(joint_only),
-        "posthoc_only_n": len(post_only),
-        "joint_duplicate_rows": joint_duplicates,
-        "posthoc_duplicate_rows": post_duplicates,
-        "exact_question_match": exact_match,
-        "joint_only_examples": " ||| ".join(
-            list(sorted(joint_only))[:5]
-        ),
-        "posthoc_only_examples": " ||| ".join(
-            list(sorted(post_only))[:5]
-        ),
+
+        "shared_questions":
+            len(shared),
+
+        "joint_only_n":
+            len(joint_only),
+
+        "posthoc_only_n":
+            len(post_only),
+
+        "joint_duplicates":
+            joint_duplicates,
+
+        "posthoc_duplicates":
+            post_duplicates,
+
+        "exact_match":
+            exact_match,
+
+        "joint_only_examples":
+            " ||| ".join(
+                list(joint_only)[:3]
+            ),
+
+        "posthoc_only_examples":
+            " ||| ".join(
+                list(post_only)[:3]
+            ),
     }
 
-    return qc, exact_match
-
 
 # ============================================================
-# C1: PAIRED BOOTSTRAP DELTA RHO
+# 12. PAIRED BOOTSTRAP DELTA RHO
 # ============================================================
 
-def paired_bootstrap_delta_rho(
-    paired,
-    n_boot=10000,
-    seed=42,
-):
-    """
-    Paired bootstrap Joint vs Post-hoc.
-
-    IMPORTANT:
-        Resampling unit = QUESTION.
-
-    Each sampled question brings BOTH:
-        Joint observation
-        Post-hoc observation
-
-    Delta rho:
-        rho_joint - rho_posthoc
-    """
+def paired_bootstrap_delta_rho(paired):
 
     n = len(paired)
 
     if n < 3:
-        return {
-            "rho_joint": np.nan,
-            "rho_posthoc": np.nan,
-            "delta_rho": np.nan,
-            "delta_ci_low": np.nan,
-            "delta_ci_high": np.nan,
-            "bootstrap_p_two_sided": np.nan,
-            "valid_bootstraps": 0,
-        }
+        return None
 
     rho_joint, _ = safe_spearman(
         paired["ebse_joint"],
@@ -927,119 +970,152 @@ def paired_bootstrap_delta_rho(
         paired["gpt_uncertainty_posthoc"],
     )
 
-    delta_observed = rho_joint - rho_posthoc
+    observed_delta = (
+        rho_joint -
+        rho_posthoc
+    )
 
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(SEED)
 
     deltas = []
 
-    for _ in range(n_boot):
+    for _ in range(N_BOOT):
 
-        # SAME question indices sampled for BOTH conditions.
-        idx = rng.integers(0, n, size=n)
+        # CRITICAL:
+        #
+        # We resample QUESTIONS.
+        #
+        # The same sampled indices bring both
+        # Joint and Post-hoc observations.
+
+        idx = rng.integers(
+            0,
+            n,
+            size=n,
+        )
 
         sample = paired.iloc[idx]
 
-        rj, _ = safe_spearman(
+        r_joint, _ = safe_spearman(
             sample["ebse_joint"],
             sample["gpt_uncertainty_joint"],
         )
 
-        rp, _ = safe_spearman(
+        r_post, _ = safe_spearman(
             sample["ebse_posthoc"],
             sample["gpt_uncertainty_posthoc"],
         )
 
-        if np.isfinite(rj) and np.isfinite(rp):
-            deltas.append(rj - rp)
+        if (
+            np.isfinite(r_joint)
+            and np.isfinite(r_post)
+        ):
 
-    if not deltas:
-        return {
-            "rho_joint": rho_joint,
-            "rho_posthoc": rho_posthoc,
-            "delta_rho": delta_observed,
-            "delta_ci_low": np.nan,
-            "delta_ci_high": np.nan,
-            "bootstrap_p_two_sided": np.nan,
-            "valid_bootstraps": 0,
-        }
+            deltas.append(
+                r_joint -
+                r_post
+            )
 
     deltas = np.asarray(deltas)
 
-    ci_low = np.percentile(deltas, 2.5)
-    ci_high = np.percentile(deltas, 97.5)
+    if len(deltas) == 0:
+        return None
 
-    # Bootstrap sign-based two-sided p-value.
-    #
-    # This is supplementary; the CI is the main result.
-    p_lower = np.mean(deltas <= 0)
-    p_upper = np.mean(deltas >= 0)
+    ci_low = np.percentile(
+        deltas,
+        2.5,
+    )
+
+    ci_high = np.percentile(
+        deltas,
+        97.5,
+    )
+
+    # Approximate bootstrap sign test
+    # around Delta rho = 0.
+
+    p_negative = np.mean(
+        deltas <= 0
+    )
+
+    p_positive = np.mean(
+        deltas >= 0
+    )
 
     bootstrap_p = min(
         1.0,
-        2 * min(p_lower, p_upper),
+        2 * min(
+            p_negative,
+            p_positive,
+        ),
     )
 
     return {
-        "rho_joint": rho_joint,
-        "rho_posthoc": rho_posthoc,
-        "delta_rho": delta_observed,
-        "delta_ci_low": ci_low,
-        "delta_ci_high": ci_high,
-        "bootstrap_p_two_sided": bootstrap_p,
-        "valid_bootstraps": len(deltas),
+
+        "rho_joint":
+            rho_joint,
+
+        "rho_posthoc":
+            rho_posthoc,
+
+        "delta_rho":
+            observed_delta,
+
+        "delta_ci95_low":
+            ci_low,
+
+        "delta_ci95_high":
+            ci_high,
+
+        "bootstrap_p":
+            bootstrap_p,
+
+        "valid_bootstraps":
+            len(deltas),
     }
 
 
 # ============================================================
-# EXPERIMENT C1
+# 13. EXPERIMENT C1
 # ============================================================
 
-def experiment_C1(
-    records,
-    output_dir,
-    ebse_column,
-    n_boot,
-    seed,
-):
-    """
-    Joint vs Post-hoc paired comparison.
+def experiment_C1(records):
 
-    STRICT requirement:
-        SAME questions must occur in both conditions.
-    """
+    print("\n" + "=" * 75)
+    print("EXPERIMENT C1")
+    print("JOINT VS POST-HOC")
+    print("=" * 75)
 
-    print("=" * 70)
-    print("EXPERIMENT C1: JOINT VS POST-HOC")
-    print("=" * 70)
-
-    all_data = collect_uncertainty_frames(
-        records,
-        ebse_column,
+    all_data = collect_uncertainty_data(
+        records
     )
 
     if all_data.empty:
-        print("No uncertainty data found.")
-        return pd.DataFrame(), pd.DataFrame()
+
+        print("No uncertainty files found.")
+
+        return
 
     qc_results = []
     comparison_results = []
 
     combinations = (
-        all_data[["dataset", "model"]]
+        all_data[
+            ["dataset", "model"]
+        ]
         .drop_duplicates()
-        .sort_values(["dataset", "model"])
     )
 
-    for _, combo in combinations.iterrows():
+    for _, row in combinations.iterrows():
 
-        dataset = combo["dataset"]
-        model = combo["model"]
+        dataset = row["dataset"]
+        model = row["model"]
 
         subset = all_data[
             (all_data["dataset"] == dataset)
-            & (all_data["model"] == model)
-        ].copy()
+            &
+            (all_data["model"] == model)
+        ]
 
         joint = subset[
             subset["condition"] == "joint"
@@ -1049,60 +1125,111 @@ def experiment_C1(
             subset["condition"] == "posthoc"
         ].copy()
 
+        # Need BOTH conditions.
+
         if len(joint) == 0 or len(posthoc) == 0:
             continue
 
-        print()
-        print("-" * 70)
-        print(f"{dataset} | {model}")
-        print("-" * 70)
+        print("\n" + "-" * 75)
+        print(dataset, "|", model)
+        print("-" * 75)
 
-        qc, exact_match = validate_question_pairing(
+        qc = validate_question_pairing(
             joint,
             posthoc,
         )
 
-        qc_row = {
+        qc_results.append({
             "dataset": dataset,
             "model": model,
             **qc,
-        }
+        })
 
-        qc_results.append(qc_row)
+        print(
+            "Joint rows:       ",
+            qc["joint_n"]
+        )
 
-        print(f"Joint rows:       {qc['joint_n']}")
-        print(f"Post-hoc rows:    {qc['posthoc_n']}")
-        print(f"Shared questions: {qc['shared_questions']}")
-        print(f"Joint only:       {qc['joint_only_n']}")
-        print(f"Post-hoc only:    {qc['posthoc_only_n']}")
-        print(f"Joint duplicates: {qc['joint_duplicate_rows']}")
-        print(f"Post duplicates:  {qc['posthoc_duplicate_rows']}")
+        print(
+            "Post-hoc rows:    ",
+            qc["posthoc_n"]
+        )
 
-        if exact_match:
-            print("STATUS: PASS - exact question match")
-        else:
-            print("STATUS: FAIL - question sets are not identical")
+        print(
+            "Shared questions: ",
+            qc["shared_questions"]
+        )
+
+        print(
+            "Joint only:       ",
+            qc["joint_only_n"]
+        )
+
+        print(
+            "Post-hoc only:    ",
+            qc["posthoc_only_n"]
+        )
+
+        print(
+            "Joint duplicates: ",
+            qc["joint_duplicates"]
+        )
+
+        print(
+            "Post duplicates:  ",
+            qc["posthoc_duplicates"]
+        )
+
+        # ----------------------------------------------------
+        # THIS IS THE CHECK YOU ASKED FOR
+        # ----------------------------------------------------
+
+        if not qc["exact_match"]:
+
+            print(
+                "\n*** PAIRING FAILED ***"
+            )
+
+            print(
+                "Joint and Post-hoc were NOT run "
+                "on exactly the same questions."
+            )
 
             if qc["joint_only_examples"]:
+
                 print(
-                    "Joint-only examples:",
-                    qc["joint_only_examples"],
+                    "\nExample Joint-only question:"
+                )
+
+                print(
+                    qc["joint_only_examples"]
                 )
 
             if qc["posthoc_only_examples"]:
+
                 print(
-                    "Posthoc-only examples:",
-                    qc["posthoc_only_examples"],
+                    "\nExample Post-hoc-only question:"
+                )
+
+                print(
+                    qc["posthoc_only_examples"]
                 )
 
             if STRICT_PAIRING:
+
                 print(
-                    "Comparison SKIPPED because STRICT_PAIRING=True."
+                    "\nSKIPPING this model-dataset pair."
                 )
+
                 continue
 
+        print(
+            "\nPAIRING PASSED:"
+            " exact same question set."
+        )
+
         # ----------------------------------------------------
-        # MERGE ONLY AFTER VALIDATION
+        # MERGE BY QUESTION
         # ----------------------------------------------------
 
         joint_small = joint[
@@ -1111,7 +1238,7 @@ def experiment_C1(
                 "ebse",
                 "gpt_uncertainty",
             ]
-        ].copy()
+        ]
 
         post_small = posthoc[
             [
@@ -1119,22 +1246,40 @@ def experiment_C1(
                 "ebse",
                 "gpt_uncertainty",
             ]
-        ].copy()
+        ]
 
         try:
+
             paired = joint_small.merge(
+
                 post_small,
+
                 on="question",
+
                 how="inner",
-                suffixes=("_joint", "_posthoc"),
+
+                suffixes=(
+                    "_joint",
+                    "_posthoc",
+                ),
+
+                # Prevent accidental many-to-many
+                # question matching.
                 validate="one_to_one",
             )
+
         except Exception as e:
-            print(f"PAIRING ERROR: {e}")
+
+            print(
+                "\nMERGE FAILED:",
+                e
+            )
+
             continue
 
-        # Both conditions need usable EBSE and GPT scores
-        # for the paired correlation comparison.
+        # For paired Delta rho analysis,
+        # both conditions need usable values.
+
         paired = paired.dropna(
             subset=[
                 "ebse_joint",
@@ -1144,146 +1289,188 @@ def experiment_C1(
             ]
         )
 
-        print(f"Complete paired rows: {len(paired)}")
-
-        stats = paired_bootstrap_delta_rho(
-            paired,
-            n_boot=n_boot,
-            seed=seed,
+        print(
+            "Complete paired rows:",
+            len(paired)
         )
 
+        stats = paired_bootstrap_delta_rho(
+            paired
+        )
+
+        if stats is None:
+
+            print(
+                "Insufficient data for bootstrap."
+            )
+
+            continue
+
         comparison_results.append({
-            "dataset": dataset,
-            "model": model,
-            "n_paired": len(paired),
-            "ebse_metric": ebse_column,
+
+            "dataset":
+                dataset,
+
+            "model":
+                model,
+
+            "n_paired":
+                len(paired),
+
+            "ebse_metric":
+                EBSE_COLUMN,
+
             **stats,
         })
 
         print(
-            f"Post-hoc rho = {stats['rho_posthoc']:.4f}"
-        )
-        print(
-            f"Joint rho    = {stats['rho_joint']:.4f}"
-        )
-        print(
-            f"Delta rho    = {stats['delta_rho']:.4f}"
-        )
-        print(
-            "95% CI       = "
-            f"[{stats['delta_ci_low']:.4f}, "
-            f"{stats['delta_ci_high']:.4f}]"
-        )
-        print(
-            "Bootstrap p  = "
-            f"{stats['bootstrap_p_two_sided']:.4g}"
+            f"\nPost-hoc rho = "
+            f"{stats['rho_posthoc']:.4f}"
         )
 
-    qc_df = pd.DataFrame(qc_results)
+        print(
+            f"Joint rho    = "
+            f"{stats['rho_joint']:.4f}"
+        )
+
+        print(
+            f"Delta rho    = "
+            f"{stats['delta_rho']:.4f}"
+        )
+
+        print(
+            f"95% CI       = "
+            f"[{stats['delta_ci95_low']:.4f}, "
+            f"{stats['delta_ci95_high']:.4f}]"
+        )
+
+        print(
+            f"Bootstrap p  = "
+            f"{stats['bootstrap_p']:.4g}"
+        )
+
+    # ========================================================
+    # SAVE PAIRING QC
+    # ========================================================
+
+    qc_df = pd.DataFrame(
+        qc_results
+    )
+
+    qc_path = (
+        OUTPUT_DIR /
+        "experiment_C1_pairing_QC.csv"
+    )
+
+    qc_df.to_csv(
+        qc_path,
+        index=False,
+    )
+
+    # ========================================================
+    # SAVE C1 RESULTS
+    # ========================================================
 
     comparison_df = pd.DataFrame(
         comparison_results
     )
 
-    qc_path = (
-        output_dir /
-        "experiment_C1_pairing_qc.csv"
-    )
-
     comparison_path = (
-        output_dir /
+        OUTPUT_DIR /
         "experiment_C1_joint_vs_posthoc.csv"
     )
 
-    qc_df.to_csv(qc_path, index=False)
-    comparison_df.to_csv(comparison_path, index=False)
+    comparison_df.to_csv(
+        comparison_path,
+        index=False,
+    )
 
-    print()
-    print(f"Saved QC: {qc_path}")
-    print(f"Saved comparisons: {comparison_path}")
+    print("\nSaved:", qc_path)
+    print("Saved:", comparison_path)
 
     # ========================================================
     # AGGREGATE WILCOXON
     # ========================================================
 
-    aggregate_results = []
+    if comparison_df.empty:
 
-    if not comparison_df.empty:
-
-        deltas = (
-            comparison_df["delta_rho"]
-            .dropna()
-            .to_numpy()
+        print(
+            "\nNo valid Joint/Post-hoc comparisons."
         )
 
-        n_pairs = len(deltas)
+        return
 
-        n_positive = int(np.sum(deltas > 0))
-        n_negative = int(np.sum(deltas < 0))
-        n_zero = int(np.sum(deltas == 0))
-
-        median_delta = (
-            np.median(deltas)
-            if n_pairs > 0
-            else np.nan
-        )
-
-        mean_delta = (
-            np.mean(deltas)
-            if n_pairs > 0
-            else np.nan
-        )
-
-        if n_pairs > 0 and not np.all(deltas == 0):
-
-            try:
-                w = wilcoxon(
-                    deltas,
-                    alternative="two-sided",
-                    zero_method="wilcox",
-                )
-
-                wilcoxon_stat = w.statistic
-                wilcoxon_p = w.pvalue
-
-            except Exception:
-                wilcoxon_stat = np.nan
-                wilcoxon_p = np.nan
-
-        else:
-            wilcoxon_stat = np.nan
-            wilcoxon_p = np.nan
-
-        aggregate_results.append({
-            "n_model_dataset_pairs": n_pairs,
-            "mean_delta_rho": mean_delta,
-            "median_delta_rho": median_delta,
-            "n_joint_higher": n_positive,
-            "n_posthoc_higher": n_negative,
-            "n_equal": n_zero,
-            "wilcoxon_statistic": wilcoxon_stat,
-            "wilcoxon_p": wilcoxon_p,
-        })
-
-        print()
-        print("=" * 70)
-        print("C1 AGGREGATE RESULT")
-        print("=" * 70)
-
-        print(f"Model-dataset pairs: {n_pairs}")
-        print(f"Mean Delta rho:      {mean_delta:.4f}")
-        print(f"Median Delta rho:    {median_delta:.4f}")
-        print(f"Joint higher:        {n_positive}")
-        print(f"Post-hoc higher:     {n_negative}")
-        print(f"Equal:               {n_zero}")
-        print(f"Wilcoxon p:          {wilcoxon_p:.4g}")
-
-    aggregate_df = pd.DataFrame(
-        aggregate_results
+    deltas = (
+        comparison_df["delta_rho"]
+        .dropna()
+        .to_numpy()
     )
 
+    n_pairs = len(deltas)
+
+    n_joint_higher = int(
+        np.sum(deltas > 0)
+    )
+
+    n_posthoc_higher = int(
+        np.sum(deltas < 0)
+    )
+
+    n_equal = int(
+        np.sum(deltas == 0)
+    )
+
+    mean_delta = np.mean(deltas)
+    median_delta = np.median(deltas)
+
+    if (
+        n_pairs > 0
+        and not np.all(deltas == 0)
+    ):
+
+        result = wilcoxon(
+            deltas,
+            alternative="two-sided",
+            zero_method="wilcox",
+        )
+
+        W = result.statistic
+        p = result.pvalue
+
+    else:
+
+        W = np.nan
+        p = np.nan
+
+    aggregate_df = pd.DataFrame([{
+
+        "n_model_dataset_pairs":
+            n_pairs,
+
+        "mean_delta_rho":
+            mean_delta,
+
+        "median_delta_rho":
+            median_delta,
+
+        "n_joint_higher":
+            n_joint_higher,
+
+        "n_posthoc_higher":
+            n_posthoc_higher,
+
+        "n_equal":
+            n_equal,
+
+        "wilcoxon_W":
+            W,
+
+        "wilcoxon_p":
+            p,
+    }])
+
     aggregate_path = (
-        output_dir /
+        OUTPUT_DIR /
         "experiment_C1_aggregate.csv"
     )
 
@@ -1292,194 +1479,140 @@ def experiment_C1(
         index=False,
     )
 
-    print(f"Saved aggregate: {aggregate_path}")
-    print()
+    print("\n" + "=" * 75)
+    print("AGGREGATE JOINT VS POST-HOC")
+    print("=" * 75)
 
-    return comparison_df, qc_df
-
-
-# ============================================================
-# DUPLICATE ANALYSIS CHECK
-# ============================================================
-
-def check_duplicate_analysis_files(records):
-    """
-    Warn if multiple files appear to provide the same
-    dataset/model/condition/analysis combination.
-
-    This is important because otherwise the same experiment
-    could accidentally enter the results twice.
-    """
-
-    rows = []
-
-    for rec in records:
-
-        df = rec["df"]
-
-        if "dataset" not in df.columns or "model" not in df.columns:
-            continue
-
-        combinations = (
-            df[["dataset", "model"]]
-            .drop_duplicates()
-        )
-
-        for _, row in combinations.iterrows():
-
-            for analysis_type in rec["types"]:
-
-                rows.append({
-                    "dataset": normalize_dataset_name(
-                        row["dataset"]
-                    ),
-                    "model": normalize_model_name(
-                        row["model"]
-                    ),
-                    "condition": rec["condition"],
-                    "analysis_type": analysis_type,
-                    "file": rec["path"].name,
-                })
-
-    check = pd.DataFrame(rows)
-
-    if check.empty:
-        return
-
-    counts = (
-        check
-        .groupby(
-            [
-                "dataset",
-                "model",
-                "condition",
-                "analysis_type",
-            ]
-        )
-        .size()
-        .reset_index(name="n_files")
+    print(
+        "Model-dataset pairs:",
+        n_pairs
     )
 
-    duplicates = counts[
-        counts["n_files"] > 1
-    ]
+    print(
+        "Joint higher:",
+        n_joint_higher
+    )
 
-    if not duplicates.empty:
+    print(
+        "Post-hoc higher:",
+        n_posthoc_higher
+    )
 
-        print()
-        print("!" * 70)
-        print("WARNING: POSSIBLE DUPLICATE ANALYSIS FILES")
-        print("!" * 70)
+    print(
+        "Mean Delta rho:",
+        round(mean_delta, 4)
+    )
 
-        print(duplicates.to_string(index=False))
+    print(
+        "Median Delta rho:",
+        round(median_delta, 4)
+    )
 
-        print()
-        print(
-            "Check these before trusting the results. "
-            "You may have multiple versions of the same scored file."
-        )
-        print()
+    print(
+        "Wilcoxon W:",
+        W
+    )
+
+    print(
+        "Wilcoxon p:",
+        p
+    )
+
+    print("\nSaved:", aggregate_path)
 
 
 # ============================================================
-# MAIN
+# 14. MAIN
 # ============================================================
 
 def main():
 
-    parser = argparse.ArgumentParser()
+    print("\n" + "=" * 75)
+    print("POST-HOC EXPLANATION CALIBRATION")
+    print("STATISTICAL ANALYSIS")
+    print("=" * 75)
 
-    parser.add_argument(
-        "results_dir",
-        help="Root directory containing experiment CSV files",
+    print("\nConfiguration:")
+
+    print(
+        "Results directory:",
+        RESULTS_DIR.resolve()
     )
 
-    parser.add_argument(
-        "--output_dir",
-        default="statistical_results",
-        help="Directory for output CSV files",
+    print(
+        "Output directory:",
+        OUTPUT_DIR.resolve()
     )
 
-    parser.add_argument(
-        "--n_boot",
-        type=int,
-        default=DEFAULT_N_BOOT,
-        help="Number of bootstrap replicates",
+    print(
+        "EBSE column:",
+        EBSE_COLUMN
     )
 
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=DEFAULT_SEED,
-        help="Random seed",
+    print(
+        "Bootstrap iterations:",
+        N_BOOT
     )
 
-    parser.add_argument(
-        "--ebse_column",
-        choices=["ebse", "norm_ebse"],
-        default=DEFAULT_EBSE_COLUMN,
-        help="EBSE variable used in correlation analyses",
+    print(
+        "Seed:",
+        SEED
     )
 
-    args = parser.parse_args()
-
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(
+    OUTPUT_DIR.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    print()
-    print("=" * 70)
-    print("POST-HOC EXPLANATION STATISTICAL ANALYSIS")
-    print("=" * 70)
-    print(f"EBSE metric: {args.ebse_column}")
-    print(f"Bootstrap replicates: {args.n_boot}")
-    print(f"Random seed: {args.seed}")
-    print(f"Strict Joint/Post-hoc pairing: {STRICT_PAIRING}")
-    print()
+    if not RESULTS_DIR.exists():
 
-    records = load_all_csvs(
-        args.results_dir
-    )
-
-    if not records:
-        raise RuntimeError(
-            "No usable scored CSV files were found."
+        print(
+            "\nERROR:"
+            "\nResults directory does not exist:"
         )
 
-    check_duplicate_analysis_files(records)
+        print(
+            RESULTS_DIR.resolve()
+        )
 
-    experiment_A(
-        records,
-        output_dir,
-        args.ebse_column,
-        args.n_boot,
-        args.seed,
-    )
+        print(
+            "\nEither create a folder named 'results' "
+            "next to this script, or change RESULTS_DIR "
+            "at the top of the script."
+        )
 
-    experiment_B(
-        records,
-        output_dir,
-        args.n_boot,
-        args.seed,
-    )
+        return
 
-    experiment_C1(
-        records,
-        output_dir,
-        args.ebse_column,
-        args.n_boot,
-        args.seed,
-    )
+    records = load_all_csvs()
 
-    print("=" * 70)
-    print("ANALYSIS COMPLETE")
-    print("=" * 70)
+    if len(records) == 0:
+
+        print(
+            "\nERROR: No usable CSV files found."
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # RUN ALL THREE ANALYSES
+    # --------------------------------------------------------
+
+    experiment_A(records)
+
+    experiment_B(records)
+
+    experiment_C1(records)
+
+    print("\n" + "=" * 75)
+    print("DONE")
+    print("=" * 75)
 
     print(
-        "\nOutput directory:",
-        output_dir.resolve(),
+        "\nResults saved to:"
+    )
+
+    print(
+        OUTPUT_DIR.resolve()
     )
 
 
