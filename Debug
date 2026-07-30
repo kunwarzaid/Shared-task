@@ -1055,3 +1055,659 @@ Finally, we tested whether this happens simply because our explanation is genera
 So the emerging conclusion is not that explanations contain zero uncertainty information. Rather, uncertainty communication is weak and inconsistent, while explanations remain strongly answer-supportive even for incorrect answers. Removing the Post-hoc architectural separation does not systematically fix this, suggesting that access to uncertainty information alone is insufficient; the explanation-generation behavior itself may favor answer-consistent justification over uncertainty-faithful communication.
 
 And that last distinction—availability of uncertainty versus communication of uncertainty—is probably the cleanest conceptual center for the paper now.
+
+
+Yes — and this is actually the “why should anyone care?” question of the paper. The motivation is not merely to show that EBSE and explanation uncertainty have low correlation. The deeper issue is whether an explanation can be trusted as evidence about the model’s epistemic state.
+
+1. What do users infer from explanations?
+
+Suppose a medical QA model gives:
+
+Answer: B
+“B is the correct treatment because the patient’s symptoms indicate X, which causes Y, therefore B is appropriate.”
+
+A reader sees a coherent, detailed explanation and naturally gets two signals:
+
+1. Why the model chose B
+2. How trustworthy B seems
+
+The problem is that these are not the same thing.
+
+The model could have been highly stable across possible generations:
+
+B, B, B, B, B, B, B, B, B, B
+
+or highly unstable:
+
+B, A, B, C, A, B, D, B, A, C
+
+Yet after selecting B, it might generate essentially the same confident-sounding justification in both cases.
+
+That is the failure we are investigating.
+
+⸻
+
+2. Why should explanation uncertainty track predictive uncertainty?
+
+We are not claiming they must be numerically equal.
+
+We are asking for a much weaker property:
+
+If the model is substantially more uncertain on question A than question B, does its explanation communicate some corresponding difference?
+
+For example:
+
+Low predictive uncertainty
+
+Samples:
+
+B B B B B B B B B B
+
+Explanation:
+
+“B is the appropriate answer because…”
+
+Fine.
+
+High predictive uncertainty
+
+Samples:
+
+B A C B A B C D A B
+
+But explanation:
+
+“B is clearly the correct answer because…”
+
+Now we have a problem.
+
+The explanation makes the two situations appear similar to the user even though the underlying predictive distributions are very different.
+
+That’s why Spearman correlation is useful.
+
+We’re not demanding:
+
+\text{EBSE}=0.73 \Rightarrow \text{Explanation uncertainty}=0.73
+
+We’re testing whether:
+
+\text{higher predictive uncertainty}
+\quad\Rightarrow\quad
+\text{higher communicated uncertainty}
+
+at least monotonically.
+
+⸻
+
+3. What practical problem does this solve?
+
+It addresses trust calibration through explanations.
+
+Consider two systems.
+
+System A
+
+Answer: Drug X
+Explanation: “Drug X is appropriate because…”
+
+System B
+
+Answer: Drug X
+Explanation: “Drug X appears most likely, although the evidence is ambiguous between X and Y because…”
+
+Even if both ultimately answer X, System B communicates information that may change the user’s behavior.
+
+A clinician might verify the recommendation.
+
+A student might check another source.
+
+A human decision-maker might defer rather than act automatically.
+
+An AI system might escalate the case to another model or human expert.
+
+So explanation uncertainty potentially supports appropriate reliance.
+
+The issue we’re identifying is that current explanations may not provide that signal reliably.
+
+⸻
+
+4. Why isn’t answer accuracy enough?
+
+Suppose a model has 80% accuracy.
+
+That tells us:
+
+Across 100 questions, approximately 80 were correct.
+
+But for the current question, the user doesn’t know whether they’re looking at one of the 80 correct answers or one of the 20 wrong ones.
+
+That’s where confidence, uncertainty and explanations matter.
+
+And there is an especially dangerous combination:
+
+\boxed{\text{Wrong answer + strong justification + no communicated uncertainty}}
+
+That’s exactly why Experiment A and Experiment B complement one another.
+
+Experiment A asks:
+
+Does the explanation communicate predictive uncertainty?
+
+Experiment B asks:
+
+What happens when the answer is actually wrong?
+
+Your results suggest:
+
+uncertainty communication is generally weak/inconsistent,
+
+while:
+
+incorrect answers can still receive strong explanatory support.
+
+Together, those findings matter more than either one alone.
+
+⸻
+
+5. A concrete example
+
+Imagine the model’s sampled answers for a difficult MedQA question are:
+
+A, C, B, A, D, A, C, A, B, C
+
+Suppose A wins narrowly and becomes the final answer.
+
+The model then generates:
+
+“A is the correct diagnosis. The patient’s presentation is characteristic of condition X because…”
+
+But the correct answer is C.
+
+From the user’s perspective, they see:
+
+A + convincing medical explanation
+
+They don’t see the disagreement behind the answer.
+
+Our EBSE measurement detects that disagreement.
+
+The explanation does not necessarily communicate it.
+
+So there is a mismatch between:
+
+What the model’s predictive behavior tells us
+
+“Several alternatives are plausible.”
+
+and
+
+What the explanation tells the user
+
+“Here is why A is correct.”
+
+That mismatch is the phenomenon we’re studying.
+
+⸻
+
+6. But here’s an important scientific distinction
+
+I would not tell your supervisor:
+
+“A good explanation must always express the model’s uncertainty.”
+
+That’s too strong.
+
+An explanation has multiple possible functions:
+
+* explain the reasoning,
+* provide evidence,
+* justify a prediction,
+* communicate limitations,
+* expose uncertainty,
+* help humans evaluate an answer.
+
+A conventional explanation might only be intended to answer:
+
+“Why did you choose A?”
+
+If so, a reviewer could reasonably say:
+
+“Why should it encode EBSE at all?”
+
+That is a serious objection.
+
+Our argument should therefore be narrower:
+
+When natural-language explanations are presented to users as transparency or trust-supporting artifacts, it is important to know whether their apparent certainty reflects the model’s predictive uncertainty.
+
+We’re testing whether that assumption is warranted.
+
+And our results suggest it often isn’t.
+
+That’s much stronger scientifically than defining low correlation as a failure by fiat.
+
+⸻
+
+7. This changes how I would frame the paper
+
+Rather than:
+
+Are explanations calibrated?
+
+I would frame the core question as:
+
+Do post-hoc explanations faithfully communicate predictive uncertainty?
+
+And then the broader question becomes:
+
+Can users infer a model’s uncertainty from how its explanation is expressed?
+
+Our empirical answer appears to be:
+
+Not reliably.
+
+This is useful because it warns against interpreting a fluent or confident explanation as evidence that the underlying answer was produced with high certainty.
+
+⸻
+
+8. Experiment B makes the motivation much stronger
+
+If Experiment A alone found:
+
+\rho\approx0
+
+a reviewer could say:
+
+“Okay. Explanations weren’t designed to communicate uncertainty. So what?”
+
+But Experiment B says something more consequential.
+
+When answers are incorrect, explanation support can still remain very high.
+
+So the combined phenomenon is:
+
+\text{Predictive uncertainty}
+\not\approx
+\text{communicated uncertainty}
+
+while simultaneously:
+
+\text{incorrect answer}
+\rightarrow
+\text{strong justification}
+
+That means the explanation can behave more like an answer-conditioned rationalizer than a reliable window into how stable the prediction was.
+
+That’s the important result.
+
+⸻
+
+9. And C1 answers an obvious explanation
+
+A reviewer might then say:
+
+“Of course post-hoc explanations don’t know the uncertainty. You generated the answer first, threw away the state, then asked for an explanation.”
+
+That’s exactly why Joint generation matters.
+
+We tested whether generating:
+
+(\text{answer},\text{explanation})
+
+together improves uncertainty communication.
+
+So far it doesn’t systematically do so.
+
+That strengthens the story:
+
+The problem may not simply be that post-hoc explanations lack architectural access to answer-generation state. Even when answer and explanation are jointly generated, uncertainty communication does not reliably improve.
+
+That points toward a deeper distinction between having uncertainty information available and being trained/prompted to communicate it.
+
+⸻
+
+10. What would solving this eventually enable?
+
+This is where the research can go beyond diagnosis.
+
+Imagine an uncertainty-aware explanation system.
+
+When uncertainty is low:
+
+Answer: B
+“B is strongly supported because…”
+
+When uncertainty is moderate:
+
+Answer: B
+“B is the most likely answer, although C remains plausible because…”
+
+When uncertainty is high:
+
+Answer: B
+“The evidence is ambiguous between B and C. B is selected because X, but this answer should be treated cautiously.”
+
+Then explanations don’t merely rationalize decisions.
+
+They expose information about when the model itself is unstable.
+
+That could support:
+
+human escalation, selective prediction, model deferral, verification, decision support, safer agent behavior, and better human-AI reliance.
+
+Your current paper doesn’t need to build that system.
+
+The contribution can first establish:
+
+There is a gap between predictive uncertainty and uncertainty communicated through explanations, and strong justification can persist despite incorrect answers.
+
+Before designing uncertainty-faithful explanations, we first need evidence that ordinary explanations aren’t already providing that function.
+
+⸻
+
+The sentence I’d use with your supervisor
+
+“Our motivation is that explanations are often used as transparency signals, and users may interpret a confident explanation as evidence that the model is confident in its answer. We test whether that inference is actually justified. We estimate predictive uncertainty independently from repeated answer generation and compare it with uncertainty communicated by the explanation. We find that the two are generally weakly related, while explanations can remain strongly supportive even when the answer is wrong. Therefore, explanation confidence should not automatically be treated as a reliable proxy for model confidence.”
+
+And if your supervisor asks “So what does your work solve?”, I’d say:
+
+“At this stage we diagnose and quantify a reliability problem rather than solve it: natural-language explanations can create an appearance of certainty that is weakly connected to the model’s predictive uncertainty. Establishing that gap is the prerequisite for designing explanations that communicate uncertainty faithfully.”
+
+From a trustworthiness perspective, the question
+
+If the model is substantially more uncertain on Question A than Question B, does its explanation communicate some corresponding difference?
+
+matters because the explanation is part of the interface through which a human decides whether to trust the model.
+
+The fundamental issue is appropriate reliance: a trustworthy AI system should help users know not only what it predicts, but also when that prediction deserves scrutiny.
+
+Imagine two cases
+
+For Question A, the model’s sampled answers are highly consistent:
+
+A, A, A, A, A, A, A, A, A, A
+
+So the model has low predictive uncertainty.
+
+For Question B:
+
+A, C, B, A, D, B, A, C, B, A
+
+The model has high predictive uncertainty. Several semantically different answers are plausible under its own predictive distribution.
+
+Now suppose the user receives:
+
+Question A
+
+Answer: A
+“A is the correct answer because X leads to Y, which clearly establishes A.”
+
+Question B
+
+Answer: A
+“A is the correct answer because X leads to Y, which clearly establishes A.”
+
+To the user, these systems look equally certain.
+
+Internally, they are very different.
+
+That’s a trustworthiness problem.
+
+The explanation has hidden a distinction that could be important for deciding whether to rely on the prediction.
+
+⸻
+
+Trustworthiness isn’t just accuracy
+
+Suppose a model is 80% accurate.
+
+That doesn’t tell the user whether this particular answer belongs to the 80% or the 20%.
+
+A trustworthy system ideally provides signals that help distinguish:
+
+“I have strong evidence for this prediction”
+
+from
+
+“This is my best answer, but several alternatives are plausible.”
+
+Predictive uncertainty is one such signal.
+
+If explanations are shown to users as transparency mechanisms, but explanation language doesn’t track predictive uncertainty, then the explanation may provide false reassurance.
+
+And false reassurance can be worse than providing no explanation.
+
+⸻
+
+Why?
+
+Consider a clinician using an AI system.
+
+Model is stable
+
+Internal samples:
+
+Diagnosis A
+Diagnosis A
+Diagnosis A
+Diagnosis A
+Diagnosis A
+
+Explanation:
+
+“The presentation strongly supports diagnosis A because…”
+
+Reasonable.
+
+Model is unstable
+
+Internal samples:
+
+Diagnosis A
+Diagnosis B
+Diagnosis C
+Diagnosis A
+Diagnosis B
+
+But the final output says:
+
+Diagnosis A
+“The presentation strongly supports diagnosis A because…”
+
+The clinician cannot see the model’s instability.
+
+A better trust-supporting explanation might instead say:
+
+“Diagnosis A is the most likely interpretation, but the presentation also overlaps with B. Additional evidence would be needed to distinguish them.”
+
+That difference could change the clinician’s action.
+
+They might verify the answer, order another test, seek another opinion, or avoid acting solely on the model’s recommendation.
+
+So the important chain is:
+
+Internal uncertainty → explanation → human perception → reliance decision
+
+If the middle link fails, the user may rely on the model in situations where they shouldn’t.
+
+⸻
+
+This connects directly to trustworthy AI
+
+A trustworthy system should support calibrated trust.
+
+There are two undesirable extremes.
+
+Under-trust: the model is reliable, but the user doesn’t trust it.
+
+Over-trust: the model is unreliable or uncertain, but the user trusts it anyway.
+
+Your work is particularly relevant to over-trust.
+
+A fluent explanation can make an answer appear more credible. If the model produces equally assertive explanations when its prediction is unstable, the explanation can increase perceived confidence without providing corresponding evidence of reliability.
+
+So the concern isn’t merely:
+
+“The explanation doesn’t match EBSE.”
+
+It’s:
+
+The explanation may cause the human’s trust to become disconnected from the model’s actual predictive reliability.
+
+That’s much more important.
+
+⸻
+
+And Experiment B makes this more concerning
+
+Your study isn’t only finding weak EBSE ↔ explanation-uncertainty relationships.
+
+You’re also finding that incorrect answers receive substantial explanatory support.
+
+Put the two findings together.
+
+The model may be:
+
+uncertain internally
+
+↓
+
+select one answer
+
+↓
+
+generate a confident explanation
+
+↓
+
+answer may actually be wrong
+
+↓
+
+explanation still strongly supports it
+
+↓
+
+human sees a coherent justification
+
+↓
+
+potential over-reliance
+
+That’s the trustworthiness story.
+
+Importantly, we haven’t measured the final human over-reliance step yet. So the paper shouldn’t claim that your experiments prove explanations cause users to over-trust models.
+
+What you have demonstrated is the precondition for that risk:
+
+The uncertainty communicated by explanations is often weakly coupled to predictive uncertainty, while strong justification can persist for incorrect answers.
+
+⸻
+
+There are actually three kinds of trust here
+
+This distinction may help when explaining the work to your supervisor.
+
+1. Trust in the answer
+
+“Is the answer correct?”
+
+Measured through correctness.
+
+2. Trust in the model’s confidence
+
+“Does the model know when its prediction is uncertain?”
+
+Approached through EBSE and its relationship with correctness.
+
+3. Trust in the explanation
+
+“Does the explanation give the user an accurate signal about the uncertainty surrounding the prediction?”
+
+This is what your EBSE ↔ GPT-perceived uncertainty experiment addresses.
+
+And Experiment B adds:
+
+“Does the explanation continue to advocate for the answer even when that answer is wrong?”
+
+These are different properties.
+
+A model can have useful predictive uncertainty while producing explanations that fail to communicate it.
+
+⸻
+
+This also clarifies what “explanation calibration” means
+
+I think this is the strongest conceptual framing for the paper.
+
+Traditional calibration asks:
+
+Does confidence correspond to correctness?
+
+Your work asks a different question:
+
+Does communicated confidence in the explanation correspond to the model’s predictive uncertainty?
+
+And then:
+
+Does explanatory support correspond to correctness, or does the model strongly justify answers regardless of truth?
+
+So explanation trustworthiness has two relationships:
+
+Uncertainty fidelity
+
+Predictive uncertainty → communicated uncertainty
+
+and
+
+Truth sensitivity
+
+Answer correctness → explanatory support
+
+A trustworthy explanation ideally performs reasonably on both.
+
+Your experiments suggest both relationships can be problematic, though the effects vary across models and datasets.
+
+⸻
+
+The most important distinction
+
+Suppose Model A has low uncertainty and produces a confident explanation.
+
+That’s not necessarily a problem.
+
+Suppose Model B has high uncertainty and produces a cautious explanation.
+
+Also sensible.
+
+The trustworthiness failure occurs when:
+
+Model uncertainty changes substantially, but the explanation presented to the human doesn’t meaningfully change with it.
+
+Because then the explanation is not functioning as an informative trust signal.
+
+It may still be a perfectly good rationale:
+
+“Here are reasons supporting A.”
+
+But it is not necessarily a good trustworthiness signal:
+
+“Here is how strongly you should rely on A.”
+
+That distinction could be central to your paper.
+
+A strong one-line motivation
+
+If your supervisor asks “Why should explanations reflect uncertainty?”, I would answer:
+
+Because explanations influence whether humans trust and act on model outputs. If explanations remain confident when the model’s own prediction is unstable, they can conceal uncertainty and encourage inappropriate reliance. Therefore, a trustworthy explanation should not only justify what the model predicted; it should preserve enough information about predictive uncertainty for users to distinguish robust predictions from uncertain ones.
+
+And then your research question follows naturally:
+
+Do current LLM explanations actually provide that signal?
+
+Your results so far suggest:
+
+Only weakly and inconsistently — while remaining strongly capable of justifying incorrect answers.
+
+That is a much stronger trustworthiness framing than simply saying “EBSE and explanation uncertainty have low correlation.”
