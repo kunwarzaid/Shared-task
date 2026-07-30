@@ -1,57 +1,1037 @@
-Summary
-This paper studies the trustworthiness of current large language models in cross-lingual settings, focusing on clinical dialogue summarization for Indian languages. The paper mainly presents a practical empirical study rather than methodological innovation. The authors evaluate two 7B-scale open-source LLMs under multiple settings including zero-shot, few-shot, translation-based summarization, and supervised fine-tuning. The paper provides detailed analyses on hallucination, safety, and cross-lingual performance gaps across different language families.
+\documentclass[11pt]{article}
 
-Strengths
-The paper studies an important and practical problem: the reliability and safety of LLMs in multilingual healthcare applications, which could affect a very large user population.
-The empirical study is overall comprehensive and well organized. The analysis of hallucination and safety issues is useful and practically relevant.
-Weaknesses
-The experimental scope is somewhat limited. The paper only evaluates two 7B models, which makes it difficult to know whether the conclusions generalize to stronger or larger-scale LLMs.
-There are several minor writing issues throughout the paper. For example:
-some commas should be replaced with periods (e.g., line 177),
-some model names could be abbreviated for readability (e.g., lines 230 and 231).
+% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
+% Change to "preprint" to generate a non-anonymous version with page numbers.
+\usepackage[review]{acl}
 
-Summary
-This paper considers the robust summarization of clinical doctor-patient dialogues from multilingual Indian languages. The paper explores various methodologies for this task across languages from different typological language families. It considers zero-shot summarization, in-context-learning-based summarization, translation-based summarization, and supervised fine-tuning. The empirical results evaluate two open-source models using a variety of metrics, including safety, trustworthiness, explainability (based on LLM judges), and entity extraction (based on an LLM evaluator). The paper demonstrates some key empirical findings: supervised fine-tuning generally produces the best results across the considered settings; low-resource languages, such as Dravidian languages, produce worse results for language models trained heavily on Latin-script languages; and safety is the hardest metric to improve.
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
 
-Strengths
-Considers a problem that is highly relevant to the robust deployment of open-source LLMs in a safety-critical domain.
-Presents a substantial empirical study across a variety of metrics involving robustness and accuracy of LLMs on clinical summarization, comparing various Indian languages, which is an important but understudied problem.
-Weaknesses
-There is not much technical novelty; the work is mainly an application of existing techniques to an under-explored problem.
-There is an over-reliance on the judgement provided by a single model, GPT-4o, for many of the important evaluations, including safety and entity extraction. Although the paper considers some human evaluation of the results, this does not cover all aspects of the evaluation.
-Although the paper provides a reference to the considered dataset, further details should be mentioned, such as the number of examples for each language type, the length of the conversations, and the details of the summaries. Preferably, the tests should also be run with multiple random seeds, and the results should be averaged. However, this is not mentioned and is not clear from the text.
-The page limits have not been maintained.
+% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
+\usepackage[T1]{fontenc}
+% For Vietnamese characters
+% \usepackage[T5]{fontenc}
+% See https://www.latex-project.org/help/documentation/encguide.pdf for other character sets
 
-This paper presents an empirical study of open-source LLMs for cross-lingual clinical dialogue summarization across ten Indian languages. The task is to generate English structured clinical summaries from multilingual doctor-patient conversations. The paper evaluates two 7B-parameter models, Mistral-7B-Instruct and Qwen2.5-7B-Instruct, under four settings: zero-shot prompting, few-shot prompting, translate-then-summarize, and LoRA-based supervised fine-tuning. The evaluation combines lexical/semantic metrics, LLM-as-judge scores for truthfulness, safety, and explainability, and LLM-based clinical entity-level analysis using precision, recall, hallucination rate, omission rate, and entity (F1). The entity-level analysis is relevant because it goes beyond surface text similarity, but it also depends on GPT-4o-mini for entity extraction, normalization, and semantic comparison, making it similar in nature to the LLM-as-judge evaluation.
+% This assumes your files are encoded as UTF8
+\usepackage[utf8]{inputenc}
 
-The paper is a good fit for RobustifAI because it studies an important deployment robustness problem: whether clinical summarization systems remain reliable in multilingual and low-resource settings. Its main contribution is a systematic empirical comparison showing that few-shot prompting and translation can degrade performance, while supervised fine-tuning improves entity-level accuracy and reduces hallucination.
+% This is not strictly necessary, and may be commented out,
+% but it will improve the layout of the manuscript,
+% and will typically save some space.
+\usepackage{microtype}
 
-Strengths
-The paper addresses an important and underexplored robustness problem: trustworthy clinical summarization in multilingual and low-resource Indian language settings.
-The topic is well aligned with the workshop’s focus on robustifying GenAI systems, especially operational robustness and deployment reliability.
-The study compares multiple practical deployment strategies, including zero-shot prompting, few-shot prompting, translation, and supervised fine-tuning.
-The evaluation goes beyond lexical metrics and includes clinical entity-level hallucination and omission analysis.
-The negative findings are valuable: few-shot prompting and translation can degrade performance, which is important for practitioners.
-The paper is generally well motivated and the main contribution is easy to identify.
-The finding that supervised fine-tuning reduces hallucination and narrows cross-lingual disparities is significant.
-The observation that safety remains difficult to improve, even after fine-tuning, is important for robust clinical GenAI deployment.
-Weaknesses and concerns
-The work is primarily an empirical study using existing methods, so the methodological originality is limited. The contribution is mainly in the evaluation setting and analysis.
+% This is also not strictly necessary, and may be commented out.
+% However, it will improve the aesthetics of text in
+% the typewriter font.
+\usepackage{inconsolata}
 
-Heavy reliance on LLM-as-a-judge evaluation. A small human evaluation is included, but it covers only four languages and the visible table shows only Marathi and Tamil examples, not a full rigorous validation study.
+%Including images in your LaTeX document requires adding
+%additional package(s)
 
-The summary format, prompts are not sufficiently specified. The paper refers to a ``structured clinical summary'' and says full prompts appear in Appendix 10, but the submitted PDF does not appear to include the exact summary template, generation prompts, LLM-as-judge prompts, entity extraction prompts, or rubrics. This limits reproducibility and makes the LLM-based evaluation harder to assess.
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{graphicx}
 
-The translation approach would benefit from a more explicit analysis of translation quality.
+% If the title and author information does not fit in the area allocated, uncomment the following
+%
+%\setlength\titlebox{<dim>}
+%
+% and set <dim> to something 5cm or larger.
 
-Direct cross-lingual summarization asks the model to both understand and translate the source dialogue and summarize it in English. The paper should discuss more explicitly how this combined translation-plus-summarization burden affects performance compared with summarization only pipelines.
+\title{Instructions for *ACL Proceedings}
 
-The English baseline is included but could be compared and discussed more consistently as a reference point for the multilingual conditions.
+% Author information can be set in various styles:
+% For several authors from the same institution:
+% \author{Author 1 \and ... \and Author n \\
+%         Address line \\ ... \\ Address line}
+% if the names do not fit well on one line use
+%         Author 1 \\ {\bf Author 2} \\ ... \\ {\bf Author n} \\
+% For authors from different institutions:
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \And  ... \And
+%         Author n \\ Address line \\ ... \\ Address line}
+% To start a separate ``row'' of authors use \AND, as in
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \AND
+%         Author 2 \\ Address line \\ ... \\ Address line \And
+%         Author 3 \\ Address line \\ ... \\ Address line}
 
-Some tables and figures are not discussed sufficiently in the text.
+\author{First Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  \texttt{email@domain} \\\And
+  Second Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  \texttt{email@domain} \\}
 
-Table 2’s color coding is unclear. The caption says green indicates the best value per row and red the worst value per row, but several rows appear to highlight best/worst values separately within each model family rather than globally across all eight conditions.
+%\author{
+%  \textbf{First Author\textsuperscript{1}},
+%  \textbf{Second Author\textsuperscript{1,2}},
+%  \textbf{Third T. Author\textsuperscript{1}},
+%  \textbf{Fourth Author\textsuperscript{1}},
+%\\
+%  \textbf{Fifth Author\textsuperscript{1,2}},
+%  \textbf{Sixth Author\textsuperscript{1}},
+%  \textbf{Seventh Author\textsuperscript{1}},
+%  \textbf{Eighth Author \textsuperscript{1,2,3,4}},
+%\\
+%  \textbf{Ninth Author\textsuperscript{1}},
+%  \textbf{Tenth Author\textsuperscript{1}},
+%  \textbf{Eleventh E. Author\textsuperscript{1,2,3,4,5}},
+%  \textbf{Twelfth Author\textsuperscript{1}},
+%\\
+%  \textbf{Thirteenth Author\textsuperscript{3}},
+%  \textbf{Fourteenth F. Author\textsuperscript{2,4}},
+%  \textbf{Fifteenth Author\textsuperscript{1}},
+%  \textbf{Sixteenth Author\textsuperscript{1}},
+%\\
+%  \textbf{Seventeenth S. Author\textsuperscript{4,5}},
+%  \textbf{Eighteenth Author\textsuperscript{3,4}},
+%  \textbf{Nineteenth N. Author\textsuperscript{2,5}},
+%  \textbf{Twentieth Author\textsuperscript{1}}
+%\\
+%\\
+%  \textsuperscript{1}Affiliation 1,
+%  \textsuperscript{2}Affiliation 2,
+%  \textsuperscript{3}Affiliation 3,
+%  \textsuperscript{4}Affiliation 4,
+%  \textsuperscript{5}Affiliation 5
+%\\
+%  \small{
+%    \textbf{Correspondence:} \href{mailto:email@domain}{email@domain}
+%  }
+%}
 
-There appear to be formatting/page-limit issues. The paper seems to exceed the 7-page limit by several lines, and Table 10 is referenced in the main text but appears outside the main page limit. The appendix/human evaluation section also appears incorrectly positioned, possibly due to a LaTeX compilation issue.
+\begin{document}
+\maketitle
+\begin{abstract}
+Large language models are frequently asked to explain an answer they
+have already produced, either in a separate inference step after the
+answer is fixed (a \emph{post-hoc} explanation) or jointly with the
+answer in one continuous decoding pass. We ask, under both
+conditions, whether the resulting explanation faithfully communicates
+the model's predictive uncertainty over its own answer, and whether
+it discriminates between correct and incorrect answers when
+justifying them. Comparing the two conditions directly lets us test
+whether architectural separation between answer and explanation is
+responsible for any uncertainty-communication failure we observe.
+Across two question answering datasets spanning distinct task
+structures (MedQA, StrategyQA), six model variants (base and
+instruction-tuned Llama, Qwen, and Mistral), and a sample-based
+estimator of predictive uncertainty, we find that, under both
+conditions, explanation-communicated uncertainty is weakly and
+inconsistently aligned with predictive uncertainty, and explanations
+remain highly supportive of incorrect answers, with support scores
+rarely falling below 60/100 even for answers independently
+determined to be incorrect. Joint generation shows no consistent
+improvement over post-hoc generation in uncertainty fidelity,
+indicating that architectural separation alone is insufficient to
+explain the phenomenon. Our results suggest that LLM explanations,
+however they are generated, provide strong justificatory signals that
+are only weakly coupled to the model's predictive uncertainty, with
+direct consequences for user trust.
+\end{abstract}
 
-There are also internal consistency and editing problems. For example, the heading “When In-Context Learning Fails (what about this?” appears unfinished. Some references are incomplete such as the "What Makes In-Context Learning Work" entry.
+% ============================================================
+\section{Introduction}
+
+Large language models are frequently asked not just to answer a
+question, but to explain that answer. Sometimes this explanation is
+requested afterward, in a separate step, once the answer is already
+fixed: a user asks a medical question, receives a diagnosis, and
+asks ``why?''; a support agent asks a model to justify a
+recommendation before passing it along. We call this the
+\emph{post-hoc} case. The same question can equally be asked when
+the model produces the answer and the explanation together in one
+continuous pass, which we call the \emph{joint} case. We study both
+throughout: every experiment in this paper is run under each
+condition on the same models, datasets, and metrics
+(\S\ref{sec:experiments}). Post-hoc explanation is where we ground
+the paper's formal definition and theoretical characterization
+(\S\ref{sec:definition}, \S\ref{sec:discussion}), since its
+architecture admits a precise description; joint generation lets us
+ask whether that architecture is what causes any gap we find, by
+removing it and testing whether the gap remains. In both cases, we
+ask the same thing: does the explanation tell a reader anything true
+about how confident the model actually was?
+
+This question matters because people use explanations to decide how
+much to trust an answer, regardless of how that explanation was
+produced. A hedged explanation reads as a signal the answer might be
+wrong; a fluent, assertive one reads as a signal it is probably
+right. If that signal is disconnected from the model's actual
+reliability, a user's trust is being shaped by something other than
+the thing it is supposed to track. We are not asking whether every
+explanation must communicate uncertainty. We ask a narrower,
+concrete question: when a model's own predictive distribution
+indicates it is unreliable, does the explanation it generates,
+post-hoc or jointly, say so?
+
+We answer this empirically. We estimate each model's predictive
+uncertainty using a sample-based semantic entropy estimator, and
+elicit an explanation under each condition, scoring it with an
+independent LLM judge along two dimensions: how much uncertainty it
+communicates, and how strongly it argues the answer is correct.
+Across three model families (Llama, Qwen, Mistral), base and
+instruction-tuned, and two datasets with different answer structures
+(StrategyQA, MedQA), we find a consistent pattern. Predictive
+uncertainty is informative, reliably higher before incorrect answers
+than correct ones. But communicated uncertainty barely tracks it,
+in either condition. Meanwhile explanations keep defending the
+answer regardless: even answers we can independently confirm are
+wrong receive support scores of 60--90/100, only modestly lower than
+correct answers. We then test whether this is simply an artifact of
+generating the explanation in a separate pass that cannot see the
+state that produced the answer, by comparing post-hoc against joint
+generation directly. If the separate-pass architecture were the
+cause, removing it should help. It does not: across twelve paired
+comparisons, joint generation shows no consistent improvement (mean
+$\Delta\rho = 0.024$, Wilcoxon $p=0.52$). Whatever drives the gap
+between what the model knows and what its explanation says, it
+survives giving the explanation full access to the answer-generation
+process --- evidence for a trust hazard distinct from explanations
+simply being wrong: a model can be internally uncertain and
+externally assertive at once, and neither generation protocol closes
+that gap.
+
+Our contributions are: (1) a formal characterization of post-hoc
+explanation as an architectural pattern (\S\ref{sec:definition}),
+distinguishing it from chain-of-thought reasoning and joint
+generation; (2) an empirical demonstration, across three model
+families, two alignment regimes, two datasets, and both conditions,
+that communicated uncertainty is weakly related to predictive
+uncertainty while explanations remain highly supportive of incorrect
+answers (\S\ref{sec:results}); (3) a mechanism ablation ruling out
+separate-pass architecture as a sufficient explanation
+(\S\ref{ssec:result-c}); and (4) an information-theoretic
+characterization of the post-hoc channel and a stated hypothesis for
+why the gap persists even when the architectural constraint does not
+apply (\S\ref{sec:discussion}).
+
+% ============================================================
+\section{Related Work}
+\label{sec:related-work}
+
+\paragraph{Faithful uncertainty expression.} The work closest to ours
+asks whether a model's stated confidence matches its actual
+reliability. \citet{kadavath2022language} show that large language
+models can be well calibrated when evaluating the validity of their
+own answers in a constrained format, but this measures a scalar
+confidence judgment, not the free-text explanations people actually
+read. \citet{lin2022teaching} similarly train models to verbalize a
+numeric confidence, again separate from any explanation.
+\citet{yona-etal-2024-large} come closest to our question by
+comparing verbalized decisiveness against an independent confidence
+estimate, but their object is the full response (answer plus any
+hedging in the same utterance); we isolate the narrower case where an
+explanation is elicited in a genuinely separate step, after an answer
+is already fixed, and additionally ask whether the explanation
+defends that answer regardless of its truth. \citet{liu2025metafaith}
+extend this line with prompt-based interventions across a larger
+model set, reporting limited effect on some models; our post-hoc and
+joint conditions are complementary manipulations on the generation
+side rather than the prompt side. \citet{mielke2022reducing} train
+dialogue agents to linguistically calibrate their utterances, which
+presupposes exactly the faithful confidence-to-language mapping we
+find is largely absent without explicit training.
+\citet{guo2017calibration} establish that neural networks are
+frequently overconfident and popularize temperature scaling as a
+correction; \citet{desai2020calibration} extend this to pre-trained
+transformers; and \citet{ouyang2022training} show that RLHF-style
+instruction tuning, which we use to distinguish base from
+instruction-tuned models throughout, can itself degrade calibration.
+Calibration in this sense asks whether a stated confidence
+\emph{score} matches empirical accuracy; we ask a different question
+--- whether a separately generated natural-language explanation's
+rhetoric matches the model's own internal uncertainty --- so our
+measurements (Spearman correlation, Mann--Whitney) are not
+calibration metrics and should not be read as testing calibration.
+Our base-versus-instruct comparison asks a related but distinct
+question: not whether alignment changes calibration of the answer
+itself, but whether it changes how faithfully an explanation reflects
+whatever uncertainty remains, under either generation condition.
+
+\paragraph{Faithfulness of reasoning and explanation.}
+\citet{turpin2023language} show chain-of-thought explanations can be
+systematically influenced by biasing features the model never
+mentions, and \citet{lanham2023measuring} show larger models often
+reason less faithfully even as accuracy improves. Both study a single
+continuous generation in which the explanation precedes or
+accompanies the answer; we study the complementary case in which the
+explanation is requested only after the answer is fixed, and our
+joint-generation ablation compares the two conditions directly within
+the same models and datasets. \citet{atanasova2023faithfulness} and
+\citet{siegel2024probabilities} develop tests for whether an
+explanation's stated reasons are the reasons the model actually used;
+\citet{parcalabescu2024measuring} raise related concerns about
+conflating faithfulness with self-consistency. These works ask
+whether an explanation's content is causally responsible for the
+answer; we ask whether its \emph{rhetorical register} (how uncertain
+or supportive it sounds) tracks the model's actual reliability,
+independent of that causal question. \citet{lyu2024towards} survey
+this broader literature, which our setting sits at the intersection
+of with the confidence-calibration line above.
+
+\paragraph{Uncertainty quantification.} We estimate predictive
+uncertainty with a sample-based semantic entropy method in the
+tradition of \citet{kuhn2023semantic} and
+\citet{farquhar2024detecting}, who cluster repeated generations by
+meaning and compute entropy over the resulting clusters;
+\citet{kossen2024semantic} propose a cheaper probe-based
+approximation, and \citet{xiong2024llms} benchmark verbalized and
+sampling-based confidence-elicitation strategies across black-box
+LLMs. None of this literature asks whether the resulting uncertainty
+estimate is reflected in a separately generated explanation, which is
+the gap we address. We report our main results on StrategyQA
+\citep{geva-etal-2021-strategyqa}, a multi-hop commonsense benchmark,
+and MedQA \citep{jin2021medqa}, a clinical board-exam benchmark with a
+discrete five-option answer space chosen specifically because it
+removes the need for a semantic-similarity threshold in estimating
+predictive uncertainty (\S\ref{sec:measurement}), evaluating
+Llama~3~\citep{grattafiori2024llama}, Qwen2.5
+\citep{qwen2025qwen2}, and Mistral~7B \citep{jiang2023mistral}, each
+in base and instruction-tuned form.
+
+% ============================================================
+\section{Post-Hoc Explanation and the Uncertainty--Justification Gap}
+\label{sec:definition}
+
+We study whether natural-language explanations faithfully
+communicate the predictive uncertainty underlying an answer, under
+two conditions studied throughout this paper. In the \emph{post-hoc}
+condition, a model first produces an answer and is subsequently
+asked, in a separate inference step, to explain that answer; this is
+a common deployment pattern, and its architecture admits the precise
+description we formalize below (Definition~1). In the \emph{joint}
+condition, the model produces the answer and the explanation
+together in a single continuous decoding pass. We run every
+experiment in this paper under both conditions
+(\S\ref{sec:experiments}); comparing them directly (Experiment C)
+lets us test whether the architectural separation that Definition~1
+describes is responsible for any uncertainty-communication failure
+we observe.
+
+\begin{quote}
+\textbf{Definition 1 (Post-Hoc Explanation).}
+Let $M$ be an autoregressive language model with parameters
+$\theta$. Given a query $\mathbf{Q}$, let $Z$ denote the model's
+latent decoder state immediately prior to answer generation, and
+let $\mathbf{A}$ denote the realized answer sampled from
+$P_\theta(\mathbf{A}\mid\mathbf{Q})$. A \emph{post-hoc explanation}
+$\mathbf{E}$ is generated in a separate inference pass, conditioned
+only on $\mathbf{Q}$ and the realized text of $\mathbf{A}$, such
+that
+\[
+P_\theta(\mathbf{E}\mid Z,\mathbf{A},\mathbf{Q}) =
+P_\theta(\mathbf{E}\mid\mathbf{A},\mathbf{Q}).
+\]
+\end{quote}
+
+Operationally, the second inference pass receives $\mathbf{Q}$ and
+the realized answer text $\mathbf{A}$, but no hidden-state or cache
+information from the first pass; we model this protocol by the
+conditional independence stated above. This definition matches the
+architecture of a standard two-turn interaction (``answer the
+question''; ``now explain your answer'') and distinguishes our
+post-hoc protocol from chain-of-thought reasoning and from the joint
+protocol introduced above. Joint generation preserves computational
+continuity and cached representations from answer generation, which
+is a weaker property than direct access to $Z$.
+
+We study two properties of an explanation, under either condition,
+with respect to the query and answer it accompanies.
+
+\paragraph{Uncertainty fidelity.} Does $\mathbf{E}$ communicate the
+degree of uncertainty present in $M$'s own predictive distribution
+over answers? An explanation of a genuinely uncertain answer should
+read as hedged; an explanation of a confidently-produced answer need
+not.
+
+\paragraph{Truth sensitivity.} Does $\mathbf{E}$ discriminate between
+justifying a correct answer and justifying an incorrect one? An
+explanation provides a poor guide to trustworthiness if it defends a
+wrong answer with the same rhetorical support as a right one.
+
+These two properties are logically independent: an explanation could
+fail to track predictive uncertainty while still hedging
+symmetrically for right and wrong answers alike, or it could vary
+its degree of support with correctness without that variation
+tracking the model's true predictive state. We measure both.
+
+% ============================================================
+\section{Measuring Uncertainty, Communicated Uncertainty, and
+Support}
+\label{sec:measurement}
+
+\subsection{Quantifying Predictive Uncertainty}
+We define predictive uncertainty at the level of $M$'s predictive
+distribution over answers,
+\[
+U(\mathbf{Q}) = \mathcal{H}_{\text{sem}}\big(P_\theta(\mathbf{A}\mid
+\mathbf{Q})\big),
+\]
+the semantic entropy of the answer distribution. We estimate
+$U(\mathbf{Q})$ with an empirical, sample-based estimator
+$\widehat{U}(\mathbf{Q})$, computed differently depending on the
+structure of the answer space.
+
+For StrategyQA, although the reference answer is binary (yes/no),
+models in our generation protocol produce unconstrained free-form
+responses rather than a bare label; a model may answer ``Yes,
+because...'' with widely varying justificatory content even when the
+yes/no judgment itself is fixed, and collapsing samples to a binary
+label would discard this variation. We therefore estimate uncertainty
+over the semantic content of the sampled responses using
+\textbf{Embedding-Based Semantic Entropy (EBSE)}: we draw
+$k=10$ temperature-sampled answers from $M$, embed each with a
+sentence encoder, and cluster the embeddings via agglomerative
+clustering with a fixed cosine-distance threshold. EBSE is the
+Shannon entropy of the resulting cluster-frequency distribution,
+normalized by $\log k$:
+\[
+\widehat{U}_{\text{EBSE}}(\mathbf{Q})
+= \frac{-\sum_{c} p_c \log p_c}{\log k},
+\quad p_c = \frac{|\text{cluster } c|}{k}.
+\]
+For MedQA, whose answer space is a fixed set of five labeled
+options, $\widehat U$ is instead computed as direct Shannon entropy
+over the sampled option labels, normalized by $\log 5$, removing the
+need for embedding clusters or a similarity threshold entirely
+(\S\ref{sec:appendix-implementation}).
+
+We emphasize the distinction throughout: $U(\mathbf{Q})$ is the
+theoretical construct; $\widehat{U}(\mathbf{Q})$ is our finite-sample
+estimator of it, instantiated as EBSE for StrategyQA and as
+option-label entropy for MedQA. We use $\widehat U$ as the general
+symbol when discussing both datasets together, and refer to EBSE
+specifically only where the embedding-based estimator is meant.
+
+\subsection{Quantifying Communicated Uncertainty}
+We elicit an explanation $\mathbf{E}$ for the greedily decoded
+answer, under either condition, and score it with an independent LLM
+judge (GPT-4/5 class model), prompted to rate, on a 0--100 scale, how
+much uncertainty $\mathbf{E}$ communicates to a reader --- independent
+of whether $\mathbf{E}$ is factually correct. The judge is not asked
+to infer the model's latent or predictive uncertainty; it scores
+only the uncertainty conveyed linguistically by the explanation to a
+reader. This distinction is central to Experiment A
+(\S\ref{ssec:result-a}): $\widehat U$ is computed from the
+model's own distribution of sampled answers, while the judge score
+is computed from the surface text of a single explanation, with no
+access to that distribution. Full prompt in
+Appendix~\ref{sec:appendix-prompts}.
+
+\subsection{Quantifying Support}
+We separately score $\mathbf{E}$ with a second judge prompt, rating
+0--100 the degree to which $\mathbf{E}$ argues that the accompanying
+answer is correct (0 = explicitly disputes the answer; 100 =
+unconditionally defends it), again independent of the judge's own
+assessment of factual correctness. We refer to this score
+throughout as \emph{support}, and deliberately avoid the word
+``confidence'' for it, since confidence is the construct measured by
+the communicated-uncertainty judge above; conflating the two would
+collapse exactly the distinction this paper is designed to test.
+
+\subsection{Correctness}
+For StrategyQA, correctness of the greedily-decoded answer is
+independently re-verified by an LLM judge against the dataset's
+reference answer(s), rather than relying on lexical overlap alone
+(\S\ref{sec:appendix-implementation}). For MedQA, correctness is a
+direct comparison against the labeled correct option, requiring no
+judge.
+
+\subsection{Validation}
+\emph{[Placeholder: human-judgement correlation for the uncertainty
+and support judges, following the validation protocol of
+\citet{yona-etal-2024-large}. Mandatory before submission --- see
+Limitations.]}
+
+% ============================================================
+\section{Experimental Setting}
+\label{sec:experiments}
+
+\paragraph{Data.} We use two question-answering datasets spanning
+distinct task structures: \textbf{StrategyQA}
+\citep{geva-etal-2021-strategyqa}, multi-hop commonsense reasoning
+with binary yes/no answers, and \textbf{MedQA}
+\citep{jin2021medqa}, discrete five-option clinical board-exam
+questions. This span lets us test whether our findings are specific
+to any one answer format or task type.
+
+\paragraph{Models.} We evaluate three model families at the 7--8B
+scale, each in both base and instruction-tuned form: Llama-3.1-8B
+(base / Instruct), Qwen2.5-7B (base / Instruct), and Mistral-7B
+(v0.1 base / v0.3 Instruct).
+
+\paragraph{Methods.} For each question we generate under two
+conditions. \textbf{Post-hoc} follows Definition~1 directly: the
+answer is generated, and the explanation is elicited in a fresh
+forward pass. \textbf{Joint} generates the answer and explanation in
+a single continuous decoding pass, retaining shared context, as a
+direct test of whether Definition~1's separation is the cause of any
+observed uncertainty-communication failure.
+
+\paragraph{Evaluation.} We report three analyses.
+\textbf{Experiment A (Uncertainty Fidelity)}: the Spearman
+correlation between $\widehat U$ and communicated
+uncertainty, per model--dataset--condition combination, with 95\%
+confidence intervals obtained by non-parametric bootstrap
+($n{=}1000$ resamples). \textbf{Experiment B (Truth Sensitivity)}:
+the \emph{Truth Sensitivity Gap},
+$\mathrm{TSG} = \mathbb{E}[S\mid C{=}1] - \mathbb{E}[S\mid C{=}0]$,
+the difference in mean support score between correct ($C{=}1$) and
+incorrect ($C{=}0$) answers, tested via Mann--Whitney $U$ with
+rank-biserial effect size and 95\% CI. Larger TSG indicates greater
+truth discrimination; TSG near zero indicates that support is
+largely uninformative about correctness. \textbf{Experiment C
+(Mechanism)}: for each model--dataset pair with paired Post-hoc/Joint
+data, we compute $\Delta\rho = \rho_{\text{Joint}} -
+\rho_{\text{Post-hoc}}$ via paired bootstrap over questions
+(preserving the pairing, since the same questions appear in both
+conditions), and aggregate across all 12 pairs with a Wilcoxon
+signed-rank test.
+
+\paragraph{Multiple comparisons.} We report a large number of
+individual hypothesis tests across model--dataset--condition
+combinations (11 $\widehat U$-validity tests, 24 Experiment A
+correlations, 12 post-hoc and 12 joint Experiment B comparisons, 12
+Experiment C pairs). These are not independent replications in the
+classical sense: combinations share model families, base/instruct
+variants, overlapping questions within a dataset, and the same judge
+models.
+We therefore treat our conclusions as resting primarily on the
+\emph{consistency and magnitude} of effects across configurations
+rather than on counts of individually significant tests, and report
+FDR-adjusted $q$-values alongside raw $p$-values in
+Appendix~\ref{sec:appendix-results}.
+
+% ============================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Estimated predictive uncertainty contains information
+about answer reliability}
+\label{ssec:result-validity}
+
+Before asking whether explanations communicate predictive
+uncertainty, we first confirm that $\widehat U$ is a
+meaningful estimate of it. Across 11 model--dataset combinations
+tested (MedQA and StrategyQA, post-hoc condition), incorrect answers
+exhibit significantly higher $\widehat U$ in 8 configurations, while
+no configuration shows a significant reversal (full table in
+Appendix~\ref{sec:appendix-results}, Table~\ref{tab:ebse-validity}).
+Thus, estimated predictive uncertainty contains answer-reliability
+information across most of the settings we study, providing an
+empirical basis for asking, in the next section, whether this
+signal is reflected in explanations.
+
+\subsection{Explanation-communicated uncertainty is weakly and
+inconsistently aligned with predictive uncertainty}
+\label{ssec:result-a}
+
+Figure~\ref{fig:forest} shows the Spearman correlation between
+$\widehat U$ and communicated uncertainty for all 24
+model--dataset--condition combinations tested. Higher judge scores
+indicate greater communicated uncertainty; uncertainty fidelity
+therefore predicts a positive correlation between $\widehat U$ and
+judge score. Point estimates instead cluster near zero: all observed
+correlations have small magnitudes ($|\rho|\le 0.236$), with the
+largest observed magnitude $|\rho|=0.236$ (StrategyQA,
+Llama-3.1-8B-Instruct, post-hoc, $p=0.0008$). The majority of 95\%
+confidence intervals include zero. We do not treat the count of
+individually significant versus non-significant tests as the primary
+evidence here, since the 24 configurations are not independent
+replications (\S\ref{sec:experiments}); rather, across three model
+families, two alignment regimes, and two generation conditions, the
+association remains weak in magnitude throughout, indicating that
+communicated uncertainty is at best a weak proxy for variation in
+the model's predictive uncertainty. Full per-configuration
+correlations with bootstrap CIs are plotted in
+Appendix~\ref{sec:appendix-results}, Figure~\ref{fig:forest}.
+
+\subsection{Explanations remain highly supportive of incorrect
+answers}
+\label{ssec:result-b}
+
+Figure~\ref{fig:support} and Table~\ref{tab:tsg} report mean support
+scores for correct and incorrect answers under the post-hoc
+condition. The central finding is the absolute level of support for
+incorrect answers, not the significance of the gap: across all
+twelve model--dataset combinations, answers determined to be
+incorrect (\S\ref{sec:measurement}) receive support scores of
+62--91/100. In several cases this is nearly indistinguishable from
+the support given to correct answers (e.g.\ MedQA, Qwen Base:
+$S_{\text{correct}}=93.9$ vs.\ $S_{\text{incorrect}}=91.0$,
+$p=0.495$); we read this null result as one of the clearest
+instances of the phenomenon we document, not as an absence of
+effect. Where the gap (Truth Sensitivity Gap, TSG) does reach
+significance --- nine of twelve comparisons
+(Table~\ref{tab:tsg}) --- the magnitude varies across configurations
+(Appendix~\ref{sec:appendix-results}, Table~\ref{tab:effect-sizes}).
+Crucially, even configurations exhibiting substantial
+correct--incorrect separation retain high absolute support for
+incorrect answers, and incorrect-answer support never approaches the
+low end of the scale in any comparison. We regard this as the
+paper's most direct trustworthiness finding: an explanation providing
+60--90/100 support for an incorrect answer does not merely fail to
+hedge, it actively constructs the appearance of justification, even
+though incorrect answers, at the population level, are associated
+with elevated
+predictive uncertainty in most configurations
+(\S\ref{ssec:result-validity}).
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{fig2 support scores.pdf}
+\caption{Support score for correct vs.\ incorrect answers (post-hoc
+condition), by model and dataset; connecting line drawn darker where
+the gap is significant ($p<0.05$). Incorrect-answer support never
+approaches the neutral midpoint (50).}
+\label{fig:support}
+\end{figure*}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Model & $S_{\text{corr}}$ & $S_{\text{incorr}}$ & TSG \\
+\midrule
+MedQA & Mistral I. & 95.8 & 85.2 & 10.6$^{***}$ \\
+MedQA & Qwen I. & 96.2 & 88.9 & 7.3$^{**}$ \\
+MedQA & Llama I. & 92.0 & 86.0 & 6.0 \\
+MedQA & Qwen B. & 93.9 & 91.0 & 2.9 \\
+MedQA & Llama B. & 87.1 & 75.9 & 11.2$^{**}$ \\
+MedQA & Mistral B. & 82.4 & 71.6 & 10.8$^{*}$ \\
+StrategyQA & Llama I. & 89.2 & 78.7 & 10.5$^{***}$ \\
+StrategyQA & Mistral I. & 92.7 & 88.9 & 3.8 \\
+StrategyQA & Mistral B. & 76.1 & 67.5 & 8.6$^{*}$ \\
+StrategyQA & Llama B. & 85.3 & 71.7 & 13.6$^{**}$ \\
+StrategyQA & Qwen B. & 87.0 & 62.7 & 24.3$^{***}$ \\
+StrategyQA & Qwen I. & 92.8 & 79.3 & 13.5$^{***}$ \\
+\bottomrule
+\end{tabular}
+\caption{Truth Sensitivity Gap, post-hoc condition
+($\mathrm{TSG} = S_{\text{correct}} - S_{\text{incorrect}}$; higher
+indicates greater truth discrimination). Stars denote raw
+Mann--Whitney $p$-values ($^*p<.05$, $^{**}p<.01$, $^{***}p<.001$);
+BH-FDR-adjusted $q$-values are reported in
+Appendix~\ref{sec:appendix-results}, where 8 of these 9 significant
+comparisons remain significant after correction. I.\ = Instruct,
+B.\ = Base. Effect sizes and CIs in
+Appendix~\ref{sec:appendix-results}.}
+\label{tab:tsg}
+\end{table}
+
+\subsection{Removing the separate-pass architecture does not
+restore uncertainty fidelity}
+\label{ssec:result-c}
+
+Definition~1 identifies the separation between answer and
+explanation generation as an architectural constraint on what
+information can reach $\mathbf{E}$. We test whether removing this
+constraint --- generating $\mathbf{A}$ and $\mathbf{E}$ jointly, in a
+single decoding pass with shared context --- improves uncertainty
+fidelity. Figure~\ref{fig:c1} shows $\Delta\rho = \rho_{\text{Joint}}
+- \rho_{\text{Post-hoc}}$ for each of the twelve paired
+model--dataset combinations available (identical question sets in
+both conditions; \S\ref{sec:appendix-implementation} reports pairing
+diagnostics). Only one of twelve individual comparisons reaches
+significance (MedQA, Mistral-7B-v0.1, $\Delta\rho=0.200$, 95\% CI
+$[0.021, 0.386]$); the aggregate distribution shows no consistent
+direction (7 of 12 pairs favor Joint, 5 favor Post-hoc; mean
+$\Delta\rho=0.024$, median $=0.037$; Wilcoxon signed-rank $p=0.52$).
+Per-pair estimates with bootstrap CIs are plotted in
+Appendix~\ref{sec:appendix-results}, Figure~\ref{fig:c1}.
+
+We read this null result as evidence \emph{against} the sufficiency
+of architectural separation as an explanation for F2
+(\S\ref{ssec:result-a}): granting the explanation-generation process
+computational continuity with answer generation does not reliably
+improve how faithfully the resulting explanation communicates
+uncertainty. We discuss the implications of this finding for
+characterizing the phenomenon, as distinct from explaining it, in
+\S\ref{sec:discussion}.
+
+% ============================================================
+\section{An Information-Theoretic Characterization}
+\label{sec:discussion}
+
+Sections~\ref{ssec:result-validity}--\ref{ssec:result-c} establish
+three empirical findings: estimated predictive uncertainty carries
+information about answer reliability (F1); that information is
+weakly and inconsistently reflected in communicated uncertainty
+(F2); explanations remain highly supportive of incorrect answers
+(F3); and removing the architectural separation between answer and
+explanation generation produces no consistent improvement
+(Experiment C). These findings are established under both the
+post-hoc and joint conditions. The characterization below, by
+contrast, is scoped deliberately to the post-hoc condition: Definition~1
+gives an exact conditional-independence property that holds for
+post-hoc generation by construction, and Proposition~1 is a direct
+consequence of that property. Joint generation, while tested
+empirically throughout, does not satisfy the same property --- it
+preserves computational continuity with $Z$ rather than eliminating
+access to it (\S\ref{sec:definition}) --- so we do not claim
+Proposition~1 or the discussion that follows applies to it. We
+characterize the information-theoretic structure of the post-hoc
+channel that Definition~1 describes, and present this as a
+\emph{characterization} of the channel, not as an explanation for
+why F2 and F3 occur --- Experiment C shows directly that the
+constraint identified below is not, by itself, sufficient to account
+for the empirical pattern.
+
+\subsection{Architectural Information Bottleneck}
+Recall that a post-hoc explanation $\mathbf{E}$ is generated
+conditioned only on $\mathbf{Q}$ and the realized text of
+$\mathbf{A}$, with no access to the latent decoder state $Z$ beyond
+what $\mathbf{A}$ encodes.
+
+\begin{quote}
+\textbf{Proposition 1 (Architectural Information Bottleneck).} Under
+Definition~1, $Z \to \mathbf{A} \to \mathbf{E}$ forms a Markov chain
+conditional on $\mathbf{Q}$, and consequently
+\[
+I(Z;\mathbf{E}\mid \mathbf{Q}) \le I(Z;\mathbf{A}\mid \mathbf{Q}).
+\]
+\end{quote}
+
+\noindent\emph{Proof.} By Definition~1,
+$P_\theta(\mathbf{E}\mid Z,\mathbf{A},\mathbf{Q}) =
+P_\theta(\mathbf{E}\mid\mathbf{A},\mathbf{Q})$: $\mathbf{E}$ is
+conditionally independent of $Z$ given $\mathbf{A}$ and
+$\mathbf{Q}$, exactly the condition defining this Markov chain. The
+(conditional) data processing inequality gives the stated bound
+directly. \hfill$\blacksquare$
+
+No post-hoc explanation can carry more information about the
+model's latent state, for a given query, than survives in the text
+of the answer it explains --- a statement about the computational
+structure in Definition~1, not an empirical claim.
+
+This bound does not, however, directly constrain predictive
+uncertainty. $U(\mathbf{Q}) = \mathcal{H}_{\text{sem}}(P_\theta(\mathbf{A}\mid\mathbf{Q}))$
+is a property of the model's distribution over answers to a given
+$\mathbf{Q}$, not a deterministic function of the single realized
+$Z$ for that query. Conditioning on $\mathbf{Q}$, as Proposition~1
+does, therefore yields no bound relating $U(\mathbf{Q})$ to
+$\mathbf{E}$: $U(\mathbf{Q})$ is fixed once $\mathbf{Q}$ is fixed, so
+no further mutual-information statement follows from Proposition~1
+alone. Whether post-hoc explanations preserve variation in
+predictive uncertainty \emph{across queries} is consequently an
+empirical question, which Experiment A (\S\ref{ssec:result-a})
+tests directly.
+
+\subsection{Justification Preference Hypothesis}
+Proposition~1 characterizes the information constraint imposed by
+post-hoc generation, while \S6.2 establishes that this constraint
+does not itself determine how faithfully predictive uncertainty is
+communicated. Neither explains F3: why explanations remain strongly
+supportive even of answers that are demonstrably incorrect. We do
+not derive an explanation for this from information theory, and
+state it instead as a plain hypothesis about the elicitation
+procedure itself.
+
+\begin{quote}
+\textbf{Hypothesis 1 (Justification Preference).} Standard post-hoc
+explanation elicitation conditions the model on an already-selected
+answer and requests a rationale for that answer. This elicitation
+explicitly requests answer-consistent explanation generation, but
+imposes no explicit requirement that explanation language preserve
+information about the model's predictive uncertainty.
+\end{quote}
+
+This hypothesis predicts that explanations may remain strongly
+supportive even when the selected answer is incorrect, because the
+elicitation procedure provides no explicit instruction to reduce
+support when the underlying predictive state is uncertain. This does
+not require support to be independent of correctness --- our data
+show a significant gap in most configurations (\S\ref{ssec:result-b})
+--- only that whatever gap exists is not large enough to bring
+incorrect-answer support down to a level that would signal
+unreliability to a reader. Experiment B tests this directly.
+
+\subsection{What Experiment C Establishes}
+Experiment~C (\S\ref{ssec:result-c}) tests whether removing the
+separate-pass architecture behind Proposition~1's bound is
+\emph{sufficient} to restore uncertainty fidelity, and finds that it
+is not. This does not overturn Proposition~1 --- the bound still
+holds under Definition~1's post-hoc condition --- but it rules out
+architectural separation as a sufficient explanation for the weak
+uncertainty fidelity we observe, leaving elicitation-induced
+justification preference (Hypothesis~1) as one plausible mechanism
+consistent with the pattern: an explanation-generation process
+without an incentive to preserve $U(\mathbf{Q})$ may fail to do so
+even when answer and explanation generation share computational
+continuity, since shared continuity with $Z$ does not itself supply
+that incentive. Table~\ref{tab:theory-map} (Appendix~\ref{sec:appendix-discussion})
+summarizes how each theoretical claim maps onto its corresponding
+test.
+
+\section*{Limitations}
+\label{sec:limitations}
+\emph{[Placeholder. To include at minimum: (1) LLM-judge validation
+against human annotation is not yet complete and is treated as
+mandatory before submission, since both Experiment A and Experiment
+B depend directly on GPT-judged constructs (communicated uncertainty
+and support, respectively) --- see \S\ref{sec:measurement}; (2)
+TruthfulQA was evaluated in earlier stages of this work but is
+excluded from the present scope, which is restricted to MedQA and
+StrategyQA; (3) the joint-generation template's structured format
+increases answer convergence for instruction-tuned models relative
+to post-hoc, a confound noted explicitly for Experiment C; (4)
+reasoning models, whose chain-of-thought is generated jointly with
+the answer by construction, are outside the scope of Definition~1
+and are discussed only as a predicted direction for future work; (5)
+many hypothesis tests are reported across overlapping, non-independent
+configurations --- see the multiple-comparisons note in
+\S\ref{sec:experiments} and FDR-adjusted $q$-values in
+Appendix~\ref{sec:appendix-results}.]}
+
+% ============================================================
+% NOTE: acl_natbib.bst in this directory is currently a copy of
+% the standard plainnat.bst, used as a placeholder so BibTeX can
+% locate a file under the name acl.sty expects. Before final
+% submission, replace acl_natbib.bst with the genuine file from
+% https://github.com/acl-org/acl-style-files/blob/master/acl_natbib.bst
+% (it is a long, generated urlbst file -- download it directly
+% rather than hand-transcribing) for correct ACL-formatted
+% references (e.g. proper venue abbreviations, DOI/URL handling).
+\bibliography{refs}
+
+% ============================================================
+\appendix
+
+\section{Implementation Details}
+\label{sec:appendix-implementation}
+\emph{[Placeholder: generation prompts for post-hoc/joint/base
+completion-style conditions; EBSE clustering distance threshold and
+sensitivity; MedQA option-letter extraction and content-match
+fallback for base models; pairing QC table for Experiment C.]}
+
+\section{Additional Results}
+\label{sec:appendix-results}
+
+\subsection{Uncertainty Fidelity: Full Correlations}
+Figure~\ref{fig:forest} plots the Spearman correlation between
+$\widehat U$ and communicated uncertainty for all 24
+model--dataset--condition combinations underlying \S\ref{ssec:result-a}.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{fig1 ebse gpt forest.pdf}
+\caption{Spearman correlation between $\widehat U$ and communicated
+uncertainty across 24 model--dataset--condition combinations
+(StrategyQA, MedQA). Error bars show 95\% bootstrap CIs; outlined
+markers denote $p<0.05$. All effects are small
+($|\rho|\le 0.236$).}
+\label{fig:forest}
+\end{figure*}
+
+\subsection{Estimated Predictive Uncertainty Validity}
+Table~\ref{tab:ebse-validity} reports the full check underlying
+\S\ref{ssec:result-validity}: does $\widehat U$ predict
+incorrect answers? Of the 12 model--dataset combinations in our
+design (three architectures $\times$ base/instruct $\times$
+StrategyQA/MedQA), one --- StrategyQA, Qwen2.5-7B-Instruct --- is
+excluded from this specific check.\footnote{Placeholder: confirm and
+state the actual reason this combination is absent from the
+$\widehat U$-validity check before submission (e.g.\ whether the
+correctness recheck for this run was not completed, or was run on a
+different sample). The same model--dataset pair is included in
+Experiments A and B (Tables~\ref{tab:tsg}, \ref{tab:effect-sizes}),
+so the omission is specific to this one analysis and needs a
+verified explanation rather than the placeholder given here.} Across
+the
+remaining 11 combinations tested (post-hoc condition), 8 show a
+significant gap in the expected direction, and \emph{zero} show a
+significant reversal. The remaining non-significant gaps are small
+and associated with large $p$-values, consistent with sampling noise
+rather than a true reversal.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Model & $\widehat U_{\text{c}}$ & $\widehat U_{\text{i}}$ & $p$ \\
+\midrule
+MedQA & Llama I. & 0.107 & 0.263 & $<$.001$^{***}$ \\
+MedQA & Qwen I. & 0.008 & 0.048 & 0.007$^{**}$ \\
+MedQA & Mistral I. & 0.070 & 0.121 & 0.020$^{*}$ \\
+MedQA & Llama B. & 0.293 & 0.388 & 0.015$^{*}$ \\
+MedQA & Qwen B. & 0.256 & 0.419 & $<$.001$^{***}$ \\
+MedQA & Mistral B. & 0.396 & 0.455 & 0.038$^{*}$ \\
+StrategyQA & Llama I. & 0.222 & 0.296 & 0.009$^{**}$ \\
+StrategyQA & Mistral I. & 0.099 & 0.070 & 0.542 \\
+StrategyQA & Llama B. & 0.836 & 0.836 & 0.997 \\
+StrategyQA & Qwen B. & 0.286 & 0.374 & 0.018$^{*}$ \\
+StrategyQA & Mistral B. & 0.870 & 0.897 & 0.105 \\
+\bottomrule
+\end{tabular}
+\caption{$\widehat U$ for correct ($\widehat U_c$) vs.\
+incorrect ($\widehat U_i$) answers, Mann--Whitney $p$-value, all 11
+model--dataset combinations (post-hoc condition). I.\ = Instruct,
+B.\ = Base.}
+\label{tab:ebse-validity}
+\end{table}
+
+\subsection{Mechanism Ablation: Per-Pair Estimates}
+Figure~\ref{fig:c1} plots $\Delta\rho$ (Joint minus Post-hoc) with
+paired bootstrap 95\% CIs for each of the twelve model--dataset pairs
+underlying \S\ref{ssec:result-c}.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.75\textwidth]{fig3 joint vs posthoc.pdf}
+\caption{$\Delta\rho$ (Joint minus Post-hoc) for the
+$\widehat U \leftrightarrow$ communicated-uncertainty correlation,
+with paired bootstrap 95\% CIs, across twelve model--dataset pairs.
+Aggregate: mean $\Delta\rho=0.024$, median $=0.037$; 7 of 12 pairs
+favor Joint, 5 favor Post-hoc; Wilcoxon signed-rank $p=0.52$,
+indicating no consistent direction.}
+\label{fig:c1}
+\end{figure*}
+
+\subsection{Joint-Condition Support Scores}
+Table~\ref{tab:tsg-joint} reports the Truth Sensitivity Gap under
+the joint generation condition, analogous to Table~\ref{tab:tsg} for
+post-hoc. The pattern from the main text is unchanged: incorrect
+answers continue to receive substantial support (55.8--92.8) across
+every combination, regardless of generation condition.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Model & $S_{\text{c}}$ & $S_{\text{i}}$ & TSG \\
+\midrule
+MedQA & Llama B. & 85.1 & 60.1 & 25.0$^{***}$ \\
+MedQA & Llama I. & 96.7 & 91.5 & 5.2 \\
+MedQA & Mistral B. & 82.3 & 68.8 & 13.5$^{**}$ \\
+MedQA & Mistral I. & 96.1 & 92.8 & 3.2$^{*}$ \\
+MedQA & Qwen B. & 84.2 & 75.2 & 9.0 \\
+MedQA & Qwen I. & 98.1 & 91.1 & 7.0$^{**}$ \\
+StrategyQA & Llama B. & 90.5 & 73.3 & 17.2$^{***}$ \\
+StrategyQA & Llama I. & 88.9 & 82.4 & 6.5$^{*}$ \\
+StrategyQA & Mistral B. & 82.0 & 68.3 & 13.7 \\
+StrategyQA & Mistral I. & 89.5 & 84.9 & 4.6 \\
+StrategyQA & Qwen B. & 84.1 & 55.8 & 28.3$^{***}$ \\
+StrategyQA & Qwen I. & 92.1 & 81.9 & 10.2$^{*}$ \\
+\bottomrule
+\end{tabular}
+\caption{Truth Sensitivity Gap, joint condition. Same convention as
+Table~\ref{tab:tsg}.}
+\label{tab:tsg-joint}
+\end{table}
+
+\subsection{Effect Sizes for Experiment B}
+Table~\ref{tab:effect-sizes} reports rank-biserial correlation with
+95\% bootstrap CIs for the post-hoc condition, supplementing the
+significance stars in Table~\ref{tab:tsg} with a standardized effect
+size. For several non-significant comparisons (e.g.\ MedQA Qwen
+Base, MedQA Llama Instruct), the 95\% CIs on the rank-biserial
+correlation include zero, reflecting substantial uncertainty about
+the direction and magnitude of the effect rather than a precisely
+estimated null. The largest effects are StrategyQA Qwen Base
+(rank-biserial $=0.392$, CI $[0.215, 0.574]$) and, in the joint
+condition, StrategyQA Qwen Base again ($0.462$, CI $[0.290, 0.639]$).
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llrr}
+\toprule
+Dataset & Model & $r_{\text{rb}}$ & 95\% CI \\
+\midrule
+MedQA & Qwen I. & 0.164 & [0.051, 0.277] \\
+MedQA & Llama I. & 0.099 & [$-$0.054, 0.255] \\
+MedQA & Mistral B. & 0.187 & [0.043, 0.330] \\
+MedQA & Llama B. & 0.212 & [0.069, 0.346] \\
+MedQA & Mistral I. & 0.242 & [0.117, 0.364] \\
+MedQA & Qwen B. & 0.038 & [$-$0.076, 0.151] \\
+StrategyQA & Llama I. & 0.286 & [0.124, 0.429] \\
+StrategyQA & Qwen B. & 0.392 & [0.215, 0.574] \\
+StrategyQA & Llama B. & 0.225 & [0.067, 0.379] \\
+StrategyQA & Mistral B. & 0.163 & [$-$0.007, 0.327] \\
+StrategyQA & Qwen I. & 0.359 & [0.213, 0.498] \\
+StrategyQA & Mistral I. & 0.109 & [$-$0.049, 0.257] \\
+\bottomrule
+\end{tabular}
+\caption{Rank-biserial correlation (effect size) with 95\% CI,
+post-hoc condition, for the correctness--support comparison in
+Table~\ref{tab:tsg}. I.\ = Instruct, B.\ = Base.}
+\label{tab:effect-sizes}
+\end{table}
+
+\subsection{FDR-Corrected Significance}
+Given the number of hypothesis tests reported across overlapping
+configurations (\S\ref{sec:experiments}), we additionally report
+Benjamini--Hochberg FDR-corrected $q$-values at $\alpha=0.05$ for our
+three main significance tables. For the post-hoc Truth Sensitivity
+Gap (Table~\ref{tab:tsg}, $n=12$), 9 of 12 comparisons have raw
+$p<0.05$; 8 of 12 remain significant after FDR correction (the
+MedQA Llama-Instruct and Qwen-Base comparisons, and the StrategyQA
+Mistral-Instruct and Mistral-Base comparisons, do not survive
+correction). For the joint-condition TSG (Table~\ref{tab:tsg-joint},
+$n=12$), 8 of 12 have raw $p<0.05$, and all 8 remain significant
+after correction. For the $\widehat U$-validity check
+(Table~\ref{tab:ebse-validity}, $n=11$), 8 of 11 have raw $p<0.05$;
+7 of 11 remain significant after correction, with MedQA Mistral-Base
+($p=0.038$, $q=0.052$) no longer surviving. In all three tables, the
+comparisons that lose significance under FDR correction are
+precisely those with the smallest raw effect sizes, and no
+previously non-significant comparison becomes significant; the
+qualitative pattern reported in the main text --- higher estimated
+uncertainty for incorrect answers in most configurations, and
+persistently high incorrect-answer support throughout --- is
+unchanged after correction.
+
+\emph{[Remaining: qualitative example table (question, incorrect
+answer, explanation excerpt, $\widehat U$, communicated uncertainty,
+support score) --- pending selection of representative rows.]}
+
+\section{Discussion of Design Choices}
+\label{sec:appendix-discussion}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{2.0cm}p{2.4cm}p{2.3cm}}
+\toprule
+Theory & Status & Experiment \\
+\midrule
+Prop.\ 1 & Proved (cond.\ DPI) & Architecture (Def.\ 1) \\
+Uncertainty implication & Conceptual, not a bound & Exp.\ A
+(\S\ref{ssec:result-a}) \\
+Hyp.\ 1 & Stated, not derived & Exp.\ B
+(\S\ref{ssec:result-b}) \\
+--- & Tests sufficiency of Prop.\ 1 & Exp.\ C
+(\S\ref{ssec:result-c}) \\
+\bottomrule
+\end{tabular}
+\caption{Mapping from theoretical claims to their empirical tests.}
+\label{tab:theory-map}
+\end{table}
+
+\emph{[Placeholder, in the register of Yona et al.\ Appendix C:
+why post-hoc (vs.\ reasoning-model CoT) is the object of study; EBSE
+vs.\ alternative uncertainty estimators; support score vs.\
+correctness, why not equated.]}
+
+\section{Prompts}
+\label{sec:appendix-prompts}
+\emph{[Placeholder: full text of uncertainty-score judge prompt,
+support-score judge prompt, correctness-recheck prompt, joint- and
+post-hoc-generation templates.]}
+
+\end{document}
