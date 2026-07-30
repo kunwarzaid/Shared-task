@@ -1,92 +1,1057 @@
-experiment_A_correlations
+Yes. The easiest way to explain this to your supervisor is to build the story from the research question → experimental design → measurements → statistics → findings → interpretation. The statistics make much more sense once the scientific question is clear.
 
-dataset,model,condition,n,ebse_metric,spearman_rho,spearman_p,rho_ci95_low,rho_ci95_high,bootstrap_valid,source_file
-StrategyQA,Llama-3.1-8B,joint,173,ebse,-0.03547813011305403,0.6430741473644305,-0.18785369475684782,0.12206252278655678,1000,llama_base_joint_gpt_judge.csv
-StrategyQA,Llama-3.1-8B-Instruct,posthoc,200,ebse,0.23564127017141595,0.0007822227048904171,0.09209084257326487,0.3632135990766172,1000,llama_instruct_gpt_judge.csv
-StrategyQA,Qwen2.5-7B-Instruct,posthoc,200,ebse,-0.037188889610578896,0.6011032291774682,-0.17791984416279275,0.11023376991888824,1000,qwen_instruct_gpt_judge.csv
-StrategyQA,Mistral-7B-v0.1,posthoc,200,ebse,-0.041977471684177516,0.555063078505622,-0.1677183920516439,0.0829695549082841,1000,mistral_base_gpt_judge.csv
-StrategyQA,Qwen2.5-7B,posthoc,200,ebse,0.19326931442287196,0.006106449752149671,0.04064419323037423,0.32926530014559,1000,qwen_base_gpt_judge.csv
-StrategyQA,Qwen2.5-7B-Instruct,joint,200,ebse,0.08045016565133764,0.2574485092223735,-0.04749679678192112,0.18441317755043524,1000,qwen_instruct_joint_gpt_judge.csv
-StrategyQA,Llama-3.1-8B,posthoc,200,ebse,-0.10423820717688526,0.14185574663448797,-0.23937661374671101,0.03710394614582873,1000,llama_base_gpt_judge.csv
-StrategyQA,Mistral-7B-Instruct-v0.3,joint,200,ebse,0.17771450288824203,0.011816349844561837,0.01676273224922222,0.3223177675001707,1000,mistral_instruct_joint_gpt_judge.csv
-StrategyQA,Mistral-7B-v0.1,joint,47,ebse,-0.18865132271636617,0.20410564771283699,-0.44958578300160223,0.12565808388132568,1000,mistral_base_joint_gpt_judge.csv
-StrategyQA,Qwen2.5-7B,joint,199,ebse,0.08191729273713484,0.2500449946282261,-0.04195423320168207,0.2080917840719263,1000,qwen_base_joint_gpt_judge.csv
-StrategyQA,Llama-3.1-8B-Instruct,joint,200,ebse,0.20700700352229048,0.0032705351459229046,0.08580305953300915,0.3356457788135217,1000,llama_instruct_joint_gpt_judge.csv
-StrategyQA,Mistral-7B-Instruct-v0.3,posthoc,200,ebse,0.008100286636680951,0.9093652790335963,-0.13894966130166805,0.1439312060295002,1000,mistral_instruct_gpt_judge.csv
-MedQA,Llama-3.1-8B,joint,145,ebse,0.051697075059244375,0.5368783121572106,-0.1229103245699134,0.21720246005682398,1000,medqa_llama_base_joint_gpt_judge.csv
-MedQA,Qwen2.5-7B,joint,198,ebse,0.03844023163919388,0.590800719654137,-0.12352263332457117,0.17908287312219084,1000,medqa_qwen_base_joint_gpt_judge.csv
-MedQA,Qwen2.5-7B,posthoc,200,ebse,0.047655236448031234,0.5027919131501205,-0.09054896812798353,0.19131150603452587,1000,medqa_qwen_base_gpt_judge.csv
-MedQA,Mistral-7B-v0.1,joint,193,ebse,0.16482884170118883,0.021981298246794734,0.02770888081059078,0.28848389539713654,1000,medqa_mistral_base_joint_gpt_judge.csv
-MedQA,Mistral-7B-Instruct-v0.3,joint,200,ebse,-0.027421440575249808,0.6999118264367706,-0.16788197241182953,0.10439965825479998,1000,medqa_mistral_instruct_joint_gpt_judge.csv
-MedQA,Mistral-7B-v0.1,posthoc,200,ebse,-0.023973791803172603,0.7361440890530995,-0.16484077599165886,0.10653797922192797,1000,medqa_mistral_base_gpt_judge.csv
-MedQA,Qwen2.5-7B-Instruct,joint,200,ebse,-0.005159575772000981,0.9421956187999672,-0.1530604391477074,0.13838106724923255,1000,medqa_qwen_instruct_joint_gpt_judge.csv
-MedQA,Llama-3.1-8B-Instruct,joint,200,ebse,0.15201353004717716,0.031648297618124224,0.015007801105048452,0.2886727154548444,1000,medqa_llama_instruct_joint_gpt_judge.csv
-MedQA,Llama-3.1-8B-Instruct,posthoc,200,ebse,0.08741823946104521,0.21836424369851312,-0.0597999687720273,0.22785007722413175,1000,medqa_llama_instruct_gpt_judge.csv
-MedQA,Qwen2.5-7B-Instruct,posthoc,200,ebse,-0.014667511937986839,0.8366808888696271,-0.12830403154426623,0.09853149909358062,1000,medqa_qwen_instruct_gpt_judge.csv
-MedQA,Mistral-7B-Instruct-v0.3,posthoc,200,ebse,0.16305678824067682,0.021056013131845464,0.032946850599390794,0.310689438567497,1000,medqa_mistral_instruct_gpt_judge.csv
-MedQA,Llama-3.1-8B,posthoc,200,ebse,-0.017343106409328457,0.8074248008065138,-0.152212042850109,0.12737939224866723,1000,medqa_llama_base_gpt_judge.csv
+1. What is the problem we are studying?
 
+The central question is:
 
-experiment_B_justification
+Do LLM explanations faithfully communicate how uncertain the model was when producing its answer, or do they primarily justify the answer after it has been selected?
 
-dataset,model,condition,n_total,n_correct,n_incorrect,support_correct_mean,support_incorrect_mean,support_gap_correct_minus_incorrect,mannwhitney_U,mannwhitney_p,rank_biserial,rank_biserial_ci95_low,rank_biserial_ci95_high,spearman_correctness_support,spearman_p,source_file
-StrategyQA,Llama-3.1-8B-Instruct,posthoc,200,141,59,89.18439716312056,78.72881355932203,10.45558360379853,5349.0,0.0003795749014023583,0.285971871619185,0.12390912369275159,0.42915614857555,0.2520346732444048,0.00031789655634907935,llama_instruct_support_scored.csv
-StrategyQA,Qwen2.5-7B-Instruct,joint,200,130,70,92.11538461538461,81.92857142857143,10.186813186813183,5291.5,0.020505714890402007,0.16296703296703297,0.02504945054945059,0.30253571428571424,0.16435602133685373,0.02003917169301796,qwen_instruct_joint_support_scored.csv
-StrategyQA,Qwen2.5-7B,joint,191,145,46,84.13793103448276,55.76086956521739,28.37706146926537,4876.5,2.298515934105878e-07,0.46221889055472265,0.2899062968515743,0.6389842578710646,0.37544087409784566,8.71268307777004e-08,qwen_base_joint_support_scored.csv
-StrategyQA,Llama-3.1-8B,posthoc,180,108,72,85.27777777777777,71.73611111111111,13.541666666666657,4763.0,0.004788714347056742,0.2250514403292181,0.06747042181069958,0.3793724279835391,0.21096551099568447,0.004472663354190707,llama_base_support_scored.csv
-StrategyQA,Mistral-7B-Instruct-v0.3,joint,200,137,63,89.52554744525547,84.92063492063492,4.604912524620545,4797.0,0.13088588653707486,0.11157455683003126,-0.0288929440389294,0.25443169968717405,0.10719616301264931,0.1308299496840638,mistral_instruct_joint_support_scored.csv
-StrategyQA,Qwen2.5-7B,posthoc,192,146,46,86.98630136986301,62.71739130434783,24.268910065515186,4675.5,6.575421528991924e-06,0.3923466349017273,0.21458085169743896,0.5740023823704585,0.3262380474564309,3.875582931707568e-06,qwen_base_support_scored.csv
-StrategyQA,Llama-3.1-8B-Instruct,joint,200,146,54,88.9041095890411,82.4074074074074,6.496702181633694,4649.5,0.028100631555890772,0.1794774226281075,0.014431126331811346,0.34566527143581943,0.15577179513337253,0.027622913022281488,llama_instruct_joint_support_scored.csv
-StrategyQA,Mistral-7B-v0.1,posthoc,199,124,75,76.08870967741936,67.46666666666667,8.62204301075269,5406.0,0.04466417858372734,0.16258064516129034,-0.006572580645161318,0.3272069892473118,0.14278281337051235,0.04423781026403001,mistral_base_support_scored.csv
-StrategyQA,Qwen2.5-7B-Instruct,posthoc,200,131,69,92.82442748091603,79.27536231884058,13.54906516207545,6142.0,1.7717891046802733e-06,0.35899988936829286,0.213295165394402,0.4978177895784931,0.3387972576064014,9.239053892997357e-07,qwen_instruct_support_scored.csv
-StrategyQA,Mistral-7B-Instruct-v0.3,posthoc,200,138,62,92.68115942028986,88.87096774193549,3.8101916783543714,4744.5,0.13035612120117562,0.10904628330995791,-0.049143875642823714,0.2571411874707807,0.1073474487006784,0.13028428665168082,mistral_instruct_support_scored.csv
-StrategyQA,Mistral-7B-v0.1,joint,47,32,15,82.03125,68.33333333333333,13.697916666666671,297.5,0.15879934367317883,0.23958333333333326,-0.11880208333333335,0.5688020833333334,0.20958606848744823,0.15738604863567104,mistral_base_joint_support_scored.csv
-StrategyQA,Llama-3.1-8B,joint,154,94,60,90.53191489361703,73.33333333333333,17.1985815602837,3708.0,0.00014512208199231525,0.3148936170212766,0.15627659574468095,0.4746498226950355,0.30732593458682855,0.0001057539802840822,llama_base_joint_support_scored.csv
-MedQA,Qwen2.5-7B-Instruct,posthoc,181,102,79,96.17647058823529,88.92405063291139,7.2524199553239015,4690.0,0.0072428525456882725,0.16406056093323396,0.05112000496401083,0.27737031521469346,0.20031441631963362,0.006856318099229843,medqa_qwen_instruct_support_scored.csv
-MedQA,Llama-3.1-8B-Instruct,posthoc,174,109,65,92.01834862385321,86.0,6.018348623853214,3892.5,0.18356878372901275,0.09880028228652082,-0.05370501058574453,0.255197600564573,0.10125101709823407,0.18372097929809716,medqa_llama_instruct_support_scored.csv
-MedQA,Mistral-7B-v0.1,posthoc,200,79,121,82.40506329113924,71.61157024793388,10.793493043205359,5675.0,0.016881356449111276,0.18736269484255685,0.04330473898943393,0.3296448373260801,0.16946630463605628,0.016441212482390295,medqa_mistral_base_support_scored.csv
-MedQA,Mistral-7B-v0.1,joint,193,76,117,82.30263157894737,68.76068376068376,13.541947818263608,5532.0,0.002263767759568938,0.24426450742240213,0.09432636077372929,0.39597953216374276,0.2204508815198455,0.00206516419267718,medqa_mistral_base_support_scored_joint.csv
-MedQA,Llama-3.1-8B,posthoc,200,84,116,87.14285714285714,75.94827586206897,11.19458128078817,5904.0,0.004009522949751108,0.21182266009852224,0.06944273399014772,0.3463362068965515,0.20407316942542358,0.0037494495310947448,medqa_llama_base_support_scored.csv
-MedQA,Mistral-7B-Instruct-v0.3,joint,200,90,110,96.05555555555556,92.81818181818181,3.237373737373744,5556.5,0.02917380908637821,0.12252525252525248,0.01817929292929289,0.231820707070707,0.1547437710545429,0.028677897740921016,medqa_mistral_instruct_support_scored_joint.csv
-MedQA,Llama-3.1-8B,joint,145,63,82,85.07936507936508,60.0609756097561,25.018389469608977,3624.5,7.491425614607061e-06,0.40321331784746417,0.23226867982965552,0.5482530003871466,0.373448100109406,3.7190478092965212e-06,medqa_llama_base_support_scored_joint.csv
-MedQA,Qwen2.5-7B,posthoc,200,119,81,93.90756302521008,91.04938271604938,2.8581803091607014,5003.5,0.49496920150178647,0.038178234256665666,-0.07618528893038694,0.15095186222637202,0.048507758007837215,0.49517251165741594,medqa_qwen_base_support_scored.csv
-MedQA,Qwen2.5-7B,joint,198,119,79,84.2016806722689,75.18987341772151,9.011807254547392,5247.0,0.11506974030766408,0.11626422720987128,-0.04235985533453885,0.2721013721944473,0.11237458256005661,0.11497153314298865,medqa_qwen_base_support_scored_joint.csv
-MedQA,Mistral-7B-Instruct-v0.3,posthoc,197,89,108,95.84269662921348,85.23148148148148,10.611215147731997,5969.5,0.00021075772674601095,0.242093216812318,0.11672128589263416,0.36395131086142307,0.26481094854220816,0.00016957255084100497,medqa_mistral_instruct_support_scored.csv
-MedQA,Qwen2.5-7B-Instruct,joint,200,120,80,98.08333333333333,91.125,6.958333333333329,5424.0,0.009879470149769563,0.1299999999999999,0.01572656249999991,0.23480208333333338,0.18303940802710647,0.009478435566571396,medqa_qwen_instruct_support_scored_joint.csv
-MedQA,Llama-3.1-8B-Instruct,joint,200,128,72,96.71875,91.45833333333333,5.260416666666671,4993.0,0.10971370724289174,0.08355034722222232,-0.020410156250000023,0.2001274956597222,0.11353166467844653,0.10944425619577107,medqa_llama_instruct_support_scored_joint.csv
+Imagine an LLM answers:
 
-experiment_C1_aggregate
+Question: What is X?
+Answer: B
+Explanation: B is correct because…
 
-n_model_dataset_pairs,mean_delta_rho,median_delta_rho,n_joint_higher,n_posthoc_higher,n_equal,wilcoxon_W,wilcoxon_p
-12,0.02408816941758075,0.0370516133760589,7,5,0,30.0,0.5185546875
+As a human reader, that explanation may sound extremely convincing.
 
-experiment_C1_joint_vs_posthoc
+But there are two very different possibilities.
 
-dataset,model,n_paired,ebse_metric,rho_joint,rho_posthoc,delta_rho,delta_ci95_low,delta_ci95_high,bootstrap_p,valid_bootstraps
-StrategyQA,Llama-3.1-8B,173,ebse,-0.03547813011305403,-0.1388342536738918,0.10335612356083776,-0.08115692911689003,0.28311123776078095,0.256,1000
-StrategyQA,Llama-3.1-8B-Instruct,200,ebse,0.20700700352229048,0.23564127017141595,-0.028634266649125467,-0.1954491255825078,0.13733557465450466,0.734,1000
-StrategyQA,Qwen2.5-7B-Instruct,200,ebse,0.08045016565133764,-0.037188889610578896,0.11763905526191654,-0.07484692252159475,0.2888537836817297,0.234,1000
-StrategyQA,Mistral-7B-v0.1,47,ebse,-0.18865132271636617,-0.02009237762529321,-0.16855894509107297,-0.601739922320204,0.3090544644272565,0.502532928064843,987
-StrategyQA,Qwen2.5-7B,199,ebse,0.08191729273713484,0.18567097910508457,-0.10375368636794972,-0.28441622427007723,0.07005319021466191,0.234,1000
-StrategyQA,Mistral-7B-Instruct-v0.3,200,ebse,0.17771450288824203,0.008100286636680951,0.1696142162515611,-0.06422175489201347,0.3872695288638018,0.146,1000
-MedQA,Llama-3.1-8B,145,ebse,0.051697075059244375,-0.06635070815034433,0.1180477832095887,-0.10798318176190537,0.3270689084825342,0.272,1000
-MedQA,Qwen2.5-7B,198,ebse,0.03844023163919388,0.040218491821954507,-0.0017782601827606298,-0.1874908993736449,0.16400558772197155,0.908,1000
-MedQA,Mistral-7B-v0.1,193,ebse,0.16482884170118883,-0.03467217338059371,0.19950101508178253,0.020542577075645087,0.38603249066257955,0.03,1000
-MedQA,Mistral-7B-Instruct-v0.3,200,ebse,-0.027421440575249808,0.16305678824067682,-0.19047822881592663,-0.4048063416588957,0.015629216843269608,0.062,1000
-MedQA,Qwen2.5-7B-Instruct,200,ebse,-0.005159575772000981,-0.014667511937986839,0.009507936165985859,-0.17339513343117438,0.19121974892296217,0.944,1000
-MedQA,Llama-3.1-8B-Instruct,200,ebse,0.15201353004717716,0.08741823946104521,0.06459529058613195,-0.11671295580214543,0.25174091858152065,0.522,1000
+The model might have had:
 
-experiment_C1_pairing_QC
-dataset,model,joint_n,posthoc_n,shared_questions,joint_only_n,posthoc_only_n,joint_duplicates,posthoc_duplicates,exact_match,joint_only_examples,posthoc_only_examples
-StrategyQA,Llama-3.1-8B,200,200,200,0,0,0,0,True,,
-StrategyQA,Llama-3.1-8B-Instruct,200,200,200,0,0,0,0,True,,
-StrategyQA,Qwen2.5-7B-Instruct,200,200,200,0,0,0,0,True,,
-StrategyQA,Mistral-7B-v0.1,200,200,200,0,0,0,0,True,,
-StrategyQA,Qwen2.5-7B,200,200,200,0,0,0,0,True,,
-StrategyQA,Mistral-7B-Instruct-v0.3,200,200,200,0,0,0,0,True,,
-MedQA,Llama-3.1-8B,200,200,200,0,0,0,0,True,,
-MedQA,Qwen2.5-7B,200,200,200,0,0,0,0,True,,
-MedQA,Mistral-7B-v0.1,200,200,200,0,0,0,0,True,,
-MedQA,Mistral-7B-Instruct-v0.3,200,200,200,0,0,0,0,True,,
-MedQA,Qwen2.5-7B-Instruct,200,200,200,0,0,0,0,True,,
-MedQA,Llama-3.1-8B-Instruct,200,200,200,0,0,0,0,True,,
+B = 95% probability
+A = 2%
+C = 2%
+D = 1%
+
+or:
+
+B = 28%
+A = 26%
+C = 24%
+D = 22%
+
+The model outputs B in both cases.
+
+But internally, these situations are very different. In the first case the model strongly prefers B. In the second it is highly uncertain.
+
+Does the explanation reveal this difference?
+
+If explanations are uncertainty-faithful, the second explanation should generally sound more uncertain.
+
+Our experiments suggest that this relationship is weak and inconsistent.
+
+At the same time, when the answer is actually wrong, the model often still generates an explanation strongly supporting it.
+
+That gives us two related questions:
+
+RQ1 — Uncertainty communication
+
+Does predictive uncertainty correlate with uncertainty communicated by the explanation?
+
+RQ2 — Justification
+
+Does the model continue to support an answer when that answer is incorrect?
+
+And then we added a third question:
+
+RQ3 — Post-hoc vs Joint
+
+Is poor uncertainty communication caused simply by generating the explanation separately from the answer?
+
+⸻
+
+2. What models and datasets have we tested?
+
+We have three model families:
+
+* Llama 3.1 8B
+* Qwen 2.5 7B
+* Mistral 7B
+
+with both Base and Instruction-tuned variants where applicable.
+
+And multiple datasets, particularly:
+
+TruthfulQA — factual questions designed to expose misconceptions and false beliefs.
+
+StrategyQA — reasoning/commonsense questions.
+
+MedQA — medical multiple-choice questions.
+
+This matters because if we saw the phenomenon only on one model and one dataset, it could simply be an artifact.
+
+Instead we’re asking whether it survives across architectures, alignment conditions and task domains.
+
+⸻
+
+3. What exactly happens for one question?
+
+This is crucial.
+
+Suppose the question is q.
+
+We first estimate the model’s uncertainty over possible answers.
+
+Rather than asking the model:
+
+“How confident are you?”
+
+we repeatedly sample answers from the model.
+
+For example, with 10 generations:
+
+B, B, B, A, B, C, B, A, B, C
+
+The model is clearly less certain than if we got:
+
+B, B, B, B, B, B, B, B, B, B
+
+But raw textual answers are difficult because:
+
+“The answer is B”
+
+and
+
+“I believe option B is correct”
+
+mean the same thing.
+
+So we measure uncertainty at the semantic answer level.
+
+That’s where EBSE enters.
+
+⸻
+
+4. What is EBSE?
+
+EBSE is our operational measure of predictive semantic uncertainty.
+
+The basic idea is:
+
+Generate multiple answers → group semantically equivalent answers → calculate entropy over the resulting answer distribution.
+
+Suppose 10 generations produce semantic answers:
+
+B B B B B B B B B B
+
+There is essentially one semantic outcome.
+
+So entropy is approximately:
+
+H=0
+
+The model is highly consistent.
+
+Now suppose:
+
+B B B B B A A A C C
+
+The semantic distribution is:
+
+P(B)=0.5,\quad P(A)=0.3,\quad P(C)=0.2
+
+Entropy is:
+
+H=-\sum_i p_i\log p_i
+
+which gives approximately:
+
+H=1.03
+
+Higher entropy means the sampled answers are distributed across more plausible semantic alternatives.
+
+So conceptually:
+
+Low EBSE → answers converge → lower predictive uncertainty
+
+High EBSE → answers diverge → higher predictive uncertainty
+
+There is an important wording issue for the paper:
+
+EBSE is not literally the model’s hidden internal confidence variable.
+
+It’s an empirical estimate/proxy of the uncertainty in the model’s predictive answer distribution.
+
+That distinction matters.
+
+⸻
+
+5. Then how do we measure uncertainty in the explanation?
+
+After generating an explanation, we use an independent LLM judge to evaluate:
+
+How uncertain does this explanation sound?
+
+For example:
+
+“B is clearly correct because…”
+
+might receive very low perceived uncertainty.
+
+Whereas:
+
+“B appears most likely, although the evidence is ambiguous…”
+
+should receive higher perceived uncertainty.
+
+So for every question we obtain two quantities:
+
+U_i = \text{EBSE}
+
+and
+
+G_i = \text{GPT-perceived explanation uncertainty}
+
+Then the central statistical question becomes:
+
+When EBSE increases, does perceived explanation uncertainty also increase?
+
+This is Experiment A.
+
+⸻
+
+6. Why do we use Spearman correlation?
+
+Suppose five questions have:
+
+Question	EBSE	Explanation uncertainty
+Q1	.10	8
+Q2	.20	15
+Q3	.40	32
+Q4	.60	50
+Q5	.90	80
+
+As EBSE increases, explanation uncertainty increases.
+
+That’s a positive association.
+
+Spearman’s rank correlation coefficient is denoted:
+
+\rho
+
+and ranges from:
+
+-1\leq\rho\leq1
+
+Interpretation:
+
+\rho=+1 — perfect increasing rank relationship.
+
+\rho=0 — no monotonic relationship.
+
+\rho=-1 — perfect decreasing rank relationship.
+
+As rough intuition—not universal cutoffs:
+
+ρ ≈ 0.05 → tiny relationship
+ρ ≈ 0.20 → weak relationship
+ρ ≈ 0.50 → moderate/strong relationship
+ρ ≈ 0.90 → extremely strong relationship
+
+⸻
+
+7. How is Spearman actually calculated?
+
+This is easier than it sounds.
+
+Instead of correlating the raw values, Spearman converts each variable into ranks.
+
+Suppose:
+
+Question	EBSE	Rank	GPT uncertainty	Rank
+A	.10	1	10	1
+B	.30	2	30	2
+C	.50	3	50	3
+D	.80	4	80	4
+
+Ranks match perfectly.
+
+Therefore:
+
+\rho=1
+
+Now imagine:
+
+Question	EBSE rank	GPT rank
+A	1	3
+B	2	1
+C	3	4
+D	4	2
+
+Knowing which questions have higher EBSE tells you little about which explanations sound more uncertain.
+
+So \rho approaches zero.
+
+This is why Spearman suits our experiment: we primarily care whether higher predictive uncertainty corresponds to higher communicated uncertainty, without assuming a linear relationship or normally distributed variables.
+
+⸻
+
+8. What have we found with Spearman?
+
+Take MedQA Post-hoc.
+
+Llama Instruct:
+
+\rho=.087,\quad p=.218
+
+Qwen Instruct:
+
+\rho=-.015,\quad p=.837
+
+Mistral Instruct:
+
+\rho=.163,\quad p=.021
+
+The first two are essentially very weak relationships.
+
+Mistral has a statistically detectable positive relationship, but:
+
+\rho=.163
+
+is still weak.
+
+StrategyQA contains another example:
+
+Llama Instruct:
+
+\rho=.236,\quad p<.001
+
+So we cannot say:
+
+“There is zero relationship.”
+
+Instead:
+
+The relationship between predictive uncertainty and explanation-communicated uncertainty is generally weak and inconsistent across models and datasets.
+
+Some models exhibit statistically detectable relationships, but even those correlations are small.
+
+⸻
+
+9. What is the p-value?
+
+This is one of the most commonly misunderstood statistics.
+
+Suppose we observe:
+
+\rho=.236
+
+We ask:
+
+Could we have obtained a correlation at least this extreme merely from sampling variability if the true population correlation were zero?
+
+The null hypothesis is:
+
+H_0:\rho=0
+
+A p-value is roughly:
+
+Assuming H_0 is true, how surprising would data at least this extreme be?
+
+For:
+
+p=.001
+
+the observed result would be very unusual under the null.
+
+Conventionally:
+
+p<.05
+
+is called statistically significant.
+
+But p-value does not measure the size or importance of an effect.
+
+That’s critical.
+
+Suppose:
+
+\rho=.16,\quad p=.01
+
+This means the relationship is statistically detectable.
+
+It does not mean the relationship is strong.
+
+The effect is still:
+
+\rho=.16
+
+which is weak.
+
+That’s why we report:
+
+effect size + p-value + confidence interval
+
+rather than p-values alone.
+
+⸻
+
+10. Why do we need a 95% confidence interval?
+
+Consider:
+
+\rho=.16
+
+A point estimate alone doesn’t tell us how uncertain that estimate is.
+
+For Mistral Instruct on MedQA:
+
+\rho=.163
+
+with bootstrap 95% CI:
+
+[.033,\ .311]
+
+Conceptually, the data suggest that the plausible population effect is positive but relatively small.
+
+Compare Qwen Instruct:
+
+\rho=-.015
+
+CI:
+
+[-.128,\ .099]
+
+Zero is comfortably inside that interval.
+
+So the data are compatible with a small negative relationship, essentially no relationship, or a small positive relationship.
+
+That’s much more informative than saying:
+
+p=.837 → not significant.
+
+⸻
+
+11. What is bootstrapping?
+
+Suppose our dataset has 200 questions.
+
+Traditional statistical theory often makes assumptions about the sampling distribution of a statistic.
+
+Bootstrapping instead says:
+
+Let’s use the observed data to empirically estimate how variable our statistic is.
+
+Take the 200 rows and sample 200 rows with replacement.
+
+Because sampling is with replacement, some questions appear multiple times and some don’t appear in that bootstrap sample.
+
+Calculate Spearman \rho.
+
+Then repeat.
+
+We currently did this 1,000 times.
+
+So we obtain:
+
+\rho_1,\rho_2,\rho_3,\ldots,\rho_{1000}
+
+Maybe the distribution looks roughly like:
+
+.08, .14, .19, .12, .23, .10, …
+
+We then take the relevant percentiles of this empirical distribution to form the 95% CI.
+
+So bootstrapping answers:
+
+If we had obtained somewhat different samples of questions from a similar population, how much might our estimated correlation vary?
+
+This is particularly useful because statistics like Spearman correlation and rank-based effect sizes need not have simple sampling distributions under our data characteristics.
+
+⸻
+
+12. Experiment B: are wrong answers still justified?
+
+Now we move from uncertainty to truth.
+
+Suppose the model answers a question incorrectly.
+
+We give the answer for explanation generation.
+
+Does the explanation say:
+
+“This answer is questionable…”
+
+or:
+
+“This answer is correct because X, Y and Z.”
+
+We score how strongly the explanation supports the answer.
+
+Call this support score S.
+
+Then divide questions into:
+
+C=1 \quad \text{correct}
+
+and
+
+C=0 \quad \text{incorrect}
+
+and compare support.
+
+For example, MedQA Qwen Instruct Post-hoc:
+
+Correct answers: 96.2
+
+Incorrect answers: 88.9
+
+So yes, correct answers receive somewhat stronger support.
+
+But 88.9/100 support for objectively incorrect answers is still strikingly high.
+
+This is why our finding isn’t:
+
+models cannot distinguish correct from incorrect answers.
+
+Instead:
+
+Correctness affects explanation support in some conditions, but explanations remain strongly justificatory even for incorrect answers.
+
+⸻
+
+13. Why Mann–Whitney U?
+
+We now have two groups:
+
+Group 1
+
+S_{\text{correct}}
+
+Group 2
+
+S_{\text{incorrect}}
+
+We want to know whether their support-score distributions differ.
+
+We could consider a t-test, but support scores may not be normally distributed. In fact, LLM judge scores can cluster near 90–100.
+
+So we use the non-parametric Mann–Whitney U test.
+
+It works largely from ranks rather than relying on normality.
+
+Conceptually it asks:
+
+Do observations from one group tend to have higher ranks than observations from the other group?
+
+For Qwen Instruct/MedQA:
+
+p=.007
+
+So correct answers tend to receive higher support than incorrect answers.
+
+But again:
+
+significance ≠ magnitude.
+
+That’s why we added an effect size.
+
+⸻
+
+14. Rank-biserial correlation
+
+For the correct-vs-incorrect support comparison we calculate rank-biserial correlation.
+
+It expresses the magnitude and direction of the separation between the two groups.
+
+It ranges roughly from:
+
+-1\text{ to }+1
+
+Near zero means the support distributions substantially overlap.
+
+Larger positive values mean correct answers tend to receive greater support.
+
+For Qwen Instruct/MedQA:
+
+r_{rb}=.164
+
+95% CI:
+
+[.051,.277]
+
+So the effect is statistically detectable, but relatively modest.
+
+And this is important because the absolute means are:
+
+correct = 96.2
+incorrect = 88.9
+
+The model differentiates somewhat while still heavily supporting the wrong answers.
+
+⸻
+
+15. Why do we report mean support as well as rank-biserial?
+
+Because they answer different questions.
+
+The support gap
+
+\bar S_{\text{correct}}-\bar S_{\text{incorrect}}
+
+tells us how far apart the average scores are.
+
+The rank-biserial effect size tells us how separated the overall distributions are.
+
+The Mann–Whitney p-value tells us whether the observed rank separation is difficult to explain under the null hypothesis.
+
+Together:
+
+Mean scores → what happened?
+
+Effect size → how large/consistent is the difference?
+
+p-value → how strong is the evidence against no difference?
+
+CI → how uncertain is our effect-size estimate?
+
+That’s the statistical package reviewers want to see.
+
+⸻
+
+16. What is the Spearman correctness↔support analysis?
+
+We also calculate:
+
+\rho(C,S)
+
+where correctness is binary:
+
+0=\text{incorrect},\quad1=\text{correct}
+
+and S is support score.
+
+Positive correlation means correct answers tend to receive greater support.
+
+For StrategyQA Qwen Base Post-hoc:
+
+\rho=.326
+
+with:
+
+p<.00001
+
+That’s a meaningful correctness signal.
+
+But incorrect-answer support is still:
+
+62.7/100
+
+So again:
+
+the model distinguishes correctness to some extent and still justifies wrong answers.
+
+Those are not contradictory findings.
+
+⸻
+
+17. Experiment C1: Post-hoc vs Joint
+
+This was the important ablation.
+
+Post-hoc
+
+First:
+
+q\rightarrow A
+
+Then separately:
+
+(q,A)\rightarrow E
+
+The explanation is generated in a new forward pass.
+
+Joint
+
+We ask for answer + explanation together:
+
+q\rightarrow(A,E)
+
+The motivation was:
+
+Perhaps uncertainty communication fails because the Post-hoc explanation no longer has access to the computational context that generated the answer.
+
+If that were the dominant explanation, Joint generation should systematically improve:
+
+\rho(\text{EBSE},\text{communicated uncertainty})
+
+So we tested it.
+
+⸻
+
+18. Why must Joint and Post-hoc use the same questions?
+
+Suppose Post-hoc uses 200 questions and Joint uses a different 200 questions.
+
+Then:
+
+\rho_{\text{joint}}-\rho_{\text{posthoc}}
+
+could reflect differences in question difficulty rather than generation condition.
+
+So our script explicitly checks question identity.
+
+Your QC showed:
+
+Joint = 200
+Post-hoc = 200
+Shared = 200
+Joint-only = 0
+Post-hoc-only = 0
+duplicates = 0
+
+across the experimental pairs.
+
+That’s very important methodological validation.
+
+⸻
+
+19. What is Δρ?
+
+For every model × dataset pair:
+
+\Delta\rho=\rho_{\text{joint}}-\rho_{\text{posthoc}}
+
+Suppose:
+
+\rho_{\text{joint}}=.30
+
+and:
+
+\rho_{\text{posthoc}}=.10
+
+Then:
+
+\Delta\rho=.20
+
+Joint improved the association by .20.
+
+If:
+
+\Delta\rho<0
+
+Post-hoc performed better.
+
+Your current aggregate result across the 11 valid pairs is:
+
+\text{mean }\Delta\rho=.020
+
+\text{median }\Delta\rho=.010
+
+Joint higher:
+
+6
+
+Post-hoc higher:
+
+5
+
+That’s essentially no consistent directional pattern.
+
+⸻
+
+20. Why paired bootstrap Δρ?
+
+This part is especially important.
+
+For a given model, the Joint and Post-hoc conditions contain the same questions.
+
+Therefore they’re paired observations.
+
+When bootstrapping, we shouldn’t independently sample Joint questions and Post-hoc questions.
+
+Instead we sample question IDs:
+
+Q7, Q41, Q41, Q103, Q2, …
+
+and take both Joint and Post-hoc observations for those same selected questions.
+
+Then calculate:
+
+\rho_J^*
+
+and:
+
+\rho_P^*
+
+and:
+
+\Delta\rho^*=\rho_J^*-\rho_P^*
+
+Repeat 1,000 times.
+
+Now we get the bootstrap distribution of the actual quantity we care about:
+
+\Delta\rho
+
+For MedQA Mistral Base:
+
+\Delta\rho=.200
+
+95% CI:
+
+[.021,.386]
+
+This individual condition suggests improvement.
+
+But most other Δρ confidence intervals contain zero.
+
+So there is no consistent cross-model improvement.
+
+⸻
+
+21. Why the Wilcoxon signed-rank test?
+
+Now we have one Δρ for every model × dataset pair.
+
+Currently 11 usable pairs:
+
+\Delta\rho_1,\Delta\rho_2,\ldots,\Delta\rho_{11}
+
+The question becomes:
+
+Across experimental conditions, does Joint systematically produce larger correlations than Post-hoc?
+
+Because these are paired differences and we have very few pairs, we use the Wilcoxon signed-rank test, a non-parametric paired test.
+
+Current result:
+
+W=27
+
+p=.638
+
+That gives us no evidence of a systematic Joint improvement.
+
+And descriptively:
+
+Joint higher = 6
+Post-hoc higher = 5
+
+Median improvement:
+
++.0095
+
+Essentially zero.
+
+One Llama-Instruct/MedQA Joint uncertainty-judge run is currently incomplete, so this aggregate result should be treated as provisional until the 12th pair is restored and the test rerun.
+
+⸻
+
+22. This changed our theoretical interpretation
+
+Initially we had a plausible explanation:
+
+Post-hoc generation discards answer-generation state, creating an information bottleneck.
+
+That’s still architecturally true.
+
+But then we performed an intervention:
+
+Remove that separation using Joint generation.
+
+If architecture were the main reason for poor uncertainty communication, Joint should reliably improve it.
+
+It didn’t.
+
+This tells us something more interesting:
+
+Making uncertainty-related computational information more accessible is not sufficient to make explanations communicate uncertainty.
+
+That points toward the generation objective itself.
+
+If the explanation-generation behavior is primarily:
+
+“Explain/justify the selected answer”
+
+rather than:
+
+“Faithfully communicate how uncertain you were about this answer”
+
+then even if uncertainty information is available, there is no reason it must appear in the explanation.
+
+That’s now a hypothesis supported by two different experimental observations:
+
+1. Joint doesn’t systematically improve uncertainty communication.
+2. Incorrect answers continue receiving highly supportive explanations.
+
+⸻
+
+23. So what is the complete experimental logic?
+
+This is probably the most useful thing to show your supervisor.
+
+Experiment A — Uncertainty fidelity
+
+Measure:
+
+\text{EBSE}\leftrightarrow\text{perceived explanation uncertainty}
+
+using Spearman \rho.
+
+Finding:
+
+Mostly weak/inconsistent relationships.
+
+Therefore:
+
+Explanations are not reliable readouts of predictive uncertainty.
+
+⸻
+
+Experiment B — Justification behavior
+
+Compare:
+
+S_{\text{correct}}
+
+against:
+
+S_{\text{incorrect}}
+
+using mean gaps, Mann–Whitney U, rank-biserial effect sizes, bootstrap CIs and correctness↔support correlations.
+
+Finding:
+
+Correct answers often receive somewhat stronger support, but incorrect answers still receive substantial—and frequently very high—support.
+
+Therefore:
+
+Explanations show some truth sensitivity but remain strongly justificatory of false answers.
+
+⸻
+
+Experiment C1 — Architectural ablation
+
+Compare:
+
+\rho_{\text{Joint}}
+
+against:
+
+\rho_{\text{Post-hoc}}
+
+on matched questions.
+
+Use paired bootstrap Δρ and aggregate Wilcoxon signed-rank testing.
+
+Current result:
+
+\text{median }\Delta\rho\approx.010
+
+p=.638
+
+Finding:
+
+No systematic improvement under Joint generation.
+
+Therefore:
+
+Architectural separation alone does not appear sufficient to explain weak uncertainty communication.
+
+⸻
+
+24. One distinction your supervisor may challenge you on
+
+They may ask:
+
+“You’re calling EBSE internal uncertainty. Is it really internal?”
+
+The precise answer should be:
+
+No, not in the sense of directly reading hidden activations.
+
+We are estimating predictive uncertainty from repeated stochastic samples of the model’s answer distribution.
+
+EBSE tells us how semantically dispersed the model’s possible answers are.
+
+So I would avoid:
+
+“EBSE measures the model’s true internal uncertainty.”
+
+Instead say:
+
+“EBSE provides an empirical estimate of predictive semantic uncertainty from the model’s answer distribution.”
+
+That’s much safer.
+
+⸻
+
+25. Another likely question: Why not use accuracy − confidence?
+
+Because that’s a different calibration question.
+
+Classical calibration asks:
+
+When the model says 80% confidence, is it correct approximately 80% of the time?
+
+Our question is different.
+
+We’re asking:
+
+When predictive uncertainty changes across questions, does the uncertainty communicated by the explanation change correspondingly?
+
+We’re studying uncertainty communication through explanations, not merely answer confidence calibration.
+
+That’s what distinguishes the work.
+
+⸻
+
+26. Statistical terms you should know in one sentence each
+
+If you’re asked quickly:
+
+EBSE:
+An entropy-based estimate of predictive uncertainty derived from semantic diversity across sampled model answers.
+
+Spearman \rho:
+Measures whether two variables increase or decrease together monotonically based on their ranks.
+
+p-value:
+Under the null hypothesis, the probability of obtaining a result at least as extreme as the observed one.
+
+95% CI:
+A range produced by a procedure that, over repeated samples, would contain the true parameter 95% of the time.
+
+Bootstrap:
+Repeatedly resampling the observed data with replacement to empirically estimate uncertainty in a statistic.
+
+Mann–Whitney U:
+A non-parametric test asking whether values in one independent group tend to rank higher than values in another.
+
+Rank-biserial correlation:
+An effect size describing the direction and magnitude of rank separation between two groups.
+
+Δρ:
+The difference between two Spearman correlations—in our case Joint minus Post-hoc.
+
+Paired bootstrap:
+Bootstrap where matched Joint/Post-hoc observations for the same questions are resampled together.
+
+Wilcoxon signed-rank:
+A non-parametric test of whether paired differences systematically lie above or below zero.
+
+Statistical significance:
+Evidence that an observed effect is difficult to explain under the specified null hypothesis; it does not tell us that the effect is large or practically important.
+
+Effect size:
+How large the observed relationship or difference actually is.
+
+⸻
+
+27. The supervisor-level summary
+
+If you had two minutes, I’d explain the whole project like this:
+
+We’re investigating whether natural-language explanations generated by LLMs faithfully communicate the model’s predictive uncertainty, or primarily rationalize the answer that has already been selected.
+
+We test Llama, Qwen and Mistral, including base and instruction-tuned variants, across TruthfulQA, MedQA and StrategyQA. For each question, we sample multiple answers and calculate EBSE, an entropy-based measure of semantic dispersion in the model’s answer distribution. High EBSE means the model generates multiple competing semantic answers; low EBSE means its generations converge.
+
+We then generate an explanation and independently score how uncertain that explanation sounds. Experiment A correlates EBSE with communicated uncertainty using Spearman correlation. Across models and datasets, these relationships are generally weak and inconsistent. Some are statistically significant, but even those effects are small.
+
+In Experiment B, we ask whether explanations behave differently when the selected answer is wrong. We compare explanation support for correct and incorrect answers using Mann–Whitney tests, rank-biserial effect sizes and bootstrap confidence intervals. Correct answers often receive stronger support, so explanations aren’t completely insensitive to truth. However, wrong answers still receive substantial and often very high support—frequently around 70–90 out of 100.
+
+Finally, we tested whether this happens simply because our explanation is generated post-hoc in a separate forward pass. We therefore compared Post-hoc generation with Joint answer-and-explanation generation on exactly matched questions. We calculate the difference in EBSE–explanation correlations using paired bootstrap and aggregate those differences using a Wilcoxon signed-rank test. So far, Joint generation does not systematically improve uncertainty communication: median Δρ is approximately .01 and the aggregate p-value is .638, pending restoration of one incomplete model-condition pair.
+
+So the emerging conclusion is not that explanations contain zero uncertainty information. Rather, uncertainty communication is weak and inconsistent, while explanations remain strongly answer-supportive even for incorrect answers. Removing the Post-hoc architectural separation does not systematically fix this, suggesting that access to uncertainty information alone is insufficient; the explanation-generation behavior itself may favor answer-consistent justification over uncertainty-faithful communication.
+
+And that last distinction—availability of uncertainty versus communication of uncertainty—is probably the cleanest conceptual center for the paper now.
