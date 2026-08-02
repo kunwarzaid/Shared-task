@@ -14,6 +14,7 @@ script, just pointed at the hedging-licensed generations file.
 import os
 import time
 import json
+import glob
 import pandas as pd
 from pathlib import Path
 from openai import AzureOpenAI
@@ -27,10 +28,11 @@ AZURE_API_KEY = "5bc17f3698774aed9e7529e4bcecc2c1"
 AZURE_API_VERSION = "2024-12-01-preview"
 DEPLOYMENT_NAME = "gpt-5"
 
-INPUT_CSV = "hedging_arm/generations_hedging_licensed.csv"
-OUTPUT_CSV = "hedging_arm/generations_hedging_licensed_support_scored.csv"
+INPUT_DIR = "MedQA/hedging"
+INPUT_PATTERN = "generations_hedging_*.csv"
+OUTPUT_DIR = "MedQA/hedging/support_score"
 
-Path(OUTPUT_CSV).parent.mkdir(exist_ok=True, parents=True)
+Path(OUTPUT_DIR).mkdir(exist_ok=True, parents=True)
 
 client = AzureOpenAI(
     azure_endpoint=AZURE_ENDPOINT,
@@ -43,13 +45,16 @@ print("Azure OpenAI client initialized.")
 # LOAD DATA
 # =====================================================
 
-df = pd.read_csv(INPUT_CSV)
-print(f"Loaded {len(df)} rows from {INPUT_CSV}")
+files = sorted(glob.glob(os.path.join(INPUT_DIR, INPUT_PATTERN)))
+print(f"Found {len(files)} hedging generation files:")
+for f in files:
+    print(f"  {f}")
 
-required_cols = ["question", "greedy_answer", "explanation", "correct"]
-missing = [c for c in required_cols if c not in df.columns]
-if missing:
-    raise ValueError(f"Missing columns in CSV: {missing}")
+if len(files) == 0:
+    raise FileNotFoundError(
+        f"No files matched {os.path.join(INPUT_DIR, INPUT_PATTERN)}. "
+        f"Check INPUT_DIR matches your actual path."
+    )
 
 # =====================================================
 # SUPPORT-SCORE JUDGE PROMPT -- identical to the original
@@ -133,52 +138,104 @@ def score_support(question, answer, explanation, max_retries=3):
 # MAIN LOOP
 # =====================================================
 
-scores = []
-reasons = []
+def process_file(input_path):
+    filename = os.path.basename(input_path)
+    output_path = os.path.join(OUTPUT_DIR, filename.replace(".csv", "_scored.csv"))
 
-for idx, row in df.iterrows():
-    print(f"[{idx:03d}/{len(df)}] {str(row['question'])[:70]}...")
+    if os.path.exists(output_path):
+        existing = pd.read_csv(output_path)
+        if "support_score" in existing.columns and existing["support_score"].notna().all():
+            print(f"\nSKIP {filename}: already fully scored at {output_path}")
+            return existing
 
-    score, reason = score_support(
-        row["question"], row["greedy_answer"], row["explanation"]
-    )
+    print(f"\n{'='*60}")
+    print(f"PROCESSING: {filename}")
+    print(f"{'='*60}")
 
-    print(f"  support_score={score} | {str(reason)[:80]}")
+    df = pd.read_csv(input_path)
+    print(f"Loaded {len(df)} rows.")
 
-    scores.append(score)
-    reasons.append(reason)
+    required_cols = ["question", "greedy_answer", "explanation", "correct"]
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        print(f"  SKIP: missing columns {missing}")
+        return None
 
-    # Checkpoint every 10 rows in case of interruption
-    if idx % 10 == 0:
-        checkpoint = df.copy()
-        checkpoint["support_score"] = scores + [None] * (len(df) - len(scores))
-        checkpoint["support_reason"] = reasons + [None] * (len(df) - len(reasons))
-        checkpoint.to_csv(OUTPUT_CSV, index=False)
+    scores = []
+    reasons = []
 
-df["support_score"] = scores
-df["support_reason"] = reasons
-df.to_csv(OUTPUT_CSV, index=False)
+    for idx, row in df.iterrows():
+        print(f"[{idx:03d}/{len(df)}] {str(row['question'])[:70]}...")
+
+        score, reason = score_support(
+            row["question"], row["greedy_answer"], row["explanation"]
+        )
+
+        print(f"  support_score={score} | {str(reason)[:80]}")
+
+        scores.append(score)
+        reasons.append(reason)
+
+        if idx % 10 == 0:
+            checkpoint = df.copy()
+            checkpoint["support_score"] = scores + [None] * (len(df) - len(scores))
+            checkpoint["support_reason"] = reasons + [None] * (len(df) - len(reasons))
+            checkpoint.to_csv(output_path, index=False)
+
+    df["support_score"] = scores
+    df["support_reason"] = reasons
+    df.to_csv(output_path, index=False)
+
+    valid = df[df["support_score"].notna() & df["correct"].notna()].copy()
+    valid["correct"] = valid["correct"].astype(float).astype(int)
+
+    correct_support = valid[valid["correct"] == 1]["support_score"]
+    incorrect_support = valid[valid["correct"] == 0]["support_score"]
+
+    print(f"\n--- SUMMARY: {filename} ---")
+    print(f"Scored: {len(valid)} / {len(df)}")
+    if len(correct_support) > 0:
+        print(f"Correct:   n={len(correct_support)}  mean support={correct_support.mean():.1f}")
+    if len(incorrect_support) > 0:
+        print(f"Incorrect: n={len(incorrect_support)}  mean support={incorrect_support.mean():.1f}")
+    if len(correct_support) > 0 and len(incorrect_support) > 0:
+        tsg = correct_support.mean() - incorrect_support.mean()
+        print(f"TSG (hedging-licensed) = {tsg:.2f}")
+    print(f"Saved to: {output_path}")
+
+    return df
+
 
 # =====================================================
-# SUMMARY
+# RUN ACROSS ALL SIX MODEL FILES
 # =====================================================
 
-valid = df[df["support_score"].notna() & df["correct"].notna()].copy()
-valid["correct"] = valid["correct"].astype(float).astype(int)
+all_results = {}
+for filepath in files:
+    result = process_file(filepath)
+    if result is not None:
+        model_label = os.path.basename(filepath).replace("generations_hedging_", "").replace(".csv", "")
+        all_results[model_label] = result
 
-correct_support = valid[valid["correct"] == 1]["support_score"]
-incorrect_support = valid[valid["correct"] == 0]["support_score"]
+# =====================================================
+# COMBINED SUMMARY ACROSS ALL MODELS
+# =====================================================
 
-print(f"\n{'='*60}")
-print(f"SUPPORT SCORE SUMMARY: hedging-licensed condition")
-print(f"{'='*60}")
-print(f"Total scored: {len(valid)} / {len(df)}")
-print(f"Correct answers:   n={len(correct_support)}  mean support={correct_support.mean():.1f}")
-print(f"Incorrect answers: n={len(incorrect_support)}  mean support={incorrect_support.mean():.1f}")
-if len(correct_support) > 0 and len(incorrect_support) > 0:
-    tsg = correct_support.mean() - incorrect_support.mean()
-    print(f"TSG (hedging-licensed) = {tsg:.2f}")
+print(f"\n{'='*70}")
+print("COMBINED SUMMARY -- ALL MODELS, HEDGING-LICENSED CONDITION")
+print(f"{'='*70}")
+print(f"{'Model':20s} {'n':>5s} {'Support(correct)':>18s} {'Support(incorrect)':>20s} {'TSG':>8s}")
 
-print(f"\nSaved to: {OUTPUT_CSV}")
-print("\nNext step: compare this TSG against your original post-hoc TSG")
-print("for the same model/dataset using compare_hedging_vs_original.py.")
+for model_label, df in all_results.items():
+    valid = df[df["support_score"].notna() & df["correct"].notna()].copy()
+    valid["correct"] = valid["correct"].astype(float).astype(int)
+    correct_support = valid[valid["correct"] == 1]["support_score"]
+    incorrect_support = valid[valid["correct"] == 0]["support_score"]
+    if len(correct_support) > 0 and len(incorrect_support) > 0:
+        tsg = correct_support.mean() - incorrect_support.mean()
+        print(f"{model_label:20s} {len(valid):5d} {correct_support.mean():18.1f} "
+              f"{incorrect_support.mean():20.1f} {tsg:8.2f}")
+
+print(f"\nAll scored files saved under: {OUTPUT_DIR}")
+print("\nNext step: compare each model's hedging-licensed TSG against its")
+print("original post-hoc TSG using compare_hedging_vs_original.py.")
