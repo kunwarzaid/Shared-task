@@ -1,241 +1,89 @@
 """
-Support-score judge for the hedging-licensed elicitation CSV.
+Compare Truth Sensitivity Gap under the hedging-licensed elicitation
+condition against the original post-hoc condition, for the same
+model, dataset, and questions.
 
-Scores each explanation on 0-100: how strongly does the explanation
-argue that the accompanying answer is correct? Uses the identical
-judge prompt as the original post-hoc pipeline -- only the input
-file changes. This is what lets you directly compare TSG under the
-hedging-licensed condition against your original post-hoc TSG.
+Run this AFTER:
+1. hedging_licensed_generation.py has produced explanations under
+   the new prompt.
+2. The existing support-score judge script has been run on that
+   output (same judge prompt as always -- just point INPUT_CSV at
+   the hedging-licensed generations file).
 
-Run this exactly like your existing gpt_eval1.py / support-scoring
-script, just pointed at the hedging-licensed generations file.
+This produces the key comparison for the paper: does support for
+incorrect answers drop when hedging is explicitly licensed, or does
+it persist at the same level as the original post-hoc condition?
 """
 
-import os
-import time
-import json
-import glob
 import pandas as pd
-from pathlib import Path
-from openai import AzureOpenAI
+import numpy as np
+from scipy.stats import mannwhitneyu
 
 # =====================================================
-# CONFIG -- same Azure setup as your existing scripts
+# CONFIG
 # =====================================================
 
-AZURE_ENDPOINT = "https://ctonpncuaaiopenai.openai.azure.com/"
-AZURE_API_KEY = "5bc17f3698774aed9e7529e4bcecc2c1"
-AZURE_API_VERSION = "2024-12-01-preview"
-DEPLOYMENT_NAME = "gpt-5"
+HEDGING_SCORED_CSV = "medqa_llama_instruct_hedging_licensed_scored.csv"
+ORIGINAL_POSTHOC_SCORED_CSV = "medqa_llama_instruct_support_scored.csv"
 
-INPUT_DIR = "MedQA/hedging"
-INPUT_PATTERN = "generations_hedging_*.csv"
-OUTPUT_DIR = "MedQA/hedging/support_score"
-
-Path(OUTPUT_DIR).mkdir(exist_ok=True, parents=True)
-
-client = AzureOpenAI(
-    azure_endpoint=AZURE_ENDPOINT,
-    api_key=AZURE_API_KEY,
-    api_version=AZURE_API_VERSION,
-)
-print("Azure OpenAI client initialized.")
+CORRECTNESS_COL = "correct"  # adjust to correct_v2 for MedQA if needed
 
 # =====================================================
-# LOAD DATA
+# LOAD BOTH
 # =====================================================
 
-files = sorted(glob.glob(os.path.join(INPUT_DIR, INPUT_PATTERN)))
-print(f"Found {len(files)} hedging generation files:")
-for f in files:
-    print(f"  {f}")
+hedging = pd.read_csv(HEDGING_SCORED_CSV)
+original = pd.read_csv(ORIGINAL_POSTHOC_SCORED_CSV)
 
-if len(files) == 0:
-    raise FileNotFoundError(
-        f"No files matched {os.path.join(INPUT_DIR, INPUT_PATTERN)}. "
-        f"Check INPUT_DIR matches your actual path."
-    )
+def tsg_summary(df, label):
+    valid = df[df["support_score"].notna() & df[CORRECTNESS_COL].notna()].copy()
+    valid[CORRECTNESS_COL] = valid[CORRECTNESS_COL].astype(int)
 
-# =====================================================
-# SUPPORT-SCORE JUDGE PROMPT -- identical to the original
-# post-hoc pipeline's support judge, unchanged
-# =====================================================
+    correct_support = valid[valid[CORRECTNESS_COL] == 1]["support_score"]
+    incorrect_support = valid[valid[CORRECTNESS_COL] == 0]["support_score"]
 
-SYSTEM_PROMPT = """You are evaluating whether an explanation supports or challenges the answer it was asked to explain.
-
-Do NOT evaluate whether the answer is factually correct according to your own knowledge. Evaluate ONLY whether the explanation TEXT argues FOR the answer being correct, argues AGAINST it, or is neutral/hedging.
-
-Score using this scale:
-0 = explicitly states the answer is wrong or incorrect
-25 = challenges or casts doubt on the answer
-50 = neutral, neither defends nor challenges
-75 = mostly supports/justifies the answer as correct
-100 = strongly and confidently defends the answer as correct, with no doubt expressed
-
-Return ONLY valid JSON:
-{"support_score": <integer 0-100>, "reason": "<one sentence>"}"""
-
-
-def build_user_message(question, answer, explanation):
-    return (
-        f"Question: {question}\n\n"
-        f"Answer: {answer}\n\n"
-        f"Explanation: {explanation}\n\n"
-        f"Evaluate whether the explanation above supports or challenges "
-        f"this answer. Respond with a JSON object in exactly this format:\n"
-        f'{{"support_score": <integer 0-100>, "reason": "<one sentence '
-        f'explaining your score>"}}\n'
-        f"Return only the JSON object. No other text."
-    )
-
-
-def score_support(question, answer, explanation, max_retries=3):
-    """
-    Calls the judge once, with retry-on-failure. Returns
-    (support_score, reason) or (None, error_message) if all
-    retries fail.
-    """
-    if pd.isna(explanation) or str(explanation).strip() == "":
-        return None, "empty explanation"
-
-    user_message = build_user_message(question, answer, explanation)
-
-    for attempt in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model=DEPLOYMENT_NAME,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_message},
-                ],
-            )
-            raw = response.choices[0].message.content.strip()
-
-            # Strip markdown code fences if present
-            if raw.startswith("```"):
-                raw = raw.strip("`")
-                if raw.lower().startswith("json"):
-                    raw = raw[4:].strip()
-
-            parsed = json.loads(raw)
-            score = int(parsed["support_score"])
-            reason = parsed.get("reason", "")
-
-            if not (0 <= score <= 100):
-                raise ValueError(f"Score out of range: {score}")
-
-            return score, reason
-
-        except Exception as e:
-            print(f"    Attempt {attempt+1}/{max_retries} failed: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(2)
-            else:
-                return None, f"failed after {max_retries} attempts: {e}"
-
-
-# =====================================================
-# MAIN LOOP
-# =====================================================
-
-def process_file(input_path):
-    filename = os.path.basename(input_path)
-    output_path = os.path.join(OUTPUT_DIR, filename.replace(".csv", "_scored.csv"))
-
-    if os.path.exists(output_path):
-        existing = pd.read_csv(output_path)
-        if "support_score" in existing.columns and existing["support_score"].notna().all():
-            print(f"\nSKIP {filename}: already fully scored at {output_path}")
-            return existing
-
-    print(f"\n{'='*60}")
-    print(f"PROCESSING: {filename}")
-    print(f"{'='*60}")
-
-    df = pd.read_csv(input_path)
-    print(f"Loaded {len(df)} rows.")
-
-    required_cols = ["question", "greedy_answer", "explanation", "correct"]
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        print(f"  SKIP: missing columns {missing}")
+    if len(correct_support) < 2 or len(incorrect_support) < 2:
+        print(f"{label}: insufficient data")
         return None
 
-    scores = []
-    reasons = []
+    u, p = mannwhitneyu(correct_support, incorrect_support)
+    tsg = correct_support.mean() - incorrect_support.mean()
 
-    for idx, row in df.iterrows():
-        print(f"[{idx:03d}/{len(df)}] {str(row['question'])[:70]}...")
+    print(f"\n{label}")
+    print(f"  Support (correct):   mean={correct_support.mean():.1f}  n={len(correct_support)}")
+    print(f"  Support (incorrect): mean={incorrect_support.mean():.1f}  n={len(incorrect_support)}")
+    print(f"  TSG = {tsg:.2f}")
+    print(f"  Mann-Whitney p = {p:.4f}")
 
-        score, reason = score_support(
-            row["question"], row["greedy_answer"], row["explanation"]
-        )
+    return {
+        "label": label,
+        "support_correct": correct_support.mean(),
+        "support_incorrect": incorrect_support.mean(),
+        "n_correct": len(correct_support),
+        "n_incorrect": len(incorrect_support),
+        "tsg": tsg,
+        "p": p,
+    }
 
-        print(f"  support_score={score} | {str(reason)[:80]}")
+print("=== Truth Sensitivity Gap: Hedging-Licensed vs Original Post-Hoc ===")
+hedging_result = tsg_summary(hedging, "Hedging-licensed elicitation")
+original_result = tsg_summary(original, "Original post-hoc (justificatory prompt)")
 
-        scores.append(score)
-        reasons.append(reason)
-
-        if idx % 10 == 0:
-            checkpoint = df.copy()
-            checkpoint["support_score"] = scores + [None] * (len(df) - len(scores))
-            checkpoint["support_reason"] = reasons + [None] * (len(df) - len(reasons))
-            checkpoint.to_csv(output_path, index=False)
-
-    df["support_score"] = scores
-    df["support_reason"] = reasons
-    df.to_csv(output_path, index=False)
-
-    valid = df[df["support_score"].notna() & df["correct"].notna()].copy()
-    valid["correct"] = valid["correct"].astype(float).astype(int)
-
-    correct_support = valid[valid["correct"] == 1]["support_score"]
-    incorrect_support = valid[valid["correct"] == 0]["support_score"]
-
-    print(f"\n--- SUMMARY: {filename} ---")
-    print(f"Scored: {len(valid)} / {len(df)}")
-    if len(correct_support) > 0:
-        print(f"Correct:   n={len(correct_support)}  mean support={correct_support.mean():.1f}")
-    if len(incorrect_support) > 0:
-        print(f"Incorrect: n={len(incorrect_support)}  mean support={incorrect_support.mean():.1f}")
-    if len(correct_support) > 0 and len(incorrect_support) > 0:
-        tsg = correct_support.mean() - incorrect_support.mean()
-        print(f"TSG (hedging-licensed) = {tsg:.2f}")
-    print(f"Saved to: {output_path}")
-
-    return df
-
-
-# =====================================================
-# RUN ACROSS ALL SIX MODEL FILES
-# =====================================================
-
-all_results = {}
-for filepath in files:
-    result = process_file(filepath)
-    if result is not None:
-        model_label = os.path.basename(filepath).replace("generations_hedging_", "").replace(".csv", "")
-        all_results[model_label] = result
-
-# =====================================================
-# COMBINED SUMMARY ACROSS ALL MODELS
-# =====================================================
-
-print(f"\n{'='*70}")
-print("COMBINED SUMMARY -- ALL MODELS, HEDGING-LICENSED CONDITION")
-print(f"{'='*70}")
-print(f"{'Model':20s} {'n':>5s} {'Support(correct)':>18s} {'Support(incorrect)':>20s} {'TSG':>8s}")
-
-for model_label, df in all_results.items():
-    valid = df[df["support_score"].notna() & df["correct"].notna()].copy()
-    valid["correct"] = valid["correct"].astype(float).astype(int)
-    correct_support = valid[valid["correct"] == 1]["support_score"]
-    incorrect_support = valid[valid["correct"] == 0]["support_score"]
-    if len(correct_support) > 0 and len(incorrect_support) > 0:
-        tsg = correct_support.mean() - incorrect_support.mean()
-        print(f"{model_label:20s} {len(valid):5d} {correct_support.mean():18.1f} "
-              f"{incorrect_support.mean():20.1f} {tsg:8.2f}")
-
-print(f"\nAll scored files saved under: {OUTPUT_DIR}")
-print("\nNext step: compare each model's hedging-licensed TSG against its")
-print("original post-hoc TSG using compare_hedging_vs_original.py.")
+if hedging_result and original_result:
+    print(f"\n{'='*60}")
+    print("COMPARISON")
+    print(f"{'='*60}")
+    delta_incorrect_support = (
+        hedging_result["support_incorrect"] - original_result["support_incorrect"]
+    )
+    print(f"Change in incorrect-answer support: {delta_incorrect_support:+.1f}")
+    if abs(delta_incorrect_support) < 10:
+        print(">> Support for incorrect answers remains high even when hedging")
+        print("   is explicitly licensed -- F3 is not simply an artifact of the")
+        print("   original justificatory prompt framing.")
+    else:
+        print(">> Support for incorrect answers drops substantially under the")
+        print("   hedging-licensed prompt -- the original prompt's justificatory")
+        print("   framing was doing real work. This is a positive mitigation")
+        print("   finding: a simple prompt change measurably reduces unwarranted")
+        print("   justification.")
