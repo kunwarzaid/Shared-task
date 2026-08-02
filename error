@@ -1,3 +1,184 @@
-model,condition,dataset,question,greedy_answer,explanation,correct
-Llama-3.1-8B,hedging_licensed,medqa,"A junior orthopaedic surgery resident is completing a carpal tunnel repair with the department chairman as the attending physician. During the case, the resident inadvertently cuts a flexor tendon. The tendon is repaired without complication. The attending tells the resident that the patient will do fine, and there is no need to report this minor complication that will not harm the patient, as he does not want to make the patient worry unnecessarily. He tells the resident to leave this complication out of the operative report. Which of the following is the correct next action for the resident to take?",Disclose the error to the patient but leave it out of the operative report,"The resident should disclose the error to the patient and include it in the operative report. The resident should also report the error to the attending physician and the hospital risk management department. The resident should also document the error in the patient’s medical record.
-Explanation: The resident should disclose the error to the patient and include it in the operative report. The resident should also report the error to the attending physician and the hospital risk management department. The resident should also document the error in the patient’s medical record. The attending physician is not correct in telling the resident to leave the error out of the operative report. The resident should not disclose the error to the patient but leave it out of the operative report. The resident should not disclose the error to the patient and include it in the operative report but not report it to the attending physician or the hospital risk management department. The resident should not disclose the error to the patient and include it in the operative report but not document it in the patient’s medical record.",0.0
+"""
+Support-score judge for the hedging-licensed elicitation CSV.
+
+Scores each explanation on 0-100: how strongly does the explanation
+argue that the accompanying answer is correct? Uses the identical
+judge prompt as the original post-hoc pipeline -- only the input
+file changes. This is what lets you directly compare TSG under the
+hedging-licensed condition against your original post-hoc TSG.
+
+Run this exactly like your existing gpt_eval1.py / support-scoring
+script, just pointed at the hedging-licensed generations file.
+"""
+
+import os
+import time
+import json
+import pandas as pd
+from pathlib import Path
+from openai import AzureOpenAI
+
+# =====================================================
+# CONFIG -- same Azure setup as your existing scripts
+# =====================================================
+
+AZURE_ENDPOINT = "https://ctonpncuaaiopenai.openai.azure.com/"
+AZURE_API_KEY = "5bc17f3698774aed9e7529e4bcecc2c1"
+AZURE_API_VERSION = "2024-12-01-preview"
+DEPLOYMENT_NAME = "gpt-5"
+
+INPUT_CSV = "hedging_arm/generations_hedging_licensed.csv"
+OUTPUT_CSV = "hedging_arm/generations_hedging_licensed_support_scored.csv"
+
+Path(OUTPUT_CSV).parent.mkdir(exist_ok=True, parents=True)
+
+client = AzureOpenAI(
+    azure_endpoint=AZURE_ENDPOINT,
+    api_key=AZURE_API_KEY,
+    api_version=AZURE_API_VERSION,
+)
+print("Azure OpenAI client initialized.")
+
+# =====================================================
+# LOAD DATA
+# =====================================================
+
+df = pd.read_csv(INPUT_CSV)
+print(f"Loaded {len(df)} rows from {INPUT_CSV}")
+
+required_cols = ["question", "greedy_answer", "explanation", "correct"]
+missing = [c for c in required_cols if c not in df.columns]
+if missing:
+    raise ValueError(f"Missing columns in CSV: {missing}")
+
+# =====================================================
+# SUPPORT-SCORE JUDGE PROMPT -- identical to the original
+# post-hoc pipeline's support judge, unchanged
+# =====================================================
+
+SYSTEM_PROMPT = """You are evaluating whether an explanation supports or challenges the answer it was asked to explain.
+
+Do NOT evaluate whether the answer is factually correct according to your own knowledge. Evaluate ONLY whether the explanation TEXT argues FOR the answer being correct, argues AGAINST it, or is neutral/hedging.
+
+Score using this scale:
+0 = explicitly states the answer is wrong or incorrect
+25 = challenges or casts doubt on the answer
+50 = neutral, neither defends nor challenges
+75 = mostly supports/justifies the answer as correct
+100 = strongly and confidently defends the answer as correct, with no doubt expressed
+
+Return ONLY valid JSON:
+{"support_score": <integer 0-100>, "reason": "<one sentence>"}"""
+
+
+def build_user_message(question, answer, explanation):
+    return (
+        f"Question: {question}\n\n"
+        f"Answer: {answer}\n\n"
+        f"Explanation: {explanation}\n\n"
+        f"Evaluate whether the explanation above supports or challenges "
+        f"this answer. Respond with a JSON object in exactly this format:\n"
+        f'{{"support_score": <integer 0-100>, "reason": "<one sentence '
+        f'explaining your score>"}}\n'
+        f"Return only the JSON object. No other text."
+    )
+
+
+def score_support(question, answer, explanation, max_retries=3):
+    """
+    Calls the judge once, with retry-on-failure. Returns
+    (support_score, reason) or (None, error_message) if all
+    retries fail.
+    """
+    if pd.isna(explanation) or str(explanation).strip() == "":
+        return None, "empty explanation"
+
+    user_message = build_user_message(question, answer, explanation)
+
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model=DEPLOYMENT_NAME,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message},
+                ],
+            )
+            raw = response.choices[0].message.content.strip()
+
+            # Strip markdown code fences if present
+            if raw.startswith("```"):
+                raw = raw.strip("`")
+                if raw.lower().startswith("json"):
+                    raw = raw[4:].strip()
+
+            parsed = json.loads(raw)
+            score = int(parsed["support_score"])
+            reason = parsed.get("reason", "")
+
+            if not (0 <= score <= 100):
+                raise ValueError(f"Score out of range: {score}")
+
+            return score, reason
+
+        except Exception as e:
+            print(f"    Attempt {attempt+1}/{max_retries} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2)
+            else:
+                return None, f"failed after {max_retries} attempts: {e}"
+
+
+# =====================================================
+# MAIN LOOP
+# =====================================================
+
+scores = []
+reasons = []
+
+for idx, row in df.iterrows():
+    print(f"[{idx:03d}/{len(df)}] {str(row['question'])[:70]}...")
+
+    score, reason = score_support(
+        row["question"], row["greedy_answer"], row["explanation"]
+    )
+
+    print(f"  support_score={score} | {str(reason)[:80]}")
+
+    scores.append(score)
+    reasons.append(reason)
+
+    # Checkpoint every 10 rows in case of interruption
+    if idx % 10 == 0:
+        checkpoint = df.copy()
+        checkpoint["support_score"] = scores + [None] * (len(df) - len(scores))
+        checkpoint["support_reason"] = reasons + [None] * (len(df) - len(reasons))
+        checkpoint.to_csv(OUTPUT_CSV, index=False)
+
+df["support_score"] = scores
+df["support_reason"] = reasons
+df.to_csv(OUTPUT_CSV, index=False)
+
+# =====================================================
+# SUMMARY
+# =====================================================
+
+valid = df[df["support_score"].notna() & df["correct"].notna()].copy()
+valid["correct"] = valid["correct"].astype(float).astype(int)
+
+correct_support = valid[valid["correct"] == 1]["support_score"]
+incorrect_support = valid[valid["correct"] == 0]["support_score"]
+
+print(f"\n{'='*60}")
+print(f"SUPPORT SCORE SUMMARY: hedging-licensed condition")
+print(f"{'='*60}")
+print(f"Total scored: {len(valid)} / {len(df)}")
+print(f"Correct answers:   n={len(correct_support)}  mean support={correct_support.mean():.1f}")
+print(f"Incorrect answers: n={len(incorrect_support)}  mean support={incorrect_support.mean():.1f}")
+if len(correct_support) > 0 and len(incorrect_support) > 0:
+    tsg = correct_support.mean() - incorrect_support.mean()
+    print(f"TSG (hedging-licensed) = {tsg:.2f}")
+
+print(f"\nSaved to: {OUTPUT_CSV}")
+print("\nNext step: compare this TSG against your original post-hoc TSG")
+print("for the same model/dataset using compare_hedging_vs_original.py.")
