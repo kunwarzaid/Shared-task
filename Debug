@@ -1,107 +1,79 @@
-"""
-Compare closed-form MedQA U-hat (from closed_form_medqa.py) against
-the original sampling-based U-hat, for the same model and questions.
+Llama Instruct
 
-Two things this produces, both needed for the paper:
-1. Updated Experiment A correlation (U-hat vs communicated
-   uncertainty) using the closed-form, noise-free estimator.
-2. Updated EBSE-validity check (correct vs incorrect U-hat,
-   Mann-Whitney) using the closed-form estimator.
+=== Experiment A: Closed-form vs Sampling-based ===
+Closed-form:     r=0.2637  p=0.0002  n=200
+Sampling-based:  r=0.0874  p=0.2187  n=200
 
-Run this after (a) closed_form_medqa.py has produced a CSV with
-norm_uhat, and (b) you have run the GPT uncertainty judge on the
-same explanations (the judge script works unchanged -- just point
-INPUT_CSV at the closed-form output file).
-"""
+=== Validity check: Closed-form vs Sampling-based ===
+Closed-form:    correct=0.4717 (sd=0.2878, n=99) | incorrect=0.6707 (sd=0.2293, n=101) | p=0.0000
+Sampling-based: correct=0.1065 (sd=0.1824, n=99) | incorrect=0.2633 (sd=0.2611, n=51) | p=0.0001
 
-import pandas as pd
-import numpy as np
-from scipy.stats import spearmanr, mannwhitneyu
+=== Variance diagnostics ===
+Closed-form: SD=0.2778 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
+Sampling-based: SD=0.2149 | floor%=67.5% | ceiling%=0.0% | distinct_values=24
 
-# =====================================================
-# CONFIG
-# =====================================================
+Mistral Instruct
 
-CLOSED_FORM_JUDGED_CSV = "medqa_llama_instruct_closed_form_judged.csv"
-ORIGINAL_SAMPLING_JUDGED_CSV = "llama_instruct_gpt_judge.csv"
+=== Experiment A: Closed-form vs Sampling-based ===
+Closed-form:     r=0.1344  p=0.0579  n=200
+Sampling-based:  r=0.1631  p=0.0211  n=200
 
-# =====================================================
-# LOAD BOTH
-# =====================================================
+=== Validity check: Closed-form vs Sampling-based ===
+Closed-form:    correct=0.1002 (sd=0.1768, n=90) | incorrect=0.1960 (sd=0.2065, n=110) | p=0.0000
+Sampling-based: correct=0.0704 (sd=0.1507, n=89) | incorrect=0.1211 (sd=0.1863, n=107) | p=0.0274
 
-closed = pd.read_csv(CLOSED_FORM_JUDGED_CSV)
-original = pd.read_csv(ORIGINAL_SAMPLING_JUDGED_CSV)
+=== Variance diagnostics ===
+Closed-form: SD=0.1991 | floor%=1.0% | ceiling%=0.0% | distinct_values=195
+Sampling-based: SD=0.1758 | floor%=72.0% | ceiling%=0.0% | distinct_values=20
 
-# =====================================================
-# EXPERIMENT A: CORRELATION COMPARISON
-# =====================================================
+Qwen Instruct
 
-def compute_correlation(df, uhat_col, judge_col="gpt_perceived_uncertainty"):
-    sub = df[df[uhat_col].notna() & df[judge_col].notna()].copy()
-    sub["judge_norm"] = sub[judge_col] / 100.0
-    r, p = spearmanr(sub[uhat_col], sub["judge_norm"])
-    return r, p, len(sub)
+=== Experiment A: Closed-form vs Sampling-based ===
+Closed-form:     r=0.0973  p=0.1704  n=200
+Sampling-based:  r=-0.0147  p=0.8367  n=200
 
-r_closed, p_closed, n_closed = compute_correlation(closed, "norm_uhat")
-r_original, p_original, n_original = compute_correlation(original, "norm_ebse")
+=== Validity check: Closed-form vs Sampling-based ===
+Closed-form:    correct=0.0768 (sd=0.1552, n=111) | incorrect=0.1648 (sd=0.1761, n=89) | p=0.0000
+Sampling-based: correct=0.0076 (sd=0.0518, n=93) | incorrect=0.0479 (sd=0.1239, n=60) | p=0.0065
 
-print("=== Experiment A: Closed-form vs Sampling-based ===")
-print(f"Closed-form:     r={r_closed:.4f}  p={p_closed:.4f}  n={n_closed}")
-print(f"Sampling-based:  r={r_original:.4f}  p={p_original:.4f}  n={n_original}")
+=== Variance diagnostics ===
+Closed-form: SD=0.1701 | floor%=2.0% | ceiling%=0.0% | distinct_values=181
+Sampling-based: SD=0.0787 | floor%=95.0% | ceiling%=0.0% | distinct_values=7
 
-# =====================================================
-# VALIDITY CHECK: CORRECT VS INCORRECT U-HAT
-# =====================================================
+Qwen Base
 
-def validity_check(df, uhat_col, correct_col="correct"):
-    valid = df[df[uhat_col].notna() & df[correct_col].notna()]
-    correct_vals = valid[valid[correct_col] == 1][uhat_col]
-    incorrect_vals = valid[valid[correct_col] == 0][uhat_col]
-    if len(correct_vals) < 2 or len(incorrect_vals) < 2:
-        return None
-    u, p = mannwhitneyu(correct_vals, incorrect_vals)
-    return {
-        "mean_correct": correct_vals.mean(),
-        "mean_incorrect": incorrect_vals.mean(),
-        "sd_correct": correct_vals.std(),
-        "sd_incorrect": incorrect_vals.std(),
-        "n_correct": len(correct_vals),
-        "n_incorrect": len(incorrect_vals),
-        "p": p,
-    }
+=== Experiment A: Closed-form vs Sampling-based ===
+Closed-form:     r=0.0765  p=0.2818  n=200
+Sampling-based:  r=0.0477  p=0.5022  n=200
 
-print("\n=== Validity check: Closed-form vs Sampling-based ===")
-closed_validity = validity_check(closed, "norm_uhat")
-original_validity = validity_check(original, "norm_ebse")
+=== Validity check: Closed-form vs Sampling-based ===
+Closed-form:    correct=0.4552 (sd=0.2703, n=115) | incorrect=0.6835 (sd=0.2000, n=85) | p=0.0000
+Sampling-based: correct=0.2510 (sd=0.2714, n=117) | incorrect=0.4186 (sd=0.2534, n=81) | p=0.0000
 
-if closed_validity:
-    print(f"Closed-form:    correct={closed_validity['mean_correct']:.4f} "
-          f"(sd={closed_validity['sd_correct']:.4f}, n={closed_validity['n_correct']}) | "
-          f"incorrect={closed_validity['mean_incorrect']:.4f} "
-          f"(sd={closed_validity['sd_incorrect']:.4f}, n={closed_validity['n_incorrect']}) | "
-          f"p={closed_validity['p']:.4f}")
+=== Variance diagnostics ===
+Closed-form: SD=0.2675 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
+Sampling-based: SD=0.2760 | floor%=33.0% | ceiling%=0.0% | distinct_values=44
 
-if original_validity:
-    print(f"Sampling-based: correct={original_validity['mean_correct']:.4f} "
-          f"(sd={original_validity['sd_correct']:.4f}, n={original_validity['n_correct']}) | "
-          f"incorrect={original_validity['mean_incorrect']:.4f} "
-          f"(sd={original_validity['sd_incorrect']:.4f}, n={original_validity['n_incorrect']}) | "
-          f"p={original_validity['p']:.4f}")
+mistral Base
 
-# =====================================================
-# VARIANCE DIAGNOSTICS FOR BOTH
-# =====================================================
+=== Validity check: Closed-form vs Sampling-based ===
+Closed-form:    correct=0.6657 (sd=0.1935, n=73) | incorrect=0.7658 (sd=0.1494, n=127) | p=0.0001
+Sampling-based: correct=0.3923 (sd=0.2508, n=61) | incorrect=0.5261 (sd=0.2086, n=76) | p=0.0004
 
-print("\n=== Variance diagnostics ===")
-for label, df, col in [("Closed-form", closed, "norm_uhat"),
-                        ("Sampling-based", original, "norm_ebse")]:
-    s = df[col].dropna()
-    print(f"{label}: SD={s.std():.4f} | "
-          f"floor%={(s < 1e-6).mean():.1%} | "
-          f"ceiling%={(s > 1-1e-6).mean():.1%} | "
-          f"distinct_values={s.round(6).nunique()}")
+=== Variance diagnostics ===
+Closed-form: SD=0.1732 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
+Sampling-based: SD=0.2467 | floor%=16.0% | ceiling%=0.0% | distinct_values=58
 
-print("\nSaved comparison complete. Report both rows in the paper's")
-print("variance-audit discussion, showing the closed-form estimator")
-print("removes the floor/ceiling degeneracy the sampling-based")
-print("estimator exhibited.")
+Llama Base
+
+=== Experiment A: Closed-form vs Sampling-based ===
+Closed-form:     r=-0.0791  p=0.2655  n=200
+Sampling-based:  r=-0.0173  p=0.8074  n=200
+
+=== Validity check: Closed-form vs Sampling-based ===
+Closed-form:    correct=0.5518 (sd=0.2330, n=91) | incorrect=0.6507 (sd=0.2095, n=109) | p=0.0028
+Sampling-based: correct=0.2968 (sd=0.2625, n=77) | incorrect=0.3930 (sd=0.2456, n=92) | p=0.0203
+
+=== Variance diagnostics ===
+Closed-form: SD=0.2254 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
+Sampling-based: SD=0.2574 | floor%=25.5% | ceiling%=0.0% | distinct_values=46
