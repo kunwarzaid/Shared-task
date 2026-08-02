@@ -1,151 +1,107 @@
+"""
+Compare closed-form MedQA U-hat (from closed_form_medqa.py) against
+the original sampling-based U-hat, for the same model and questions.
 
-======================================================================
-COMBINED SUMMARY -- ALL MODELS, HEDGING-LICENSED CONDITION
-======================================================================
-Model                    n   Support(correct)   Support(incorrect)      TSG
-llama_base             165               83.9                 58.3    25.69
-llama_instruct         150               80.3                 53.3    26.97
-mistral_base           137               85.2                 72.9    12.35
-mistral_instruct       196               70.1                 55.3    14.83
-qwen_base              104               92.1                 88.6     3.45
-qwen_instruct          153               73.7                 44.2    29.54
+Two things this produces, both needed for the paper:
+1. Updated Experiment A correlation (U-hat vs communicated
+   uncertainty) using the closed-form, noise-free estimator.
+2. Updated EBSE-validity check (correct vs incorrect U-hat,
+   Mann-Whitney) using the closed-form estimator.
 
+Run this after (a) closed_form_medqa.py has produced a CSV with
+norm_uhat, and (b) you have run the GPT uncertainty judge on the
+same explanations (the judge script works unchanged -- just point
+INPUT_CSV at the closed-form output file).
+"""
 
-Llama Instruct
-Hedging-licensed elicitation
-  Support (correct):   mean=80.3  n=99
-  Support (incorrect): mean=53.3  n=51
-  TSG = 26.97
-  Mann-Whitney p = 0.0000
+import pandas as pd
+import numpy as np
+from scipy.stats import spearmanr, mannwhitneyu
 
-Original post-hoc (justificatory prompt)
-  Support (correct):   mean=92.9  n=98
-  Support (incorrect): mean=90.5  n=51
-  TSG = 2.42
-  Mann-Whitney p = 0.8624
+# =====================================================
+# CONFIG
+# =====================================================
 
-============================================================
-COMPARISON
-============================================================
-Change in incorrect-answer support: -37.2
->> Support for incorrect answers drops substantially under the
-   hedging-licensed prompt -- the original prompt's justificatory
-   framing was doing real work. This is a positive mitigation
-   finding: a simple prompt change measurably reduces unwarranted
-   justification.
+CLOSED_FORM_JUDGED_CSV = "medqa_llama_instruct_closed_form_judged.csv"
+ORIGINAL_SAMPLING_JUDGED_CSV = "llama_instruct_gpt_judge.csv"
 
-Mistral Instruct
+# =====================================================
+# LOAD BOTH
+# =====================================================
 
-Hedging-licensed elicitation
-  Support (correct):   mean=70.1  n=89
-  Support (incorrect): mean=55.3  n=107
-  TSG = 14.83
-  Mann-Whitney p = 0.0024
+closed = pd.read_csv(CLOSED_FORM_JUDGED_CSV)
+original = pd.read_csv(ORIGINAL_SAMPLING_JUDGED_CSV)
 
-Original post-hoc (justificatory prompt)
-  Support (correct):   mean=95.8  n=89
-  Support (incorrect): mean=85.3  n=107
-  TSG = 10.52
-  Mann-Whitney p = 0.0003
+# =====================================================
+# EXPERIMENT A: CORRELATION COMPARISON
+# =====================================================
 
-============================================================
-COMPARISON
-============================================================
-Change in incorrect-answer support: -30.0
->> Support for incorrect answers drops substantially under the
-   hedging-licensed prompt -- the original prompt's justificatory
-   framing was doing real work. This is a positive mitigation
-   finding: a simple prompt change measurably reduces unwarranted
-   justification.
+def compute_correlation(df, uhat_col, judge_col="gpt_perceived_uncertainty"):
+    sub = df[df[uhat_col].notna() & df[judge_col].notna()].copy()
+    sub["judge_norm"] = sub[judge_col] / 100.0
+    r, p = spearmanr(sub[uhat_col], sub["judge_norm"])
+    return r, p, len(sub)
 
-Qwen Instruct
+r_closed, p_closed, n_closed = compute_correlation(closed, "norm_uhat")
+r_original, p_original, n_original = compute_correlation(original, "norm_ebse")
 
-Hedging-licensed elicitation
-  Support (correct):   mean=73.7  n=93
-  Support (incorrect): mean=44.2  n=60
-  TSG = 29.54
-  Mann-Whitney p = 0.0000
+print("=== Experiment A: Closed-form vs Sampling-based ===")
+print(f"Closed-form:     r={r_closed:.4f}  p={p_closed:.4f}  n={n_closed}")
+print(f"Sampling-based:  r={r_original:.4f}  p={p_original:.4f}  n={n_original}")
 
-Original post-hoc (justificatory prompt)
-  Support (correct):   mean=97.5  n=93
-  Support (incorrect): mean=91.2  n=60
-  TSG = 6.28
-  Mann-Whitney p = 0.0327
+# =====================================================
+# VALIDITY CHECK: CORRECT VS INCORRECT U-HAT
+# =====================================================
 
-============================================================
-COMPARISON
-============================================================
-Change in incorrect-answer support: -47.1
->> Support for incorrect answers drops substantially under the
-   hedging-licensed prompt -- the original prompt's justificatory
-   framing was doing real work. This is a positive mitigation
-   finding: a simple prompt change measurably reduces unwarranted
-   justification.
+def validity_check(df, uhat_col, correct_col="correct"):
+    valid = df[df[uhat_col].notna() & df[correct_col].notna()]
+    correct_vals = valid[valid[correct_col] == 1][uhat_col]
+    incorrect_vals = valid[valid[correct_col] == 0][uhat_col]
+    if len(correct_vals) < 2 or len(incorrect_vals) < 2:
+        return None
+    u, p = mannwhitneyu(correct_vals, incorrect_vals)
+    return {
+        "mean_correct": correct_vals.mean(),
+        "mean_incorrect": incorrect_vals.mean(),
+        "sd_correct": correct_vals.std(),
+        "sd_incorrect": incorrect_vals.std(),
+        "n_correct": len(correct_vals),
+        "n_incorrect": len(incorrect_vals),
+        "p": p,
+    }
 
-Qwen Base
+print("\n=== Validity check: Closed-form vs Sampling-based ===")
+closed_validity = validity_check(closed, "norm_uhat")
+original_validity = validity_check(original, "norm_ebse")
 
-Hedging-licensed elicitation
-  Support (correct):   mean=92.1  n=60
-  Support (incorrect): mean=88.6  n=44
-  TSG = 3.45
-  Mann-Whitney p = 0.6910
+if closed_validity:
+    print(f"Closed-form:    correct={closed_validity['mean_correct']:.4f} "
+          f"(sd={closed_validity['sd_correct']:.4f}, n={closed_validity['n_correct']}) | "
+          f"incorrect={closed_validity['mean_incorrect']:.4f} "
+          f"(sd={closed_validity['sd_incorrect']:.4f}, n={closed_validity['n_incorrect']}) | "
+          f"p={closed_validity['p']:.4f}")
 
-Original post-hoc (justificatory prompt)
-  Support (correct):   mean=94.0  n=117
-  Support (incorrect): mean=91.0  n=81
-  TSG = 2.97
-  Mann-Whitney p = 0.4375
+if original_validity:
+    print(f"Sampling-based: correct={original_validity['mean_correct']:.4f} "
+          f"(sd={original_validity['sd_correct']:.4f}, n={original_validity['n_correct']}) | "
+          f"incorrect={original_validity['mean_incorrect']:.4f} "
+          f"(sd={original_validity['sd_incorrect']:.4f}, n={original_validity['n_incorrect']}) | "
+          f"p={original_validity['p']:.4f}")
 
-============================================================
-COMPARISON
-============================================================
-Change in incorrect-answer support: -2.4
->> Support for incorrect answers remains high even when hedging
-   is explicitly licensed -- F3 is not simply an artifact of the
-   original justificatory prompt framing.
+# =====================================================
+# VARIANCE DIAGNOSTICS FOR BOTH
+# =====================================================
 
-Mistral Base
+print("\n=== Variance diagnostics ===")
+for label, df, col in [("Closed-form", closed, "norm_uhat"),
+                        ("Sampling-based", original, "norm_ebse")]:
+    s = df[col].dropna()
+    print(f"{label}: SD={s.std():.4f} | "
+          f"floor%={(s < 1e-6).mean():.1%} | "
+          f"ceiling%={(s > 1-1e-6).mean():.1%} | "
+          f"distinct_values={s.round(6).nunique()}")
 
-Hedging-licensed elicitation
-  Support (correct):   mean=85.2  n=61
-  Support (incorrect): mean=72.9  n=76
-  TSG = 12.35
-  Mann-Whitney p = 0.0131
-
-Original post-hoc (justificatory prompt)
-  Support (correct):   mean=83.8  n=61
-  Support (incorrect): mean=73.1  n=76
-  TSG = 10.68
-  Mann-Whitney p = 0.0329
-
-============================================================
-COMPARISON
-============================================================
-Change in incorrect-answer support: -0.2
->> Support for incorrect answers remains high even when hedging
-   is explicitly licensed -- F3 is not simply an artifact of the
-   original justificatory prompt framing.
-
-Llama Base
-
-Hedging-licensed elicitation
-  Support (correct):   mean=83.9  n=76
-  Support (incorrect): mean=58.3  n=89
-  TSG = 25.69
-  Mann-Whitney p = 0.0000
-
-Original post-hoc (justificatory prompt)
-  Support (correct):   mean=88.6  n=77
-  Support (incorrect): mean=79.7  n=92
-  TSG = 8.84
-  Mann-Whitney p = 0.0137
-
-============================================================
-COMPARISON
-============================================================
-Change in incorrect-answer support: -21.5
->> Support for incorrect answers drops substantially under the
-   hedging-licensed prompt -- the original prompt's justificatory
-   framing was doing real work. This is a positive mitigation
-   finding: a simple prompt change measurably reduces unwarranted
-   justification.
+print("\nSaved comparison complete. Report both rows in the paper's")
+print("variance-audit discussion, showing the closed-form estimator")
+print("removes the floor/ceiling degeneracy the sampling-based")
+print("estimator exhibited.")
