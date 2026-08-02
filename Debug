@@ -1,89 +1,151 @@
-"""
-Compare Truth Sensitivity Gap under the hedging-licensed elicitation
-condition against the original post-hoc condition, for the same
-model, dataset, and questions.
 
-Run this AFTER:
-1. hedging_licensed_generation.py has produced explanations under
-   the new prompt.
-2. The existing support-score judge script has been run on that
-   output (same judge prompt as always -- just point INPUT_CSV at
-   the hedging-licensed generations file).
+======================================================================
+COMBINED SUMMARY -- ALL MODELS, HEDGING-LICENSED CONDITION
+======================================================================
+Model                    n   Support(correct)   Support(incorrect)      TSG
+llama_base             165               83.9                 58.3    25.69
+llama_instruct         150               80.3                 53.3    26.97
+mistral_base           137               85.2                 72.9    12.35
+mistral_instruct       196               70.1                 55.3    14.83
+qwen_base              104               92.1                 88.6     3.45
+qwen_instruct          153               73.7                 44.2    29.54
 
-This produces the key comparison for the paper: does support for
-incorrect answers drop when hedging is explicitly licensed, or does
-it persist at the same level as the original post-hoc condition?
-"""
 
-import pandas as pd
-import numpy as np
-from scipy.stats import mannwhitneyu
+Llama Instruct
+Hedging-licensed elicitation
+  Support (correct):   mean=80.3  n=99
+  Support (incorrect): mean=53.3  n=51
+  TSG = 26.97
+  Mann-Whitney p = 0.0000
 
-# =====================================================
-# CONFIG
-# =====================================================
+Original post-hoc (justificatory prompt)
+  Support (correct):   mean=92.9  n=98
+  Support (incorrect): mean=90.5  n=51
+  TSG = 2.42
+  Mann-Whitney p = 0.8624
 
-HEDGING_SCORED_CSV = "medqa_llama_instruct_hedging_licensed_scored.csv"
-ORIGINAL_POSTHOC_SCORED_CSV = "medqa_llama_instruct_support_scored.csv"
+============================================================
+COMPARISON
+============================================================
+Change in incorrect-answer support: -37.2
+>> Support for incorrect answers drops substantially under the
+   hedging-licensed prompt -- the original prompt's justificatory
+   framing was doing real work. This is a positive mitigation
+   finding: a simple prompt change measurably reduces unwarranted
+   justification.
 
-CORRECTNESS_COL = "correct"  # adjust to correct_v2 for MedQA if needed
+Mistral Instruct
 
-# =====================================================
-# LOAD BOTH
-# =====================================================
+Hedging-licensed elicitation
+  Support (correct):   mean=70.1  n=89
+  Support (incorrect): mean=55.3  n=107
+  TSG = 14.83
+  Mann-Whitney p = 0.0024
 
-hedging = pd.read_csv(HEDGING_SCORED_CSV)
-original = pd.read_csv(ORIGINAL_POSTHOC_SCORED_CSV)
+Original post-hoc (justificatory prompt)
+  Support (correct):   mean=95.8  n=89
+  Support (incorrect): mean=85.3  n=107
+  TSG = 10.52
+  Mann-Whitney p = 0.0003
 
-def tsg_summary(df, label):
-    valid = df[df["support_score"].notna() & df[CORRECTNESS_COL].notna()].copy()
-    valid[CORRECTNESS_COL] = valid[CORRECTNESS_COL].astype(int)
+============================================================
+COMPARISON
+============================================================
+Change in incorrect-answer support: -30.0
+>> Support for incorrect answers drops substantially under the
+   hedging-licensed prompt -- the original prompt's justificatory
+   framing was doing real work. This is a positive mitigation
+   finding: a simple prompt change measurably reduces unwarranted
+   justification.
 
-    correct_support = valid[valid[CORRECTNESS_COL] == 1]["support_score"]
-    incorrect_support = valid[valid[CORRECTNESS_COL] == 0]["support_score"]
+Qwen Instruct
 
-    if len(correct_support) < 2 or len(incorrect_support) < 2:
-        print(f"{label}: insufficient data")
-        return None
+Hedging-licensed elicitation
+  Support (correct):   mean=73.7  n=93
+  Support (incorrect): mean=44.2  n=60
+  TSG = 29.54
+  Mann-Whitney p = 0.0000
 
-    u, p = mannwhitneyu(correct_support, incorrect_support)
-    tsg = correct_support.mean() - incorrect_support.mean()
+Original post-hoc (justificatory prompt)
+  Support (correct):   mean=97.5  n=93
+  Support (incorrect): mean=91.2  n=60
+  TSG = 6.28
+  Mann-Whitney p = 0.0327
 
-    print(f"\n{label}")
-    print(f"  Support (correct):   mean={correct_support.mean():.1f}  n={len(correct_support)}")
-    print(f"  Support (incorrect): mean={incorrect_support.mean():.1f}  n={len(incorrect_support)}")
-    print(f"  TSG = {tsg:.2f}")
-    print(f"  Mann-Whitney p = {p:.4f}")
+============================================================
+COMPARISON
+============================================================
+Change in incorrect-answer support: -47.1
+>> Support for incorrect answers drops substantially under the
+   hedging-licensed prompt -- the original prompt's justificatory
+   framing was doing real work. This is a positive mitigation
+   finding: a simple prompt change measurably reduces unwarranted
+   justification.
 
-    return {
-        "label": label,
-        "support_correct": correct_support.mean(),
-        "support_incorrect": incorrect_support.mean(),
-        "n_correct": len(correct_support),
-        "n_incorrect": len(incorrect_support),
-        "tsg": tsg,
-        "p": p,
-    }
+Qwen Base
 
-print("=== Truth Sensitivity Gap: Hedging-Licensed vs Original Post-Hoc ===")
-hedging_result = tsg_summary(hedging, "Hedging-licensed elicitation")
-original_result = tsg_summary(original, "Original post-hoc (justificatory prompt)")
+Hedging-licensed elicitation
+  Support (correct):   mean=92.1  n=60
+  Support (incorrect): mean=88.6  n=44
+  TSG = 3.45
+  Mann-Whitney p = 0.6910
 
-if hedging_result and original_result:
-    print(f"\n{'='*60}")
-    print("COMPARISON")
-    print(f"{'='*60}")
-    delta_incorrect_support = (
-        hedging_result["support_incorrect"] - original_result["support_incorrect"]
-    )
-    print(f"Change in incorrect-answer support: {delta_incorrect_support:+.1f}")
-    if abs(delta_incorrect_support) < 10:
-        print(">> Support for incorrect answers remains high even when hedging")
-        print("   is explicitly licensed -- F3 is not simply an artifact of the")
-        print("   original justificatory prompt framing.")
-    else:
-        print(">> Support for incorrect answers drops substantially under the")
-        print("   hedging-licensed prompt -- the original prompt's justificatory")
-        print("   framing was doing real work. This is a positive mitigation")
-        print("   finding: a simple prompt change measurably reduces unwarranted")
-        print("   justification.")
+Original post-hoc (justificatory prompt)
+  Support (correct):   mean=94.0  n=117
+  Support (incorrect): mean=91.0  n=81
+  TSG = 2.97
+  Mann-Whitney p = 0.4375
+
+============================================================
+COMPARISON
+============================================================
+Change in incorrect-answer support: -2.4
+>> Support for incorrect answers remains high even when hedging
+   is explicitly licensed -- F3 is not simply an artifact of the
+   original justificatory prompt framing.
+
+Mistral Base
+
+Hedging-licensed elicitation
+  Support (correct):   mean=85.2  n=61
+  Support (incorrect): mean=72.9  n=76
+  TSG = 12.35
+  Mann-Whitney p = 0.0131
+
+Original post-hoc (justificatory prompt)
+  Support (correct):   mean=83.8  n=61
+  Support (incorrect): mean=73.1  n=76
+  TSG = 10.68
+  Mann-Whitney p = 0.0329
+
+============================================================
+COMPARISON
+============================================================
+Change in incorrect-answer support: -0.2
+>> Support for incorrect answers remains high even when hedging
+   is explicitly licensed -- F3 is not simply an artifact of the
+   original justificatory prompt framing.
+
+Llama Base
+
+Hedging-licensed elicitation
+  Support (correct):   mean=83.9  n=76
+  Support (incorrect): mean=58.3  n=89
+  TSG = 25.69
+  Mann-Whitney p = 0.0000
+
+Original post-hoc (justificatory prompt)
+  Support (correct):   mean=88.6  n=77
+  Support (incorrect): mean=79.7  n=92
+  TSG = 8.84
+  Mann-Whitney p = 0.0137
+
+============================================================
+COMPARISON
+============================================================
+Change in incorrect-answer support: -21.5
+>> Support for incorrect answers drops substantially under the
+   hedging-licensed prompt -- the original prompt's justificatory
+   framing was doing real work. This is a positive mitigation
+   finding: a simple prompt change measurably reduces unwarranted
+   justification.
