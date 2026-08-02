@@ -1,79 +1,367 @@
-Llama Instruct
+"""
+Closed-form MedQA predictive uncertainty -- JOINT condition, all 6 models.
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.2637  p=0.0002  n=200
-Sampling-based:  r=0.0874  p=0.2187  n=200
+Identical closed-form entropy computation as the post-hoc version
+(single forward pass, softmax over the five option-letter token
+logits, exact Shannon entropy) -- the only difference is how the
+explanation is elicited: under the joint condition, answer and
+explanation are generated together in one continuous decoding pass,
+using the structured "Answer: ... / Explanation: ..." prompt format
+already established in Appendix A of the paper.
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.4717 (sd=0.2878, n=99) | incorrect=0.6707 (sd=0.2293, n=101) | p=0.0000
-Sampling-based: correct=0.1065 (sd=0.1824, n=99) | incorrect=0.2633 (sd=0.2611, n=51) | p=0.0001
+Run this once. It loops over all 6 models automatically, downloading
+each one, running the full 200-question set, saving a separate
+output CSV per model, and freeing GPU memory between models so you
+do not need to run this script six separate times.
+"""
 
-=== Variance diagnostics ===
-Closed-form: SD=0.2778 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2149 | floor%=67.5% | ceiling%=0.0% | distinct_values=24
+import os
+import gc
+import re
+import torch
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from datasets import load_dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from huggingface_hub import login
 
-Mistral Instruct
+# =====================================================
+# CONFIG -- edit HF_TOKEN, then leave the rest unless
+# your paths differ from the MedQA/closed_form structure
+# already used for the post-hoc run
+# =====================================================
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.1344  p=0.0579  n=200
-Sampling-based:  r=0.1631  p=0.0211  n=200
+HF_TOKEN = ''
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.1002 (sd=0.1768, n=90) | incorrect=0.1960 (sd=0.2065, n=110) | p=0.0000
-Sampling-based: correct=0.0704 (sd=0.1507, n=89) | incorrect=0.1211 (sd=0.1863, n=107) | p=0.0274
+MODELS = [
+    ("meta-llama/Llama-3.1-8B",            "llama_base",       True),
+    ("meta-llama/Llama-3.1-8B-Instruct",   "llama_instruct",   False),
+    ("Qwen/Qwen2.5-7B",                    "qwen_base",        True),
+    ("Qwen/Qwen2.5-7B-Instruct",           "qwen_instruct",    False),
+    ("mistralai/Mistral-7B-v0.1",          "mistral_base",     True),
+    ("mistralai/Mistral-7B-Instruct-v0.3", "mistral_instruct", False),
+]
+# Each tuple: (HF model name, short label for filenames, is_base_model)
 
-=== Variance diagnostics ===
-Closed-form: SD=0.1991 | floor%=1.0% | ceiling%=0.0% | distinct_values=195
-Sampling-based: SD=0.1758 | floor%=72.0% | ceiling%=0.0% | distinct_values=20
+BASE_DIR = "MedQA/closed_form_joint"
+PILOT_SIZE = 200
+OPTION_LETTERS = ["A", "B", "C", "D", "E"]
 
-Qwen Instruct
+os.makedirs(BASE_DIR, exist_ok=True)
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.0973  p=0.1704  n=200
-Sampling-based:  r=-0.0147  p=0.8367  n=200
+login(token=HF_TOKEN)
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.0768 (sd=0.1552, n=111) | incorrect=0.1648 (sd=0.1761, n=89) | p=0.0000
-Sampling-based: correct=0.0076 (sd=0.0518, n=93) | incorrect=0.0479 (sd=0.1239, n=60) | p=0.0065
+# =====================================================
+# LOAD DATASET ONCE, SHARED ACROSS ALL MODELS
+# =====================================================
 
-=== Variance diagnostics ===
-Closed-form: SD=0.1701 | floor%=2.0% | ceiling%=0.0% | distinct_values=181
-Sampling-based: SD=0.0787 | floor%=95.0% | ceiling%=0.0% | distinct_values=7
+print("Loading MedQA...")
+dataset = load_dataset("bigbio/med_qa", "med_qa_en_source")
+split_name = "test" if "test" in dataset else list(dataset.keys())[0]
+questions = list(dataset[split_name])[:PILOT_SIZE]
+print(f"Loaded {len(questions)} questions from split '{split_name}'.\n")
 
-Qwen Base
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.0765  p=0.2818  n=200
-Sampling-based:  r=0.0477  p=0.5022  n=200
+def format_medqa_question(item):
+    options_text = "\n".join(
+        f"{opt['key']}. {opt['value']}" for opt in item["options"]
+    )
+    return f"{item['question']}\n\n{options_text}"
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.4552 (sd=0.2703, n=115) | incorrect=0.6835 (sd=0.2000, n=85) | p=0.0000
-Sampling-based: correct=0.2510 (sd=0.2714, n=117) | incorrect=0.4186 (sd=0.2534, n=81) | p=0.0000
 
-=== Variance diagnostics ===
-Closed-form: SD=0.2675 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2760 | floor%=33.0% | ceiling%=0.0% | distinct_values=44
+def get_option_text(item, letter):
+    for opt in item["options"]:
+        if opt["key"] == letter:
+            return opt["value"]
+    return None
 
-mistral Base
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.6657 (sd=0.1935, n=73) | incorrect=0.7658 (sd=0.1494, n=127) | p=0.0001
-Sampling-based: correct=0.3923 (sd=0.2508, n=61) | incorrect=0.5261 (sd=0.2086, n=76) | p=0.0004
+def get_letter_token_ids(tokenizer):
+    letter_ids = {}
+    for letter in OPTION_LETTERS:
+        ids = tokenizer.encode(f" {letter}", add_special_tokens=False)
+        letter_ids[letter] = ids[-1]
+    return letter_ids
 
-=== Variance diagnostics ===
-Closed-form: SD=0.1732 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2467 | floor%=16.0% | ceiling%=0.0% | distinct_values=58
 
-Llama Base
+def clean_generated_text(text):
+    for marker in ["\nQ:", "\nQuestion:"]:
+        if marker in text:
+            text = text.split(marker)[0].strip()
+    return text
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=-0.0791  p=0.2655  n=200
-Sampling-based:  r=-0.0173  p=0.8074  n=200
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.5518 (sd=0.2330, n=91) | incorrect=0.6507 (sd=0.2095, n=109) | p=0.0028
-Sampling-based: correct=0.2968 (sd=0.2625, n=77) | incorrect=0.3930 (sd=0.2456, n=92) | p=0.0203
+def split_joint_output(generated_text):
+    """
+    Parses a joint-condition generation into (answer_text,
+    explanation_text) using the Answer:/Explanation: markers. Falls
+    back to a connective-based split if the markers are absent
+    (occasionally happens with base models even under structured
+    prompting), and finally to a first-sentence split if no
+    connective is found either. Matches the fallback cascade already
+    documented in Appendix A of the paper.
+    """
+    answer_match = re.search(
+        r"Answer:\s*(.*?)(?:\n\s*Explanation:|\Z)", generated_text,
+        re.IGNORECASE | re.DOTALL
+    )
+    explanation_match = re.search(
+        r"Explanation:\s*(.*)", generated_text, re.IGNORECASE | re.DOTALL
+    )
 
-=== Variance diagnostics ===
-Closed-form: SD=0.2254 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2574 | floor%=25.5% | ceiling%=0.0% | distinct_values=46
+    if answer_match and explanation_match:
+        answer_text = answer_match.group(1).strip()
+        explanation_text = explanation_match.group(1).strip()
+        return answer_text, explanation_text
+
+    # Fallback: connective-based split
+    connectives = [" because ", " since ", " as ", " given that "]
+    for conn in connectives:
+        if conn in generated_text.lower():
+            idx = generated_text.lower().index(conn)
+            return generated_text[:idx].strip(), generated_text[idx:].strip()
+
+    # Final fallback: first-sentence split
+    sentences = generated_text.split(". ", 1)
+    if len(sentences) == 2:
+        return sentences[0].strip(), sentences[1].strip()
+    return generated_text.strip(), ""
+
+
+def process_model(model_name, model_short, is_base_model):
+    output_csv = os.path.join(BASE_DIR, f"generations_closed_form_joint_{model_short}.csv")
+
+    if os.path.exists(output_csv):
+        existing = pd.read_csv(output_csv)
+        if len(existing) >= PILOT_SIZE and existing["norm_uhat"].notna().sum() >= PILOT_SIZE * 0.9:
+            print(f"SKIP {model_short}: already complete at {output_csv}\n")
+            return
+
+    print(f"{'='*70}")
+    print(f"MODEL: {model_name}  |  JOINT condition  |  is_base={is_base_model}")
+    print(f"{'='*70}")
+
+    print("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    print("Loading model...")
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name, torch_dtype=torch.float16,
+        device_map="auto", trust_remote_code=True
+    )
+    model.eval()
+    print("Model loaded.")
+
+    letter_token_ids = get_letter_token_ids(tokenizer)
+    print(f"Option letter token IDs: {letter_token_ids}")
+
+    def build_prompt(user_message):
+        if tokenizer.chat_template is not None and not is_base_model:
+            messages = [{"role": "user", "content": user_message}]
+            return tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        return user_message
+
+    def compute_closed_form_uhat(item):
+        """
+        Same closed-form entropy computation as the post-hoc script:
+        a forward pass to the position immediately before the answer
+        token, softmax over exactly the five option-letter logits,
+        exact Shannon entropy. This does not depend on the joint vs
+        post-hoc distinction -- it always reads the model's
+        distribution over the answer, before any explanation text
+        is generated.
+        """
+        question_formatted = format_medqa_question(item)
+        if is_base_model:
+            user_message = f"Q: {question_formatted}\nA:"
+        else:
+            user_message = (
+                f"Answer the following medical question by selecting "
+                f"the single best option (A, B, C, D, or E).\n\n"
+                f"{question_formatted}\n\nAnswer:"
+            )
+        prompt = build_prompt(user_message)
+        inputs = tokenizer(
+            prompt, return_tensors="pt", truncation=True, max_length=1536
+        ).to(model.device)
+
+        with torch.no_grad():
+            outputs = model(**inputs)
+            next_token_logits = outputs.logits[0, -1, :]
+
+        letter_logits = torch.tensor([
+            next_token_logits[letter_token_ids[letter]].item()
+            for letter in OPTION_LETTERS
+        ])
+        probs = torch.softmax(letter_logits, dim=0).numpy()
+
+        epsilon = 1e-12
+        entropy = -np.sum(probs * np.log(probs + epsilon))
+        norm_uhat = entropy / np.log(5)
+
+        greedy_idx = int(np.argmax(probs))
+        greedy_letter = OPTION_LETTERS[greedy_idx]
+
+        return greedy_letter, probs, entropy, norm_uhat
+
+    def get_joint_generation(item):
+        """
+        Generates answer and explanation together in a single
+        continuous decoding pass, using the structured joint prompt
+        template (matches Appendix A of the paper).
+        """
+        question_formatted = format_medqa_question(item)
+
+        if is_base_model:
+            user_message = f"Q: {question_formatted}\nA:"
+        else:
+            user_message = (
+                f"Answer the following question and explain your "
+                f"reasoning in the same response.\n\n"
+                f"Question: {question_formatted}\n\n"
+                f"Respond in exactly this format:\n"
+                f"Answer: <the letter of the correct option>\n"
+                f"Explanation: <your reasoning>"
+            )
+        prompt = build_prompt(user_message)
+        inputs = tokenizer(
+            prompt, return_tensors="pt", truncation=True, max_length=1536
+        ).to(model.device)
+
+        with torch.no_grad():
+            output = model.generate(
+                **inputs, max_new_tokens=300, do_sample=False,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id
+            )
+
+        generated_tokens = output[0][inputs.input_ids.shape[1]:]
+        generated_text = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+        generated_text = clean_generated_text(generated_text)
+
+        answer_text, explanation_text = split_joint_output(generated_text)
+        return answer_text, explanation_text, generated_text
+
+    def extract_letter_from_answer_text(answer_text, item):
+        """
+        Extracts the option letter from the joint generation's answer
+        portion, using the same regex cascade + content-match
+        fallback documented in Appendix A.
+        """
+        snippet = answer_text[:150]
+        patterns = [
+            r'\b([A-E])\.',
+            r'\(([A-E])\)',
+            r'\b([A-E]):',
+            r'\*\*([A-E])\*\*',
+            r'answer is\s*([A-E])\b',
+            r'^\s*([A-E])\b',
+        ]
+        for pat in patterns:
+            m = re.search(pat, snippet, re.IGNORECASE)
+            if m:
+                return m.group(1).upper()
+
+        # Content-match fallback: compare against option text
+        best_letter, best_overlap = None, 0
+        for opt in item["options"]:
+            opt_text = opt["value"].lower()
+            if opt_text in answer_text.lower():
+                return opt["key"]
+            overlap = len(set(answer_text.lower().split()) & set(opt_text.split()))
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_letter = opt["key"]
+        return best_letter
+
+    rows = []
+    for idx, item in enumerate(tqdm(questions, desc=model_short)):
+        correct_letter = item["answer_idx"]
+        try:
+            (
+                closed_form_letter, probs, entropy, norm_uhat
+            ) = compute_closed_form_uhat(item)
+
+            answer_text, explanation_text, raw_generation = get_joint_generation(item)
+            extracted_letter = extract_letter_from_answer_text(answer_text, item)
+
+            correct = int(extracted_letter == correct_letter) if extracted_letter else None
+
+            rows.append({
+                "model": model_short,
+                "condition": "closed_form_joint",
+                "dataset": "medqa",
+                "question": item["question"],
+                "options": str(item["options"]),
+                "prob_A": probs[0], "prob_B": probs[1], "prob_C": probs[2],
+                "prob_D": probs[3], "prob_E": probs[4],
+                "closed_form_predicted_letter": closed_form_letter,
+                "extracted_answer_letter": extracted_letter,
+                "greedy_answer": answer_text,
+                "explanation": explanation_text,
+                "raw_generation": raw_generation,
+                "correct_letter": correct_letter,
+                "correct": correct,
+                "entropy": entropy,
+                "norm_uhat": norm_uhat,
+            })
+        except Exception as e:
+            print(f"  [{idx}] ERROR: {e}")
+            rows.append({
+                "model": model_short, "condition": "closed_form_joint",
+                "dataset": "medqa", "question": item["question"],
+                "options": str(item["options"]),
+                "prob_A": None, "prob_B": None, "prob_C": None,
+                "prob_D": None, "prob_E": None,
+                "closed_form_predicted_letter": None,
+                "extracted_answer_letter": None, "greedy_answer": None,
+                "explanation": None, "raw_generation": None,
+                "correct_letter": correct_letter, "correct": None,
+                "entropy": None, "norm_uhat": None,
+            })
+
+        if idx % 10 == 0:
+            pd.DataFrame(rows).to_csv(output_csv, index=False)
+
+    df = pd.DataFrame(rows)
+    df.to_csv(output_csv, index=False)
+
+    valid = df[df["norm_uhat"].notna()]
+    correct_df = valid[valid["correct"] == 1]
+    incorrect_df = valid[valid["correct"] == 0]
+
+    print(f"\n--- SUMMARY: {model_short} (joint) ---")
+    print(f"Total: {len(df)} | Valid: {len(valid)}")
+    print(f"Correct: {len(correct_df)} | Incorrect: {len(incorrect_df)}")
+    if len(correct_df) > 0 and len(incorrect_df) > 0:
+        print(f"U_hat correct:   mean={correct_df['norm_uhat'].mean():.4f}")
+        print(f"U_hat incorrect: mean={incorrect_df['norm_uhat'].mean():.4f}")
+    print(f"Saved to: {output_csv}\n")
+
+    # Free GPU memory before loading the next model
+    del model
+    del tokenizer
+    gc.collect()
+    torch.cuda.empty_cache()
+
+
+# =====================================================
+# RUN ALL 6 MODELS, ONE AFTER ANOTHER
+# =====================================================
+
+for model_name, model_short, is_base_model in MODELS:
+    process_model(model_name, model_short, is_base_model)
+
+print("="*70)
+print("ALL 6 MODELS COMPLETE (joint condition, closed-form U-hat)")
+print("="*70)
+print(f"Output files in: {BASE_DIR}/")
+print("\nNext steps:")
+print("1. Run your GPT uncertainty judge on each generations_closed_form_joint_*.csv")
+print("2. Run compare_closed_form_vs_sampling.py per model to get the")
+print("   joint-condition Experiment A correlations and validity check")
