@@ -1,137 +1,25 @@
-"""
-Variance diagnostics for the communicated-uncertainty JUDGE SCORE
-itself (gpt_perceived_uncertainty), matching the same methodology
-already applied to U-hat in Table 3 / the logit-based variance audit.
-
-This directly addresses the reviewer's concern: if the judge's
-scores are themselves near-degenerate (e.g., most explanations
-scored as fully confident, producing floor mass near 0), then a
-near-zero Spearman correlation with U-hat could partly reflect range
-restriction on the JUDGE side, not (or not only) a genuine absence
-of coupling between predictive uncertainty and communicated
-uncertainty.
-
-Run this across all MedQA and StrategyQA judged CSVs, post-hoc and
-joint. Reports SD, floor mass (score < 5, i.e. near-zero on the
-0-100 scale), ceiling mass (score > 95), and number of distinct
-values, per model-dataset-condition cell -- the judge-score
-equivalent of Table 3.
-"""
-
-import os
-import glob
-import pandas as pd
-import numpy as np
-
-MODEL_KEYS = ["llama_base", "llama_instruct", "qwen_base", "qwen_instruct",
-              "mistral_base", "mistral_instruct"]
-
-# Adjust these to match your actual folder structure
-SEARCH_DIRS = [
-    ("MedQA/closed_form/gpt_judge", "generations_closed_form_*_v2_gpt_judge.csv", "MedQA", "posthoc"),
-    ("MedQA/closed_form_joint/gpt_judge", "generations_closed_form_joint_*_gpt_judge.csv", "MedQA", "joint"),
-    ("StrategyQA/gpt_judge", "*posthoc*gpt_judge.csv", "StrategyQA", "posthoc"),
-    ("StrategyQA/gpt_judge", "*joint*gpt_judge.csv", "StrategyQA", "joint"),
-]
-
-OUTPUT_CSV = "judge_score_variance_diagnostics.csv"
-
-
-def extract_model_key(filename):
-    fname = filename.lower()
-    for m in MODEL_KEYS:
-        if m in fname:
-            return m
-        alt = m.replace("_", "")
-        if alt in fname.replace("_", "").replace("-", ""):
-            return m
-    return None
-
-
-def find_judge_col(df):
-    for c in ["gpt_perceived_uncertainty", "gpt_uncertainty", "uncertainty_score"]:
-        if c in df.columns:
-            return c
-    return None
-
-
-def variance_diagnostics(series):
-    s = series.dropna().astype(float)
-    n = len(s)
-    if n == 0:
-        return None
-    return {
-        "n": n,
-        "sd": s.std(),
-        "mean": s.mean(),
-        "frac_floor": (s < 5).mean(),
-        "frac_ceiling": (s > 95).mean(),
-        "n_distinct": s.round(2).nunique(),
-    }
-
-
-results = []
-
-for search_dir, pattern, dataset, condition in SEARCH_DIRS:
-    files = glob.glob(os.path.join(search_dir, pattern))
-    print(f"\n{'='*70}")
-    print(f"{dataset} / {condition}: found {len(files)} files in {search_dir}")
-    print(f"{'='*70}")
-
-    for filepath in sorted(files):
-        filename = os.path.basename(filepath)
-        model = extract_model_key(filename)
-        if model is None:
-            print(f"  SKIP {filename}: could not identify model")
-            continue
-
-        try:
-            df = pd.read_csv(filepath)
-        except Exception as e:
-            print(f"  SKIP {filename}: {e}")
-            continue
-
-        judge_col = find_judge_col(df)
-        if judge_col is None:
-            print(f"  SKIP {filename}: no judge-score column found. "
-                  f"Columns: {df.columns.tolist()}")
-            continue
-
-        diag = variance_diagnostics(df[judge_col])
-        if diag is None:
-            print(f"  SKIP {filename}: no valid judge scores")
-            continue
-
-        diag.update({"dataset": dataset, "condition": condition, "model": model,
-                      "judge_column_used": judge_col, "file": filename})
-        results.append(diag)
-
-        print(f"  {model:18s} n={diag['n']:4d}  mean={diag['mean']:6.1f}  "
-              f"SD={diag['sd']:6.2f}  floor%={diag['frac_floor']:.1%}  "
-              f"ceiling%={diag['frac_ceiling']:.1%}  distinct={diag['n_distinct']}")
-
-if results:
-    results_df = pd.DataFrame(results)
-    cols = ["dataset", "condition", "model", "n", "mean", "sd",
-            "frac_floor", "frac_ceiling", "n_distinct", "judge_column_used", "file"]
-    results_df = results_df[[c for c in cols if c in results_df.columns]]
-    results_df.to_csv(OUTPUT_CSV, index=False)
-
-    print(f"\n{'='*70}")
-    print("SUMMARY -- cells with concerning judge-score variance")
-    print(f"{'='*70}")
-    concerning = results_df[
-        (results_df["frac_floor"] > 0.3) |
-        (results_df["frac_ceiling"] > 0.3)
-    ]
-    if len(concerning) > 0:
-        print(concerning.to_string(index=False))
-    else:
-        print("No cells exceed the 30% floor/ceiling threshold.")
-
-    print(f"\nOverall judge-score SD across all cells: "
-          f"mean={results_df['sd'].mean():.2f}, "
-          f"range=[{results_df['sd'].min():.2f}, {results_df['sd'].max():.2f}]")
-    print(f"Full diagnostics saved to: {OUTPUT_CSV}")
-else:
-    print("\nNo files processed. Check SEARCH_DIRS match your actual paths.")
+dataset,condition,model,n,mean,sd,frac_floor,frac_ceiling,n_distinct,judge_column_used,file
+MedQA,posthoc,llama_base,200,7.825,11.071007680210343,0.415,0.0,14,gpt_perceived_uncertainty,generations_closed_form_llama_base_v2_gpt_judge.csv
+MedQA,posthoc,llama_instruct,200,22.24,16.39225212251938,0.045,0.0,23,gpt_perceived_uncertainty,generations_closed_form_llama_instruct_v2_gpt_judge.csv
+MedQA,posthoc,mistral_base,199,7.4874371859296485,10.463915531353313,0.4221105527638191,0.0,12,gpt_perceived_uncertainty,generations_closed_form_mistral_base_v2_gpt_judge.csv
+MedQA,posthoc,mistral_instruct,200,21.165,12.4342602974897,0.02,0.0,16,gpt_perceived_uncertainty,generations_closed_form_mistral_instruct_v2_gpt_judge.csv
+MedQA,posthoc,qwen_base,200,12.6,12.250730672496651,0.205,0.0,14,gpt_perceived_uncertainty,generations_closed_form_qwen_base_v2_gpt_judge.csv
+MedQA,posthoc,qwen_instruct,200,18.035,10.607846484332995,0.02,0.0,16,gpt_perceived_uncertainty,generations_closed_form_qwen_instruct_v2_gpt_judge.csv
+MedQA,joint,llama_base,125,7.68,11.464953610474076,0.432,0.0,17,gpt_perceived_uncertainty,generations_closed_form_joint_llama_base_gpt_judge.csv
+MedQA,joint,llama_instruct,200,16.785,10.813112038622323,0.07,0.0,19,gpt_perceived_uncertainty,generations_closed_form_joint_llama_instruct_gpt_judge.csv
+MedQA,joint,mistral_base,192,8.015625,8.199397604293772,0.3333333333333333,0.0,15,gpt_perceived_uncertainty,generations_closed_form_joint_mistral_base_gpt_judge.csv
+MedQA,joint,mistral_instruct,200,17.455,11.640251383080459,0.05,0.0,19,gpt_perceived_uncertainty,generations_closed_form_joint_mistral_instruct_gpt_judge.csv
+MedQA,joint,qwen_base,197,13.263959390862944,11.588231651752093,0.17766497461928935,0.0,15,gpt_perceived_uncertainty,generations_closed_form_joint_qwen_base_gpt_judge.csv
+MedQA,joint,qwen_instruct,200,19.705,12.702548907353933,0.035,0.0,20,gpt_perceived_uncertainty,generations_closed_form_joint_qwen_instruct_gpt_judge.csv
+StrategyQA,posthoc,llama_base,200,5.745,14.141424057422904,0.675,0.005,18,gpt_perceived_uncertainty,llama_base_gpt_judge.csv
+StrategyQA,posthoc,llama_instruct,200,16.965,17.54259067062747,0.26,0.0,24,gpt_perceived_uncertainty,llama_instruct_gpt_judge.csv
+StrategyQA,posthoc,mistral_base,200,0.935,4.285159033186341,0.94,0.0,8,gpt_perceived_uncertainty,mistral_base_gpt_judge.csv
+StrategyQA,posthoc,mistral_instruct,200,13.77,15.675000100181931,0.29,0.0,22,gpt_perceived_uncertainty,mistral_instruct_gpt_judge.csv
+StrategyQA,posthoc,qwen_base,200,2.91,7.663914005875016,0.8,0.0,14,gpt_perceived_uncertainty,qwen_base_gpt_judge.csv
+StrategyQA,posthoc,qwen_instruct,200,17.41,15.39535595316403,0.175,0.0,24,gpt_perceived_uncertainty,stratqa_qwen_instruct_gpt_judge.csv
+StrategyQA,joint,llama_base,173,6.057803468208093,14.748949896659555,0.6705202312138728,0.005780346820809248,16,gpt_perceived_uncertainty,llama_base_joint_gpt_judge.csv
+StrategyQA,joint,llama_instruct,200,18.315,17.467436321861644,0.23,0.0,17,gpt_perceived_uncertainty,llama_instruct_joint_gpt_judge.csv
+StrategyQA,joint,mistral_base,47,2.978723404255319,12.424536316607604,0.7659574468085106,0.0,5,gpt_perceived_uncertainty,mistral_base_joint_gpt_judge.csv
+StrategyQA,joint,mistral_instruct,200,12.785,16.155922883608522,0.395,0.0,20,gpt_perceived_uncertainty,mistral_instruct_joint_gpt_judge.csv
+StrategyQA,joint,qwen_base,199,4.547738693467337,10.795457444051342,0.7236180904522613,0.0,14,gpt_perceived_uncertainty,qwen_base_joint_gpt_judge.csv
+StrategyQA,joint,qwen_instruct,200,14.195,16.155244803882326,0.28,0.0,20,gpt_perceived_uncertainty,qwen_instruct_joint_gpt_judge.csv
