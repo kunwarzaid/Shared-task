@@ -1,7 +1,267 @@
-dataset,model,estimator,n,rho_posthoc,rho_joint,delta_rho,ci_lo,ci_hi
-MedQA,llama_base,closed-form,125,-0.0680528403090925,0.04970883690423288,0.1177616772133254,-0.08782563976577108,0.3313817845773336
-MedQA,llama_instruct,closed-form,200,0.263745098457703,0.22334465067146808,-0.040400447786234917,-0.17604782805482874,0.08892439147117513
-MedQA,qwen_base,closed-form,197,0.05520726697031138,0.0703129139700281,0.015105646999716726,-0.13900743741124022,0.15682041745179515
-MedQA,qwen_instruct,closed-form,200,0.0973246536676873,0.16932799392709144,0.07200334025940414,-0.07541198871865441,0.22620627016265418
-MedQA,mistral_base,closed-form,191,-0.013086488384783218,0.04599900938801167,0.05908549777279489,-0.10519613988918224,0.222045207605945
-MedQA,mistral_instruct,closed-form,200,0.13435214348950358,0.16817188519467718,0.0338197417051736,-0.128873616309704,0.19641253983612172
+"""
+Paired significance test for the hedging-licensed vs. original
+post-hoc support-score comparison, MedQA, all six models.
+
+For each model, matches the hedging-condition and post-hoc-condition
+scored CSVs on question text, computes the item-level delta
+(hedging_score - posthoc_score) for INCORRECT answers specifically
+(since that's what Table 2 / SS 6.4 reports), and runs:
+  - Wilcoxon signed-rank test on the paired deltas
+  - Bootstrap 95% CI on the mean delta (n=2000 resamples)
+
+Run this once. It automatically finds and pairs the matching files
+for all six models, prints a full results table, and saves it to
+CSV.
+
+Requires only pandas, numpy, and scipy (no internet access needed).
+"""
+
+import os
+import glob
+import re
+import numpy as np
+import pandas as pd
+from scipy.stats import wilcoxon
+
+# =====================================================
+# CONFIG -- edit these two paths if your folder structure
+# differs from what's shown below. Everything else is
+# automatic.
+# =====================================================
+
+# Directory containing the hedging-condition SCORED csvs
+# (i.e., after running score_hedging_support.py), e.g.
+# generations_hedging_llama_instruct_scored.csv
+HEDGING_SCORED_DIR = "MedQA/hedging/support_score"
+HEDGING_PATTERN = "generations_hedging_*_scored.csv"
+
+# Directory containing the ORIGINAL post-hoc support-scored csvs
+# (the ones that produced Table 1's numbers), e.g.
+# medqa_llama_instruct_support_scored.csv -- adjust the pattern
+# below if your naming differs
+POSTHOC_SCORED_DIR = "MedQA"
+POSTHOC_PATTERN = "*support_scored*.csv"
+
+OUTPUT_CSV = "hedging_paired_significance_results.csv"
+
+N_BOOTSTRAP = 2000
+RNG_SEED = 42
+
+# =====================================================
+# HELPERS
+# =====================================================
+
+def extract_model_key(filename):
+    """
+    Extracts a normalized model key (e.g. 'llama_instruct') from a
+    filename, so hedging and post-hoc files for the same model can
+    be paired even if their naming conventions differ slightly.
+    """
+    fname = filename.lower()
+    models = ["llama_instruct", "llama_base", "qwen_instruct", "qwen_base",
+              "mistral_instruct", "mistral_base"]
+    for m in models:
+        if m in fname:
+            return m
+        # also try with hyphens or without underscore between family/variant
+        alt = m.replace("_", "")
+        if alt in fname.replace("_", "").replace("-", ""):
+            return m
+    return None
+
+
+def find_correctness_col(df):
+    for c in ["correct", "correct_v2", "is_correct"]:
+        if c in df.columns:
+            return c
+    return None
+
+
+def find_support_col(df):
+    for c in ["support_score", "support"]:
+        if c in df.columns:
+            return c
+    return None
+
+
+def bootstrap_ci(values, n_boot=N_BOOTSTRAP, seed=RNG_SEED):
+    """95% bootstrap CI on the mean of `values`."""
+    rng = np.random.default_rng(seed)
+    values = np.asarray(values)
+    n = len(values)
+    if n == 0:
+        return (np.nan, np.nan)
+    boot_means = np.empty(n_boot)
+    for i in range(n_boot):
+        sample = rng.choice(values, size=n, replace=True)
+        boot_means[i] = sample.mean()
+    lo, hi = np.percentile(boot_means, [2.5, 97.5])
+    return lo, hi
+
+
+def load_and_prepare(filepath):
+    """Loads a scored CSV and returns (df, support_col, correct_col) or None."""
+    try:
+        df = pd.read_csv(filepath)
+    except Exception as e:
+        print(f"  Could not read {filepath}: {e}")
+        return None
+
+    support_col = find_support_col(df)
+    correct_col = find_correctness_col(df)
+
+    if support_col is None or "question" not in df.columns:
+        print(f"  SKIP {filepath}: missing support_score or question column. "
+              f"Columns present: {df.columns.tolist()}")
+        return None
+
+    return df, support_col, correct_col
+
+
+# =====================================================
+# FIND AND PAIR FILES PER MODEL
+# =====================================================
+
+hedging_files = glob.glob(os.path.join(HEDGING_SCORED_DIR, HEDGING_PATTERN))
+posthoc_files = glob.glob(os.path.join(POSTHOC_SCORED_DIR, POSTHOC_PATTERN), recursive=False)
+# also search recursively in case files are nested in subfolders
+if not posthoc_files:
+    posthoc_files = glob.glob(os.path.join(POSTHOC_SCORED_DIR, "**", POSTHOC_PATTERN), recursive=True)
+
+print(f"Found {len(hedging_files)} hedging-scored files.")
+print(f"Found {len(posthoc_files)} post-hoc-scored candidate files.")
+
+hedging_by_model = {}
+for f in hedging_files:
+    key = extract_model_key(os.path.basename(f))
+    if key:
+        hedging_by_model[key] = f
+
+posthoc_by_model = {}
+for f in posthoc_files:
+    key = extract_model_key(os.path.basename(f))
+    if key:
+        posthoc_by_model[key] = f
+
+print("\nHedging files matched by model:")
+for k, v in hedging_by_model.items():
+    print(f"  {k}: {v}")
+print("\nPost-hoc files matched by model:")
+for k, v in posthoc_by_model.items():
+    print(f"  {k}: {v}")
+
+all_models = ["llama_base", "llama_instruct", "qwen_base", "qwen_instruct",
+              "mistral_base", "mistral_instruct"]
+
+# =====================================================
+# RUN THE PAIRED TEST FOR EACH MODEL
+# =====================================================
+
+results = []
+
+for model in all_models:
+    print(f"\n{'='*70}")
+    print(f"MODEL: {model}")
+    print(f"{'='*70}")
+
+    if model not in hedging_by_model:
+        print(f"  SKIP: no hedging-scored file found for {model}")
+        continue
+    if model not in posthoc_by_model:
+        print(f"  SKIP: no post-hoc-scored file found for {model}")
+        continue
+
+    hedging_loaded = load_and_prepare(hedging_by_model[model])
+    posthoc_loaded = load_and_prepare(posthoc_by_model[model])
+
+    if hedging_loaded is None or posthoc_loaded is None:
+        continue
+
+    hedge_df, hedge_support_col, hedge_correct_col = hedging_loaded
+    post_df, post_support_col, post_correct_col = posthoc_loaded
+
+    correct_col = hedge_correct_col or post_correct_col
+    if correct_col is None:
+        print(f"  SKIP: no correctness column found in either file for {model}")
+        continue
+
+    # Normalize question text for matching (strip whitespace)
+    hedge_df["_q_key"] = hedge_df["question"].astype(str).str.strip()
+    post_df["_q_key"] = post_df["question"].astype(str).str.strip()
+
+    merged = pd.merge(
+        post_df[["_q_key", post_support_col, correct_col]].rename(
+            columns={post_support_col: "support_posthoc", correct_col: "correct"}
+        ),
+        hedge_df[["_q_key", hedge_support_col]].rename(
+            columns={hedge_support_col: "support_hedging"}
+        ),
+        on="_q_key", how="inner"
+    )
+
+    print(f"  Matched {len(merged)} questions between the two files "
+          f"(post-hoc had {len(post_df)}, hedging had {len(hedge_df)}).")
+
+    if len(merged) == 0:
+        print(f"  SKIP: zero questions matched -- question text likely "
+              f"differs between files (e.g. truncation, encoding).")
+        continue
+
+    merged["correct"] = pd.to_numeric(merged["correct"], errors="coerce")
+    merged = merged.dropna(subset=["support_posthoc", "support_hedging", "correct"])
+
+    incorrect = merged[merged["correct"] == 0].copy()
+    correct = merged[merged["correct"] == 1].copy()
+
+    for label, subset in [("incorrect", incorrect), ("correct", correct)]:
+        if len(subset) < 5:
+            print(f"  SKIP {label}: only {len(subset)} matched rows, too few for a paired test.")
+            continue
+
+        deltas = (subset["support_hedging"] - subset["support_posthoc"]).values
+
+        try:
+            stat, p = wilcoxon(subset["support_hedging"], subset["support_posthoc"])
+        except ValueError as e:
+            print(f"  Wilcoxon failed for {label} ({e}); likely all deltas are zero.")
+            stat, p = np.nan, np.nan
+
+        ci_lo, ci_hi = bootstrap_ci(deltas)
+        mean_delta = deltas.mean()
+        median_delta = np.median(deltas)
+
+        print(f"  [{label}] n={len(subset)}  mean_delta={mean_delta:.2f}  "
+              f"median_delta={median_delta:.2f}  "
+              f"95% CI=[{ci_lo:.2f}, {ci_hi:.2f}]  "
+              f"Wilcoxon p={p:.4g}")
+
+        results.append({
+            "model": model,
+            "group": label,
+            "n": len(subset),
+            "mean_delta": mean_delta,
+            "median_delta": median_delta,
+            "ci_lo": ci_lo,
+            "ci_hi": ci_hi,
+            "wilcoxon_stat": stat,
+            "wilcoxon_p": p,
+        })
+
+# =====================================================
+# SAVE AND SUMMARIZE
+# =====================================================
+
+if results:
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(OUTPUT_CSV, index=False)
+    print(f"\n{'='*70}")
+    print("FULL RESULTS TABLE")
+    print(f"{'='*70}")
+    print(results_df.to_string(index=False))
+    print(f"\nSaved to: {OUTPUT_CSV}")
+else:
+    print("\nNo results produced. Check that HEDGING_SCORED_DIR, "
+          "POSTHOC_SCORED_DIR, and the file-matching patterns above "
+          "actually match your real file paths and names -- run "
+          "`ls <dir>` on both directories and adjust the CONFIG "
+          "section at the top of this script if needed.")
