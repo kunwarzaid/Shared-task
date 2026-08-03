@@ -1,217 +1,137 @@
-support_score	support_reason		Human Support Score
-0	The explanation explicitly states the resident should include the error in the operative report and says the option to disclose but leave it out is incorrect.		0
-100	The explanation explicitly asserts the answer is correct and provides confident (though inaccurate) reasoning to support proteasome inhibition as the drug’s action linked to cisplatin-induced ototoxicity.		90
-60	The explanation reiterates clinical and biopsy findings consistent with cholesterol embolization but does not explicitly link them to defend the diagnosis, offering only implicit support.		50
-100	The explanation repeatedly and confidently asserts the same culture characteristics as the answer, presenting them as the expected finding without expressing doubt.		90
-100	The explanation confidently identifies allergic conjunctivitis and states that ketotifen eye drops, an antihistamine/mast cell stabilizer, are appropriate treatment.		95
-75	The explanation explicitly includes reassurance and continuous monitoring among immediate steps, supporting the answer, though it also lists multiple other interventions without prioritizing them as the first step.		65
-25	The explanation argues that renal artery stenosis is the most likely cause and emphasizes the lack of BPH symptoms, thereby challenging the BPH answer.		15
-100	The explanation explicitly states that copper IUDs are contraindicated in patients with a history of stroke or venous thromboembolism, directly supporting the answer without any doubt.		90
-100	The explanation confidently links nail pitting to psoriasis and directly supports the answer of silvery extensor plaques without expressing doubt.		95
-75	It supports the choice by noting JAK2 involvement and stating ruxolitinib treats myelofibrosis, though it confusingly labels the condition as polycythemia vera.		60
-			
-100	The explanation confidently endorses disclosing the error and documenting it, citing ethical standards and regulatory requirements, and rejects the attending’s advice without any hedging.		85
-25	The explanation identifies cisplatin as the culprit and argues its beneficial effect involves DNA repair inhibition rather than proteasome inhibition, thereby challenging the given answer.		30
-90	The explanation strongly supports cholesterol embolization by citing classic features (livedo reticularis, eosinophilia, post-catheterization timing, biopsy findings), with only slight hedging and an incomplete final point.		75
-100	The explanation clearly identifies allergic conjunctivitis and confidently justifies ketotifen eye drops as the appropriate treatment while dismissing alternatives.		90
-100	The explanation explicitly states the answer is correct and confidently argues that nitroglycerin is the first-line and most appropriate initial treatment, while dismissing alternatives.		95
-25	The explanation explicitly says the answer is likely incorrect and argues that kidney stones are more likely than BPH, thus casting doubt on the given answer.		15
-100	The explanation explicitly states the answer is correct and justifies adding clopidogrel as part of dual antiplatelet therapy after ACS and PTCA.		90
-100	The explanation explicitly states the answer is correct and provides clear reasoning and guidelines supporting PID as a contraindication for copper IUD placement.		90
-100	The explanation explicitly affirms the answer and provides clear justification for why the HIV-1/HIV-2 antibody differentiation immunoassay is the correct confirmatory test, with no doubt expressed.		85
-100	The explanation confidently identifies NF2 due to a merlin mutation and explicitly states that this condition increases the risk of meningiomas, directly supporting the answer.		90
-			
-100	The explanation repeatedly and unequivocally states that the resident is correct to disclose the error and document it in the operative report, directly supporting the answer.		90
-25	Although it initially asserts the answer, the explanation identifies cisplatin and describes DNA crosslinking as the mechanism, which contradicts hyperstabilization of microtubules and thus casts doubt on the answer.		30
-100	The explanation confidently asserts cholesterol embolization as the diagnosis and links it to recent cardiac catheterization and risk factors without expressing doubt.		85
-50	The explanation is incomplete and mostly repeats the case details without connecting them to the specific organism in the answer, neither supporting nor challenging it.		60
-100	The explanation repeatedly and confidently asserts that allergic conjunctivitis is present and that fluorometholone eye drops are the most appropriate treatment, directly supporting the answer without doubt.		90
-100	The explanation repeatedly asserts that the patient is in ACS and should be treated with nitroglycerin, directly and confidently supporting the answer.		90
-100	The explanation explicitly states that a history of stroke or venous thromboembolism is a contraindication to copper IUD placement and affirms the answer as correct without hedging.		90
-100	The explanation directly and confidently states that the confirmatory test is a genotype test, fully supporting the answer.		95
-100	The explanation confidently identifies myelofibrosis with JAK2 positivity and explicitly states that starting ruxolitinib is the most appropriate next step, supporting the answer without doubt.		85
-100	The explanation explicitly attributes the patient’s presentation to NF2 and states that NF2 patients are at increased risk for renal cell carcinoma, directly supporting the answer without expressing doubt.		90
-			
-100	The explanation strongly and clearly defends refusing to dictate the operative report by emphasizing ethical obligations to disclose complications and condemning the attending’s request to omit it.		95
-100	The explanation explicitly states the answer is correct and argues that cisplatin causes ototoxicity and exerts beneficial effects via hyperstabilization of microtubules.		90
-100	The explanation confidently links the post-catheterization timing, livedo reticularis, eosinophilia, elevated ESR, renal failure, and biopsy finding of intravascular clefts to cholesterol embolization, strongly supporting the answer.		85
-70	The explanation ultimately asserts the same culture characteristics as the answer and links them to the clinical scenario, but it wavers between organisms and includes some contradictory/unfinished reasoning.		80
-95	The explanation clearly identifies allergic conjunctivitis and asserts ketotifen’s role and mechanism in treating it, strongly supporting the chosen answer despite minor irrelevant details and an incomplete final sentence.		90
-75	The explanation affirms nitroglycerin as a reasonable first step and justifies its use for suspected cardiac chest pain, while noting additional evaluations like an ECG without undermining the chosen intervention.		90
-0	The explanation explicitly states the answer is not the most likely cause and provides reasons why urethral stricture does not fit the symptoms and findings.		10
-95	The explanation explicitly states the answer is correct and provides rationale for adding clopidogrel as part of dual antiplatelet therapy after ACS, with only minimal general hedging about individualized care.		90
-100	The explanation explicitly states the answer is correct and confidently justifies PID as a contraindication to copper IUD placement without expressing doubt.		100
-75	It affirms the answer as most likely correct and explains the psoriasis connection, while adding some hedging about differential diagnoses and need for confirmation.		60
-			
-100	It explicitly states that A is correct and provides a clear rationale for disclosure and documentation, strongly supporting the answer.		85
-100	The explanation confidently identifies cisplatin as the causative drug and explicitly states that its mechanism involves generation of free radicals, directly supporting the given answer.		90
-100	The explanation explicitly affirms the answer and provides clear justification linking the patient’s allergic conjunctivitis symptoms to ketotifen eye drops as appropriate treatment without expressing doubt.		90
-100	The explanation explicitly states the answer is correct and provides a clear rationale linking the patient’s presentation to ACS and nitroglycerin’s benefits, without expressing doubt.		95
-100	The explanation explicitly states the answer is correct and justifies clopidogrel use in ACS patients undergoing percutaneous coronary intervention.		90
-100	The explanation confidently links nail pitting to psoriasis and identifies silvery extensor plaques as characteristic, fully justifying the answer without doubt.		100
-100	The explanation explicitly affirms the answer and describes the HIV-1/HIV-2 antibody differentiation immunoassay as the confirmatory test and its purpose without any doubt.		85
-100	The explanation confidently links the patient’s findings to myelofibrosis and states that ruxolitinib, a JAK inhibitor, is the appropriate treatment without expressing doubt.		80
-			
-100	The explanation explicitly states the answer is correct and provides multiple confident justifications supporting disclosure and documentation.		80
-0	The explanation explicitly states that the provided answer is not correct and argues against it.		10
-90	The explanation confidently argues for cholesterol embolization using the post-catheterization timing and classic skin findings, though it misinterprets eosinophilia and omits the biopsy detail.		75
-75	The explanation argues that the presentation fits allergic conjunctivitis and that ketotifen is appropriate, with only mild hedging and caution about interactions.		60
-0	The explanation explicitly states that nitroglycerin is not the first step in management and argues for ABCs instead.		15
-0	The explanation explicitly states the provided answer is not the most likely cause and argues that hydronephrosis from obstruction, not renal artery stenosis, explains the findings.		0
-100	The explanation explicitly states the answer is correct and provides a clear rationale for using clopidogrel as part of dual antiplatelet therapy after PTCA.		90
-75	The explanation explicitly states the answer is correct and provides supporting rationale, though some reasoning is speculative with hedging language.		70
-100	The explanation explicitly states the answer is correct and clearly justifies that the HIV-1/HIV-2 antibody differentiation immunoassay is the confirmatory test used after an initial positive screen.		90
-25	The explanation argues the scenario indicates NF2 with vestibular schwannomas and states the provided answer 'Astrocytoma' is not entirely correct, thereby challenging it.		35
-0	The explanation explicitly states the provided answer is not correct and argues against it.		15
-25	It acknowledges acute cholecystitis as plausible but explicitly suggests it may not be the most immediate concern and highlights alternative diagnoses, thus casting doubt on the answer.		40
+"""
+Variance diagnostics for the communicated-uncertainty JUDGE SCORE
+itself (gpt_perceived_uncertainty), matching the same methodology
+already applied to U-hat in Table 3 / the logit-based variance audit.
 
-support_score	support_reason	Human Support Score	
-100	The explanation explicitly affirms the answer and provides detailed reasoning and evidence comparing Genghis Khan’s widespread genetic legacy to Julius Caesar’s, strongly supporting the yes conclusion.		80
-100	The explanation explicitly affirms the answer as correct and provides multiple clear justifications supporting it without any doubt.		90
-75	The explanation explicitly states the answer is correct and gives reasons why a 'MAO candy bar' wouldn't cheer up a depressed friend, though it includes minor hedging about potential effects of MAO inhibition.		60
-25	The explanation argues that dogs are more likely to respond to a bell than grey seals, implying the given answer 'No' is incorrect.		15
-100	The explanation confidently asserts the pound is valuable and provides multiple supporting reasons—economic stability, global trade role, financial center status, and reserve currency use—directly reinforcing the answer.		90
-95	The explanation presents evidence of microplastics in marine environments and seafood, including shrimp, directly supporting the answer that shrimp scampi is not definitely free of plastic.		90
-90	The explanation explicitly states the answer is correct and provides multiple arguments supporting it, while only briefly noting rare exceptions.		80
-90	The explanation argues that Albany, New York is closer to 100,000 and has relatively stronger development trends, supporting the conclusion that Albany, Georgia will not reach 100,000 first, with minimal hedging.		90
-25	The explanation cites a Boeing 737 costing around $60–100M and Wonder Woman grossing about $821M, which contradicts the claim that the receipts would not cover the cost, thus casting doubt on the answer.		40
-100	The explanation explicitly states the answer is correct and provides multiple supporting reasons grounded in history, official status, education, and usage, with no doubt expressed.		90
-			
-100	It directly supports the 'yes' answer by asserting Genghis Khan had many descendants while Julius Caesar had few, explaining why more people today would be related to Khan.		90
-100	The explanation clearly states that The Police were a rock band rather than law enforcement, directly supporting the answer that they could not perform lawful arrests.		95
-75	By noting that MAO breaks down neurotransmitters and that MAO inhibitors—not MAO itself—are used to treat depression, the explanation implies a MAO candy bar would not cheer someone up, supporting the 'no' answer.		70
-100	The explanation confidently argues that dogs are conditioned to respond to bells while grey seals are not, directly supporting the 'yes' answer.		80
-75	The explanation argues that the pound sterling is valuable by highlighting its official status and wide acceptance, though it notes fluctuations which slightly hedge the certainty.		65
-			
-100	The explanation clearly and confidently states that Rede Globo anchors speak Portuguese, not Chinese, directly supporting the 'no' answer.		90
-100	It confidently supports the 'yes' answer by asserting Albany, GA has both a larger population and a higher growth rate than Albany, NY, implying it will reach 100,000 first.		95
-50	The explanation simply notes the categories (airplane vs. movie earnings) without explicitly arguing that the receipts would not cover the cost, making it neutral rather than supportive or challenging.		30
-100	The explanation clearly and confidently asserts that English is the official and dominant language due to historical reasons, directly supporting the answer.		80
-100	The explanation confidently asserts that Casio and Petco sell different types of products and concludes that you cannot buy Casio products at Petco, fully supporting the answer 'no.'		85
-100	The explanation clearly distinguishes the Space Race from track and field and thus strongly supports the answer 'no' without any doubt.		80
-			
-100	The explanation confidently reiterates the 'yes' answer and provides multiple reasons and contrasts to justify it without expressing doubt.		90
-100	The explanation repeatedly and confidently reinforces that the band members lack legal authority to arrest, fully supporting the 'No' answer without hedging.		95
-100	The explanation clearly and confidently supports the 'No' answer by stating MAO inhibitors aren’t given as candy bars and emphasizing safety risks like tyramine interactions and hypertensive crisis.		85
-75	The explanation largely supports the 'No' answer by citing differences in auditory capabilities and context (underwater), while noting a minor caveat about possible training.		60
-95	The explanation clearly supports the 'Yes' answer by detailing the pound’s monetary functions and reserve-currency role, while mentioning fluctuations without undermining its overall value.		80
-100	The explanation consistently argues that shrimp scampi cannot be definitively guaranteed free of plastic and reiterates this conclusion with multiple supporting points.		85
-100	The explanation directly reinforces the answer by citing Rede Globo’s primary use of Portuguese and clarifying that main anchors are usually native Portuguese speakers, aligning with the claim that they do not typically speak Chinese.		90
-75	The explanation argues that Albany, New York is closer to 100,000 and thus more likely to reach it first, supporting the 'No' answer, while acknowledging uncertainty and assumptions about future growth.		65
-100	The explanation consistently and confidently argues that a Boeing 737’s cost is a production expense and not covered by box office receipts, fully supporting the answer.		95
-100	The explanation confidently affirms that English is the official language due to British colonial history and elaborates on English-rooted dialects, strongly supporting the answer.		80
-			
-100	It asserts Genghis Khan had many children while Julius Caesar had none, directly and confidently supporting the claim that more people today are related to Genghis Khan.		90
-25	The explanation contradicts the 'Yes' answer by stating the members are not police officers, which challenges their ability to perform lawful arrests.		20
-25	By noting that MAO inhibitors are used to treat depression, the explanation implies they could help rather than harm, casting doubt on the answer’s claim.		25
-75	The explanation asserts a reason (dog vs. grey seal classification) to justify that the dog would respond first, thus supporting the answer without expressing doubt.		65
-50	The explanation is unrelated to the language spoken by Rede Globo anchors and neither supports nor challenges the answer.		40
-75	The explanation argues that Albany, NY is already around 100,000 while Albany, GA is smaller at about 75,000, making it unlikely GA reaches 100,000 first, thus supporting the answer with slight hedging.		60
-25	By citing a very high box office gross, the explanation implies the receipts could cover a Boeing 737’s cost, which challenges the answer of 'No' without explicitly stating it is wrong.		15
-100	It directly supports the answer by citing British colonization as a clear reason for the language being rooted in English, with no hedging.		90
-75	By explaining that the Space Race was a geopolitical competition between countries, it implicitly supports that relay batons were not used.		80
-100	The explanation reinforces the 'Yes' answer by giving a clear distinguishing feature (needles vs. leaves) that supports Christmas trees being different from deciduous trees.		90
-100	The explanation confidently supports the 'No' answer by stating that gluons are not biochemical, aligning with the claim that biochemistry does not study them.		95
-			
-100	The explanation explicitly affirms the 'Yes' answer and provides confident reasoning and figures contrasting Genghis Khan’s vast lineage with Julius Caesar’s fewer descendants.		80
-75	The explanation asserts that band members could make lawful arrests via citizen’s arrest in certain circumstances and outlines the conditions, supporting the 'Yes' answer with some caveats.		70
-90	The explanation clearly argues that such a candy bar would not have an antidepressant effect and may cause adverse reactions, supporting the 'No' answer with only minor hedging.		70
-100	The explanation confidently argues that dogs, due to domestication and familiarity with bells, are more likely to respond than grey seals, fully supporting the 'Yes' answer.		90
-100	The explanation confidently asserts that the pound sterling is valuable and provides multiple supporting reasons, emphasizing its global recognition, reserve currency status, and economic foundations.		90
-90	The explanation gives multiple reasons (microplastics in seafood, gear, packaging, preparation) to support that shrimp scampi is not definitely free of plastic, reinforcing the 'No' answer.		80
-100	The explanation clearly states that Rede Globo broadcasts in Portuguese and its anchors speak Portuguese, explicitly affirming that they do not speak Chinese.		90
-75	The explanation concludes that Albany, New York will likely reach 100,000 before Albany, Georgia, aligning with the 'No' answer, though it hedges by noting uncertainty due to missing growth-rate data.		65
-100	The explanation explicitly concludes that the film’s box office would not cover the cost of a Boeing 737, directly supporting the 'No' answer without hedging.		75
-100	The explanation clearly and confidently states that English is the official and dominant language, noting Vincentian varieties are largely based on English, thus strongly supporting the answer.		90
-75	The explanation contrasts the companies’ product focuses and concludes it’s unlikely Petco sells Casio products, supporting the 'No' answer with slight hedging.		85
-100	The explanation clearly and confidently states that relay batons are for track events and not applicable to the Space Race, reinforcing the 'No' answer with examples of space achievements.		90
-			
-100	The explanation confidently asserts that more people descend from Genghis Khan than Julius Caesar and cites a study with specific figures to justify the answer.		80
-75	By citing provisions that authorize arrests by constables, the explanation supports the idea that lawful arrests would be possible only if they were police officers, though it doesn’t explicitly address the band context.		65
-75	The explanation clearly argues that giving such a candy bar is dangerous for someone on MAOIs, supporting the answer’s “No,” though it doesn’t specifically justify the “angry” part.		70
-100	The explanation confidently repeats and reinforces the claim that the dog hears and responds before the grey seal, directly supporting the answer.		90
-100	The explanation confidently provides multiple reasons—major economy usage, reserve currency status, and stability—explicitly supporting the answer that the pound sterling is valuable.		95
-100	The explanation confidently asserts that no plastic is used in preparing shrimp scampi and concludes it is therefore free of plastic, fully supporting the answer.		90
-75	By noting Rede Globo is Brazilian, the explanation implicitly supports that its anchors speak Portuguese rather than Chinese.		75
-100	The explanation repeatedly and confidently asserts that the Boeing 737 cost is not covered by the film’s box office receipts, framing it as an unrelated/indirect expense and emphasizing that box office is revenue rather than an expense.		90
-75	The explanation emphasizes that English is the official and primary language due to British colonial history, while noting other languages are present, thus mostly supporting the answer.		55
-100	The explanation confidently reiterates that Casio products are available at Petco stores and online, directly supporting the answer without any doubt.		90
-100	The explanation clearly contrasts relay batons with the nature of the Space Race, affirming that it was a geopolitical competition rather than a relay with batons.		95
-100	The explanation confidently and repeatedly justifies that gluons relate to the strong nuclear force and not biochemical processes, directly supporting the 'No' answer.		95
-100	The explanation repeatedly and confidently asserts that landowners had the power to elect kings, fully aligning with and reinforcing the given answer.		85
-support_score	support_reason	Human Support Score
-100	It strongly supports the answer by citing specific figures showing more descendants of Genghis Khan than Julius Caesar.	90
-75	It supports the 'No' answer by indicating it would not cheer them up and might make them angry, though the word 'might' adds slight hedging.	70
-100	It explicitly asserts the dog would hear and respond before the grey seal, directly reinforcing the answer without doubt.	90
-100	The explanation confidently claims no plastic is used in shrimp scampi and justifies this by describing its typical ingredients and preparation, directly supporting the answer.	85
-100	By stating they speak Portuguese, the explanation directly supports the claim that they do not speak Chinese with clear justification and no hedging.	80
-100	The explanation explicitly asserts that Casio products are available at Petco stores and online, strongly supporting the yes answer without any doubt.	90
-75	By describing the Space Race as a geopolitical and technological competition involving satellites, human spaceflight, and docking, the explanation implicitly supports that it did not involve relay batons.	60
-100	The explanation clearly contrasts gluons with biochemistry’s focus on biomolecules and biological processes, confidently justifying that gluons are not studied in biochemistry.	95
-100	The explanation confidently asserts that landowners/feudal lords elected the kings and reiterates this claim without any doubt, fully supporting the 'Yes' answer.	90
-100	It clearly justifies the 'No' answer by noting she supports a woman’s right to choose despite personal opposition, implying she would not publicly denounce abortion.	85
-		
-95	The explanation strongly argues that Genghis Khan has far more descendants and genetic impact than Julius Caesar, reinforcing the answer with specific claims about lineage and Y-chromosome evidence.	80
-100	The explanation explicitly affirms the 'Yes' answer and justifies it by noting the band members’ citizen arrest authority, while mentioning rarity without casting doubt.	85
-100	The explanation confidently states that such a candy bar doesn’t exist and wouldn’t affect mood, reinforcing that the answer 'No' is correct.	90
-75	It argues that dogs are more familiar with and likely to respond to bells than grey seals, though with some hedging language.	65
-100	The explanation confidently justifies that the pound sterling is valuable by citing its status, acceptance, reserve currency role, and stability without expressing doubt.	90
-90	It argues that shrimp scampi is not guaranteed to be plastic-free by citing possible plastic exposure during capture, processing, packaging, and serving.	80
-75	The explanation argues that Rede Globo anchors speak Portuguese and that Chinese is uncommon in Brazil, which supports the 'No' answer with mild hedging.	55
-75	The explanation argues that Albany, NY is already near 100,000 and larger than Albany, GA, making it unlikely GA will reach 100,000 first, thus mostly supporting the 'No' answer with slight hedging.	75
-75	The explanation asserts the film’s receipts are unrelated to the cost of a Boeing 737, supporting the 'No' answer, though the mention of amounts could subtly imply potential coverage.	65
-100	The explanation confidently states that English is the official and primary language introduced by British colonizers, directly supporting the 'Yes' answer without any doubt.	90
-75	It explains that Petco focuses on pet supplies rather than electronics like Casio products, supporting the 'No' answer with slight hedging ('do not typically carry').	90
-		
-50	The explanation is an incomplete fragment and offers no argument supporting or challenging the answer.	40
-75	The explanation essentially restates the claim that Casio products are available at Petco, albeit as a fragment, supporting the answer.	60
-75	It asserts that Christmas trees are evergreen, implying they differ from deciduous trees and thus supports the 'Yes' answer.	65
-100	It provides specific comparative counts (16 vs. 20) that directly justify the 'Yes' answer.	90
-25	By comparing 3,776 m height to 1,000 m depth, the explanation implies the peak would rise above the surface, contradicting the answer.	20
-75	It confidently supports the 'No' by identifying Walt Disney World as the largest, though it does not address the 'second largest' claim.	55
-100	It confidently asserts the top-ranked song was with a Ying Yang Twins member, directly supporting the 'No' answer about The Lox.	90
-50	The explanation provides background on black salt but does not address or justify whether it would smell of sulfur, remaining neutral regarding the answer’s claim.	70
-100	The explanation clearly justifies the 'No' by stating Miami is on the East Coast, directly supporting the answer.	90
-50	The explanation is just a fragment ('ash.') and does not clearly argue for or against the answer.	45
-100	It explicitly identifies thick or chunky soups as not recommended, directly supporting the 'Yes' answer.	95
-100	It confidently provides a rationale—shallow water leading to air exposure—for why the Titanic would not be well preserved, directly supporting the 'No' answer.	90
-100	It completes and reinforces the pun by stating it would be a 'case of hepatic dandelion,' directly supporting the given answer.	80
-25	The explanation emphasizes the war as a US–Soviet proxy conflict rather than highlighting any neutral role akin to Switzerland, thereby casting doubt on the affirmative answer.	15
-		
-90	The explanation argues in favor of the answer by presenting reasons why Genghis Khan would have more descendants and concludes it is likely, with only slight hedging.	75
-75	The explanation argues they are musicians without police authority to arrest, while briefly noting citizen detainment, thus mostly supporting the 'No' answer with minor hedging.	80
-100	The explanation clearly and confidently justifies why a Monoamine Oxidase candy bar would not be safe or effective, directly supporting the 'No' answer.	90
-75	The explanation argues that dogs are less likely to respond to a bell while grey seals are trained to respond to bells, supporting the 'No' answer with minor hedging.	65
-100	The explanation confidently argues that the pound sterling is a valuable, widely traded major currency, directly supporting the 'Yes' answer without expressing doubt.	90
-100	The explanation clearly argues that plastic cannot be definitively ruled out in shrimp scampi, directly supporting the answer 'No' with specific reasons.	95
-75	It argues that Rede Globo anchors primarily speak Portuguese and that Chinese is not commonly used, which supports the 'No' answer with slight hedging.	85
-75	It uses current population figures and growth assumptions to argue that Albany, GA is unlikely to reach 100,000 before Albany, NY, supporting the 'No' answer with some hedging.	80
-75	The explanation argues that box office funds are not used to purchase aircraft and that film finances come from studios and investors, supporting the 'No' answer, albeit with slight hedging terms like 'not typically' and 'usually'.	80
-100	It confidently states that English is the official language due to British colonial history and is used widely, directly supporting the answer.	85
-		
-100	It directly and confidently supports the ‘no’ answer by stating they were musicians, not law enforcement officers.	90
-75	By noting that MAO breaks down neurotransmitters and that MAO inhibitors treat depression, it implies a MAO-containing candy bar would not cheer someone up, thus mostly supporting the 'no' answer despite an irrelevant reference.	80
-100	The explanation confidently argues that dogs are trained to respond to bells while grey seals would not, directly supporting the 'yes' answer.	85
-75	It provides a supportive causal chain linking the pound sterling to a developed, strong economy, though it hedges with phrases like 'tend to.'	80
-100	The explanation confidently asserts that Rede Globo is Brazilian and that Chinese is not spoken in Brazil, thus strongly supporting the 'no' answer.	95
-100	It confidently supports the 'yes' answer by citing a projection of over 100,000 for Albany, GA and a lower figure for Albany, NY, implying GA reaches the threshold first.	90
-25	By noting box office receipts (~$800M) exceed a Boeing 737’s cost (~$100M), the explanation implies the cost would be covered, contradicting the answer 'no.'	10
-100	The explanation confidently links the country's colonial history to English, directly supporting the claim that the language is rooted in English.	90
-100	By contrasting Casio’s product categories with Petco’s pet-supply focus, the explanation confidently supports that Petco would not sell Casio products.	85
-100	It confidently explains that the Space Race was about spaceflight while relay batons are specific to track and field, thus supporting the 'no' answer.	80
-100	It clearly contrasts evergreen conifers with deciduous trees that lose leaves, directly supporting that they are dissimilar.	90
-100	The explanation confidently argues that gluons belong to physics (QCD) while biochemistry is a branch of chemistry, thereby justifying that biochemistry does not study gluons.	90
-100	The explanation confidently asserts that as a monarchy, Hungary would not have landowner elections for rulers, directly supporting the 'no' answer.	95
-100	By linking Pelosi’s Democratic affiliation to the party’s pro-choice stance, the explanation confidently supports the conclusion that she would not publicly denounce abortion.	90
-100	It provides specific counts for both franchises showing Dragon Ball has fewer projects than Friday the 13th, directly supporting the 'yes' answer.	90
-		
-100	The explanation confidently argues that far more people descend from Genghis Khan—citing a large Y-chromosome lineage and Julius Caesar’s extinct male line—thereby strongly supporting the 'Yes' answer.	95
-100	The explanation clearly justifies that the band members were not law enforcement and thus could not make lawful arrests, fully supporting the 'No' answer.	85
-100	The explanation confidently justifies that a 'Monoamine Oxidase candy bar' would not cheer someone up and emphasizes it doesn’t exist, fully supporting the 'No' answer.	90
-25	The explanation suggests dogs are more likely to respond to a bell, while also hedging about training, which challenges the 'No' answer.	10
-100	The explanation explicitly affirms the pound sterling is valuable and justifies this with reasons like its global use and UK economic strength, without undermining the answer.	90
-100	The explanation clearly argues that shrimp scampi cannot be deemed definitely free of plastic due to the possibility of microplastics in seafood, directly supporting the answer 'No.'	85
-75	It supports the 'No' answer by noting Globo anchors primarily speak Portuguese and Chinese is uncommon, though it includes slight hedging about multilingual exceptions.	70
-75	It argues that Albany, New York is closer to 100,000 and concludes Albany, Georgia is unlikely to reach that mark first, supporting the 'No' answer.	65
-100	The explanation explicitly and confidently states that the film’s box office would not cover the cost of a Boeing 737, directly supporting the answer 'No' without hedging.	90
-100	The explanation clearly states English is the official and primary language due to British colonial history, directly supporting the answer without expressing doubt.	95
+This directly addresses the reviewer's concern: if the judge's
+scores are themselves near-degenerate (e.g., most explanations
+scored as fully confident, producing floor mass near 0), then a
+near-zero Spearman correlation with U-hat could partly reflect range
+restriction on the JUDGE side, not (or not only) a genuine absence
+of coupling between predictive uncertainty and communicated
+uncertainty.
+
+Run this across all MedQA and StrategyQA judged CSVs, post-hoc and
+joint. Reports SD, floor mass (score < 5, i.e. near-zero on the
+0-100 scale), ceiling mass (score > 95), and number of distinct
+values, per model-dataset-condition cell -- the judge-score
+equivalent of Table 3.
+"""
+
+import os
+import glob
+import pandas as pd
+import numpy as np
+
+MODEL_KEYS = ["llama_base", "llama_instruct", "qwen_base", "qwen_instruct",
+              "mistral_base", "mistral_instruct"]
+
+# Adjust these to match your actual folder structure
+SEARCH_DIRS = [
+    ("MedQA/closed_form/gpt_judge", "generations_closed_form_*_v2_gpt_judge.csv", "MedQA", "posthoc"),
+    ("MedQA/closed_form_joint/gpt_judge", "generations_closed_form_joint_*_gpt_judge.csv", "MedQA", "joint"),
+    ("StrategyQA/gpt_judge", "*posthoc*gpt_judge.csv", "StrategyQA", "posthoc"),
+    ("StrategyQA/gpt_judge", "*joint*gpt_judge.csv", "StrategyQA", "joint"),
+]
+
+OUTPUT_CSV = "judge_score_variance_diagnostics.csv"
+
+
+def extract_model_key(filename):
+    fname = filename.lower()
+    for m in MODEL_KEYS:
+        if m in fname:
+            return m
+        alt = m.replace("_", "")
+        if alt in fname.replace("_", "").replace("-", ""):
+            return m
+    return None
+
+
+def find_judge_col(df):
+    for c in ["gpt_perceived_uncertainty", "gpt_uncertainty", "uncertainty_score"]:
+        if c in df.columns:
+            return c
+    return None
+
+
+def variance_diagnostics(series):
+    s = series.dropna().astype(float)
+    n = len(s)
+    if n == 0:
+        return None
+    return {
+        "n": n,
+        "sd": s.std(),
+        "mean": s.mean(),
+        "frac_floor": (s < 5).mean(),
+        "frac_ceiling": (s > 95).mean(),
+        "n_distinct": s.round(2).nunique(),
+    }
+
+
+results = []
+
+for search_dir, pattern, dataset, condition in SEARCH_DIRS:
+    files = glob.glob(os.path.join(search_dir, pattern))
+    print(f"\n{'='*70}")
+    print(f"{dataset} / {condition}: found {len(files)} files in {search_dir}")
+    print(f"{'='*70}")
+
+    for filepath in sorted(files):
+        filename = os.path.basename(filepath)
+        model = extract_model_key(filename)
+        if model is None:
+            print(f"  SKIP {filename}: could not identify model")
+            continue
+
+        try:
+            df = pd.read_csv(filepath)
+        except Exception as e:
+            print(f"  SKIP {filename}: {e}")
+            continue
+
+        judge_col = find_judge_col(df)
+        if judge_col is None:
+            print(f"  SKIP {filename}: no judge-score column found. "
+                  f"Columns: {df.columns.tolist()}")
+            continue
+
+        diag = variance_diagnostics(df[judge_col])
+        if diag is None:
+            print(f"  SKIP {filename}: no valid judge scores")
+            continue
+
+        diag.update({"dataset": dataset, "condition": condition, "model": model,
+                      "judge_column_used": judge_col, "file": filename})
+        results.append(diag)
+
+        print(f"  {model:18s} n={diag['n']:4d}  mean={diag['mean']:6.1f}  "
+              f"SD={diag['sd']:6.2f}  floor%={diag['frac_floor']:.1%}  "
+              f"ceiling%={diag['frac_ceiling']:.1%}  distinct={diag['n_distinct']}")
+
+if results:
+    results_df = pd.DataFrame(results)
+    cols = ["dataset", "condition", "model", "n", "mean", "sd",
+            "frac_floor", "frac_ceiling", "n_distinct", "judge_column_used", "file"]
+    results_df = results_df[[c for c in cols if c in results_df.columns]]
+    results_df.to_csv(OUTPUT_CSV, index=False)
+
+    print(f"\n{'='*70}")
+    print("SUMMARY -- cells with concerning judge-score variance")
+    print(f"{'='*70}")
+    concerning = results_df[
+        (results_df["frac_floor"] > 0.3) |
+        (results_df["frac_ceiling"] > 0.3)
+    ]
+    if len(concerning) > 0:
+        print(concerning.to_string(index=False))
+    else:
+        print("No cells exceed the 30% floor/ceiling threshold.")
+
+    print(f"\nOverall judge-score SD across all cells: "
+          f"mean={results_df['sd'].mean():.2f}, "
+          f"range=[{results_df['sd'].min():.2f}, {results_df['sd'].max():.2f}]")
+    print(f"Full diagnostics saved to: {OUTPUT_CSV}")
+else:
+    print("\nNo files processed. Check SEARCH_DIRS match your actual paths.")
