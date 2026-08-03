@@ -1,160 +1,280 @@
-Llama Base
+"""
+Recompute Experiment C (mechanism ablation) with MATCHED closed-form
+Uhat estimators on both post-hoc and joint MedQA, replacing the old
+sampling-based comparison that Table/Figure 3 currently reports.
 
-        norm_uhat  gpt_perceived_uncertainty     correct
-count  200.000000                 125.000000  200.000000
-mean     0.605689                   7.680000    0.400000
-std      0.225412                  11.464954    0.491127
-min      0.056196                   0.000000    0.000000
-25%      0.445091                   0.000000    0.000000
-50%      0.634516                   5.000000    0.000000
-75%      0.797675                  10.000000    1.000000
-max      0.975550                  75.000000    1.000000
-correct
-0    0.647757
-1    0.542587
+For MedQA: uses the closed-form judged CSVs for post-hoc and joint,
+matches them on question text, computes a paired bootstrap over
+questions to get Delta-rho = rho_Joint - rho_Post-hoc with a 95% CI,
+per model.
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.0497  p=0.5820  n=125
-Sampling-based:  r=0.0517  p=0.5369  n=145
+For StrategyQA: unchanged -- still uses the existing sampling-based
+EBSE post-hoc/joint pairs, since no closed-form estimator applies
+there (see Limitations).
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.5426 (sd=0.2356, n=80) | incorrect=0.6478 (sd=0.2090, n=120) | p=0.0026
-Sampling-based: correct=0.3452 (sd=0.2319, n=79) | incorrect=0.4641 (sd=0.2127, n=121) | p=0.0002
+Combines both into the aggregate 12-pair test (Wilcoxon signed-rank),
+matching the format already reported in the paper.
 
-=== Variance diagnostics ===
-Closed-form: SD=0.2254 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2275 | floor%=10.5% | ceiling%=0.5% | distinct_values=25
+Run this once. It automatically finds and matches all six MedQA
+post-hoc/joint file pairs.
+"""
 
-Mistral Base
-        norm_uhat  gpt_perceived_uncertainty     correct
-count  200.000000                 192.000000  199.000000
-mean     0.729238                   8.015625    0.422111
-std      0.173225                   8.199398    0.495142
-min      0.129971                   0.000000    0.000000
-25%      0.642965                   0.000000    0.000000
-50%      0.762434                   5.000000    0.000000
-75%      0.860450                  12.750000    1.000000
-max      0.987105                  45.000000    1.000000
-correct
-0.0    0.753149
-1.0    0.695995
+import os
+import glob
+import numpy as np
+import pandas as pd
+from scipy.stats import spearmanr, wilcoxon
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.0381  p=0.6002  n=192
-Sampling-based:  r=0.1648  p=0.0220  n=193
+# =====================================================
+# CONFIG -- adjust paths if your folder structure differs
+# =====================================================
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.6960 (sd=0.2050, n=84) | incorrect=0.7531 (sd=0.1427, n=115) | p=0.1300
-Sampling-based: correct=0.4851 (sd=0.2333, n=78) | incorrect=0.5447 (sd=0.2267, n=122) | p=0.0706
+# Closed-form MedQA post-hoc judged CSVs (one per model)
+MEDQA_POSTHOC_DIR = "MedQA/closed_form/gpt_judge"
+MEDQA_POSTHOC_PATTERN = "generations_closed_form_*_v2_gpt_judge.csv"
 
-=== Variance diagnostics ===
-Closed-form: SD=0.1732 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2306 | floor%=5.0% | ceiling%=0.0% | distinct_values=48
+# Closed-form MedQA joint judged CSVs (one per model)
+MEDQA_JOINT_DIR = "MedQA/closed_form_joint/gpt_judge"
+MEDQA_JOINT_PATTERN = "generations_closed_form_joint_*_gpt_judge.csv"
 
-Qwen Base
+# StrategyQA post-hoc/joint judged CSVs -- unchanged, still
+# sampling-based. Point these at your existing files.
+STRATEGYQA_POSTHOC_DIR = "StrategyQA/gpt_judge"
+STRATEGYQA_POSTHOC_PATTERN = "*posthoc*gpt_judge.csv"
+STRATEGYQA_JOINT_DIR = "StrategyQA/gpt_judge"
+STRATEGYQA_JOINT_PATTERN = "*joint*gpt_judge.csv"
 
-        norm_uhat  gpt_perceived_uncertainty     correct
-count  200.000000                 197.000000  199.000000
-mean     0.552211                  13.263959    0.592965
-std      0.267459                  11.588232    0.492521
-min      0.041088                   0.000000    0.000000
-25%      0.337443                   5.000000    0.000000
-50%      0.597479                  12.000000    1.000000
-75%      0.790609                  20.000000    1.000000
-max      0.976401                  82.000000    1.000000
-correct
-0.0    0.676757
-1.0    0.464519
+N_BOOTSTRAP = 1000
+RNG_SEED = 42
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.0703  p=0.3262  n=197
-Sampling-based:  r=0.0384  p=0.5908  n=198
+OUTPUT_CSV = "experiment_c_recomputed.csv"
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.4645 (sd=0.2729, n=118) | incorrect=0.6768 (sd=0.2028, n=81) | p=0.0000
-Sampling-based: correct=0.3064 (sd=0.2784, n=120) | incorrect=0.5074 (sd=0.2402, n=80) | p=0.0000
+# =====================================================
+# HELPERS
+# =====================================================
 
-=== Variance diagnostics ===
-Closed-form: SD=0.2675 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2810 | floor%=22.5% | ceiling%=0.0% | distinct_values=33
+MODEL_KEYS = ["llama_base", "llama_instruct", "qwen_base", "qwen_instruct",
+              "mistral_base", "mistral_instruct"]
 
-Qwen Instruct
 
-         norm_uhat  gpt_perceived_uncertainty     correct
-count  2.000000e+02                 200.000000  200.000000
-mean   1.159307e-01                  19.705000    0.595000
-std    1.701354e-01                  12.702549    0.492124
-min    9.303112e-08                   0.000000    0.000000
-25%    1.627373e-04                  12.000000    0.000000
-50%    1.536763e-02                  20.000000    1.000000
-75%    2.031625e-01                  25.000000    1.000000
-max    8.035866e-01                  88.000000    1.000000
-correct
-0    0.147421
-1    0.094496
+def extract_model_key(filename):
+    fname = filename.lower()
+    for m in MODEL_KEYS:
+        if m in fname:
+            return m
+        alt = m.replace("_", "")
+        if alt in fname.replace("_", "").replace("-", ""):
+            return m
+    return None
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.1693  p=0.0165  n=200
-Sampling-based:  r=-0.0052  p=0.9422  n=200
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.0945 (sd=0.1658, n=119) | incorrect=0.1474 (sd=0.1725, n=81) | p=0.0000
-Sampling-based: correct=0.0168 (sd=0.0753, n=120) | incorrect=0.0317 (sd=0.1056, n=80) | p=0.2816
+def find_uncertainty_col(df):
+    for c in ["norm_uhat", "norm_ebse"]:
+        if c in df.columns:
+            return c
+    return None
 
-=== Variance diagnostics ===
-Closed-form: SD=0.1701 | floor%=2.0% | ceiling%=0.0% | distinct_values=181
-Sampling-based: SD=0.0887 | floor%=93.5% | ceiling%=0.0% | distinct_values=6
 
-Mistral Instruct
+def find_judge_col(df):
+    for c in ["gpt_perceived_uncertainty", "gpt_uncertainty"]:
+        if c in df.columns:
+            return c
+    return None
 
-          norm_uhat  gpt_perceived_uncertainty     correct
-count  2.000000e+02                 200.000000  200.000000
-mean   1.529109e-01                  17.455000    0.445000
-std    1.990770e-01                  11.640251    0.498213
-min    3.413273e-07                   0.000000    0.000000
-25%    4.685920e-04                  10.000000    0.000000
-50%    2.964847e-02                  15.000000    0.000000
-75%    3.078267e-01                  21.250000    1.000000
-max    7.651731e-01                  68.000000    1.000000
-correct
-0    0.190739
-1    0.105732
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.1682  p=0.0173  n=200
-Sampling-based:  r=-0.0274  p=0.6999  n=200
+def paired_bootstrap_delta_rho(uhat_a, judge_a, uhat_b, judge_b, n_boot=N_BOOTSTRAP, seed=RNG_SEED):
+    """
+    Computes rho_b - rho_a (e.g., Joint minus Post-hoc) with a
+    bootstrap CI, resampling QUESTION INDICES jointly for both
+    conditions (since the same questions appear in both, this
+    preserves the pairing structure).
+    """
+    n = len(uhat_a)
+    assert len(uhat_b) == n, "Post-hoc and joint arrays must be the same length (matched questions)"
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.1057 (sd=0.1911, n=89) | incorrect=0.1907 (sd=0.1981, n=111) | p=0.0001
-Sampling-based: correct=0.0273 (sd=0.0997, n=90) | incorrect=0.0776 (sd=0.1558, n=110) | p=0.0034
+    rho_a, _ = spearmanr(uhat_a, judge_a)
+    rho_b, _ = spearmanr(uhat_b, judge_b)
+    point_delta = rho_b - rho_a
 
-=== Variance diagnostics ===
-Closed-form: SD=0.1991 | floor%=1.0% | ceiling%=0.0% | distinct_values=195
-Sampling-based: SD=0.1355 | floor%=83.5% | ceiling%=0.0% | distinct_values=10
+    rng = np.random.default_rng(seed)
+    boot_deltas = np.empty(n_boot)
+    uhat_a, judge_a, uhat_b, judge_b = map(np.asarray, (uhat_a, judge_a, uhat_b, judge_b))
 
-Llama Instruct
+    for i in range(n_boot):
+        idx = rng.integers(0, n, size=n)
+        r_a, _ = spearmanr(uhat_a[idx], judge_a[idx])
+        r_b, _ = spearmanr(uhat_b[idx], judge_b[idx])
+        boot_deltas[i] = r_b - r_a
 
-       norm_uhat  gpt_perceived_uncertainty     correct
-count  200.000000                 200.000000  200.000000
-mean     0.572154                  16.785000    0.640000
-std      0.277754                  10.813112    0.481205
-min      0.005075                   0.000000    0.000000
-25%      0.357956                  10.000000    0.000000
-50%      0.610334                  15.000000    1.000000
-75%      0.817081                  25.000000    1.000000
-max      0.985135                  60.000000    1.000000
-correct
-0    0.634133
-1    0.537290
+    ci_lo, ci_hi = np.percentile(boot_deltas, [2.5, 97.5])
+    return rho_a, rho_b, point_delta, ci_lo, ci_hi
 
-=== Experiment A: Closed-form vs Sampling-based ===
-Closed-form:     r=0.2233  p=0.0015  n=200
-Sampling-based:  r=0.1520  p=0.0316  n=200
 
-=== Validity check: Closed-form vs Sampling-based ===
-Closed-form:    correct=0.5373 (sd=0.2893, n=128) | incorrect=0.6341 (sd=0.2459, n=72) | p=0.0244
-Sampling-based: correct=0.1087 (sd=0.1892, n=128) | incorrect=0.2478 (sd=0.2426, n=72) | p=0.0000
+def load_and_match(posthoc_path, joint_path):
+    """Loads both CSVs, matches on question text, returns aligned arrays."""
+    post_df = pd.read_csv(posthoc_path)
+    joint_df = pd.read_csv(joint_path)
 
-=== Variance diagnostics ===
-Closed-form: SD=0.2778 | floor%=0.0% | ceiling%=0.0% | distinct_values=200
-Sampling-based: SD=0.2198 | floor%=61.0% | ceiling%=0.0% | distinct_values=13
+    post_uhat_col = find_uncertainty_col(post_df)
+    post_judge_col = find_judge_col(post_df)
+    joint_uhat_col = find_uncertainty_col(joint_df)
+    joint_judge_col = find_judge_col(joint_df)
+
+    missing = []
+    if post_uhat_col is None or post_judge_col is None:
+        missing.append(f"post-hoc file missing uncertainty/judge column: {post_df.columns.tolist()}")
+    if joint_uhat_col is None or joint_judge_col is None:
+        missing.append(f"joint file missing uncertainty/judge column: {joint_df.columns.tolist()}")
+    if missing:
+        print("  " + "\n  ".join(missing))
+        return None
+
+    post_df["_q"] = post_df["question"].astype(str).str.strip()
+    joint_df["_q"] = joint_df["question"].astype(str).str.strip()
+
+    merged = pd.merge(
+        post_df[["_q", post_uhat_col, post_judge_col]].rename(
+            columns={post_uhat_col: "uhat_post", post_judge_col: "judge_post"}
+        ),
+        joint_df[["_q", joint_uhat_col, joint_judge_col]].rename(
+            columns={joint_uhat_col: "uhat_joint", joint_judge_col: "judge_joint"}
+        ),
+        on="_q", how="inner"
+    )
+    merged = merged.dropna(subset=["uhat_post", "judge_post", "uhat_joint", "judge_joint"])
+
+    print(f"  Matched {len(merged)} questions "
+          f"(post-hoc had {len(post_df)}, joint had {len(joint_df)})")
+
+    return merged
+
+
+# =====================================================
+# MEDQA: RECOMPUTE WITH MATCHED CLOSED-FORM ESTIMATOR
+# =====================================================
+
+print("="*70)
+print("MEDQA -- closed-form, matched post-hoc vs joint")
+print("="*70)
+
+posthoc_files = glob.glob(os.path.join(MEDQA_POSTHOC_DIR, MEDQA_POSTHOC_PATTERN))
+joint_files = glob.glob(os.path.join(MEDQA_JOINT_DIR, MEDQA_JOINT_PATTERN))
+
+posthoc_by_model = {extract_model_key(os.path.basename(f)): f for f in posthoc_files}
+joint_by_model = {extract_model_key(os.path.basename(f)): f for f in joint_files}
+
+print(f"Found {len(posthoc_by_model)} post-hoc files, {len(joint_by_model)} joint files.")
+
+results = []
+
+for model in MODEL_KEYS:
+    print(f"\n--- {model} ---")
+    if model not in posthoc_by_model:
+        print(f"  SKIP: no closed-form post-hoc file found")
+        continue
+    if model not in joint_by_model:
+        print(f"  SKIP: no closed-form joint file found")
+        continue
+
+    merged = load_and_match(posthoc_by_model[model], joint_by_model[model])
+    if merged is None or len(merged) < 10:
+        print(f"  SKIP: insufficient matched data")
+        continue
+
+    rho_post, rho_joint, delta, ci_lo, ci_hi = paired_bootstrap_delta_rho(
+        merged["uhat_post"], merged["judge_post"],
+        merged["uhat_joint"], merged["judge_joint"],
+    )
+
+    print(f"  rho_post-hoc = {rho_post:.4f}")
+    print(f"  rho_joint    = {rho_joint:.4f}")
+    print(f"  Delta_rho    = {delta:.4f}   95% CI = [{ci_lo:.4f}, {ci_hi:.4f}]")
+    sig = "SIGNIFICANT" if (ci_lo > 0 or ci_hi < 0) else "n.s."
+    print(f"  -> {sig}")
+
+    results.append({
+        "dataset": "MedQA", "model": model, "estimator": "closed-form",
+        "n": len(merged), "rho_posthoc": rho_post, "rho_joint": rho_joint,
+        "delta_rho": delta, "ci_lo": ci_lo, "ci_hi": ci_hi,
+    })
+
+# =====================================================
+# STRATEGYQA: UNCHANGED, SAMPLING-BASED
+# =====================================================
+
+print(f"\n{'='*70}")
+print("STRATEGYQA -- sampling-based (unchanged)")
+print(f"{'='*70}")
+
+sq_posthoc_files = glob.glob(os.path.join(STRATEGYQA_POSTHOC_DIR, STRATEGYQA_POSTHOC_PATTERN))
+sq_joint_files = glob.glob(os.path.join(STRATEGYQA_JOINT_DIR, STRATEGYQA_JOINT_PATTERN))
+
+sq_posthoc_by_model = {extract_model_key(os.path.basename(f)): f for f in sq_posthoc_files}
+sq_joint_by_model = {extract_model_key(os.path.basename(f)): f for f in sq_joint_files}
+
+print(f"Found {len(sq_posthoc_by_model)} StrategyQA post-hoc files, "
+      f"{len(sq_joint_by_model)} joint files.")
+
+for model in MODEL_KEYS:
+    print(f"\n--- {model} ---")
+    if model not in sq_posthoc_by_model or model not in sq_joint_by_model:
+        print(f"  SKIP: missing StrategyQA post-hoc or joint file for this model")
+        print(f"  (if you already have these Delta-rho values from the existing")
+        print(f"  paper, no need to recompute -- just keep those numbers)")
+        continue
+
+    merged = load_and_match(sq_posthoc_by_model[model], sq_joint_by_model[model])
+    if merged is None or len(merged) < 10:
+        continue
+
+    rho_post, rho_joint, delta, ci_lo, ci_hi = paired_bootstrap_delta_rho(
+        merged["uhat_post"], merged["judge_post"],
+        merged["uhat_joint"], merged["judge_joint"],
+    )
+
+    print(f"  rho_post-hoc = {rho_post:.4f}")
+    print(f"  rho_joint    = {rho_joint:.4f}")
+    print(f"  Delta_rho    = {delta:.4f}   95% CI = [{ci_lo:.4f}, {ci_hi:.4f}]")
+
+    results.append({
+        "dataset": "StrategyQA", "model": model, "estimator": "sampling-based",
+        "n": len(merged), "rho_posthoc": rho_post, "rho_joint": rho_joint,
+        "delta_rho": delta, "ci_lo": ci_lo, "ci_hi": ci_hi,
+    })
+
+# =====================================================
+# AGGREGATE ACROSS ALL AVAILABLE PAIRS
+# =====================================================
+
+if results:
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(OUTPUT_CSV, index=False)
+
+    print(f"\n{'='*70}")
+    print("FULL RESULTS")
+    print(f"{'='*70}")
+    print(results_df.to_string(index=False))
+
+    n_favor_joint = (results_df["delta_rho"] > 0).sum()
+    n_favor_posthoc = (results_df["delta_rho"] < 0).sum()
+    n_significant = ((results_df["ci_lo"] > 0) | (results_df["ci_hi"] < 0)).sum()
+
+    print(f"\n{'='*70}")
+    print("AGGREGATE SUMMARY")
+    print(f"{'='*70}")
+    print(f"Total pairs: {len(results_df)}")
+    print(f"Favor Joint: {n_favor_joint} | Favor Post-hoc: {n_favor_posthoc}")
+    print(f"Individually significant: {n_significant}")
+    print(f"Mean Delta_rho: {results_df['delta_rho'].mean():.4f}")
+    print(f"Median Delta_rho: {results_df['delta_rho'].median():.4f}")
+
+    if len(results_df) >= 2:
+        stat, p = wilcoxon(results_df["rho_joint"], results_df["rho_posthoc"])
+        print(f"Wilcoxon signed-rank (rho_joint vs rho_posthoc): "
+              f"statistic={stat:.2f}, p={p:.4f}")
+
+    print(f"\nSaved full results to: {OUTPUT_CSV}")
+else:
+    print("\nNo results produced. Check that MEDQA_POSTHOC_DIR, MEDQA_JOINT_DIR,")
+    print("and the StrategyQA paths above match your actual file locations.")
+    print("Run `ls <dir>` on each and adjust the CONFIG section if needed.")
