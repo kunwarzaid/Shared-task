@@ -10,3 +10,5 @@ drwxr-xr-x 3 coder coder   4096 Aug  3 05:30 ..
 -rw-r--r-- 1 coder coder 556093 Aug  3 07:06 generations_closed_form_joint_qwen_instruct_gpt_judge.csv
 (myvenv) coder@e344b006dc74:~/test/calibration_explain$ ls -la MedQA/closed_form_joint/gpt_judge/ 2>&1
 ls: cannot access 'MedQA/closed_form_joint/gpt_judge/': No such file or directory
+
+ValueError: MedQA/closed_form/joint/gpt_judge/generations_closed_form_joint_llama_base_gpt_judge.csv: 200 row(s) have a 'condition' value disagreeing with the folder-inferred condition 'joint' (after applying CONDITION_ALIASES). Found: ['closed_form_joint']. Add an alias to CONDITION_ALIASES, fix the file, or fix FOLDER_CONDITION_MAP.
