@@ -1,29 +1,19 @@
-=== Mistral-Instruct StrategyQA joint (strategyqa/joint_exp/gpt_judge/mistral_instruct_joint_gpt_judge.csv) ===
-n rows: 200
-gpt_perceived_uncertainty: n_valid=200, nunique=20
-gpt_perceived_uncertainty
-0     76
-10    31
-5     20
-30    17
-25    11
+=== Mistral-Instruct StrategyQA joint ===
+norm_ebse: n_valid=200, nunique=8, min=-0.0000, max=0.5074
+norm_ebse
+-0.000000    184
+ 0.141182      8
+ 0.217322      3
+ 0.389973      1
+ 0.265295      1
+  fraction at most common value: 92.0%
 
-=== Qwen-Instruct StrategyQA joint (strategyqa/joint_exp/gpt_judge/qwen_instruct_joint_gpt_judge.csv) ===
-n rows: 200
-gpt_perceived_uncertainty: n_valid=200, nunique=20
-gpt_perceived_uncertainty
-0     53
-5     35
-10    30
-30    20
-20    13
-
-=== Mistral-v0.1 StrategyQA joint (strategyqa/joint_exp/gpt_judge/mistral_base_joint_gpt_judge.csv) ===
-n rows: 200
-gpt_perceived_uncertainty: n_valid=47, nunique=5
-gpt_perceived_uncertainty
-0.0     35
-5.0      9
-2.0      1
-8.0      1
-85.0     1
+=== Qwen-Instruct StrategyQA joint ===
+norm_ebse: n_valid=200, nunique=5, min=-0.0000, max=0.3010
+norm_ebse
+-0.000000    191
+ 0.265295      3
+ 0.301030      3
+ 0.217322      2
+ 0.292285      1
+  fraction at most common value: 95.5%
