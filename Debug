@@ -6,6 +6,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import login
+
 # =====================================================
 # CONFIG
 # =====================================================
@@ -13,13 +14,22 @@ HF_TOKEN = ''
 MODEL_NAME = "meta-llama/Llama-3.1-8B"
 MODEL_SHORT = MODEL_NAME.split("/")[-1]
 IS_BASE_MODEL = "Instruct" not in MODEL_NAME
-BASE_DIR = "/workspace/data/KZ_2117574/Calibration/medqa_closed_form"
+BASE_DIR = "/workspace/data/KZ_2117574/Calibration/ecqa_closed_form"
 OUTPUT_DIR = os.path.join(BASE_DIR, f"results_{MODEL_SHORT}")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 OUTPUT_CSV = os.path.join(OUTPUT_DIR, "generations_closed_form.csv")
-PILOT_SIZE = 200
-OPTION_LETTERS = ["A", "B", "C", "D", "E"]
+
+# ECQA (yangdong/ecqa) has real train(7.6k)/validation(1.09k)/test(2.19k)
+# splits, unlike MedExpQA's tiny pool. Default to test-only, standard
+# evaluation convention and large enough on its own (2190 >> 200); flip
+# to pool all splits only if you specifically want more n.
+USE_ALL_SPLITS = False
+PILOT_SIZE = 200  # matches your MedQA script's convention; set None for all
+
+OPTION_LETTERS = ["A", "B", "C", "D", "E"]  # ECQA is a fixed 5-option dataset
+
 print(f"Model: {MODEL_NAME} | Closed-form entropy | Is base: {IS_BASE_MODEL}")
+
 # =====================================================
 # LOGIN + MODEL
 # =====================================================
@@ -27,212 +37,305 @@ login(token=HF_TOKEN)
 print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
 if tokenizer.pad_token is None:
-   tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token = tokenizer.eos_token
 print("Loading model...")
 model = AutoModelForCausalLM.from_pretrained(
-   MODEL_NAME, torch_dtype=torch.float16,
-   device_map="auto", trust_remote_code=True
+    MODEL_NAME, torch_dtype=torch.float16,
+    device_map="auto", trust_remote_code=True
 )
 model.eval()
 print("Model loaded.")
+
 # =====================================================
 # IDENTIFY THE TOKEN IDS FOR EACH OPTION LETTER
-# Different tokenizers may represent "A" differently depending on
-# whether it is preceded by a space; we check both variants and use
-# whichever the tokenizer actually produces as a single token, since
-# the letter will typically appear after "Answer: " in our prompt
-# (i.e., with a preceding space).
+# Unchanged from the original MedQA script -- ECQA is a fixed 5-option
+# dataset, so the same letter-token approach applies directly.
 # =====================================================
 def get_letter_token_ids(tokenizer):
-   """
-   Returns a dict {letter: token_id} for the five option letters,
-   using the tokenization that arises when the letter follows a
-   space (the expected context in our prompt template).
-   """
-   letter_ids = {}
-   for letter in OPTION_LETTERS:
-       # Tokenize " A" and take the last token, which is what the
-       # model would actually produce as the next token after
-       # "Answer: " in context.
-       ids = tokenizer.encode(f" {letter}", add_special_tokens=False)
-       letter_ids[letter] = ids[-1]
-   return letter_ids
+    letter_ids = {}
+    for letter in OPTION_LETTERS:
+        ids = tokenizer.encode(f" {letter}", add_special_tokens=False)
+        letter_ids[letter] = ids[-1]
+    return letter_ids
+
+
 LETTER_TOKEN_IDS = get_letter_token_ids(tokenizer)
 print(f"Option letter token IDs: {LETTER_TOKEN_IDS}")
-# Sanity check: verify these token IDs decode back to single letters
 for letter, tid in LETTER_TOKEN_IDS.items():
-   decoded = tokenizer.decode([tid])
-   print(f"  {letter} -> token id {tid} -> decodes as {decoded!r}")
+    decoded = tokenizer.decode([tid])
+    print(f"  {letter} -> token id {tid} -> decodes as {decoded!r}")
+
 # =====================================================
-# CHAT TEMPLATE HELPER
+# CHAT TEMPLATE HELPER (unchanged from the MedQA script)
 # =====================================================
 def build_prompt(user_message):
-   if tokenizer.chat_template is not None and not IS_BASE_MODEL:
-       messages = [{"role": "user", "content": user_message}]
-       prompt = tokenizer.apply_chat_template(
-           messages, tokenize=False, add_generation_prompt=True
-       )
-   else:
-       prompt = user_message
-   return prompt
-def format_medqa_question(item):
-   options_text = "\n".join(
-       f"{opt['key']}. {opt['value']}" for opt in item["options"]
-   )
-   return f"{item['question']}\n\n{options_text}"
-def get_option_text(item, letter):
-   for opt in item["options"]:
-       if opt["key"] == letter:
-           return opt["value"]
-   return None
+    if tokenizer.chat_template is not None and not IS_BASE_MODEL:
+        messages = [{"role": "user", "content": user_message}]
+        prompt = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+    else:
+        prompt = user_message
+    return prompt
+
+
 # =====================================================
-# CLOSED-FORM ENTROPY COMPUTATION
+# ECQA-SPECIFIC FORMATTING
+# Real schema (confirmed from yangdong/ecqa, not assumed): q_text is
+# the question; q_op1..q_op5 are five flat option columns (not a list
+# or dict like MedQA/MedExpQA); q_ans is the CORRECT ANSWER'S TEXT,
+# which must be matched against q_op1..q_op5 to recover which letter
+# is correct -- there is no direct letter/index field.
+# =====================================================
+def get_item_options(item):
+    """Returns {letter: option_text} for this item's five fixed options."""
+    return {letter: item[f"q_op{i+1}"] for i, letter in enumerate(OPTION_LETTERS)}
+
+
+def get_correct_letter(item):
+    """
+    q_ans is the correct answer's TEXT, not a letter -- match it against
+    the five option columns. Raises rather than silently guessing if no
+    exact match is found (strip() to tolerate incidental whitespace,
+    but do not paper over a real mismatch).
+    """
+    options = get_item_options(item)
+    target = item["q_ans"].strip()
+    for letter, text in options.items():
+        if text.strip() == target:
+            return letter
+    raise ValueError(
+        f"q_ans {item['q_ans']!r} did not exactly match any of q_op1..q_op5 "
+        f"for q_no={item.get('q_no')}. Inspect this item before proceeding -- "
+        f"do not assume a fuzzy match is safe."
+    )
+
+
+def format_ecqa_question(item):
+    options = get_item_options(item)
+    options_text = "\n".join(f"{letter}. {options[letter]}" for letter in OPTION_LETTERS)
+    return f"{item['q_text']}\n\n{options_text}"
+
+
+def get_option_text(item, letter):
+    return get_item_options(item).get(letter)
+
+
+def get_gold_explanation(item, chosen_letter, correct_letter):
+    """
+    Returns (source: str, text: str) for the gold explanation relevant
+    to the model's chosen option.
+    - If chosen == correct: taskA_pos, a clean explanation isolated to
+      the correct answer specifically.
+    - If chosen != correct: taskA_neg, which is a SINGLE COMBINED
+      paragraph addressing all incorrect options together -- not
+      isolated to the one specific wrong option the model chose. This
+      is a real structural limitation versus MedExpQA's per-option
+      isolation; a Ce judge consuming this needs to be told explicitly
+      that the gold text covers multiple wrong options, not just the
+      one in question.
+    """
+    if chosen_letter == correct_letter:
+        return "taskA_pos", item.get("taskA_pos", "") or ""
+    else:
+        return "taskA_neg", item.get("taskA_neg", "") or ""
+
+
+# =====================================================
+# CLOSED-FORM ENTROPY COMPUTATION (unchanged in structure from MedQA)
 # =====================================================
 def compute_closed_form_uhat(item):
-   """
-   Runs a single forward pass up to the point immediately before the
-   model would generate the answer letter, extracts the logits at
-   that position, restricts to the five option-letter tokens,
-   renormalizes to a valid probability distribution over exactly
-   those five outcomes, and computes exact Shannon entropy.
-   """
-   question_formatted = format_medqa_question(item)
-   if IS_BASE_MODEL:
-       user_message = f"Q: {question_formatted}\nA:"
-   else:
-       user_message = (
-           f"Answer the following medical question by selecting "
-           f"the single best option (A, B, C, D, or E).\n\n"
-           f"{question_formatted}\n\nAnswer:"
-       )
-   prompt = build_prompt(user_message)
-   inputs = tokenizer(
-       prompt, return_tensors="pt", truncation=True, max_length=1536
-   ).to(model.device)
-   with torch.no_grad():
-       outputs = model(**inputs)
-       # Logits at the final position: what the model would produce
-       # as the very next token (the answer letter, in our prompt design)
-       next_token_logits = outputs.logits[0, -1, :]
-   # Extract logits for exactly the five option-letter tokens
-   letter_logits = torch.tensor([
-       next_token_logits[LETTER_TOKEN_IDS[letter]].item()
-       for letter in OPTION_LETTERS
-   ])
-   # Softmax over just these five logits -- this is the model's
-   # probability distribution over the five options specifically,
-   # renormalized (not the full-vocabulary softmax, which would
-   # place most mass on non-letter tokens like whitespace).
-   probs = torch.softmax(letter_logits, dim=0).numpy()
-   # Exact Shannon entropy, normalized by log(5)
-   epsilon = 1e-12
-   entropy = -np.sum(probs * np.log(probs + epsilon))
-   max_entropy = np.log(5)
-   norm_uhat = entropy / max_entropy
-   # Greedy answer: argmax over the five option probabilities
-   greedy_idx = int(np.argmax(probs))
-   greedy_letter = OPTION_LETTERS[greedy_idx]
-   return greedy_letter, probs, entropy, norm_uhat
+    question_formatted = format_ecqa_question(item)
+    if IS_BASE_MODEL:
+        user_message = f"Q: {question_formatted}\nA:"
+    else:
+        user_message = (
+            f"Answer the following question by selecting "
+            f"the single best option (A, B, C, D, or E).\n\n"
+            f"{question_formatted}\n\nAnswer:"
+        )
+    prompt = build_prompt(user_message)
+    inputs = tokenizer(
+        prompt, return_tensors="pt", truncation=True, max_length=1536
+    ).to(model.device)
+
+    with torch.no_grad():
+        outputs = model(**inputs)
+        next_token_logits = outputs.logits[0, -1, :]
+
+    letter_logits = torch.tensor([
+        next_token_logits[LETTER_TOKEN_IDS[letter]].item()
+        for letter in OPTION_LETTERS
+    ])
+    probs = torch.softmax(letter_logits, dim=0).numpy()
+
+    epsilon = 1e-12
+    entropy = -np.sum(probs * np.log(probs + epsilon))
+    max_entropy = np.log(5)
+    norm_uhat = entropy / max_entropy
+
+    greedy_idx = int(np.argmax(probs))
+    greedy_letter = OPTION_LETTERS[greedy_idx]
+    return greedy_letter, probs, entropy, norm_uhat
+
+
 def get_explanation(item, answer_letter, answer_text):
-   question_formatted = format_medqa_question(item)
-   if IS_BASE_MODEL:
-       user_message = (
-           f"Q: {question_formatted}\n"
-           f"A: {answer_letter}. {answer_text}\n"
-           f"This is because"
-       )
-   else:
-       user_message = (
-           f"Question: {question_formatted}\n\n"
-           f"Answer: {answer_letter}. {answer_text}\n\n"
-           f"Provide an explanation for this answer:"
-       )
-   prompt = build_prompt(user_message)
-   inputs = tokenizer(
-       prompt, return_tensors="pt", truncation=True, max_length=1536
-   ).to(model.device)
-   with torch.no_grad():
-       output = model.generate(
-           **inputs, max_new_tokens=250, do_sample=False,
-           pad_token_id=tokenizer.pad_token_id,
-           eos_token_id=tokenizer.eos_token_id
-       )
-   generated_tokens = output[0][inputs.input_ids.shape[1]:]
-   explanation = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
-   return explanation
+    question_formatted = format_ecqa_question(item)
+    if IS_BASE_MODEL:
+        user_message = (
+            f"Q: {question_formatted}\n"
+            f"A: {answer_letter}. {answer_text}\n"
+            f"This is because"
+        )
+    else:
+        user_message = (
+            f"Question: {question_formatted}\n\n"
+            f"Answer: {answer_letter}. {answer_text}\n\n"
+            f"Provide an explanation for this answer:"
+        )
+    prompt = build_prompt(user_message)
+    inputs = tokenizer(
+        prompt, return_tensors="pt", truncation=True, max_length=1536
+    ).to(model.device)
+    with torch.no_grad():
+        output = model.generate(
+            **inputs, max_new_tokens=250, do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
+    generated_tokens = output[0][inputs.input_ids.shape[1]:]
+    explanation = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+    return explanation
+
+
 # =====================================================
 # LOAD DATASET
 # =====================================================
-print("\nLoading MedQA...")
-dataset = load_dataset("bigbio/med_qa", "med_qa_en_source")
-split_name = "test" if "test" in dataset else list(dataset.keys())[0]
-questions = list(dataset[split_name])[:PILOT_SIZE]
-print(f"Loaded {len(questions)} questions from split '{split_name}'.")
+print("\nLoading ECQA...")
+dataset = load_dataset("yangdong/ecqa")
+
+if USE_ALL_SPLITS:
+    from datasets import concatenate_datasets
+    pooled = concatenate_datasets([dataset["train"], dataset["validation"], dataset["test"]])
+    print(f"Pooled train+validation+test: {len(pooled)} rows")
+else:
+    pooled = dataset["test"]
+    print(f"Using test split only: {len(pooled)} rows")
+
+questions = list(pooled)
+if PILOT_SIZE is not None:
+    questions = questions[:PILOT_SIZE]
+print(f"Using {len(questions)} questions.")
+
+# =====================================================
+# PRE-GENERATION SANITY CHECK
+# Confirm q_ans matches an option for every item BEFORE running any
+# generation -- a systematic mismatch here would silently corrupt
+# correctness labels for the whole run.
+# =====================================================
+print("\n--- Pre-generation q_ans matching check ---")
+mismatch_count = 0
+for item in questions:
+    try:
+        get_correct_letter(item)
+    except ValueError as e:
+        mismatch_count += 1
+        if mismatch_count <= 3:
+            print(f"  MISMATCH: {e}")
+print(f"{mismatch_count}/{len(questions)} items had a q_ans matching failure.")
+if mismatch_count > 0:
+    print("WARNING: fix matching failures before running the full generation "
+          "loop -- these items will error out below otherwise.")
+print("--- End check ---\n")
+
 # =====================================================
 # MAIN LOOP
 # =====================================================
 rows = []
 for idx, item in enumerate(tqdm(questions)):
-   correct_letter = item["answer_idx"]
-   print(f"\n[{idx:03d}/{len(questions)}] {item['question'][:70]}...")
-   try:
-       (
-           greedy_letter, probs, entropy, norm_uhat
-       ) = compute_closed_form_uhat(item)
-       answer_text = get_option_text(item, greedy_letter)
-       correct = int(greedy_letter == correct_letter)
-       explanation = get_explanation(item, greedy_letter, answer_text)
-       prob_str = ", ".join(f"{l}={p:.3f}" for l, p in zip(OPTION_LETTERS, probs))
-       print(
-           f"  U_hat={norm_uhat:.4f} | probs=[{prob_str}] | "
-           f"pred={greedy_letter} | true={correct_letter} | correct={correct}"
-       )
-       rows.append({
-           "model": MODEL_SHORT,
-           "condition": "closed_form",
-           "dataset": "medqa",
-           "question": item["question"],
-           "options": str(item["options"]),
-           "prob_A": probs[0], "prob_B": probs[1], "prob_C": probs[2],
-           "prob_D": probs[3], "prob_E": probs[4],
-           "predicted_letter": greedy_letter,
-           "greedy_answer": answer_text,
-           "explanation": explanation,
-           "correct_letter": correct_letter,
-           "correct": correct,
-           "entropy": entropy,
-           "norm_uhat": norm_uhat,
-       })
-   except Exception as e:
-       print(f"  ERROR: {e}")
-       rows.append({
-           "model": MODEL_SHORT, "condition": "closed_form", "dataset": "medqa",
-           "question": item["question"], "options": str(item["options"]),
-           "prob_A": None, "prob_B": None, "prob_C": None,
-           "prob_D": None, "prob_E": None,
-           "predicted_letter": None, "greedy_answer": None,
-           "explanation": None, "correct_letter": correct_letter,
-           "correct": None, "entropy": None, "norm_uhat": None,
-       })
-   if idx % 10 == 0:
-       pd.DataFrame(rows).to_csv(OUTPUT_CSV, index=False)
+    print(f"\n[{idx:03d}/{len(questions)}] {item['q_text'][:70]}...")
+    try:
+        correct_letter = get_correct_letter(item)
+        (
+            greedy_letter, probs, entropy, norm_uhat
+        ) = compute_closed_form_uhat(item)
+        answer_text = get_option_text(item, greedy_letter)
+        correct = int(greedy_letter == correct_letter)
+        explanation = get_explanation(item, greedy_letter, answer_text)
+
+        gold_source, gold_text = get_gold_explanation(item, greedy_letter, correct_letter)
+
+        prob_str = ", ".join(f"{l}={p:.3f}" for l, p in zip(OPTION_LETTERS, probs))
+        print(
+            f"  U_hat={norm_uhat:.4f} | probs=[{prob_str}] | "
+            f"pred={greedy_letter} | true={correct_letter} | correct={correct} | "
+            f"gold_source={gold_source}"
+        )
+
+        rows.append({
+            "model": MODEL_SHORT,
+            "condition": "closed_form",
+            "dataset": "ecqa",
+            "question": item["q_text"],
+            "q_concept": item.get("q_concept"),
+            "options": str(get_item_options(item)),
+            "prob_A": probs[0], "prob_B": probs[1], "prob_C": probs[2],
+            "prob_D": probs[3], "prob_E": probs[4],
+            "predicted_letter": greedy_letter,
+            "greedy_answer": answer_text,
+            "explanation": explanation,
+            "correct_letter": correct_letter,
+            "correct": correct,
+            "entropy": entropy,
+            "norm_uhat": norm_uhat,
+            "gold_explanation_source": gold_source,  # "taskA_pos" or "taskA_neg"
+            "gold_explanation_text": gold_text,
+            "gold_explanation_is_combined_negative": gold_source == "taskA_neg",
+        })
+    except Exception as e:
+        print(f"  ERROR: {e}")
+        rows.append({
+            "model": MODEL_SHORT, "condition": "closed_form", "dataset": "ecqa",
+            "question": item.get("q_text"), "q_concept": item.get("q_concept"),
+            "options": None,
+            "prob_A": None, "prob_B": None, "prob_C": None,
+            "prob_D": None, "prob_E": None,
+            "predicted_letter": None, "greedy_answer": None,
+            "explanation": None, "correct_letter": None,
+            "correct": None, "entropy": None, "norm_uhat": None,
+            "gold_explanation_source": None, "gold_explanation_text": None,
+            "gold_explanation_is_combined_negative": None,
+        })
+    if idx % 10 == 0:
+        pd.DataFrame(rows).to_csv(OUTPUT_CSV, index=False)
+
 df = pd.DataFrame(rows)
 df.to_csv(OUTPUT_CSV, index=False)
+
 valid = df[df["norm_uhat"].notna()]
 correct_df = valid[valid["correct"] == 1]
 incorrect_df = valid[valid["correct"] == 0]
+
 print(f"\n{'='*60}")
-print(f"CLOSED-FORM MEDQA SUMMARY: {MODEL_SHORT}")
+print(f"CLOSED-FORM ECQA SUMMARY: {MODEL_SHORT}")
 print(f"{'='*60}")
 print(f"Total: {len(df)} | Valid: {len(valid)}")
 print(f"Correct: {len(correct_df)} | Incorrect: {len(incorrect_df)}")
 if len(correct_df) > 0 and len(incorrect_df) > 0:
-   print(f"U_hat correct:   mean={correct_df['norm_uhat'].mean():.4f}  sd={correct_df['norm_uhat'].std():.4f}")
-   print(f"U_hat incorrect: mean={incorrect_df['norm_uhat'].mean():.4f}  sd={incorrect_df['norm_uhat'].std():.4f}")
-# Variance diagnostics the reviewer specifically asked for
+    print(f"U_hat correct:   mean={correct_df['norm_uhat'].mean():.4f}  sd={correct_df['norm_uhat'].std():.4f}")
+    print(f"U_hat incorrect: mean={incorrect_df['norm_uhat'].mean():.4f}  sd={incorrect_df['norm_uhat'].std():.4f}")
+
 print(f"\n--- Variance diagnostics ---")
 print(f"Overall SD of U_hat: {valid['norm_uhat'].std():.4f}")
 print(f"Fraction with U_hat < 0.01 (near-floor): {(valid['norm_uhat'] < 0.01).mean():.1%}")
 print(f"Fraction with U_hat > 0.99 (near-ceiling): {(valid['norm_uhat'] > 0.99).mean():.1%}")
 print(f"Number of distinct U_hat values (rounded to 4dp): {valid['norm_uhat'].round(4).nunique()}")
+
+# Ce-source breakdown: how many rows land on a clean isolated gold
+# explanation (taskA_pos, correct answers) vs. the combined-negative
+# blob (taskA_neg, incorrect answers) -- these are not equally precise
+# and should probably be analyzed/reported separately downstream.
+print(f"\n--- Gold explanation source breakdown ---")
+print(valid["gold_explanation_source"].value_counts())
+
 print(f"\nSaved to: {OUTPUT_CSV}")
