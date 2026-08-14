@@ -1,42 +1,21 @@
-def get_explanation(item, answer_letter, answer_text, style):
-    question_formatted = format_question(item)  # whichever formatter your dataset uses
+[198/200] One way to resolve confusion here is to raise my hand. Where am I?...
+  ERROR: name 'format_question' is not defined
 
-    if IS_BASE_MODEL:
-        if style == "justificatory":
-            user_message = (
-                f"Q: {question_formatted}\n"
-                f"A: {answer_letter}. {answer_text}\n"
-                f"This is because"
-            )
-        else:  # "assessment"
-            user_message = (
-                f"Q: {question_formatted}\n"
-                f"A: {answer_letter}. {answer_text}\n"
-                f"Assessment of whether this answer is correct, including any uncertainty:"
-            )
-    else:
-        if style == "justificatory":
-            user_message = (
-                f"Question: {question_formatted}\n\n"
-                f"Answer: {answer_letter}. {answer_text}\n\n"
-                f"Provide an explanation for this answer:"
-            )
-        else:  # "assessment"
-            user_message = (
-                f"Question: {question_formatted}\n\n"
-                f"Answer: {answer_letter}. {answer_text}\n\n"
-                f"Assess whether this answer is correct, and explain your assessment. "
-                f"If you are uncertain whether the answer is correct, say so explicitly and explain why."
-            )
+[199/200] What is the opposite of hot?...
+  ERROR: name 'format_question' is not defined
 
-    prompt = build_prompt(user_message)
-    # ... rest identical to your existing generation call ...
-    return explanation
-explanation_justificatory = get_explanation(item, greedy_letter, answer_text, style="justificatory")
-explanation_assessment    = get_explanation(item, greedy_letter, answer_text, style="assessment")
+============================================================
+CLOSED-FORM ECQA SUMMARY: Llama-3.1-8B
+============================================================
+Total: 200 | Valid: 0
+Correct: 0 | Incorrect: 0
 
-rows.append({
-    ...  # everything you already store: probs, correct, norm_uhat, gold fields, etc.
-    "explanation_justificatory": explanation_justificatory,
-    "explanation_assessment": explanation_assessment,
-})
+--- Variance diagnostics ---
+Overall SD of U_hat: nan
+Fraction with U_hat < 0.01 (near-floor): nan%
+
+?Fraction with U_hat > 0.99 (near-ceiling): nan%
+Number of distinct U_hat values (rounded to 4dp): 0
+
+--- Gold explanation source breakdown ---
+Series([], Name: gold_explanation_source, dtype: int64)
