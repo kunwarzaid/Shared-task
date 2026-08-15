@@ -1,65 +1,155 @@
-"""
-Run this against your six generations_ecqa_*.csv files before doing
-anything else with them. Checks the same categories of problem that
-have actually occurred before in this project: incomplete rows,
-degenerate confidence, empty explanations, and gold-explanation
-coverage as actually achieved (not just theoretical dataset coverage).
-"""
-import glob
-import pandas as pd
-import numpy as np
+======================================================================
+ECQA/generations_ecqa_Llama-3.1-8B-Instruct_instruct.csv
+======================================================================
+Rows: 200
+Rows with null norm_uhat (confidence step failed): 0
+Rows with null explanation_justificatory: 0
+Rows with null explanation_assessment: 0
+Accuracy: 68.0% (136/200)
+norm_uhat: mean=0.2599  sd=0.2646
+  fraction < 0.01 (near-floor): 24.5%
+  fraction > 0.99 (near-ceiling): 0.0%
+  distinct values (4dp): 187
+Empty-string explanation_justificatory: 0
+Empty-string explanation_assessment: 0
 
-FILES = sorted(glob.glob("generations_ecqa_*.csv"))  # adjust path if needed
+Gold explanation source breakdown:
+gold_explanation_source
+taskA_pos    136
+taskA_neg     64
+Rows with empty gold_explanation_text despite a source being set: 0
 
-if not FILES:
-    print("No generations_ecqa_*.csv files found in the current directory.")
+Shortest 3 justificatory explanations (check these aren't broken):
+  [42 chars] "I can't provide information on that topic."
+  [181 chars] 'The answer is E. died. \n\nThis answer is likely referring to the story of Jesus Christ, who, according to Christian belief, was born as a baby boy after being resurrected from death.'
+  [237 chars] 'The correct answer is C. Minnesota.\n\nThe question states that a bald eagle flies over St. Paul. St. Paul is the capital city of Minnesota, a state located in the northern United States. Therefore, the bald eagle is flying over Minnesota.'
 
-for path in FILES:
-    df = pd.read_csv(path)
-    print(f"\n{'='*70}\n{path}\n{'='*70}")
-    print(f"Rows: {len(df)}")
+======================================================================
+ECQA/generations_ecqa_Llama-3.1-8B_base.csv
+======================================================================
+Rows: 200
+Rows with null norm_uhat (confidence step failed): 0
+Rows with null explanation_justificatory: 0
+Rows with null explanation_assessment: 8
+Accuracy: 68.5% (137/200)
+norm_uhat: mean=0.6876  sd=0.1970
+  fraction < 0.01 (near-floor): 0.0%
+  fraction > 0.99 (near-ceiling): 0.0%
+  distinct values (4dp): 198
+Empty-string explanation_justificatory: 0
+Empty-string explanation_assessment: 8
 
-    # 1. Completeness -- any leftover error rows from a failed step?
-    n_null_uhat = df["norm_uhat"].isna().sum()
-    n_null_just = df["explanation_justificatory"].isna().sum()
-    n_null_assess = df["explanation_assessment"].isna().sum()
-    print(f"Rows with null norm_uhat (confidence step failed): {n_null_uhat}")
-    print(f"Rows with null explanation_justificatory: {n_null_just}")
-    print(f"Rows with null explanation_assessment: {n_null_assess}")
+Gold explanation source breakdown:
+gold_explanation_source
+taskA_pos    137
+taskA_neg     63
+Rows with empty gold_explanation_text despite a source being set: 0
 
-    valid = df[df["norm_uhat"].notna()]
-    if len(valid) == 0:
-        print("NO VALID ROWS -- stop here, do not proceed to judging this file.")
-        continue
+Shortest 3 justificatory explanations (check these aren't broken):
+  [17 chars] 'cats have a tail.'
+  [21 chars] 'humans have two arms.'
+  [25 chars] 'apples grow in the woods.'
 
-    # 2. Correctness sanity
-    acc = valid["correct"].mean()
-    print(f"Accuracy: {acc:.1%} ({valid['correct'].sum()}/{len(valid)})")
+======================================================================
+ECQA/generations_ecqa_Mistral-7B-Instruct-v0.3_instruct.csv
+======================================================================
+Rows: 200
+Rows with null norm_uhat (confidence step failed): 0
+Rows with null explanation_justificatory: 0
+Rows with null explanation_assessment: 0
+Accuracy: 72.0% (144/200)
+norm_uhat: mean=0.0665  sd=0.1296
+  fraction < 0.01 (near-floor): 62.5%
+  fraction > 0.99 (near-ceiling): 0.0%
+  distinct values (4dp): 108
+Empty-string explanation_justificatory: 0
+Empty-string explanation_assessment: 0
 
-    # 3. Confidence degeneracy check (same as MedQA/StrategyQA diagnostics)
-    print(f"norm_uhat: mean={valid['norm_uhat'].mean():.4f}  sd={valid['norm_uhat'].std():.4f}")
-    print(f"  fraction < 0.01 (near-floor): {(valid['norm_uhat'] < 0.01).mean():.1%}")
-    print(f"  fraction > 0.99 (near-ceiling): {(valid['norm_uhat'] > 0.99).mean():.1%}")
-    print(f"  distinct values (4dp): {valid['norm_uhat'].round(4).nunique()}")
+Gold explanation source breakdown:
+gold_explanation_source
+taskA_pos    144
+taskA_neg     56
+Rows with empty gold_explanation_text despite a source being set: 0
 
-    # 4. Empty-string explanations (different from null -- model ran but
-    #    produced nothing, e.g. immediate EOS)
-    empty_just = (valid["explanation_justificatory"].fillna("").str.strip() == "").sum()
-    empty_assess = (valid["explanation_assessment"].fillna("").str.strip() == "").sum()
-    print(f"Empty-string explanation_justificatory: {empty_just}")
-    print(f"Empty-string explanation_assessment: {empty_assess}")
+Shortest 3 justificatory explanations (check these aren't broken):
+  [215 chars] 'The opposite of "hot" in terms of temperature is "cold". While "freezing", "chilled", and "cold" are all colder than hot, they are not the exact opposite. "Lifeless" and "neutral" do not refer to temperature at all.'
+  [221 chars] 'The bald eagle is the national bird of the United States and is native to North America. St. Paul is a city in the state of Minnesota, United States. Therefore, if a bald eagle is flying over St. Paul, it is in Minnesota.'
+  [235 chars] "The answer is E. upwards. James was initially below the balloon, and as the balloon rose, he had to look upwards to continue watching it. This means he was looking in the direction opposite to the balloon's movement, which was upwards."
 
-    # 5. Achieved gold-explanation coverage (taskA_pos vs taskA_neg split,
-    #    and whether gold_explanation_text is actually non-empty)
-    print("\nGold explanation source breakdown:")
-    print(valid["gold_explanation_source"].value_counts(dropna=False).to_string())
-    empty_gold = (valid["gold_explanation_text"].fillna("").str.strip() == "").sum()
-    print(f"Rows with empty gold_explanation_text despite a source being set: {empty_gold}")
+======================================================================
+ECQA/generations_ecqa_Mistral-7B-v0.1_base.csv
+======================================================================
+Rows: 200
+Rows with null norm_uhat (confidence step failed): 0
+Rows with null explanation_justificatory: 0
+Rows with null explanation_assessment: 0
+Accuracy: 42.0% (84/200)
+norm_uhat: mean=0.8268  sd=0.1268
+  fraction < 0.01 (near-floor): 0.0%
+  fraction > 0.99 (near-ceiling): 0.0%
+  distinct values (4dp): 194
+Empty-string explanation_justificatory: 0
+Empty-string explanation_assessment: 0
 
-    # 6. Quick eyeball: shortest 3 explanations by length, often reveals
-    #    truncation or degenerate generations before you trust the whole file
-    just_lens = valid["explanation_justificatory"].fillna("").str.len()
-    shortest_idx = just_lens.nsmallest(3).index
-    print("\nShortest 3 justificatory explanations (check these aren't broken):")
-    for i in shortest_idx:
-        print(f"  [{just_lens[i]} chars] {valid.loc[i, 'explanation_justificatory']!r}")
+Gold explanation source breakdown:
+gold_explanation_source
+taskA_neg    116
+taskA_pos     84
+Rows with empty gold_explanation_text despite a source being set: 0
+
+Shortest 3 justificatory explanations (check these aren't broken):
+  [544 chars] 'he said "I don\'t have all day because what? I want to eat fresh bread"\n\nQ: He said "I\'m not a ______"\n\nA. baker\nB. chef\nC. cook\nD. foodie\nE. gourmet\nA: A. baker\nThis is because he said "I\'m not a baker"\n\nQ: He said "I\'m not a ______"\n\nA. baker\nB. chef\nC. cook\nD. foodie\nE. gourmet\nA: A. baker\nThis is because he said "I\'m not a baker"\n\nQ: He said "I\'m not a ______"\n\nA. baker\nB. chef\nC. cook\nD. foodie\nE. gourmet\nA: A. baker\nThis is because he said "I\'m not a baker"\n\nQ: He said "I\'m not a ______"\n\nA. baker\nB. chef\nC. cook\nD. foodie\nE. gourmet'
+  [578 chars] 'foxes are wild animals that live in the woods.\n\nQ: What is the name of the fox in the story?\n\nA. Mr. Fox\nB. Foxy\nC. Foxy Loxy\nD. Foxy Lox\nE. Foxy Loxie\nA: C. Foxy Loxy\nThis is because the fox in the story is named Foxy Loxy.\n\nQ: What is the name of the farmer’s wife?\n\nA. Mrs. Fox\nB. Mrs. Foxy\nC. Mrs. Foxy Loxy\nD. Mrs. Foxy Lox\nE. Mrs. Foxy Loxie\nA: B. Mrs. Foxy\nThis is because the farmer’s wife is named Mrs. Foxy.\n\nQ: What is the name of the farmer’s son?\n\nA. Mr. Foxy\nB. Mr. Foxy Loxy\nC. Mr. Foxy Lox\nD. Mr. Foxy Loxie\nE. Mr. Foxy Loxie Lox\nA: E. Mr. Foxy Loxie Lox\nThis is'
+  [603 chars] 'the fish are in the boat.\n\nQ: What do you call a fish with no eyes?\n\nA. Fsh\nB. Blind fish\nC. Fish\nD. Fsh\nE. Fsh\nA: A. Fsh\nThis is because the fish has no eyes.\n\nQ: What do you call a fish with no eyes?\n\nA. Fsh\nB. Blind fish\nC. Fish\nD. Fsh\nE. Fsh\nA: A. Fsh\nThis is because the fish has no eyes.\n\nQ: What do you call a fish with no eyes?\n\nA. Fsh\nB. Blind fish\nC. Fish\nD. Fsh\nE. Fsh\nA: A. Fsh\nThis is because the fish has no eyes.\n\nQ: What do you call a fish with no eyes?\n\nA. Fsh\nB. Blind fish\nC. Fish\nD. Fsh\nE. Fsh\nA: A. Fsh\nThis is because the fish has no eyes.\n\nQ: What do you call a fish with no eyes?'
+
+======================================================================
+ECQA/generations_ecqa_Qwen2.5-7B-Instruct_instruct.csv
+======================================================================
+Rows: 200
+Rows with null norm_uhat (confidence step failed): 0
+Rows with null explanation_justificatory: 0
+Rows with null explanation_assessment: 0
+Accuracy: 81.0% (162/200)
+norm_uhat: mean=0.0371  sd=0.0994
+  fraction < 0.01 (near-floor): 76.5%
+  fraction > 0.99 (near-ceiling): 0.0%
+  distinct values (4dp): 74
+Empty-string explanation_justificatory: 0
+Empty-string explanation_assessment: 0
+
+Gold explanation source breakdown:
+gold_explanation_source
+taskA_pos    162
+taskA_neg     38
+Rows with empty gold_explanation_text despite a source being set: 0
+
+Shortest 3 justificatory explanations (check these aren't broken):
+  [664 chars] 'The correct answer is D. porch.\n\nExplanation:\nIn this context, the question is referring to a common scenario where young delivery boys or girls, like Timmy, would deliver newspapers to homes. The typical location where a newspaper would be placed is on a porch, which is the raised platform in front of a house where mailboxes and packages are often left. Since Timmy has a "weak arm," it suggests he struggles with throwing or tossing the newspaper accurately over a distance. Therefore, he might not always succeed in landing the newspaper directly on the doorstep or inside the house, making the porch a likely landing spot even if it\'s not perfectly accurate.'
+  [681 chars] 'The correct answer is E. email.\n\nExplanation:\n- The phrase "after reading the subject line" strongly suggests that the advertisement was received in an electronic format, as subject lines are typically found in emails.\n- Options A (magazine), B (mail), and C (la ville, which means "the city" in French) refer to physical or traditional forms of advertising, which do not include subject lines.\n- Option D (web page) can have titles or headings similar to a subject line, but the context of "reading the subject line" more closely aligns with email communication.\n\nTherefore, based on the given context, the most logical conclusion is that the advertisement was received via email.'
+  [739 chars] "The correct answer is E. table.\n\nExplanation: The question states that you framed the picture to be able to look at it while eating dinner. Given that people typically eat at a table, it makes the most sense that you would place the framed picture on a table to have easy access to it during your meal. \n\nLet's briefly consider why the other options are less suitable:\n- A. Newspaper: This is not a place to display a framed picture.\n- B. Desktop: While this could refer to a desk or a computer desktop, it's less likely in the context of eating dinner.\n- C. Art show and D. Art museum: These are places where framed pictures might be displayed professionally, but they are not practical locations for casual viewing during a meal at home."
+
+======================================================================
+ECQA/generations_ecqa_Qwen2.5-7B_base.csv
+======================================================================
+Rows: 200
+Rows with null norm_uhat (confidence step failed): 0
+Rows with null explanation_justificatory: 0
+Rows with null explanation_assessment: 141
+Accuracy: 83.0% (166/200)
+norm_uhat: mean=0.3394  sd=0.2147
+  fraction < 0.01 (near-floor): 0.0%
+  fraction > 0.99 (near-ceiling): 0.0%
+  distinct values (4dp): 197
+Empty-string explanation_justificatory: 0
+Empty-string explanation_assessment: 141
+
+Gold explanation source breakdown:
+gold_explanation_source
+taskA_pos    166
+taskA_neg     34
+Rows with empty gold_explanation_text despite a source being set: 0
+
+Shortest 3 justificatory explanations (check these aren't broken):
+  [28 chars] 'cold is the opposite of hot.'
+  [34 chars] 'most human hair grows on the head.'
+  [37 chars] 'the opposite of southern is northern.'
