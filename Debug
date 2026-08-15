@@ -1,101 +1,75 @@
-"""
-Scans generations_*_judged.csv OR raw generations_*.csv files for two
-failure modes spotted in the ECQA diagnostic output:
+======================================================================
+ECQA/generations_ecqa_Llama-3.1-8B-Instruct_instruct.csv
+======================================================================
 
-1. Refusals -- the model declined to answer/explain at all (seen in
-   Llama-Instruct's shortest example: "I can't provide information...").
-2. Degenerate repetition -- the model wandered into fake continued
-   Q&A pairs instead of explaining (seen throughout Mistral-7B-v0.1's
-   shortest examples). Detected via repeated "Q:"/"Question:" markers
-   within a single explanation, which should never appear at all in a
-   well-formed single explanation.
+[explanation_justificatory] total=200 empty=0 refusals=2 degenerate_fake_qa=0 repeated_sentence=0
+  refusal example: "I can't provide information on that topic."
 
-Run this BEFORE any judge scoring or regeneration decisions -- it's
-nearly free and determines the real scope of problems that eyeballing
-3 shortest examples per file can't reveal.
-"""
-import argparse
-import glob
-import re
-import pandas as pd
+[explanation_assessment] total=200 empty=0 refusals=1 degenerate_fake_qa=0 repeated_sentence=0
+  refusal example: 'The answer is correct. \n\nThe sentence "He knew how to make bread, but he said \'I don\'t have all day because...\'" is a common idiomatic expression. The'
 
-REFUSAL_PATTERNS = [
-    r"\bi can'?t\b", r"\bi cannot\b", r"\bi'?m sorry\b", r"\bi am sorry\b",
-    r"\bas an ai\b", r"\bi don'?t have\b", r"\bi'?m not able\b",
-    r"\bi'?m unable\b", r"\bi apologize\b",
-]
-REFUSAL_RE = re.compile("|".join(REFUSAL_PATTERNS), re.IGNORECASE)
+======================================================================
+ECQA/generations_ecqa_Llama-3.1-8B_base.csv
+======================================================================
 
-FAKE_QA_RE = re.compile(r"\n\s*(Q:|Question:)", re.IGNORECASE)
+[explanation_justificatory] total=200 empty=0 refusals=0 degenerate_fake_qa=1 repeated_sentence=14
+  degenerate example: 'if someone does not like learning, then they will not be interested in learning. If they are not interested in learning, then they will not be motivat'
 
+[explanation_assessment] total=200 empty=8 refusals=0 degenerate_fake_qa=0 repeated_sentence=10
 
-def scan_column(df, col):
-    texts = df[col].fillna("")
-    n_total = len(texts)
-    n_empty = (texts.str.strip() == "").sum()
+======================================================================
+ECQA/generations_ecqa_Mistral-7B-Instruct-v0.3_instruct.csv
+======================================================================
 
-    is_refusal = texts.str.contains(REFUSAL_RE)
-    n_refusal = is_refusal.sum()
+[explanation_justificatory] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
-    fake_qa_count = texts.apply(lambda t: len(FAKE_QA_RE.findall(t)))
-    n_degenerate = (fake_qa_count > 0).sum()
+[explanation_assessment] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
-    # exact-duplicate-sentence check, cheap proxy for repetition loops
-    def has_repeated_sentence(t):
-        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", t) if len(s.strip()) > 15]
-        return len(sentences) != len(set(sentences))
-    n_repeated_sentence = texts.apply(has_repeated_sentence).sum()
+======================================================================
+ECQA/generations_ecqa_Mistral-7B-v0.1_base.csv
+======================================================================
 
-    return {
-        "column": col,
-        "n_total": n_total,
-        "n_empty": int(n_empty),
-        "n_refusal": int(n_refusal),
-        "n_degenerate_fake_qa": int(n_degenerate),
-        "n_repeated_sentence": int(n_repeated_sentence),
-        "refusal_examples": df.loc[is_refusal, col].head(2).tolist(),
-        "degenerate_examples": df.loc[fake_qa_count > 0, col].head(2).tolist(),
-    }
+[explanation_justificatory] total=200 empty=0 refusals=1 degenerate_fake_qa=188 repeated_sentence=181
+  refusal example: 'he said "I don\'t have all day because what? I want to eat fresh bread"\n\nQ: He said "I\'m not a ______"\n\nA. baker\nB. chef\nC. cook\nD. foodie\nE. gourmet\nA'
+  degenerate example: 'the person who is in charge of the project is greedy.\n\nQ: What kind of people will someone who is in charge of project look for?\n\nA. greedy\nB. worry\nC'
 
+[explanation_assessment] total=200 empty=0 refusals=1 degenerate_fake_qa=21 repeated_sentence=174
+  refusal example: 'I think this is the correct answer.\n\nQ: He knew how to make bread, but he said "I don\'t have all day because what"?\n\nA. baking is hard\nB. eat bread\nC.'
+  degenerate example: 'This answer is correct.\n\nExplanation:\n\nTeaching to the test is a method of teaching that focuses on preparing students for standardized tests. This ap'
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--pattern", default="generations_ecqa_*.csv")
-    args = parser.parse_args()
+======================================================================
+ECQA/generations_ecqa_Qwen2.5-7B-Instruct_instruct.csv
+======================================================================
 
-    candidates = sorted(glob.glob(args.pattern))
-    files = [f for f in candidates if "_judged" not in f]
+[explanation_justificatory] total=200 empty=0 refusals=1 degenerate_fake_qa=0 repeated_sentence=0
+  refusal example: 'I apologize, but there seems to be an error in the provided answer. Option B, "wrong house," is not a dangerous outdoor activity for children. Let\'s a'
 
-    explanation_cols = ["explanation_justificatory", "explanation_assessment"]
+[explanation_assessment] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
-    summary_rows = []
-    for path in files:
-        df = pd.read_csv(path)
-        print(f"\n{'='*70}\n{path}\n{'='*70}")
-        for col in explanation_cols:
-            if col not in df.columns:
-                continue
-            result = scan_column(df, col)
-            print(f"\n[{col}] total={result['n_total']} empty={result['n_empty']} "
-                  f"refusals={result['n_refusal']} "
-                  f"degenerate_fake_qa={result['n_degenerate_fake_qa']} "
-                  f"repeated_sentence={result['n_repeated_sentence']}")
-            if result["n_refusal"] > 0:
-                print(f"  refusal example: {result['refusal_examples'][0][:150]!r}")
-            if result["n_degenerate_fake_qa"] > 0:
-                print(f"  degenerate example: {result['degenerate_examples'][0][:150]!r}")
-            summary_rows.append({"file": path, **result})
+======================================================================
+ECQA/generations_ecqa_Qwen2.5-7B_base.csv
+======================================================================
 
-    if summary_rows:
-        summary_df = pd.DataFrame(summary_rows).drop(columns=["refusal_examples", "degenerate_examples"])
-        print(f"\n{'='*70}\nSUMMARY (all files, all columns)\n{'='*70}")
-        print(summary_df.to_string(index=False))
-        total_flagged = summary_df[["n_refusal", "n_degenerate_fake_qa", "n_repeated_sentence"]].sum().sum()
-        print(f"\nTotal flagged instances across all files/columns: {int(total_flagged)}")
-        print("Non-zero rows above are what determines whether this needs targeted "
-              "regeneration, a stricter stop condition, or is rare enough to exclude "
-              "row-by-row before judge scoring.")
+[explanation_justificatory] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
+[explanation_assessment] total=200 empty=141 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
-if __name__ == "__main__":
-    main()
+======================================================================
+SUMMARY (all files, all columns)
+======================================================================
+                                                       file                    column  n_total  n_empty  n_refusal  n_degenerate_fake_qa  n_repeated_sentence
+   ECQA/generations_ecqa_Llama-3.1-8B-Instruct_instruct.csv explanation_justificatory      200        0          2                     0                    0
+   ECQA/generations_ecqa_Llama-3.1-8B-Instruct_instruct.csv    explanation_assessment      200        0          1                     0                    0
+                ECQA/generations_ecqa_Llama-3.1-8B_base.csv explanation_justificatory      200        0          0                     1                   14
+                ECQA/generations_ecqa_Llama-3.1-8B_base.csv    explanation_assessment      200        8          0                     0                   10
+ECQA/generations_ecqa_Mistral-7B-Instruct-v0.3_instruct.csv explanation_justificatory      200        0          0                     0                    0
+ECQA/generations_ecqa_Mistral-7B-Instruct-v0.3_instruct.csv    explanation_assessment      200        0          0                     0                    0
+             ECQA/generations_ecqa_Mistral-7B-v0.1_base.csv explanation_justificatory      200        0          1                   188                  181
+             ECQA/generations_ecqa_Mistral-7B-v0.1_base.csv    explanation_assessment      200        0          1                    21                  174
+     ECQA/generations_ecqa_Qwen2.5-7B-Instruct_instruct.csv explanation_justificatory      200        0          1                     0                    0
+     ECQA/generations_ecqa_Qwen2.5-7B-Instruct_instruct.csv    explanation_assessment      200        0          0                     0                    0
+                  ECQA/generations_ecqa_Qwen2.5-7B_base.csv explanation_justificatory      200        0          0                     0                    0
+                  ECQA/generations_ecqa_Qwen2.5-7B_base.csv    explanation_assessment      200      141          0                     0                    0
+
+Total flagged instances across all files/columns: 595
+Non-zero rows above are what determines whether this needs targeted regeneration, a stricter stop condition, or is rare enough to exclude row-by-row before judge scoring.
