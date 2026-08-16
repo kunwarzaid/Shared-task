@@ -1,367 +1,75 @@
-import os
-import gc
-import torch
-import numpy as np
-import pandas as pd
-from tqdm import tqdm
-from datasets import load_dataset, concatenate_datasets
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from huggingface_hub import login
+======================================================================
+ECQA/generations_ecqa_Llama-3.1-8B-Instruct_instruct.csv
+======================================================================
 
-# =====================================================
-# CONFIG
-# =====================================================
-HF_TOKEN = ''
+[explanation_justificatory] total=200 empty=0 refusals=2 degenerate_fake_qa=0 repeated_sentence=0
+  refusal example: "I can't provide information on that topic."
 
-# All model variants to run in this single session, in order. Add/remove
-# freely -- each is fully independent (own output file, own resume state).
-MODEL_CONFIGS = [
-    "meta-llama/Llama-3.1-8B",
-    "meta-llama/Llama-3.1-8B-Instruct",
-    "mistralai/Mistral-7B-v0.1",
-    "mistralai/Mistral-7B-Instruct-v0.3",
-    "Qwen/Qwen2.5-7B",
-    "Qwen/Qwen2.5-7B-Instruct",
-]
+[explanation_assessment] total=200 empty=0 refusals=1 degenerate_fake_qa=0 repeated_sentence=0
+  refusal example: 'The answer is correct. \n\nThe sentence "He knew how to make bread, but he said \'I don\'t have all day because...\'" is a common idiomatic expression. The'
 
-BASE_DIR = "/workspace/data/KZ_2117574/Calibration/ecqa_closed_form"
-os.makedirs(BASE_DIR, exist_ok=True)
+======================================================================
+ECQA/generations_ecqa_Llama-3.1-8B_base.csv
+======================================================================
 
-USE_ALL_SPLITS = False
-PILOT_SIZE = 200
-OPTION_LETTERS = ["A", "B", "C", "D", "E"]
-CHECKPOINT_EVERY = 10  # save to disk every N items, and used as the resume unit
+[explanation_justificatory] total=200 empty=0 refusals=0 degenerate_fake_qa=1 repeated_sentence=14
+  degenerate example: 'if someone does not like learning, then they will not be interested in learning. If they are not interested in learning, then they will not be motivat'
 
-login(token=HF_TOKEN)
+[explanation_assessment] total=200 empty=8 refusals=0 degenerate_fake_qa=0 repeated_sentence=10
 
-# =====================================================
-# ECQA-SPECIFIC FORMATTING (model-independent, defined once)
-# =====================================================
-def get_item_options(item):
-    return {letter: item[f"q_op{i+1}"] for i, letter in enumerate(OPTION_LETTERS)}
+======================================================================
+ECQA/generations_ecqa_Mistral-7B-Instruct-v0.3_instruct.csv
+======================================================================
 
+[explanation_justificatory] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
-def get_correct_letter(item):
-    options = get_item_options(item)
-    target = item["q_ans"].strip()
-    for letter, text in options.items():
-        if text.strip() == target:
-            return letter
-    raise ValueError(
-        f"q_ans {item['q_ans']!r} did not exactly match any of q_op1..q_op5 "
-        f"for q_no={item.get('q_no')}."
-    )
+[explanation_assessment] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
+======================================================================
+ECQA/generations_ecqa_Mistral-7B-v0.1_base.csv
+======================================================================
 
-def format_ecqa_question(item):
-    options = get_item_options(item)
-    options_text = "\n".join(f"{letter}. {options[letter]}" for letter in OPTION_LETTERS)
-    return f"{item['q_text']}\n\n{options_text}"
+[explanation_justificatory] total=200 empty=0 refusals=1 degenerate_fake_qa=188 repeated_sentence=181
+  refusal example: 'he said "I don\'t have all day because what? I want to eat fresh bread"\n\nQ: He said "I\'m not a ______"\n\nA. baker\nB. chef\nC. cook\nD. foodie\nE. gourmet\nA'
+  degenerate example: 'the person who is in charge of the project is greedy.\n\nQ: What kind of people will someone who is in charge of project look for?\n\nA. greedy\nB. worry\nC'
 
+[explanation_assessment] total=200 empty=0 refusals=1 degenerate_fake_qa=21 repeated_sentence=174
+  refusal example: 'I think this is the correct answer.\n\nQ: He knew how to make bread, but he said "I don\'t have all day because what"?\n\nA. baking is hard\nB. eat bread\nC.'
+  degenerate example: 'This answer is correct.\n\nExplanation:\n\nTeaching to the test is a method of teaching that focuses on preparing students for standardized tests. This ap'
 
-def get_option_text(item, letter):
-    return get_item_options(item).get(letter)
+======================================================================
+ECQA/generations_ecqa_Qwen2.5-7B-Instruct_instruct.csv
+======================================================================
 
+[explanation_justificatory] total=200 empty=0 refusals=1 degenerate_fake_qa=0 repeated_sentence=0
+  refusal example: 'I apologize, but there seems to be an error in the provided answer. Option B, "wrong house," is not a dangerous outdoor activity for children. Let\'s a'
 
-def get_gold_explanation(item, chosen_letter, correct_letter):
-    if chosen_letter == correct_letter:
-        return "taskA_pos", item.get("taskA_pos", "") or ""
-    else:
-        return "taskA_neg", item.get("taskA_neg", "") or ""
+[explanation_assessment] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
+======================================================================
+ECQA/generations_ecqa_Qwen2.5-7B_base.csv
+======================================================================
 
-# =====================================================
-# LOAD DATASET (once, shared across every model in MODEL_CONFIGS)
-# =====================================================
-print("Loading ECQA...")
-dataset = load_dataset("yangdong/ecqa")
-if USE_ALL_SPLITS:
-    pooled = concatenate_datasets([dataset["train"], dataset["validation"], dataset["test"]])
-    print(f"Pooled train+validation+test: {len(pooled)} rows")
-else:
-    pooled = dataset["test"]
-    print(f"Using test split only: {len(pooled)} rows")
+[explanation_justificatory] total=200 empty=0 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
-QUESTIONS = list(pooled)
-if PILOT_SIZE is not None:
-    QUESTIONS = QUESTIONS[:PILOT_SIZE]
-print(f"Using {len(QUESTIONS)} questions for every model in this run.\n")
+[explanation_assessment] total=200 empty=141 refusals=0 degenerate_fake_qa=0 repeated_sentence=0
 
-# =====================================================
-# PRE-GENERATION SANITY CHECK (once, shared -- q_ans matching doesn't
-# depend on the model)
-# =====================================================
-print("--- Pre-generation q_ans matching check ---")
-mismatch_count = 0
-for item in QUESTIONS:
-    try:
-        get_correct_letter(item)
-    except ValueError as e:
-        mismatch_count += 1
-        if mismatch_count <= 3:
-            print(f"  MISMATCH: {e}")
-print(f"{mismatch_count}/{len(QUESTIONS)} items had a q_ans matching failure.")
-if mismatch_count > 0:
-    print("WARNING: fix matching failures before trusting results below.")
-print("--- End check ---\n")
+======================================================================
+SUMMARY (all files, all columns)
+======================================================================
+                                                       file                    column  n_total  n_empty  n_refusal  n_degenerate_fake_qa  n_repeated_sentence
+   ECQA/generations_ecqa_Llama-3.1-8B-Instruct_instruct.csv explanation_justificatory      200        0          2                     0                    0
+   ECQA/generations_ecqa_Llama-3.1-8B-Instruct_instruct.csv    explanation_assessment      200        0          1                     0                    0
+                ECQA/generations_ecqa_Llama-3.1-8B_base.csv explanation_justificatory      200        0          0                     1                   14
+                ECQA/generations_ecqa_Llama-3.1-8B_base.csv    explanation_assessment      200        8          0                     0                   10
+ECQA/generations_ecqa_Mistral-7B-Instruct-v0.3_instruct.csv explanation_justificatory      200        0          0                     0                    0
+ECQA/generations_ecqa_Mistral-7B-Instruct-v0.3_instruct.csv    explanation_assessment      200        0          0                     0                    0
+             ECQA/generations_ecqa_Mistral-7B-v0.1_base.csv explanation_justificatory      200        0          1                   188                  181
+             ECQA/generations_ecqa_Mistral-7B-v0.1_base.csv    explanation_assessment      200        0          1                    21                  174
+     ECQA/generations_ecqa_Qwen2.5-7B-Instruct_instruct.csv explanation_justificatory      200        0          1                     0                    0
+     ECQA/generations_ecqa_Qwen2.5-7B-Instruct_instruct.csv    explanation_assessment      200        0          0                     0                    0
+                  ECQA/generations_ecqa_Qwen2.5-7B_base.csv explanation_justificatory      200        0          0                     0                    0
+                  ECQA/generations_ecqa_Qwen2.5-7B_base.csv    explanation_assessment      200      141          0                     0                    0
 
-
-# =====================================================
-# PER-MODEL RUN
-# Everything that depends on a specific model/tokenizer lives inside
-# this function so it can be called once per entry in MODEL_CONFIGS,
-# with its own output file and resume state.
-# =====================================================
-def variant_str(model_name):
-    return "instruct" if "Instruct" in model_name else "base"
-
-
-def output_path_for(model_name):
-    model_short = model_name.split("/")[-1]
-    variant = variant_str(model_name)
-    return os.path.join(BASE_DIR, f"generations_ecqa_{model_short}_{variant}.csv")
-
-
-def load_resume_state(output_csv, target_n):
-    """
-    Returns (existing_rows: list[dict], start_idx: int, already_complete: bool).
-    A file is "complete" if it has >= target_n rows -- resume otherwise
-    from exactly where it left off (row count == index to resume at,
-    since QUESTIONS is a fixed, deterministic slice every run).
-    """
-    if not os.path.exists(output_csv):
-        return [], 0, False
-    existing_df = pd.read_csv(output_csv)
-    n_existing = len(existing_df)
-    if n_existing >= target_n:
-        return existing_df.to_dict("records"), n_existing, True
-    return existing_df.to_dict("records"), n_existing, False
-
-
-def run_for_model(model_name):
-    model_short = model_name.split("/")[-1]
-    is_base_model = "Instruct" not in model_name
-    variant = variant_str(model_name)
-    output_csv = output_path_for(model_name)
-
-    print(f"\n{'='*70}")
-    print(f"MODEL: {model_name}  (variant={variant})")
-    print(f"Output: {output_csv}")
-    print(f"{'='*70}")
-
-    rows, start_idx, already_complete = load_resume_state(output_csv, len(QUESTIONS))
-    if already_complete:
-        print(f"SKIPPING -- output already has {len(rows)}/{len(QUESTIONS)} rows "
-              f"(complete). Delete the file if you want to force a rerun.")
-        return
-    if start_idx > 0:
-        print(f"RESUMING from item {start_idx}/{len(QUESTIONS)} "
-              f"({len(rows)} rows already in {output_csv}).")
-    else:
-        print(f"Starting fresh: 0/{len(QUESTIONS)} rows exist yet.")
-
-    print("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    print("Loading model...")
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, torch_dtype=torch.float16,
-        device_map="auto", trust_remote_code=True
-    )
-    model.eval()
-    print("Model loaded.")
-
-    # ---- token ids for option letters ----
-    letter_token_ids = {}
-    for letter in OPTION_LETTERS:
-        ids = tokenizer.encode(f" {letter}", add_special_tokens=False)
-        letter_token_ids[letter] = ids[-1]
-    print(f"Option letter token IDs: {letter_token_ids}")
-
-    # ---- model-dependent helpers (closures over tokenizer/model/is_base_model) ----
-    def build_prompt(user_message):
-        if tokenizer.chat_template is not None and not is_base_model:
-            messages = [{"role": "user", "content": user_message}]
-            return tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
-        return user_message
-
-    def compute_closed_form_uhat(item):
-        question_formatted = format_ecqa_question(item)
-        if is_base_model:
-            user_message = f"Q: {question_formatted}\nA:"
-        else:
-            user_message = (
-                f"Answer the following question by selecting "
-                f"the single best option (A, B, C, D, or E).\n\n"
-                f"{question_formatted}\n\nAnswer:"
-            )
-        prompt = build_prompt(user_message)
-        inputs = tokenizer(
-            prompt, return_tensors="pt", truncation=True, max_length=1536
-        ).to(model.device)
-        with torch.no_grad():
-            outputs = model(**inputs)
-            next_token_logits = outputs.logits[0, -1, :]
-        letter_logits = torch.tensor([
-            next_token_logits[letter_token_ids[letter]].item()
-            for letter in OPTION_LETTERS
-        ])
-        probs = torch.softmax(letter_logits, dim=0).numpy()
-        epsilon = 1e-12
-        entropy = -np.sum(probs * np.log(probs + epsilon))
-        norm_uhat = entropy / np.log(5)
-        greedy_idx = int(np.argmax(probs))
-        greedy_letter = OPTION_LETTERS[greedy_idx]
-        return greedy_letter, probs, entropy, norm_uhat
-
-    def get_explanation(item, answer_letter, answer_text, style):
-        question_formatted = format_ecqa_question(item)
-        if is_base_model:
-            if style == "justificatory":
-                user_message = (
-                    f"Q: {question_formatted}\n"
-                    f"A: {answer_letter}. {answer_text}\n"
-                    f"This is because"
-                )
-            else:  # "assessment"
-                user_message = (
-                    f"Q: {question_formatted}\n"
-                    f"A: {answer_letter}. {answer_text}\n"
-                    f"Assessment of whether this answer is correct, including any uncertainty:"
-                )
-        else:
-            if style == "justificatory":
-                user_message = (
-                    f"Question: {question_formatted}\n\n"
-                    f"Answer: {answer_letter}. {answer_text}\n\n"
-                    f"Provide an explanation for this answer:"
-                )
-            else:  # "assessment"
-                user_message = (
-                    f"Question: {question_formatted}\n\n"
-                    f"Answer: {answer_letter}. {answer_text}\n\n"
-                    f"Assess whether this answer is correct, and explain your assessment. "
-                    f"If you are uncertain whether the answer is correct, say so explicitly and explain why."
-                )
-        prompt = build_prompt(user_message)
-        inputs = tokenizer(
-            prompt, return_tensors="pt", truncation=True, max_length=1536
-        ).to(model.device)
-        with torch.no_grad():
-            output = model.generate(
-                **inputs, max_new_tokens=250, do_sample=False,
-                pad_token_id=tokenizer.pad_token_id,
-                eos_token_id=tokenizer.eos_token_id
-            )
-        generated_tokens = output[0][inputs.input_ids.shape[1]:]
-        return tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
-
-    # ---- main loop, resuming from start_idx ----
-    for idx in tqdm(range(start_idx, len(QUESTIONS)), initial=start_idx, total=len(QUESTIONS)):
-        item = QUESTIONS[idx]
-        print(f"\n[{idx:03d}/{len(QUESTIONS)}] {item['q_text'][:70]}...")
-
-        # Confidence step: kept separate from the explanation step so a
-        # failure in one does not discard valid data from the other.
-        try:
-            correct_letter = get_correct_letter(item)
-            greedy_letter, probs, entropy, norm_uhat = compute_closed_form_uhat(item)
-            answer_text = get_option_text(item, greedy_letter)
-            correct = int(greedy_letter == correct_letter)
-            gold_source, gold_text = get_gold_explanation(item, greedy_letter, correct_letter)
-            prob_str = ", ".join(f"{l}={p:.3f}" for l, p in zip(OPTION_LETTERS, probs))
-            print(f"  U_hat={norm_uhat:.4f} | probs=[{prob_str}] | "
-                  f"pred={greedy_letter} | true={correct_letter} | correct={correct}")
-        except Exception as e:
-            print(f"  ERROR (confidence step): {e}")
-            rows.append({
-                "model": model_short, "condition": "closed_form", "dataset": "ecqa",
-                "question": item.get("q_text"), "q_concept": item.get("q_concept"),
-                "options": None,
-                "prob_A": None, "prob_B": None, "prob_C": None,
-                "prob_D": None, "prob_E": None,
-                "predicted_letter": None, "greedy_answer": None,
-                "explanation_justificatory": None, "explanation_assessment": None,
-                "correct_letter": None, "correct": None,
-                "entropy": None, "norm_uhat": None,
-                "gold_explanation_source": None, "gold_explanation_text": None,
-                "gold_explanation_is_combined_negative": None,
-            })
-            if idx % CHECKPOINT_EVERY == 0:
-                pd.DataFrame(rows).to_csv(output_csv, index=False)
-            continue
-
-        # Explanation step: both styles, kept separate from the confidence
-        # step above so a prompt bug here (like format_question not being
-        # defined) can't wipe out valid confidence data for this row.
-        try:
-            explanation_justificatory = get_explanation(item, greedy_letter, answer_text, style="justificatory")
-            explanation_assessment = get_explanation(item, greedy_letter, answer_text, style="assessment")
-        except Exception as e:
-            print(f"  ERROR (explanation step): {e}")
-            explanation_justificatory = None
-            explanation_assessment = None
-
-        rows.append({
-            "model": model_short,
-            "condition": "closed_form",
-            "dataset": "ecqa",
-            "question": item["q_text"],
-            "q_concept": item.get("q_concept"),
-            "options": str(get_item_options(item)),
-            "prob_A": probs[0], "prob_B": probs[1], "prob_C": probs[2],
-            "prob_D": probs[3], "prob_E": probs[4],
-            "predicted_letter": greedy_letter,
-            "greedy_answer": answer_text,
-            "explanation_justificatory": explanation_justificatory,
-            "explanation_assessment": explanation_assessment,
-            "correct_letter": correct_letter,
-            "correct": correct,
-            "entropy": entropy,
-            "norm_uhat": norm_uhat,
-            "gold_explanation_source": gold_source,
-            "gold_explanation_text": gold_text,
-            "gold_explanation_is_combined_negative": gold_source == "taskA_neg",
-        })
-
-        if idx % CHECKPOINT_EVERY == 0:
-            pd.DataFrame(rows).to_csv(output_csv, index=False)
-
-    # final save
-    df = pd.DataFrame(rows)
-    df.to_csv(output_csv, index=False)
-
-    valid = df[df["norm_uhat"].notna()]
-    correct_df = valid[valid["correct"] == 1]
-    incorrect_df = valid[valid["correct"] == 0]
-    print(f"\n{'='*60}")
-    print(f"CLOSED-FORM ECQA SUMMARY: {model_short} ({variant})")
-    print(f"{'='*60}")
-    print(f"Total: {len(df)} | Valid: {len(valid)}")
-    print(f"Correct: {len(correct_df)} | Incorrect: {len(incorrect_df)}")
-    if len(correct_df) > 0 and len(incorrect_df) > 0:
-        print(f"U_hat correct:   mean={correct_df['norm_uhat'].mean():.4f}  sd={correct_df['norm_uhat'].std():.4f}")
-        print(f"U_hat incorrect: mean={incorrect_df['norm_uhat'].mean():.4f}  sd={incorrect_df['norm_uhat'].std():.4f}")
-    print(f"Saved to: {output_csv}")
-
-    # ---- free GPU memory before loading the next model in the loop ----
-    del model
-    del tokenizer
-    gc.collect()
-    torch.cuda.empty_cache()
-
-
-# =====================================================
-# RUN ALL MODEL VARIANTS
-# Each call is fully independent: if the process dies partway through
-# (e.g. session timeout) on model 4 of 6, simply rerun this script --
-# models 1-3 will be detected as complete and skipped, model 4 will
-# resume from its last checkpoint, and models 5-6 will start fresh.
-# =====================================================
-for model_name in MODEL_CONFIGS:
-    run_for_model(model_name)
-
-print("\nAll model variants processed.")
+Total flagged instances across all files/columns: 595
+Non-zero rows above are what determines whether this needs targeted regeneration, a stricter stop condition, or is rare enough to exclude row-by-row before judge scoring.
