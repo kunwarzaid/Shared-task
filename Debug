@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from datasets import load_dataset, concatenate_datasets
+from datasets import load_dataset
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import login
 
@@ -14,8 +14,6 @@ from huggingface_hub import login
 # =====================================================
 HF_TOKEN = ''
 
-# All model variants to run in this single session, in order. Add/remove
-# freely -- each is fully independent (own output file, own resume state).
 MODEL_CONFIGS = [
     "meta-llama/Llama-3.1-8B",
     "meta-llama/Llama-3.1-8B-Instruct",
@@ -25,39 +23,31 @@ MODEL_CONFIGS = [
     "Qwen/Qwen2.5-7B-Instruct",
 ]
 
-BASE_DIR = "/workspace/data/KZ_2117574/Calibration/ecqa_closed_form"
+BASE_DIR = "/workspace/data/KZ_2117574/Calibration/medmcqa_closed_form"
 os.makedirs(BASE_DIR, exist_ok=True)
 
-USE_ALL_SPLITS = False
-PILOT_SIZE = 200
-OPTION_LETTERS = ["A", "B", "C", "D", "E"]
-CHECKPOINT_EVERY = 10  # save to disk every N items, and used as the resume unit
+PILOT_SIZE = 200  # test split has 6150 rows -- plenty of headroom
+OPTION_LETTERS = ["A", "B", "C", "D"]  # MedMCQA is 4-way, unlike MedQA/ECQA's 5-way
+COP_TO_LETTER = {0: "A", 1: "B", 2: "C", 3: "D"}  # confirmed 0-indexed from the dataset card
+CHECKPOINT_EVERY = 10
 
 login(token=HF_TOKEN)
 
 # =====================================================
-# ECQA-SPECIFIC FORMATTING (model-independent, defined once)
+# MEDMCQA-SPECIFIC FORMATTING
 # =====================================================
 def get_item_options(item):
-    return {letter: item[f"q_op{i+1}"] for i, letter in enumerate(OPTION_LETTERS)}
+    return {"A": item["opa"], "B": item["opb"], "C": item["opc"], "D": item["opd"]}
 
 
 def get_correct_letter(item):
-    options = get_item_options(item)
-    target = item["q_ans"].strip()
-    for letter, text in options.items():
-        if text.strip() == target:
-            return letter
-    raise ValueError(
-        f"q_ans {item['q_ans']!r} did not exactly match any of q_op1..q_op5 "
-        f"for q_no={item.get('q_no')}."
-    )
+    return COP_TO_LETTER[item["cop"]]
 
 
-def format_ecqa_question(item):
+def format_medmcqa_question(item):
     options = get_item_options(item)
     options_text = "\n".join(f"{letter}. {options[letter]}" for letter in OPTION_LETTERS)
-    return f"{item['q_text']}\n\n{options_text}"
+    return f"{item['question']}\n\n{options_text}"
 
 
 def get_option_text(item, letter):
@@ -65,20 +55,25 @@ def get_option_text(item, letter):
 
 
 def get_gold_explanation(item, chosen_letter, correct_letter):
+    """
+    Unlike ECQA/MedExpQA, MedMCQA's 'exp' field explains only the
+    CORRECT answer -- there is no refutation of incorrect options at
+    all. When the model is wrong, there is no gold text available,
+    full stop (not even a combined/imprecise one like ECQA's
+    taskA_neg). This is recorded explicitly rather than left implicit.
+    """
     if chosen_letter == correct_letter:
-        return "taskA_pos", item.get("taskA_pos", "") or ""
+        text = item.get("exp", "") or ""
+        return ("exp" if text.strip() else "NONE_EMPTY_FIELD"), text
     else:
-        return "taskA_neg", item.get("taskA_neg", "") or ""
+        return "NONE_NO_NEGATIVE_EXPLANATIONS_EXIST", ""
 
 
 # =====================================================
-# Truncate on fake-continuation markers. Base models with no chat-turn
-# boundary can drift into hallucinating new "Q:"/"Question:" pairs
-# instead of stopping after the explanation -- confirmed to affect
-# 94% of Mistral-7B-v0.1's justificatory rows on ECQA. Applied
-# universally (all models, both prompt styles), not just where it was
-# first observed, since there's no reason to assume it's exclusive to
-# one model.
+# Truncate on fake-continuation markers (same fix applied to the ECQA
+# script after Mistral-7B-v0.1 was found drifting into hallucinated
+# new Q&A pairs 94% of the time on that dataset). Built in from the
+# start here rather than retrofitted.
 # =====================================================
 FAKE_CONTINUATION_RE = re.compile(r"\n\s*(Q:|Question:)", re.IGNORECASE)
 
@@ -91,46 +86,44 @@ def clean_explanation(text):
 
 
 # =====================================================
-# LOAD DATASET (once, shared across every model in MODEL_CONFIGS)
+# LOAD DATASET
 # =====================================================
-print("Loading ECQA...")
-dataset = load_dataset("yangdong/ecqa")
-if USE_ALL_SPLITS:
-    pooled = concatenate_datasets([dataset["train"], dataset["validation"], dataset["test"]])
-    print(f"Pooled train+validation+test: {len(pooled)} rows")
-else:
-    pooled = dataset["test"]
-    print(f"Using test split only: {len(pooled)} rows")
+print("Loading MedMCQA...")
+dataset = load_dataset("openlifescienceai/medmcqa")
+pooled = dataset["test"]
+print(f"Test split: {len(pooled)} rows")
 
-QUESTIONS = list(pooled)
-if PILOT_SIZE is not None:
-    QUESTIONS = QUESTIONS[:PILOT_SIZE]
+# Filter to single-answer questions only -- 'multi' choice_type items
+# don't fit a single-greedy-letter methodology and would silently
+# corrupt correctness labels if treated the same way.
+all_items = list(pooled)
+single_items = [item for item in all_items if item.get("choice_type") == "single"]
+n_multi_excluded = len(all_items) - len(single_items)
+print(f"Excluded {n_multi_excluded} multi-answer items (choice_type != 'single').")
+print(f"{len(single_items)} single-answer items remain.")
+
+QUESTIONS = single_items[:PILOT_SIZE] if PILOT_SIZE is not None else single_items
 print(f"Using {len(QUESTIONS)} questions for every model in this run.\n")
 
 # =====================================================
-# PRE-GENERATION SANITY CHECK (once, shared -- q_ans matching doesn't
-# depend on the model)
+# PRE-GENERATION DIAGNOSTIC: exp-field coverage
+# Confirms actual coverage before committing compute -- this was
+# flagged as unconfirmed when MedMCQA was first proposed as a
+# candidate dataset, never actually checked until now.
 # =====================================================
-print("--- Pre-generation q_ans matching check ---")
-mismatch_count = 0
-for item in QUESTIONS:
-    try:
-        get_correct_letter(item)
-    except ValueError as e:
-        mismatch_count += 1
-        if mismatch_count <= 3:
-            print(f"  MISMATCH: {e}")
-print(f"{mismatch_count}/{len(QUESTIONS)} items had a q_ans matching failure.")
-if mismatch_count > 0:
-    print("WARNING: fix matching failures before trusting results below.")
+print("--- Pre-generation 'exp' field coverage check ---")
+n_with_exp = sum(1 for item in QUESTIONS if (item.get("exp") or "").strip())
+print(f"{n_with_exp}/{len(QUESTIONS)} items ({n_with_exp/len(QUESTIONS):.1%}) have a "
+      f"non-empty 'exp' field for their correct answer.")
+print("Remember: this is coverage for the CORRECT option only. A model that answers "
+      "incorrectly on one of these items still gets NO gold explanation at all -- "
+      "MedMCQA's Ce-eligible fraction will be lower than this number once real "
+      "model accuracy is factored in (accuracy% x exp-coverage%, roughly).")
 print("--- End check ---\n")
 
 
 # =====================================================
-# PER-MODEL RUN
-# Everything that depends on a specific model/tokenizer lives inside
-# this function so it can be called once per entry in MODEL_CONFIGS,
-# with its own output file and resume state.
+# PER-MODEL RUN (same structure as the current ECQA script)
 # =====================================================
 def variant_str(model_name):
     return "instruct" if "Instruct" in model_name else "base"
@@ -139,16 +132,10 @@ def variant_str(model_name):
 def output_path_for(model_name):
     model_short = model_name.split("/")[-1]
     variant = variant_str(model_name)
-    return os.path.join(BASE_DIR, f"generations_ecqa_{model_short}_{variant}.csv")
+    return os.path.join(BASE_DIR, f"generations_medmcqa_{model_short}_{variant}.csv")
 
 
 def load_resume_state(output_csv, target_n):
-    """
-    Returns (existing_rows: list[dict], start_idx: int, already_complete: bool).
-    A file is "complete" if it has >= target_n rows -- resume otherwise
-    from exactly where it left off (row count == index to resume at,
-    since QUESTIONS is a fixed, deterministic slice every run).
-    """
     if not os.path.exists(output_csv):
         return [], 0, False
     existing_df = pd.read_csv(output_csv)
@@ -164,19 +151,14 @@ def run_for_model(model_name):
     variant = variant_str(model_name)
     output_csv = output_path_for(model_name)
 
-    print(f"\n{'='*70}")
-    print(f"MODEL: {model_name}  (variant={variant})")
-    print(f"Output: {output_csv}")
-    print(f"{'='*70}")
+    print(f"\n{'='*70}\nMODEL: {model_name}  (variant={variant})\nOutput: {output_csv}\n{'='*70}")
 
     rows, start_idx, already_complete = load_resume_state(output_csv, len(QUESTIONS))
     if already_complete:
-        print(f"SKIPPING -- output already has {len(rows)}/{len(QUESTIONS)} rows "
-              f"(complete). Delete the file if you want to force a rerun.")
+        print(f"SKIPPING -- output already has {len(rows)}/{len(QUESTIONS)} rows (complete).")
         return
     if start_idx > 0:
-        print(f"RESUMING from item {start_idx}/{len(QUESTIONS)} "
-              f"({len(rows)} rows already in {output_csv}).")
+        print(f"RESUMING from item {start_idx}/{len(QUESTIONS)}.")
     else:
         print(f"Starting fresh: 0/{len(QUESTIONS)} rows exist yet.")
 
@@ -192,14 +174,12 @@ def run_for_model(model_name):
     model.eval()
     print("Model loaded.")
 
-    # ---- token ids for option letters ----
     letter_token_ids = {}
     for letter in OPTION_LETTERS:
         ids = tokenizer.encode(f" {letter}", add_special_tokens=False)
         letter_token_ids[letter] = ids[-1]
     print(f"Option letter token IDs: {letter_token_ids}")
 
-    # ---- model-dependent helpers (closures over tokenizer/model/is_base_model) ----
     def build_prompt(user_message):
         if tokenizer.chat_template is not None and not is_base_model:
             messages = [{"role": "user", "content": user_message}]
@@ -209,13 +189,13 @@ def run_for_model(model_name):
         return user_message
 
     def compute_closed_form_uhat(item):
-        question_formatted = format_ecqa_question(item)
+        question_formatted = format_medmcqa_question(item)
         if is_base_model:
             user_message = f"Q: {question_formatted}\nA:"
         else:
             user_message = (
-                f"Answer the following question by selecting "
-                f"the single best option (A, B, C, D, or E).\n\n"
+                f"Answer the following medical question by selecting "
+                f"the single best option (A, B, C, or D).\n\n"
                 f"{question_formatted}\n\nAnswer:"
             )
         prompt = build_prompt(user_message)
@@ -232,13 +212,13 @@ def run_for_model(model_name):
         probs = torch.softmax(letter_logits, dim=0).numpy()
         epsilon = 1e-12
         entropy = -np.sum(probs * np.log(probs + epsilon))
-        norm_uhat = entropy / np.log(5)
+        norm_uhat = entropy / np.log(4)  # 4-way, not 5-way -- log(4) not log(5)
         greedy_idx = int(np.argmax(probs))
         greedy_letter = OPTION_LETTERS[greedy_idx]
         return greedy_letter, probs, entropy, norm_uhat
 
     def get_explanation(item, answer_letter, answer_text, style):
-        question_formatted = format_ecqa_question(item)
+        question_formatted = format_medmcqa_question(item)
         if is_base_model:
             if style == "justificatory":
                 user_message = (
@@ -246,15 +226,7 @@ def run_for_model(model_name):
                     f"A: {answer_letter}. {answer_text}\n"
                     f"This is because"
                 )
-            else:  # "assessment"
-                # Fixed from "Assessment of whether this answer is correct,
-                # including any uncertainty:" -- that phrasing ends on an
-                # abstract noun phrase + colon, an unnatural continuation
-                # point for a raw completion model. Confirmed to cause
-                # near-immediate EOS for Qwen2.5-7B (70.5% empty) and to a
-                # lesser extent Llama-3.1-8B (4% empty). "I am" forces a
-                # grammatical sentence continuation instead, the same way
-                # "This is because" does for the justificatory prompt.
+            else:  # "assessment" -- uses the fixed prompt shape from the start
                 user_message = (
                     f"Q: {question_formatted}\n"
                     f"A: {answer_letter}. {answer_text}\n"
@@ -288,13 +260,10 @@ def run_for_model(model_name):
         raw_explanation = tokenizer.decode(generated_tokens, skip_special_tokens=True)
         return clean_explanation(raw_explanation)
 
-    # ---- main loop, resuming from start_idx ----
     for idx in tqdm(range(start_idx, len(QUESTIONS)), initial=start_idx, total=len(QUESTIONS)):
         item = QUESTIONS[idx]
-        print(f"\n[{idx:03d}/{len(QUESTIONS)}] {item['q_text'][:70]}...")
+        print(f"\n[{idx:03d}/{len(QUESTIONS)}] {item['question'][:70]}...")
 
-        # Confidence step: kept separate from the explanation step so a
-        # failure in one does not discard valid data from the other.
         try:
             correct_letter = get_correct_letter(item)
             greedy_letter, probs, entropy, norm_uhat = compute_closed_form_uhat(item)
@@ -307,25 +276,21 @@ def run_for_model(model_name):
         except Exception as e:
             print(f"  ERROR (confidence step): {e}")
             rows.append({
-                "model": model_short, "condition": "closed_form", "dataset": "ecqa",
-                "question": item.get("q_text"), "q_concept": item.get("q_concept"),
+                "model": model_short, "condition": "closed_form", "dataset": "medmcqa",
+                "question": item.get("question"), "subject_name": item.get("subject_name"),
+                "topic_name": item.get("topic_name"),
                 "options": None,
-                "prob_A": None, "prob_B": None, "prob_C": None,
-                "prob_D": None, "prob_E": None,
+                "prob_A": None, "prob_B": None, "prob_C": None, "prob_D": None,
                 "predicted_letter": None, "greedy_answer": None,
                 "explanation_justificatory": None, "explanation_assessment": None,
                 "correct_letter": None, "correct": None,
                 "entropy": None, "norm_uhat": None,
                 "gold_explanation_source": None, "gold_explanation_text": None,
-                "gold_explanation_is_combined_negative": None,
             })
             if idx % CHECKPOINT_EVERY == 0:
                 pd.DataFrame(rows).to_csv(output_csv, index=False)
             continue
 
-        # Explanation step: both styles, kept separate from the confidence
-        # step above so a prompt bug here (like format_question not being
-        # defined) can't wipe out valid confidence data for this row.
         try:
             explanation_justificatory = get_explanation(item, greedy_letter, answer_text, style="justificatory")
             explanation_assessment = get_explanation(item, greedy_letter, answer_text, style="assessment")
@@ -337,12 +302,12 @@ def run_for_model(model_name):
         rows.append({
             "model": model_short,
             "condition": "closed_form",
-            "dataset": "ecqa",
-            "question": item["q_text"],
-            "q_concept": item.get("q_concept"),
+            "dataset": "medmcqa",
+            "question": item["question"],
+            "subject_name": item.get("subject_name"),
+            "topic_name": item.get("topic_name"),
             "options": str(get_item_options(item)),
-            "prob_A": probs[0], "prob_B": probs[1], "prob_C": probs[2],
-            "prob_D": probs[3], "prob_E": probs[4],
+            "prob_A": probs[0], "prob_B": probs[1], "prob_C": probs[2], "prob_D": probs[3],
             "predicted_letter": greedy_letter,
             "greedy_answer": answer_text,
             "explanation_justificatory": explanation_justificatory,
@@ -353,43 +318,35 @@ def run_for_model(model_name):
             "norm_uhat": norm_uhat,
             "gold_explanation_source": gold_source,
             "gold_explanation_text": gold_text,
-            "gold_explanation_is_combined_negative": gold_source == "taskA_neg",
         })
 
         if idx % CHECKPOINT_EVERY == 0:
             pd.DataFrame(rows).to_csv(output_csv, index=False)
 
-    # final save
     df = pd.DataFrame(rows)
     df.to_csv(output_csv, index=False)
 
     valid = df[df["norm_uhat"].notna()]
     correct_df = valid[valid["correct"] == 1]
     incorrect_df = valid[valid["correct"] == 0]
-    print(f"\n{'='*60}")
-    print(f"CLOSED-FORM ECQA SUMMARY: {model_short} ({variant})")
-    print(f"{'='*60}")
+    print(f"\n{'='*60}\nCLOSED-FORM MEDMCQA SUMMARY: {model_short} ({variant})\n{'='*60}")
     print(f"Total: {len(df)} | Valid: {len(valid)}")
     print(f"Correct: {len(correct_df)} | Incorrect: {len(incorrect_df)}")
     if len(correct_df) > 0 and len(incorrect_df) > 0:
         print(f"U_hat correct:   mean={correct_df['norm_uhat'].mean():.4f}  sd={correct_df['norm_uhat'].std():.4f}")
         print(f"U_hat incorrect: mean={incorrect_df['norm_uhat'].mean():.4f}  sd={incorrect_df['norm_uhat'].std():.4f}")
+
+    ce_eligible = valid[valid["gold_explanation_source"] == "exp"]
+    print(f"\nAchieved Ce-eligible rows (correct AND exp non-empty): "
+          f"{len(ce_eligible)}/{len(valid)} ({len(ce_eligible)/max(len(valid),1):.1%})")
     print(f"Saved to: {output_csv}")
 
-    # ---- free GPU memory before loading the next model in the loop ----
     del model
     del tokenizer
     gc.collect()
     torch.cuda.empty_cache()
 
 
-# =====================================================
-# RUN ALL MODEL VARIANTS
-# Each call is fully independent: if the process dies partway through
-# (e.g. session timeout) on model 4 of 6, simply rerun this script --
-# models 1-3 will be detected as complete and skipped, model 4 will
-# resume from its last checkpoint, and models 5-6 will start fresh.
-# =====================================================
 for model_name in MODEL_CONFIGS:
     run_for_model(model_name)
 
