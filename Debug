@@ -351,3 +351,380 @@ for model_name in MODEL_CONFIGS:
     run_for_model(model_name)
 
 print("\nAll model variants processed.")
+
+
+
+import os
+import gc
+import re
+import torch
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from datasets import load_dataset, concatenate_datasets
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from huggingface_hub import login
+
+# =====================================================
+# CONFIG
+# =====================================================
+HF_TOKEN = ''
+
+MODEL_CONFIGS = [
+    "meta-llama/Llama-3.1-8B",
+    "meta-llama/Llama-3.1-8B-Instruct",
+    "mistralai/Mistral-7B-v0.1",
+    "mistralai/Mistral-7B-Instruct-v0.3",
+    "Qwen/Qwen2.5-7B",
+    "Qwen/Qwen2.5-7B-Instruct",
+]
+
+BASE_DIR = "/workspace/data/KZ_2117574/Calibration/medexpqa_closed_form"
+os.makedirs(BASE_DIR, exist_ok=True)
+
+# MedExpQA English is small (622 rows total: 434/63/125 train/val/test).
+# Pooling all three splits is defensible here since there's no training
+# happening, only frozen-model inference -- maximizes n given how small
+# this dataset is. Set False to match the paper's own benchmark split.
+USE_ALL_SPLITS = True
+PILOT_SIZE = None  # None = use everything USE_ALL_SPLITS selects
+CHECKPOINT_EVERY = 10
+
+login(token=HF_TOKEN)
+
+# =====================================================
+# MEDEXPQA-SPECIFIC FORMATTING
+# options is a DICT keyed "1".."5" (variable count per item, not
+# fixed like MedQA/ECQA); correct_option is an int; question text is
+# in full_question. All confirmed from the HiTZ/MedExpQA dataset card.
+# =====================================================
+def get_item_option_keys(item):
+    return sorted(item["options"].keys(), key=lambda k: int(k))
+
+
+def format_medexpqa_question(item):
+    option_keys = get_item_option_keys(item)
+    options_text = "\n".join(f"{k}. {item['options'][k]}" for k in option_keys)
+    return f"{item['full_question']}\n\n{options_text}"
+
+
+def get_option_text(item, key):
+    return item["options"].get(key)
+
+
+def get_gold_explanation(item, key):
+    """
+    Coverage is PARTIAL (exist flag), confirmed from the dataset card
+    preview -- most options have exist=False. Callers must check
+    `exists` before trusting `text`.
+    """
+    exp = item.get("explanations", {}).get(key)
+    if exp is None:
+        return False, ""
+    return bool(exp.get("exist", False)), exp.get("text", "") or ""
+
+
+# =====================================================
+# Truncate on fake-continuation markers (same fix applied across all
+# three dataset scripts now, built in from the start here).
+# =====================================================
+FAKE_CONTINUATION_RE = re.compile(r"\n\s*(Q:|Question:)", re.IGNORECASE)
+
+
+def clean_explanation(text):
+    match = FAKE_CONTINUATION_RE.search(text)
+    if match:
+        return text[:match.start()].strip()
+    return text.strip()
+
+
+# =====================================================
+# LOAD DATASET (once, shared across every model)
+# =====================================================
+print("Loading MedExpQA (English)...")
+dataset = load_dataset("HiTZ/MedExpQA", "en")
+
+if USE_ALL_SPLITS:
+    pooled = concatenate_datasets([dataset["train"], dataset["validation"], dataset["test"]])
+    print(f"Pooled train+validation+test: {len(pooled)} rows (434+63+125=622)")
+else:
+    pooled = dataset["test"]
+    print(f"Using test split only: {len(pooled)} rows")
+
+QUESTIONS = list(pooled)
+if PILOT_SIZE is not None:
+    QUESTIONS = QUESTIONS[:PILOT_SIZE]
+print(f"Using {len(QUESTIONS)} questions for every model in this run.\n")
+
+# =====================================================
+# PRE-GENERATION GOLD-EXPLANATION COVERAGE DIAGNOSTIC
+# =====================================================
+print("--- Gold explanation coverage diagnostic (before generation) ---")
+total_items = len(QUESTIONS)
+items_with_any_gold = 0
+items_with_correct_option_gold = 0
+option_level_exist_count = 0
+option_level_total_count = 0
+
+for item in QUESTIONS:
+    option_keys = get_item_option_keys(item)
+    correct_key = str(item["correct_option"])
+    any_exist = False
+    for k in option_keys:
+        exists, _ = get_gold_explanation(item, k)
+        option_level_total_count += 1
+        if exists:
+            option_level_exist_count += 1
+            any_exist = True
+    if any_exist:
+        items_with_any_gold += 1
+    correct_exists, _ = get_gold_explanation(item, correct_key)
+    if correct_exists:
+        items_with_correct_option_gold += 1
+
+print(f"Total items: {total_items}")
+print(f"Items with >=1 option having a gold explanation: "
+      f"{items_with_any_gold} ({items_with_any_gold/total_items:.1%})")
+print(f"Items where the CORRECT option specifically has a gold explanation: "
+      f"{items_with_correct_option_gold} ({items_with_correct_option_gold/total_items:.1%})")
+print(f"Option-level coverage: {option_level_exist_count}/{option_level_total_count} "
+      f"({option_level_exist_count/max(option_level_total_count,1):.1%})")
+print("--- End diagnostic ---\n")
+
+
+# =====================================================
+# PER-MODEL RUN (same structure as the current ECQA/MedMCQA scripts)
+# =====================================================
+def variant_str(model_name):
+    return "instruct" if "Instruct" in model_name else "base"
+
+
+def output_path_for(model_name):
+    model_short = model_name.split("/")[-1]
+    variant = variant_str(model_name)
+    return os.path.join(BASE_DIR, f"generations_medexpqa_{model_short}_{variant}.csv")
+
+
+def load_resume_state(output_csv, target_n):
+    if not os.path.exists(output_csv):
+        return [], 0, False
+    existing_df = pd.read_csv(output_csv)
+    n_existing = len(existing_df)
+    if n_existing >= target_n:
+        return existing_df.to_dict("records"), n_existing, True
+    return existing_df.to_dict("records"), n_existing, False
+
+
+def run_for_model(model_name):
+    model_short = model_name.split("/")[-1]
+    is_base_model = "Instruct" not in model_name
+    variant = variant_str(model_name)
+    output_csv = output_path_for(model_name)
+
+    print(f"\n{'='*70}\nMODEL: {model_name}  (variant={variant})\nOutput: {output_csv}\n{'='*70}")
+
+    rows, start_idx, already_complete = load_resume_state(output_csv, len(QUESTIONS))
+    if already_complete:
+        print(f"SKIPPING -- output already has {len(rows)}/{len(QUESTIONS)} rows (complete).")
+        return
+    if start_idx > 0:
+        print(f"RESUMING from item {start_idx}/{len(QUESTIONS)}.")
+    else:
+        print(f"Starting fresh: 0/{len(QUESTIONS)} rows exist yet.")
+
+    print("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    print("Loading model...")
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name, torch_dtype=torch.float16,
+        device_map="auto", trust_remote_code=True
+    )
+    model.eval()
+    print("Model loaded.")
+
+    # digit tokens 1-5, superset; per-item subset used based on actual option count
+    option_token_ids = {}
+    for key in ["1", "2", "3", "4", "5"]:
+        ids = tokenizer.encode(f" {key}", add_special_tokens=False)
+        option_token_ids[key] = ids[-1]
+    print(f"Option digit token IDs: {option_token_ids}")
+
+    def build_prompt(user_message):
+        if tokenizer.chat_template is not None and not is_base_model:
+            messages = [{"role": "user", "content": user_message}]
+            return tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+        return user_message
+
+    def compute_closed_form_uhat(item):
+        option_keys = get_item_option_keys(item)
+        question_formatted = format_medexpqa_question(item)
+        if is_base_model:
+            user_message = f"Q: {question_formatted}\nA:"
+        else:
+            user_message = (
+                f"Answer the following medical question by selecting "
+                f"the single best option ({', '.join(option_keys)}).\n\n"
+                f"{question_formatted}\n\nAnswer:"
+            )
+        prompt = build_prompt(user_message)
+        inputs = tokenizer(
+            prompt, return_tensors="pt", truncation=True, max_length=1536
+        ).to(model.device)
+        with torch.no_grad():
+            outputs = model(**inputs)
+            next_token_logits = outputs.logits[0, -1, :]
+        option_logits = torch.tensor([
+            next_token_logits[option_token_ids[key]].item() for key in option_keys
+        ])
+        probs = torch.softmax(option_logits, dim=0).numpy()
+        epsilon = 1e-12
+        entropy = -np.sum(probs * np.log(probs + epsilon))
+        norm_uhat = entropy / np.log(len(option_keys))
+        greedy_idx = int(np.argmax(probs))
+        greedy_key = option_keys[greedy_idx]
+        return greedy_key, option_keys, probs, entropy, norm_uhat
+
+    def get_explanation(item, answer_key, answer_text, style):
+        question_formatted = format_medexpqa_question(item)
+        if is_base_model:
+            if style == "justificatory":
+                user_message = (
+                    f"Q: {question_formatted}\n"
+                    f"A: {answer_key}. {answer_text}\n"
+                    f"This is because"
+                )
+            else:  # "assessment"
+                user_message = (
+                    f"Q: {question_formatted}\n"
+                    f"A: {answer_key}. {answer_text}\n"
+                    f"Is this answer correct? I am"
+                )
+        else:
+            if style == "justificatory":
+                user_message = (
+                    f"Question: {question_formatted}\n\n"
+                    f"Answer: {answer_key}. {answer_text}\n\n"
+                    f"Provide an explanation for this answer:"
+                )
+            else:  # "assessment"
+                user_message = (
+                    f"Question: {question_formatted}\n\n"
+                    f"Answer: {answer_key}. {answer_text}\n\n"
+                    f"Assess whether this answer is correct, and explain your assessment. "
+                    f"If you are uncertain whether the answer is correct, say so explicitly and explain why."
+                )
+        prompt = build_prompt(user_message)
+        inputs = tokenizer(
+            prompt, return_tensors="pt", truncation=True, max_length=1536
+        ).to(model.device)
+        with torch.no_grad():
+            output = model.generate(
+                **inputs, max_new_tokens=250, do_sample=False,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id
+            )
+        generated_tokens = output[0][inputs.input_ids.shape[1]:]
+        raw_explanation = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+        return clean_explanation(raw_explanation)
+
+    for idx in tqdm(range(start_idx, len(QUESTIONS)), initial=start_idx, total=len(QUESTIONS)):
+        item = QUESTIONS[idx]
+        correct_key = str(item["correct_option"])
+        print(f"\n[{idx:03d}/{len(QUESTIONS)}] {item['full_question'][:70]}...")
+
+        try:
+            greedy_key, option_keys, probs, entropy, norm_uhat = compute_closed_form_uhat(item)
+            answer_text = get_option_text(item, greedy_key)
+            correct = int(greedy_key == correct_key)
+            gold_exists, gold_text = get_gold_explanation(item, greedy_key)
+            prob_str = ", ".join(f"{k}={p:.3f}" for k, p in zip(option_keys, probs))
+            print(f"  U_hat={norm_uhat:.4f} | probs=[{prob_str}] | "
+                  f"pred={greedy_key} | true={correct_key} | correct={correct} | "
+                  f"gold_exp_exists={gold_exists}")
+        except Exception as e:
+            print(f"  ERROR (confidence step): {e}")
+            letter_labels = ["A", "B", "C", "D", "E"]
+            rows.append({
+                "model": model_short, "condition": "closed_form", "dataset": "medexpqa",
+                "question": item.get("full_question"), "options": str(item.get("options")),
+                "medical_specialty": item.get("type"), "year": item.get("year"),
+                **{f"prob_{l}": None for l in letter_labels},
+                "predicted_option": None, "greedy_answer": None,
+                "explanation_justificatory": None, "explanation_assessment": None,
+                "correct_option": correct_key, "correct": None,
+                "entropy": None, "norm_uhat": None,
+                "gold_explanation_exists": None, "gold_explanation_text": None,
+            })
+            if idx % CHECKPOINT_EVERY == 0:
+                pd.DataFrame(rows).to_csv(output_csv, index=False)
+            continue
+
+        try:
+            explanation_justificatory = get_explanation(item, greedy_key, answer_text, style="justificatory")
+            explanation_assessment = get_explanation(item, greedy_key, answer_text, style="assessment")
+        except Exception as e:
+            print(f"  ERROR (explanation step): {e}")
+            explanation_justificatory = None
+            explanation_assessment = None
+
+        letter_labels = ["A", "B", "C", "D", "E"]
+        prob_cols = {f"prob_{letter_labels[i]}": (probs[i] if i < len(probs) else np.nan)
+                     for i in range(5)}
+
+        rows.append({
+            "model": model_short,
+            "condition": "closed_form",
+            "dataset": "medexpqa",
+            "question": item["full_question"],
+            "options": str(item["options"]),
+            "medical_specialty": item.get("type"),
+            "year": item.get("year"),
+            **prob_cols,
+            "predicted_option": greedy_key,
+            "greedy_answer": answer_text,
+            "explanation_justificatory": explanation_justificatory,
+            "explanation_assessment": explanation_assessment,
+            "correct_option": correct_key,
+            "correct": correct,
+            "entropy": entropy,
+            "norm_uhat": norm_uhat,
+            "gold_explanation_exists": gold_exists,
+            "gold_explanation_text": gold_text,
+        })
+
+        if idx % CHECKPOINT_EVERY == 0:
+            pd.DataFrame(rows).to_csv(output_csv, index=False)
+
+    df = pd.DataFrame(rows)
+    df.to_csv(output_csv, index=False)
+
+    valid = df[df["norm_uhat"].notna()]
+    correct_df = valid[valid["correct"] == 1]
+    incorrect_df = valid[valid["correct"] == 0]
+    print(f"\n{'='*60}\nCLOSED-FORM MEDEXPQA SUMMARY: {model_short} ({variant})\n{'='*60}")
+    print(f"Total: {len(df)} | Valid: {len(valid)}")
+    print(f"Correct: {len(correct_df)} | Incorrect: {len(incorrect_df)}")
+    if len(correct_df) > 0 and len(incorrect_df) > 0:
+        print(f"U_hat correct:   mean={correct_df['norm_uhat'].mean():.4f}  sd={correct_df['norm_uhat'].std():.4f}")
+        print(f"U_hat incorrect: mean={incorrect_df['norm_uhat'].mean():.4f}  sd={incorrect_df['norm_uhat'].std():.4f}")
+
+    ce_eligible = valid[valid["gold_explanation_exists"] == True]
+    print(f"\nAchieved Ce-eligible rows: {len(ce_eligible)}/{len(valid)} "
+          f"({len(ce_eligible)/max(len(valid),1):.1%})")
+    print(f"Saved to: {output_csv}")
+
+    del model
+    del tokenizer
+    gc.collect()
+    torch.cuda.empty_cache()
+
+
+for model_name in MODEL_CONFIGS:
+    run_for_model(model_name)
+
+print("\nAll model variants processed.")
+
